@@ -1,0 +1,14 @@
+<!-- templates/main.html (or profile.html) -->
+{% extends "base.html" %}
+
+{% block title %}Profile{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active" aria-current="page">Main</li>
+{% endblock %}
+
+{% block content %}
+<h1>Welcome, {{ name }}!</h1>
+<p>This is the main page that's only accessible to logged-in users.</p>
+<!-- Add more content here as needed -->
+{% endblock %}

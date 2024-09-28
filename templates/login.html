@@ -1,0 +1,22 @@
+<!-- templates/login.html -->
+{% extends "base.html" %}
+
+{% block title %}Login{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active" aria-current="page">Login</li>
+{% endblock %}
+
+{% block content %}
+<h2>Login</h2>
+<form method="POST" action="{{ url_for('auth.login') }}">
+    <div class="form-group">
+        <input type="email" class="form-control" name="email" placeholder="Your Email" required>
+    </div>
+    <div class="form-group">
+        <input type="password" class="form-control" name="password" placeholder="Your Password" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Login</button>
+    <a href="{{ url_for('auth.forgot_password') }}" class="btn btn-secondary ms-2">Forgot Password?</a>
+</form>
+{% endblock %}
