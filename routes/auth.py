@@ -2,8 +2,10 @@
 
 # Keep authentication-related routes (Login, Logout, Signup, Forgot Password).
 
+# routes/auth.py
+
 from flask import Blueprint, render_template, redirect, url_for, request, flash
-from flask_login import login_user, login_required, logout_user
+from flask_login import login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from models import User
 from services.user_service import get_user_by_email, create_user, check_password, update_user_password
@@ -14,6 +16,9 @@ logger = logging.getLogger(__name__)
 
 @auth_bp.route('/signup', methods=['GET', 'POST'])
 def signup():
+    if current_user.is_authenticated:
+        return redirect(url_for('main.index'))
+
     if request.method == 'POST':
         email = request.form.get('email')
         name = request.form.get('name')
@@ -21,44 +26,49 @@ def signup():
         
         user = get_user_by_email(email)
         if user:
-            flash('Email address already exists')
+            flash('Email address already exists', 'danger')
             return redirect(url_for('auth.signup'))
         
-        new_user = create_user(email, name, password)
+        hashed_password = generate_password_hash(password, method='sha256')
+        new_user = create_user(email, name, hashed_password)
         
         if new_user:
-            flash('Account created successfully. Please log in.')
+            flash('Account created successfully. Please log in.', 'success')
             return redirect(url_for('auth.login'))
+        else:
+            flash('An error occurred. Please try again.', 'danger')
     
     return render_template('signup.html')
 
-# Added debugging to triage problems
-
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('main.index'))
+
     if request.method == 'POST':
         email = request.form.get('email')
-        provided_password = request.form.get('password')
+        password = request.form.get('password')
+        remember = True if request.form.get('remember') else False
         logger.debug(f"Login attempt for email: {email}")
         
-        user = get_user_by_email(email)
-        if not user:
+        user_data = get_user_by_email(email)
+        if not user_data:
             logger.warning(f"User not found: {email}")
-            flash('Unidentified user; consider signing up!', 'danger')
-        elif not check_password(user['password'], provided_password):
+            flash('Email not found. Please check your login details and try again.', 'danger')
+        elif not check_password_hash(user_data['password'], password):
             logger.warning(f"Invalid password for user: {email}")
-            flash('Identified user but wrong password; try again.', 'danger')
+            flash('Please check your login details and try again.', 'danger')
         else:
-            logger.debug(f"User found: {user}")
+            logger.debug(f"User found: {user_data}")
             try:
-                user_obj = User(
-                    id=user['email'],  # Use email as id
-                    email=user['email'],
-                    name=user['name'],
-                    password=user['password'],
-                    role=user.get('role', 'User')
+                user = User(
+                    id=user_data['email'],
+                    email=user_data['email'],
+                    name=user_data['name'],
+                    password=user_data['password'],
+                    role=user_data.get('role', 'User')
                 )
-                login_user(user_obj)
+                login_user(user, remember=remember)
                 logger.info(f"User logged in successfully: {email}")
                 flash('Logged in successfully.', 'success')
                 next_page = request.args.get('next')
@@ -76,15 +86,14 @@ def login():
 @login_required
 def logout():
     logout_user()
+    flash('You have been logged out.', 'success')
     return redirect(url_for('main.index'))
-
-@auth_bp.route('/debug_users')
-def debug_users():
-    users = load_users()
-    return jsonify(users)
 
 @auth_bp.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
+    if current_user.is_authenticated:
+        return redirect(url_for('main.index'))
+
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
@@ -92,9 +101,9 @@ def forgot_password():
 
         logger.debug(f"Password reset attempt for email: {email}")
 
-        user = get_user_by_email(email)
+        user_data = get_user_by_email(email)
 
-        if not user:
+        if not user_data:
             logger.warning(f"Email not found for password reset: {email}")
             flash('Email address not found. Please check and try again.', 'danger')
             return redirect(url_for('auth.forgot_password'))
@@ -105,7 +114,8 @@ def forgot_password():
             return redirect(url_for('auth.forgot_password'))
 
         # If all checks pass, update the user's password
-        if update_user_password(email, password):
+        hashed_password = generate_password_hash(password, method='sha256')
+        if update_user_password(email, hashed_password):
             logger.info(f"Password successfully reset for user: {email}")
             flash('Your password has been successfully reset. Please log in with your new password.', 'success')
             return redirect(url_for('auth.login'))

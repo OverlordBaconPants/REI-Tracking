@@ -7,7 +7,7 @@ from services.user_service import get_user_by_email
 import logging
 
 def create_app():
-    app = Flask(__name__)
+    app = Flask(__name__, template_folder='templates')
     app.config.from_object('config.Config')
 
     login_manager = LoginManager()

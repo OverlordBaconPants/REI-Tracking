@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Remove Properties{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active" aria-current="page">Remove Properties</li>
+{% endblock %}
+
+{% block content %}
+<h1>Remove Properties</h1>
+<div class="col-md-6">
+    <h2>Remove Property</h2>
+    <form method="POST" action="{{ url_for('admin.remove_properties') }}">
+        <div class="mb-3">
+            <label for="property_id" class="form-label">Select Property</label>
+            <select class="form-select" id="property_id" name="property_id" required>
+                <option value="">Choose a property</option>
+                <!-- Add Jinja2 loop to populate options from database -->
+            </select>
+        </div>
+        <button type="submit" class="btn btn-danger">Remove Property</button>
+    </form>
+</div>
+{% endblock %}

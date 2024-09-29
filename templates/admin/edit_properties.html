@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Properties{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active" aria-current="page">Edit Properties</li>
+{% endblock %}
+
+{% block content %}
+<h1>Edit Properties</h1>
+<form method="POST" action="{{ url_for('admin.edit_properties') }}">
+    <div class="mb-3">
+        <label for="property_id" class="form-label">Select Property</label>
+        <select class="form-select" id="property_id" name="property_id" required>
+            <option value="">Choose a property</option>
+            <!-- Add Jinja2 loop to populate options from database -->
+        </select>
+    </div>
+    <div class="mb-3">
+        <label for="property_name" class="form-label">Property Name</label>
+        <input type="text" class="form-control" id="property_name" name="property_name" required>
+    </div>
+    <div class="mb-3">
+        <label for="property_address" class="form-label">Property Address</label>
+        <input type="text" class="form-control" id="property_address" name="property_address" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Update Property</button>
+</form>
+{% endblock %}
