@@ -8,7 +8,44 @@
 
 {% block head %}
 {{ super() }}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
 <style>
+     .select-wrapper {
+        position: relative;
+        display: inline-block;
+        width: 100%;
+    }
+    .select-wrapper select {
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        width: 100%;
+        padding: 10px 30px 10px 10px;
+        font-size: 16px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        background-color: white;
+        cursor: pointer;
+    }
+    .select-wrapper::after {
+        content: "\25BC";
+        position: absolute;
+        top: 50%;
+        right: 15px;
+        transform: translateY(-50%);
+        font-size: 12px;
+        color: #6c757d;
+        pointer-events: none;
+    }
+    /* Hide default arrow in IE */
+    select::-ms-expand {
+        display: none;
+    }
+
+    .autocomplete-container {
+        position: relative;
+    }
     #autocomplete-results {
         position: absolute;
         border: 1px solid #d4d4d4;
@@ -19,6 +56,8 @@
         left: 0;
         right: 0;
         background-color: white;
+        max-height: 200px;
+        overflow-y: auto;
     }
     #autocomplete-results div {
         padding: 10px;
@@ -26,11 +65,54 @@
         background-color: #fff; 
         border-bottom: 1px solid #d4d4d4; 
     }
-    #autocomplete-results div:hover {
-        background-color: #e9e9e9; 
+    #autocomplete-results div:hover,
+    #autocomplete-results div.hover-highlight {
+        background-color: #e9e9e9 !important;
     }
-    .autocomplete-container {
-        position: relative;
+    
+    /* Styles for the datepicker */
+    .ui-datepicker {
+        background-color: #fff;
+        border: 1px solid #ccc;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        font-family: Arial, sans-serif;
+    }
+    .ui-datepicker-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #ddd;
+        color: #333;
+    }
+    .ui-datepicker-calendar {
+        background-color: #fff;
+    }
+    .ui-datepicker-calendar th {
+        background-color: #f8f9fa;
+    }
+    .ui-datepicker-calendar td {
+        background-color: #fff;
+    }
+    .ui-datepicker-calendar td a {
+        color: #333;
+    }
+    .ui-datepicker-calendar td a:hover {
+        background-color: #e9ecef;
+    }
+    .ui-datepicker-today a {
+        font-weight: bold;
+    }
+    .ui-datepicker-current-day a {
+        background-color: #007bff;
+        color: #fff;
+    }
+
+    /* New styles for partner selection */
+    #partner-container {
+        display: flex;
+        align-items: center;
+    }
+    #new-partner-input {
+        display: none;
+        margin-left: 10px;
     }
 </style>
 {% endblock %}
@@ -38,13 +120,21 @@
 {% block content %}
 <div class="container mt-4">
     <h2 class="mb-4">Add Properties</h2>
-    <form method="POST">
+    <form method="POST" action="{{ url_for('admin.add_properties') }}">
         <div class="row">
             <div class="col-md-6">
                 <div class="form-group mb-3 autocomplete-container">
                     <label for="property_address">Property Address</label>
                     <input type="text" class="form-control" id="property_address" name="property_address" required>
                     <div id="autocomplete-results"></div>
+                </div>
+                <div class="form-group mb-3">
+                    <label for="purchase_date">Purchase Date (Select Calendar)</label>
+                    <input type="date" class="form-control" id="purchase_date" name="purchase_date" required>
+                </div>
+                <div class="form-group mb-3">
+                    <label for="loan_start_date">Loan Start Date (Select Calendar)</label>
+                    <input type="date" class="form-control" id="loan_start_date" name="loan_start_date" required>
                 </div>
                 <div class="form-group mb-3">
                     <label for="purchase_price">Purchase Price ($)</label>
@@ -62,15 +152,31 @@
                     <label for="primary_loan_term">Primary Loan Term (months)</label>
                     <input type="number" class="form-control" id="primary_loan_term" name="primary_loan_term" placeholder="Enter Loan Term in Months" required>
                 </div>
+                <div class="form-group mb-3">
+                    <label for="partner">Partner</label>
+                    <div class="select-wrapper">
+                        <select id="partner" name="partner" class="form-control">
+                            <option value="">Select a partner</option>
+                            {% for partner in partners %}
+                            <option value="{{ partner }}">{{ partner }}</option>
+                            {% endfor %}
+                            <option value="new">Add new partner</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="new-partner-container" class="form-group mb-3" style="display: none;">
+                    <label for="new-partner">New Partner Name</label>
+                    <input type="text" id="new-partner" name="new_partner" class="form-control">
+                </div>
             </div>
             <div class="col-md-6">
                 <div class="form-group mb-3">
                     <label for="seller_financing_amount">Seller Financing Amount ($)</label>
-                    <input type="number" class="form-control" id="seller_financing_amount" name="seller_financing_amount" placeholder="If Applicable, Enter Amount of Seller Financing. Otherwise, Leave Blank">
+                    <input type="number" class="form-control" id="seller_financing_amount" name="seller_financing_amount" value=0>
                 </div>
                 <div class="form-group mb-3">
                     <label for="seller_financing_rate">Seller Financing Rate (%)</label>
-                    <input type="number" step="0.01" class="form-control" id="seller_financing_rate" name="seller_financing_rate" placeholder="If Applicable, Enter Interest Rate to Two Decimal Places">
+                    <input type="number" step="0.01" class="form-control" id="seller_financing_rate" name="seller_financing_rate" value=0>
                 </div>
                 <div class="form-group mb-3">
                     <label for="closing_costs">Closing Costs ($)</label>
@@ -88,23 +194,31 @@
                     <label for="holding_costs">Holding Costs ($)</label>
                     <input type="number" class="form-control" id="holding_costs" name="holding_costs" placeholder="Enter Whole Dollar Amount" required>
                 </div>
+                <div class="form-group mb-3">
+                    <label for="equity_share">Equity Share (%)</label>
+                    <input type="number" class="form-control" id="equity_share" name="equity_share" placeholder="Enter Share of Equity as Percentage" required>
+                </div>
             </div>
         </div>
-        <button type="submit" class="btn btn-primary mt-3">Add Property</button>
-        <button type="reset" class="btn btn-secondary mt-3">Reset Form</button>
+        <div class="row">
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary mt-3">Add Property</button>
+                <button type="reset" class="btn btn-secondary mt-3">Reset Form</button>
+            </div>
+        </div>
     </form>
 </div>
 
-<link rel="stylesheet" href="https://cdn.geoapify.com/geocoder-autocomplete/v1.5.1/styles/minimal.css">
-
- <!-- Debug output -->
- <script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+<script>
+ 
     const addressInput = document.getElementById('property_address');
     const resultsContainer = document.getElementById('autocomplete-results');
     const apiKey = '{{ config["GEOAPIFY_API_KEY"] }}';
-    
+
     let debounceTimer;
-    
+
     addressInput.addEventListener('input', function() {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
@@ -116,7 +230,7 @@
             }
         }, 300);
     });
-    
+
     function fetchAddresses(query) {
         const url = `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(query)}&apiKey=${apiKey}`;
         
@@ -127,25 +241,52 @@
             })
             .catch(error => console.log('error', error));
     }
-    
+
     function displayResults(features) {
         resultsContainer.innerHTML = '';
         features.forEach(feature => {
             const div = document.createElement('div');
-            div.textContent = feature.properties.formatted;
+            const formattedAddress = formatAddress(feature.properties);
+            div.textContent = formattedAddress;
             div.addEventListener('click', function() {
-                addressInput.value = feature.properties.formatted;
+                addressInput.value = formattedAddress;
                 resultsContainer.innerHTML = '';
+            });
+            div.addEventListener('mouseenter', function() {
+                this.classList.add('hover-highlight');
+            });
+            div.addEventListener('mouseleave', function() {
+                this.classList.remove('hover-highlight');
             });
             resultsContainer.appendChild(div);
         });
     }
-    
-    // Close the autocomplete list when clicking outside of it
+
+    function formatAddress(properties) {
+        const parts = [];
+        if (properties.address_line1) parts.push(properties.address_line1);
+        if (properties.address_line2) parts.push(properties.address_line2);
+        if (properties.city) parts.push(properties.city);
+        if (properties.state) parts.push(properties.state);
+        if (properties.postcode) parts.push(properties.postcode);
+        return parts.join(', ');
+    }
+
     document.addEventListener('click', function(e) {
         if (e.target !== addressInput && e.target !== resultsContainer) {
             resultsContainer.innerHTML = '';
         }
     });
-    </script>
+
+    // New JavaScript for partner selection 
+    $(document).ready(function() {
+        $('#partner').change(function() {
+            if ($(this).val() === 'new') {
+                $('#new-partner-container').show();
+            } else {
+                $('#new-partner-container').hide();
+            }
+        });
+    });
+</script>
 {% endblock %}
