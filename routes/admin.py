@@ -1,9 +1,10 @@
 # routes/admin.py
 
 # Import necessary modules
-from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app
+from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app, jsonify
 from flask_login import login_required, current_user
 from functools import wraps
+from services.user_service import check_password, get_user_by_email
 import logging
 import json
 
@@ -84,6 +85,7 @@ def add_properties():
                 'loan_start_date': request.form['loan_start_date'],
                 'seller_financing_amount': int(request.form.get('seller_financing_amount') or 0),
                 'seller_financing_rate': float(request.form.get('seller_financing_rate') or 0),
+                'seller_financing_term': float(request.form.get('seller_financing_term') or 0),
                 'closing_costs': int(request.form['closing_costs']),
                 'renovation_costs': int(request.form['renovation_costs']),
                 'marketing_costs': int(request.form['marketing_costs']),
@@ -116,12 +118,31 @@ def add_properties():
 @login_required
 @admin_required
 def remove_properties():
+    properties = []
+    try:
+        with open(current_app.config['PROPERTIES_FILE'], 'r') as f:
+            properties = json.load(f)
+    except Exception as e:
+        logging.error(f"Error loading properties: {str(e)}")
+        return jsonify({'success': False, 'message': 'Error loading properties.'}), 500
+
     if request.method == 'POST':
-        # Handle the form submission for removing a property
-        # This is where you'd process the request and remove the property from the database
-        flash('Property removed successfully', 'success')
-    # Render the template for removing properties
-    return render_template('admin/remove_properties.html')
+        property_to_remove = request.form.get('property_select')
+
+        if not property_to_remove:
+            return jsonify({'success': False, 'message': 'No property selected for removal.'}), 400
+
+        try:
+            properties = [p for p in properties if p['address'] != property_to_remove]
+            with open(current_app.config['PROPERTIES_FILE'], 'w') as f:
+                json.dump(properties, f, indent=2)
+            return jsonify({'success': True, 'message': 'Property Successfully Removed!'})
+        except Exception as e:
+            logging.error(f"Error removing property: {str(e)}")
+            return jsonify({'success': False, 'message': 'Error removing property.'}), 500
+
+    return render_template('admin/remove_properties.html', properties=properties)
+
 
 # Route for editing properties
 @admin_bp.route('/edit_properties', methods=['GET', 'POST'])

@@ -1,24 +1,101 @@
 {% extends "base.html" %}
-
 {% block title %}Remove Properties{% endblock %}
-
 {% block breadcrumb %}
-<li class="breadcrumb-item active" aria-current="page">Remove Properties</li>
+<li class="breadcrumb-item active" aria-current="page">Add Properties</li>
 {% endblock %}
-
+{% block head %}
+{{ super() }}
+<style>
+    .flash-message {
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 5px;
+    }
+    .flash-danger {
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+    }
+    .flash-success {
+        background-color: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+    }
+</style>
+{% endblock %}
 {% block content %}
-<h1>Remove Properties</h1>
-<div class="col-md-6">
-    <h2>Remove Property</h2>
-    <form method="POST" action="{{ url_for('admin.remove_properties') }}">
-        <div class="mb-3">
-            <label for="property_id" class="form-label">Select Property</label>
-            <select class="form-select" id="property_id" name="property_id" required>
-                <option value="">Choose a property</option>
-                <!-- Add Jinja2 loop to populate options from database -->
+<div class="container mt-4">
+    <h2 class="mb-4">Remove Properties</h2>
+    <div id="flash-container"></div>
+    <form id="removePropertyForm">
+        <div class="form-group mb-3">
+            <label for="property_select">Select Property to Remove:</label>
+            <select id="property_select" name="property_select" class="form-select" required>
+                <option value="">Select a property</option>
+                {% for property in properties %}
+                <option value="{{ property.address }}">{{ property.address }}</option>
+                {% endfor %}
             </select>
         </div>
-        <button type="submit" class="btn btn-danger">Remove Property</button>
+        <div class="form-group mb-3">
+            <label for="confirmation_phrase">Type the following phrase to confirm:</label>
+            <input type="text" id="confirmation_phrase" name="confirmation_phrase" class="form-control" placeholder="I am completely sure I want to do this." required>
+        </div>
+        
+        <div class="alert alert-danger mt-3">
+            <strong>Warning:</strong> Removing this property will permanently delete it from the system.
+        </div>
+        
+        <button type="button" id="removePropertyBtn" class="btn btn-danger mt-3">Remove Property</button>
     </form>
 </div>
+
+<!-- Include jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- Your custom JavaScript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const CONFIRMATION_PHRASE = "I am completely sure I want to do this.";
+
+    function flashMessage(message, type) {
+        $('#flash-container').html(
+            '<div class="flash-message flash-' + type + '">' + message + '</div>'
+        );
+    }
+
+    $('#removePropertyBtn').on('click', function() {
+        var phrase = $('#confirmation_phrase').val();
+        var propertyAddress = $('#property_select').val();
+        
+        if (!propertyAddress) {
+            flashMessage('Please select a property to remove.', 'danger');
+            return;
+        }
+        
+        if (phrase !== CONFIRMATION_PHRASE) {
+            flashMessage('You must type the confirmation phrase to proceed with removal.', 'danger');
+            $('#confirmation_phrase').val('');
+            return;
+        }
+        
+        if (confirm('Are you absolutely sure you want to remove this property? This action cannot be undone.')) {
+            $.post("{{ url_for('admin.remove_properties') }}", {
+                action: 'remove',
+                property_select: propertyAddress
+            }, function(data) {
+                if (data.success) {
+                    flashMessage('Property Successfully Removed. Redirecting to the Properties Page...', 'success');
+                    $('#removePropertyBtn').prop('disabled', true);
+                    setTimeout(function() {
+                        window.location.href = "{{ url_for('main.properties') }}";
+                    }, 3000);
+                } else {
+                    flashMessage(data.message || 'Error removing property. Please try again.', 'danger');
+                }
+            });
+        }
+    });
+});
+</script>
 {% endblock %}
