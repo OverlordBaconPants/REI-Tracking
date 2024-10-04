@@ -1,1 +1,124 @@
-[]
+[
+  {
+    "address": "454 Guilford Avenue, Hagerstown, MD 21740, United States of America, Hagerstown, Maryland, 21740",
+    "purchase_price": 160000,
+    "down_payment": 10000,
+    "primary_loan_rate": 5.73,
+    "primary_loan_term": 360,
+    "purchase_date": "2024-05-14",
+    "loan_start_date": "2023-06-01",
+    "seller_financing_amount": 40000,
+    "seller_financing_rate": 0.0,
+    "seller_financing_term": 120,
+    "closing_costs": 5800,
+    "renovation_costs": 24435,
+    "marketing_costs": 0,
+    "holding_costs": 1175,
+    "partners": [
+      {
+        "name": "BJ Marshall",
+        "equity_share": 50.0
+      },
+      {
+        "name": "Brian Poole",
+        "equity_share": 50.0
+      }
+    ]
+  },
+  {
+    "address": "2212 Logan Street, Harrisburg, PA 17102, United States of America, Harrisburg, Pennsylvania, 17102",
+    "purchase_price": 125000,
+    "down_payment": 31250,
+    "primary_loan_rate": 8.5,
+    "primary_loan_term": 360,
+    "purchase_date": "2024-05-20",
+    "loan_start_date": "2022-08-01",
+    "seller_financing_amount": 0,
+    "seller_financing_rate": 0.0,
+    "seller_financing_term": 0,
+    "closing_costs": 11598,
+    "renovation_costs": 0,
+    "marketing_costs": 0,
+    "holding_costs": 0,
+    "partners": [
+      {
+        "name": "BJ Marshall",
+        "equity_share": 50.0
+      },
+      {
+        "name": "Brian Poole",
+        "equity_share": 50.0
+      }
+    ]
+  },
+  {
+    "address": "164 Dunrobin Drive, Martinsburg, WV 25404, United States of America, Martinsburg, West Virginia, 25404",
+    "purchase_price": 211824,
+    "down_payment": 23000,
+    "primary_loan_rate": 3.5,
+    "primary_loan_term": 360,
+    "purchase_date": "2024-02-16",
+    "loan_start_date": "2023-05-01",
+    "seller_financing_amount": 0,
+    "seller_financing_rate": 0.0,
+    "seller_financing_term": 0,
+    "closing_costs": 10980,
+    "renovation_costs": 0,
+    "marketing_costs": 7000,
+    "holding_costs": 8856,
+    "partners": [
+      {
+        "name": "BJ Marshall",
+        "equity_share": 50.0
+      },
+      {
+        "name": "Wayne Benny",
+        "equity_share": 50.0
+      }
+    ]
+  },
+  {
+    "address": "5451 El Camino, Columbia, MD 21044, United States of America, Columbia, Maryland, 21044",
+    "purchase_price": 234900,
+    "down_payment": 58650,
+    "primary_loan_rate": 2.99,
+    "primary_loan_term": 360,
+    "purchase_date": "2020-11-30",
+    "loan_start_date": "2020-11-30",
+    "seller_financing_amount": 0,
+    "seller_financing_rate": 0.0,
+    "seller_financing_term": 0,
+    "closing_costs": 14000,
+    "renovation_costs": 7500,
+    "marketing_costs": 125,
+    "holding_costs": 0,
+    "partners": [
+      {
+        "name": "BJ Marshall",
+        "equity_share": 100.0
+      }
+    ]
+  },
+  {
+    "address": "5920 Watch Chain Way, Columbia, MD 21044, United States of America, Columbia, Maryland, 21044",
+    "purchase_price": 198000,
+    "down_payment": 46000,
+    "primary_loan_rate": 4.25,
+    "primary_loan_term": 360,
+    "purchase_date": "2021-05-28",
+    "loan_start_date": "2021-05-28",
+    "seller_financing_amount": 0,
+    "seller_financing_rate": 0.0,
+    "seller_financing_term": 0.0,
+    "closing_costs": 8000,
+    "renovation_costs": 500,
+    "marketing_costs": 0,
+    "holding_costs": 1200,
+    "partners": [
+      {
+        "name": "BJ Marshall",
+        "equity_share": 100.0
+      }
+    ]
+  }
+]

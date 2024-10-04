@@ -6,130 +6,47 @@
     <title>{% block title %}Flask App{% endblock %}</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-    <style>
-        .sidebar {
-            background-color: navy;
-            min-height: 100vh;
-            padding-top: 20px;
-        }
-        .sidebar .accordion-button {
-            color: white !important;
-            background-color: navy;
-            font-weight: bold;
-            padding: 10px 15px;
-            transition: background-color 0.3s ease;
-        }
-        .sidebar .accordion-button:not(.collapsed) {
-            background-color: #f8f9fa;
-            color: navy !important;
-        }
-        .sidebar .accordion-button:hover {
-            background-color: #f8f9fa;
-            color: navy !important;
-        }
-        .sidebar .accordion-body {
-            background-color: #1a1a4d;
-            border: none;
-        }
-        .sidebar .accordion-body ul {
-            list-style-type: none;
-            padding-left: 0;
-        }
-        .sidebar .accordion-body a {
-            color: #d1d1e0 !important;
-            text-decoration: none;
-            display: block;
-            padding: 5px 0;
-        }
-        .sidebar .accordion-body a:hover {
-            color: white !important;
-        }
-        .form-group, .btn {
-            margin: 10px 0;
-        }
-        main {
-            padding-top: 20px;
-        }
-        .alert-success {
-            background-color: #d4edda;
-            border-color: #c3e6cb;
-            color: #155724;
-        }
-        .alert-danger {
-            background-color: #f8d7da;
-            border-color: #f5c6cb;
-            color: #721c24;
-        }
-        .breadcrumb-item + .breadcrumb-item::before {
-            content: ">";
-        }
-        /* New styles for icon spacing */
-        .sidebar .accordion-button i {
-            margin-right: 10px; /* Adds space to the right of the icon */
-            width: 20px; /* Ensures all icons have the same width */
-            text-align: center; /* Centers the icon within its width */
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}" data-current-user="{{ current_user.name }}">
     <div class="container-fluid">
         <div class="row">
-            <nav class="col-md-2 d-none d-md-block sidebar">
+            <!-- Sidebar -->
+            <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block sidebar collapse">
                 <div class="position-sticky">
                     <div class="accordion" id="accordionSidebar">
                         {% if current_user.is_authenticated %}
                             <div class="accordion-item">
-                                <h2 class="accordion-header">
-                                    <a class="accordion-button" href="{{ url_for('main.main') }}">
-                                        <i class="fas fa-home"></i> <span>Main</span>
+                                <h2 class="accordion-header" id="main">
+                                    <a href="{{ url_for('main.main') }}" class="accordion-button">
+                                        <i class="fas fa-home"></i> Main
                                     </a>
                                 </h2>
                             </div>
-                            
-                            <div class="accordion-item">
-                                <h2 class="accordion-header" id="headingProperties">
-                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseProperties" aria-expanded="false" aria-controls="collapseProperties">
-                                        <i class="fas fa-building"></i> <span>Properties</span>
-                                    </button>
-                                </h2>
-                                <div id="collapseProperties" class="accordion-collapse collapse" aria-labelledby="headingProperties" data-bs-parent="#accordionSidebar">
-                                    <div class="accordion-body">
-                                        <ul>
-                                            {% if current_user.role == 'Admin' %}
+    
+                            {% if current_user.role == 'Admin' %}
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header" id="headingProperties">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseProperties" aria-expanded="false" aria-controls="collapseProperties">
+                                            <i class="fas fa-building"></i> Properties
+                                        </button>
+                                    </h2>
+                                    <div id="collapseProperties" class="accordion-collapse collapse" aria-labelledby="headingProperties" data-bs-parent="#accordionSidebar">
+                                        <div class="accordion-body">
+                                            <ul>
                                                 <li><a href="{{ url_for('admin.add_properties') }}">Add Properties</a></li>
                                                 <li><a href="{{ url_for('admin.remove_properties') }}">Remove Properties</a></li>
                                                 <li><a href="{{ url_for('admin.edit_properties') }}">Edit Properties</a></li>
-                                            {% endif %}
-                                            <li><a href="{{ url_for('main.properties') }}">View Properties</a></li>
-                                        </ul>
+                                            </ul>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            
-                            <div class="accordion-item">
-                                <h2 class="accordion-header" id="headingLoans">
-                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseLoans" aria-expanded="false" aria-controls="collapseLoans">
-                                        <i class="fas fa-dollar-sign"></i> <span>Loans</span>
-                                    </button>
-                                </h2>
-                                <div id="collapseLoans" class="accordion-collapse collapse" aria-labelledby="headingLoans" data-bs-parent="#accordionSidebar">
-                                    <div class="accordion-body">
-                                        <ul>
-                                            {% if current_user.role == 'Admin' %}
-                                                <li><a href="{{ url_for('admin.loans') }}">View Loans</a></li>
-                                                <li><a href="{{ url_for('admin.add_loans') }}">Add Loans</a></li>
-                                                <li><a href="{{ url_for('admin.remove_loans') }}">Remove Loans</a></li>
-                                                <li><a href="{{ url_for('admin.edit_loans') }}">Edit Loans</a></li>
-                                            {% endif %}
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                            
+                            {% endif %}
+    
                             <div class="accordion-item">
                                 <h2 class="accordion-header" id="headingTransactions">
                                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTransactions" aria-expanded="false" aria-controls="collapseTransactions">
-                                        <i class="fas fa-exchange-alt"></i> <span>Transactions</span>
+                                        <i class="fas fa-exchange-alt"></i> Transactions
                                     </button>
                                 </h2>
                                 <div id="collapseTransactions" class="accordion-collapse collapse" aria-labelledby="headingTransactions" data-bs-parent="#accordionSidebar">
@@ -138,32 +55,33 @@
                                             <li><a href="{{ url_for('main.add_transactions') }}">Add Transactions</a></li>
                                             <li><a href="{{ url_for('main.transactions') }}">View Transactions</a></li>
                                             {% if current_user.role == 'Admin' %}
-                                                <li><a href="{{ url_for('admin.remove_transactions') }}">Remove Transactions</a></li>
                                                 <li><a href="{{ url_for('admin.edit_transactions') }}">Edit Transactions</a></li>
+                                                <li><a href="{{ url_for('admin.remove_transactions') }}">Remove Transactions</a></li>
                                             {% endif %}
                                         </ul>
                                     </div>
                                 </div>
-                            </div>                         
+                            </div>
+    
                             <div class="accordion-item">
-                                <h2 class="accordion-header">
-                                    <a class="accordion-button" href="{{ url_for('auth.logout') }}">
-                                        <i class="fas fa-sign-out-alt"></i> <span>Logout</span>
+                                <h2 class="accordion-header" id="logout">
+                                    <a href="{{ url_for('auth.logout') }}" class="accordion-button">
+                                        <i class="fas fa-sign-out-alt"></i> Logout
                                     </a>
                                 </h2>
                             </div>
                         {% else %}
                             <div class="accordion-item">
-                                <h2 class="accordion-header">
-                                    <a class="accordion-button" href="{{ url_for('auth.login') }}">
-                                        <i class="fas fa-sign-in-alt"></i> <span>Login</span>
+                                <h2 class="accordion-header" id="login">
+                                    <a href="{{ url_for('auth.login') }}" class="accordion-button">
+                                        <i class="fas fa-sign-in-alt"></i> Login
                                     </a>
                                 </h2>
                             </div>
                             <div class="accordion-item">
-                                <h2 class="accordion-header">
-                                    <a class="accordion-button" href="{{ url_for('auth.signup') }}">
-                                        <i class="fas fa-user-plus"></i> <span>Sign Up</span>
+                                <h2 class="accordion-header" id="sign-up">
+                                    <a href="{{ url_for('auth.signup') }}" class="accordion-button">
+                                        <i class="fas fa-user-plus"></i> Sign Up
                                     </a>
                                 </h2>
                             </div>
@@ -171,56 +89,28 @@
                     </div>
                 </div>
             </nav>
-
-            <main class="col-md-10 ms-sm-auto px-md-4">
-                <!-- Breadcrumbs -->
-                <nav aria-label="breadcrumb" class="mt-3">
+    
+            <!-- Main content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <nav aria-label="breadcrumb">
                     <ol class="breadcrumb">
                         <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Home</a></li>
-                        {% block breadcrumb %}
-                        {% endblock %}
                     </ol>
                 </nav>
-
+    
                 {% with messages = get_flashed_messages(with_categories=true) %}
                     {% if messages %}
                         {% for category, message in messages %}
-                            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                                {{ message }}
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                            </div>
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
                         {% endfor %}
                     {% endif %}
                 {% endwith %}
-
-                {% block content %}
-                {% endblock %}
+    
+                {% block content %}{% endblock %}
             </main>
         </div>
     </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            var accordionButtons = document.querySelectorAll('.accordion-button');
-            accordionButtons.forEach(function(button) {
-                button.addEventListener('click', function() {
-                    var target = this.getAttribute('data-bs-target');
-                    if (target) {
-                        var content = document.querySelector(target);
-                        if (content) {
-                            if (this.classList.contains('collapsed')) {
-                                this.classList.remove('collapsed');
-                                content.classList.add('show');
-                            } else {
-                                this.classList.add('collapsed');
-                                content.classList.remove('show');
-                            }
-                        }
-                    }
-                });
-            });
-        });
-    </script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
+
 </html>

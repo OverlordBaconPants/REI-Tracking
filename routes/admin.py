@@ -42,75 +42,77 @@ def admin_dashboard():
 def add_properties():
     logging.info("Entering add_properties function")
     
-    # Initialize partners and properties
     partners = []
     properties = []
 
-    # Get existing partners for the dropdown
     try:
-        logging.info(f"Attempting to read properties file: {current_app.config['PROPERTIES_FILE']}")
         with open(current_app.config['PROPERTIES_FILE'], 'r') as f:
             properties = json.load(f)
             logging.info(f"Successfully loaded properties. Number of properties: {len(properties)}")
-            partners = sorted(set(prop['partner'] for prop in properties if prop.get('partner')))
+            partners = sorted(set(partner['name'] for prop in properties for partner in prop.get('partners', [])))
             logging.info(f"Extracted partners: {partners}")
-    except json.JSONDecodeError as e:
-        logging.error(f"JSON decode error when reading properties file: {str(e)}")
-        flash(f'Error reading properties file: {str(e)}', 'danger')
-    except IOError as e:
-        logging.error(f"IO error when accessing properties file: {str(e)}")
-        flash(f'Error accessing properties file: {str(e)}', 'danger')
     except Exception as e:
-        logging.error(f"Unexpected error when processing properties file: {str(e)}")
-        flash(f'An unexpected error occurred: {str(e)}', 'danger')
+        logging.error(f"Error when processing properties file: {str(e)}")
+        flash(f'An error occurred while loading properties: {str(e)}', 'danger')
+        return jsonify({'success': False, 'message': str(e)}), 500
 
     if request.method == 'POST':
         try:
-            # Handle partner selection or new partner addition
-            selected_partner = request.form['partner']
-            if selected_partner == 'new':
-                new_partner = request.form.get('new_partner')
-                if new_partner:
-                    selected_partner = new_partner
-                else:
-                    raise ValueError("New partner name is required when 'Add new partner' is selected.")
+            new_property = request.get_json()
+            logging.info(f"Received property data: {json.dumps(new_property, indent=2)}")
 
-            new_property = {
-                'address': request.form['property_address'],
-                'purchase_price': int(request.form['purchase_price']),
-                'down_payment': int(request.form['down_payment']),
-                'primary_loan_rate': float(request.form['primary_loan_rate']),
-                'primary_loan_term': int(request.form['primary_loan_term']),
-                'purchase_date': request.form['purchase_date'],
-                'loan_start_date': request.form['loan_start_date'],
-                'seller_financing_amount': int(request.form.get('seller_financing_amount') or 0),
-                'seller_financing_rate': float(request.form.get('seller_financing_rate') or 0),
-                'seller_financing_term': float(request.form.get('seller_financing_term') or 0),
-                'closing_costs': int(request.form['closing_costs']),
-                'renovation_costs': int(request.form['renovation_costs']),
-                'marketing_costs': int(request.form['marketing_costs']),
-                'holding_costs': int(request.form['holding_costs']),
-                'partner': selected_partner,
-                'equity_share': float(request.form['equity_share'])
-            }
-            
-            # Logic to save the new_property to the properties file
+            if not new_property:
+                raise ValueError("No data received")
+
+            # Validate the new property data
+            required_fields = ['address', 'purchase_price', 'down_payment', 'primary_loan_rate', 
+                               'primary_loan_term', 'purchase_date', 'loan_start_date', 'partners']
+            for field in required_fields:
+                if field not in new_property or new_property[field] is None:
+                    logging.error(f"Missing or null required field: {field}")
+                    raise ValueError(f"{field} is required and cannot be null")
+
+            # Validate address
+            if not new_property['address'].strip():
+                raise ValueError("Address cannot be empty")
+
+            # Validate partner data
+            partners_data = new_property['partners']
+            if not partners_data:
+                raise ValueError("At least one partner is required")
+
+            for partner in partners_data:
+                if 'name' not in partner or not partner['name'].strip():
+                    raise ValueError("Partner name is required and cannot be empty")
+                if 'equity_share' not in partner or not isinstance(partner['equity_share'], (int, float)):
+                    raise ValueError("Valid equity share is required for each partner")
+
+            total_equity = sum(partner['equity_share'] for partner in partners_data)
+            if abs(total_equity - 100) > 0.01:  # Allow for small floating-point discrepancies
+                raise ValueError(f"Total equity must equal 100%, current total: {total_equity}%")
+
+            # Add the new property
             properties.append(new_property)
+
+            # Save updated properties
             with open(current_app.config['PROPERTIES_FILE'], 'w') as f:
                 json.dump(properties, f, indent=2)
-            
-            logging.info(f"New property added: {new_property['address']} with partner: {selected_partner}")
+
+            logging.info(f"New property added: {new_property['address']}")
             flash('Property added successfully', 'success')
-            return redirect(url_for('admin.add_properties'))
+            return jsonify({'success': True, 'message': 'Property added successfully'})
+
         except ValueError as ve:
             logging.error(f"Validation error: {str(ve)}")
             flash(str(ve), 'danger')
+            return jsonify({'success': False, 'message': str(ve)}), 400
         except Exception as e:
             logging.error(f"Error processing form submission: {str(e)}")
             flash(f'An error occurred while adding the property: {str(e)}', 'danger')
+            return jsonify({'success': False, 'message': f'An error occurred while adding the property: {str(e)}'}), 500
 
-    # If it's a GET request or if there was an error in POST, render the template
-    logging.info(f"Final list of partners to be passed to template: {partners}")
+    # For GET requests, render the template
+    logging.info(f"Rendering add_properties template with partners: {partners}")
     return render_template('admin/add_properties.html', partners=partners)
 
 # Route for removing properties
@@ -118,91 +120,143 @@ def add_properties():
 @login_required
 @admin_required
 def remove_properties():
+    logging.info("Entering remove_properties route")
     properties = []
     try:
         with open(current_app.config['PROPERTIES_FILE'], 'r') as f:
             properties = json.load(f)
     except Exception as e:
         logging.error(f"Error loading properties: {str(e)}")
-        return jsonify({'success': False, 'message': 'Error loading properties.'}), 500
+        flash('Error loading properties.', 'danger')
+        return redirect(url_for('admin.admin_dashboard'))
 
     if request.method == 'POST':
+        logging.info("Processing POST request in remove_properties")
         property_to_remove = request.form.get('property_select')
+        confirm_input = request.form.get('confirm_input')
+
+        logging.info(f"Property to remove: {property_to_remove}")
+        logging.info(f"Confirmation input: {confirm_input}")
 
         if not property_to_remove:
-            return jsonify({'success': False, 'message': 'No property selected for removal.'}), 400
+            logging.warning("No property selected for removal")
+            flash('No property selected for removal.', 'danger')
+            return redirect(url_for('admin.remove_properties'))
+
+        expected_confirm_phrase = "I am sure I want to do this."
+        if confirm_input != expected_confirm_phrase:
+            logging.warning(f"Incorrect confirmation phrase. Expected: {expected_confirm_phrase}, Got: {confirm_input}")
+            flash('Incorrect confirmation phrase. Property not removed.', 'danger')
+            return redirect(url_for('admin.remove_properties'))
 
         try:
             properties = [p for p in properties if p['address'] != property_to_remove]
             with open(current_app.config['PROPERTIES_FILE'], 'w') as f:
                 json.dump(properties, f, indent=2)
-            return jsonify({'success': True, 'message': 'Property Successfully Removed!'})
+            logging.info(f"Property successfully removed: {property_to_remove}")
+            flash('Property Successfully Removed!', 'success')
         except Exception as e:
             logging.error(f"Error removing property: {str(e)}")
-            return jsonify({'success': False, 'message': 'Error removing property.'}), 500
+            flash('Error removing property.', 'danger')
 
+        return redirect(url_for('admin.remove_properties'))
+
+    logging.info(f"Rendering remove_properties template with {len(properties)} properties")
     return render_template('admin/remove_properties.html', properties=properties)
-
 
 # Route for editing properties
 @admin_bp.route('/edit_properties', methods=['GET', 'POST'])
 @login_required
 @admin_required
 def edit_properties():
+    logging.info("Entering edit_properties function")
+    
+    partners = []
+    properties = []
+
+    try:
+        with open(current_app.config['PROPERTIES_FILE'], 'r') as f:
+            properties = json.load(f)
+            partners = sorted(set(partner['name'] for prop in properties for partner in prop.get('partners', [])))
+        logging.info(f"Loaded {len(properties)} properties and {len(partners)} unique partners")
+    except Exception as e:
+        logging.error(f"Error when processing properties file: {str(e)}")
+        flash(f'An error occurred: {str(e)}', 'danger')
+        return redirect(url_for('admin.admin_dashboard'))
+
     if request.method == 'POST':
-        # Handle the form submission for editing a property
-        # This is where you'd process the form data and update the property in the database
-        flash('Property updated successfully', 'success')
-    # Render the template for editing properties
-    return render_template('admin/edit_properties.html')
+        updated_property = request.form.to_dict()
+        address = updated_property.pop('property_select')
+        
+        try:
+            existing_property = next((prop for prop in properties if prop['address'] == address), None)
+            if not existing_property:
+                raise ValueError(f"Property with address '{address}' not found.")
 
-# Loans Management Routes
+            # Update fields
+            for key, value in updated_property.items():
+                if key not in ['partners', 'new_partner']:
+                    if value.strip():
+                        if key in ['purchase_price', 'down_payment', 'primary_loan_term', 'seller_financing_amount', 
+                                   'seller_financing_term', 'closing_costs', 'renovation_costs', 'marketing_costs', 'holding_costs']:
+                            existing_property[key] = int(value)
+                        elif key in ['primary_loan_rate', 'seller_financing_rate']:
+                            existing_property[key] = float(value)
+                        else:
+                            existing_property[key] = value
 
-# Route for viewing all loans
-@admin_bp.route('/loans')
+            # Handle partners
+            partners_data = []
+            for key, value in request.form.items():
+                if key.startswith('partners[') and key.endswith('[name]'):
+                    index = ''.join(char for char in key[8:-6] if char.isdigit())
+                    partner_name = value
+                    equity_share = float(request.form.get(f'partners[{index}][equity_share]', 0))
+                    if partner_name == 'new':
+                        partner_name = request.form.get(f'partners[{index}][new_name]')
+                    if not partner_name or partner_name.strip() == '':
+                        raise ValueError(f"Partner name is required for partner {int(index) + 1}")
+                    partners_data.append({'name': partner_name.strip(), 'equity_share': equity_share})
+
+            total_equity = sum(partner['equity_share'] for partner in partners_data)
+            if abs(total_equity - 100) > 0.01:
+                raise ValueError(f"Total equity must equal 100%, current total: {total_equity}%")
+
+            existing_property['partners'] = partners_data
+
+            # Save updated properties
+            with open(current_app.config['PROPERTIES_FILE'], 'w') as f:
+                json.dump(properties, f, indent=2)
+            
+            logging.info(f"Property updated: {address}")
+            flash('Property updated successfully', 'success')
+        except ValueError as ve:
+            logging.error(f"Validation error: {str(ve)}")
+            flash(str(ve), 'danger')
+        except Exception as e:
+            logging.error(f"Error updating property: {str(e)}")
+            flash(f'An error occurred while updating the property: {str(e)}', 'danger')
+        
+        return redirect(url_for('admin.edit_properties'))
+
+    return render_template('admin/edit_properties.html', properties=properties, partners=partners)
+
+@admin_bp.route('/get_property_details', methods=['GET'])
 @login_required
 @admin_required
-def loans():
-    # Fetch loans data from the database
-    loans = []  # Replace this with actual data fetching logic
-    # Render the template for viewing loans, passing the loans data
-    return render_template('admin/loans.html', loans=loans)
+def get_property_details():
+    address = request.args.get('address')
+    try:
+        with open(current_app.config['PROPERTIES_FILE'], 'r') as f:
+            properties = json.load(f)
+            property_details = next((prop for prop in properties if prop['address'] == address), None)
+            if property_details:
+                return jsonify({'success': True, 'property': property_details})
+            else:
+                return jsonify({'success': False, 'message': 'Property not found'}), 404
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Error fetching property details: {str(e)}'}), 500
 
-# Route for adding new loans
-@admin_bp.route('/add_loans', methods=['GET', 'POST'])
-@login_required
-@admin_required
-def add_loans():
-    if request.method == 'POST':
-        # Handle the form submission for adding a new loan
-        # This is where you'd process the form data and add it to the database
-        flash('Loan added successfully', 'success')
-    # Render the template for adding loans
-    return render_template('admin/add_loans.html')
-
-# Route for removing loans
-@admin_bp.route('/remove_loans', methods=['GET', 'POST'])
-@login_required
-@admin_required
-def remove_loans():
-    if request.method == 'POST':
-        # Handle the form submission for removing a loan
-        # This is where you'd process the request and remove the loan from the database
-        flash('Loan removed successfully', 'success')
-    # Render the template for removing loans
-    return render_template('admin/remove_loans.html')
-
-# Route for editing loans
-@admin_bp.route('/edit_loans', methods=['GET', 'POST'])
-@login_required
-@admin_required
-def edit_loans():
-    if request.method == 'POST':
-        # Handle the form submission for editing a loan
-        # This is where you'd process the form data and update the loan in the database
-        flash('Loan updated successfully', 'success')
-    # Render the template for editing loans
-    return render_template('admin/edit_loans.html')
 
 # Transactions Management Routes
 

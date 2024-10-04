@@ -1,33 +1,110 @@
 {% extends "base.html" %}
-
-{% block title %}Add Transactions{% endblock %}
-
+{% block body_class %}add-transactions-page{% endblock %}
+{% block title %}Add Transaction{% endblock %}
 {% block breadcrumb %}
-<li class="breadcrumb-item active" aria-current="page">Add Transactions</li>
+<li class="breadcrumb-item active">Add Transaction</li>
+{% endblock %}
+{% block head %}
+{{ super() }}
+{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Add Transaction</h2>
+    <form id="add-transaction-form" method="POST" enctype="multipart/form-data">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group mb-3">
+                    <label for="property-select">Select Property:</label>
+                    <select id="property-select" name="property_id" class="form-control" required>
+                        <option value="">Select a property</option>
+                        {% for property in properties %}
+                            <option value="{{ property.address }}" data-partners='{{ property.partners|tojson }}'>{{ property.address }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label>Type:</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="type" id="income-radio" value="income" checked required>
+                        <label class="form-check-label" for="income-radio">Income</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="type" id="expense-radio" value="expense" required>
+                        <label class="form-check-label" for="expense-radio">Expense</label>
+                    </div>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="category-select">Category:</label>
+                    <select id="category-select" name="category" class="form-control" required>
+                        <option value="">Select a category</option>
+                    </select>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="description">Description:</label>
+                    <textarea id="description" name="description" class="form-control" required></textarea>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="form-group mb-3">
+                    <label for="amount">Amount ($):</label>
+                    <input type="number" id="amount" name="amount" class="form-control" step="0.01" required>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="date">Date:</label>
+                    <input type="date" id="date" name="date" class="form-control" required>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="collector_payer">Received by:</label>
+                    <input type="text" id="collector_payer" name="collector_payer" class="form-control" required value="{{ current_user.name }}">
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="documentation_file">Supporting Documentation:</label>
+                    <input type="file" id="documentation_file" name="documentation_file" class="form-control-file">
+                </div>
+            </div>
+        </div>
+
+        <h3 class="mt-4">Manage Reimbursement</h3>
+        <p>This section is optional for recording a transaction. If you haven't finished this, don't worry. You can go back to this transaction later to complete it.</p>
+
+        <div id="reimbursement-section" class="mt-4 border p-3">
+            <h4>Reimbursement Information:</h4>
+            <div id="reimbursement-details"></div>
+        </div>
+
+        <div class="row mt-3">
+            <div class="col-md-6">
+                <div class="form-group mb-3">
+                    <label for="date_shared">Date Amount Shared:</label>
+                    <input type="date" id="date_shared" name="date_shared" class="form-control">
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group mb-3">
+                    <label for="share_description">Description:</label>
+                    <textarea id="share_description" name="share_description" class="form-control"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-3">
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">Add Transaction</button>
+                <a href="{{ url_for('main.transactions') }}" class="btn btn-secondary">Cancel Transaction</a>
+            </div>
+        </div>
+    </form>
+</div>
 {% endblock %}
 
-{% block content %}
-<h1>Add Transactions</h1>
-<form method="POST" action="{{ url_for('main.add_transactions') }}">
-    <div class="mb-3">
-        <label for="transaction_type" class="form-label">Transaction Type</label>
-        <select class="form-select" id="transaction_type" name="transaction_type" required>
-            <option value="income">Income</option>
-            <option value="expense">Expense</option>
-        </select>
-    </div>
-    <div class="mb-3">
-        <label for="amount" class="form-label">Amount</label>
-        <input type="number" step="0.01" class="form-control" id="amount" name="amount" required>
-    </div>
-    <div class="mb-3">
-        <label for="description" class="form-label">Description</label>
-        <input type="text" class="form-control" id="description" name="description" required>
-    </div>
-    <div class="mb-3">
-        <label for="date" class="form-label">Date</label>
-        <input type="date" class="form-control" id="date" name="date" required>
-    </div>
-    <button type="submit" class="btn btn-primary">Add Transaction</button>
-</form>
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/add_transactions.js') }}"></script>
 {% endblock %}

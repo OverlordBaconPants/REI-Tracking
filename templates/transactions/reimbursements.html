@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Reimbursements{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active" aria-current="page">Manage Reimbursements</li>
+{% endblock %}
+
+{% block head %}
+{{ super() }}
+{% endblock %}
+{% block content %}
+<table class="table">
+    <thead>
+        <tr>
+            <th>Property</th>
+            <th>Transaction Type</th>
+            <th>Amount</th>
+            <th>Date</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for transaction in transactions %}
+        <tr>
+            <td>{{ transaction.property_id }}</td>
+            <td>{{ transaction.type }}</td>
+            <td>{{ transaction.amount }}</td>
+            <td>{{ transaction.date }}</td>
+            <td>
+                <form action="{{ url_for('transactions.resolve_reimbursement_route', transaction_id=transaction.id) }}" method="post">
+                    <input type="text" name="comment" placeholder="Enter comment" required>
+                    <button type="submit" class="btn btn-primary">Resolve</button>
+                </form>
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

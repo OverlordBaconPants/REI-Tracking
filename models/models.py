@@ -18,7 +18,13 @@ class User(UserMixin):
         users = load_users()
         user_data = users.get(user_id)
         if user_data:
-            return User(user_data['email'], user_data['name'], user_data['password'], user_data['role'])
+            return User(
+                id=user_data['email'],
+                email=user_data['email'],
+                name=user_data['name'],
+                password=user_data['password'],
+                role=user_data.get('role', 'User')
+        )
         return None
 
     @property
