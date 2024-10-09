@@ -1,142 +1,214 @@
-<style>
-        body {
-            overflow-x: hidden;
-        }
-    
-        .new-partner-name {
-            margin-top: 10px;
-        }
-        
-        .remove-partner {
-            margin-top: 32px;
-        }
+body {
+    overflow-x: hidden;
+}
 
-        .sidebar {
-            position: fixed;
-            top: 0;
-            bottom: 0;
-            left: 0;
-            z-index: 100;
-            padding: 48px 0 0;
-            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
-            background-color: navy;
-            width: 250px;
-        }
+.new-partner-name {
+    margin-top: 10px;
+}
 
-        .sidebar .accordion-button {
-            color: white !important;
-            background-color: navy;
-            font-weight: bold;
-            padding: 10px 15px;
-            transition: background-color 0.3s ease;
-        }
+.remove-partner {
+    margin-top: 32px;
+}
 
-        .sidebar .accordion-button:not(.collapsed) {
-            background-color: #f8f9fa;
-            color: navy !important;
-        }
+.sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 100;
+    padding: 48px 0 0;
+    box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+    background-color: navy;
+    width: 250px;
+}
 
-        .sidebar .accordion-button:hover {
-            background-color: #f8f9fa;
-            color: navy !important;
-        }
+.sidebar .accordion-button {
+    color: white !important;
+    background-color: navy;
+    font-weight: bold;
+    padding: 10px 15px;
+    transition: background-color 0.3s ease;
+}
 
-        .sidebar .accordion-body {
-            background-color: #1a1a4d;
-            border: none;
-        }
+.sidebar .accordion-button:not(.collapsed) {
+    background-color: #f8f9fa;
+    color: navy !important;
+}
 
-        .sidebar .accordion-body ul {
-            list-style-type: none;
-            padding-left: 0;
-        }
+.sidebar .accordion-button:hover {
+    background-color: #f8f9fa;
+    color: navy !important;
+}
 
-        .sidebar .accordion-body a {
-            color: #d1d1e0 !important;
-            text-decoration: none;
-            display: block;
-            padding: 5px 0;
-        }
+.sidebar .accordion-body {
+    background-color: #1a1a4d;
+    border: none;
+}
 
-        .sidebar .accordion-body a:hover {
-            color: white !important;
-        }
+.sidebar .accordion-body ul {
+    list-style-type: none;
+    padding-left: 0;
+}
 
-        .sidebar .accordion-button i {
-            margin-right: 10px;
-            width: 20px;
-            text-align: center;
-        }
+.sidebar .accordion-body a {
+    color: #d1d1e0 !important;
+    text-decoration: none;
+    display: block;
+    padding: 5px 0;
+}
 
-        main {
-            margin-left: 250px;
-            padding: 20px;
-        }
+.sidebar .accordion-body a:hover {
+    color: white !important;
+}
 
-        .form-group, .btn {
-            margin: 10px 0;
-        }
+.sidebar .accordion-button i {
+    margin-right: 10px;
+    width: 20px;
+    text-align: center;
+}
 
-        .alert-success {
-            background-color: #d4edda;
-            border-color: #c3e6cb;
-            color: #155724;
-        }
+main {
+    margin-left: 250px;
+    padding: 20px;
+}
 
-        .alert-danger {
-            background-color: #f8d7da;
-            border-color: #f5c6cb;
-            color: #721c24;
-        }
+.form-group, .btn {
+    margin: 10px 0;
+}
 
-        .breadcrumb-item + .breadcrumb-item::before {
-            content: ">";
-        }
+.alert-success {
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+    color: #155724;
+}
 
-        .autocomplete-container {
-            position: relative;
-        }
-        
-        .autocomplete-results {
-            position: absolute;
-            z-index: 1000;
-            width: 100%;
-            max-height: 200px;
-            overflow-y: auto;
-            list-style-type: none;
-            padding: 0;
-            margin: 0;
-            border: 1px solid #ced4da;
-            border-top: none;
-            background-color: white;
-        }
-        
-        .autocomplete-results li {
-            padding: 10px;
-            cursor: pointer;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        
-        .autocomplete-results li:hover {
-            background-color: #f8f9fa;
-        }
-        
-        .remove-properties-select {
-            margin-bottom: 1rem;
-        }
-        
-        .remove-properties-confirm {
-            margin-bottom: 1rem;
-        }
-        
-        .remove-properties-warning {
-            font-weight: bold;
-            margin-bottom: 1rem;
-        }
-        
-        .remove-properties-button {
-            width: 100%;
-        }
-    </style>
+.alert-danger {
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+    color: #721c24;
+}
+
+.autocomplete-container {
+    position: relative;
+}
+
+.autocomplete-results {
+    position: absolute;
+    z-index: 1000;
+    width: 100%;
+    max-height: 200px;
+    overflow-y: auto;
+    list-style-type: none;  /* This removes the bullets */
+    padding: 0;
+    margin: 0;
+    border: 1px solid #ced4da;
+    border-top: none;
+    background-color: white;
+}
+
+.autocomplete-results li {
+    padding: 10px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: background-color 0.2s ease;  /* Smooth transition for hover effect */
+}
+
+.autocomplete-results li:hover {
+    background-color: #f0f0f0;  /* Light grey background on hover */
+    color: #333;  /* Darker text color for better contrast */
+}
+
+.remove-properties-select {
+    margin-bottom: 1rem;
+}
+
+.remove-properties-confirm {
+    margin-bottom: 1rem;
+}
+
+.remove-properties-warning {
+    font-weight: bold;
+    margin-bottom: 1rem;
+}
+
+.remove-properties-button {
+    width: 100%;
+}
+
+/* Styles for edit properties page */
+.partner-entry .row {
+    margin-bottom: 15px;
+}
+
+.partner-entry .form-group {
+    margin-bottom: 0;
+}
+
+.partner-entry .btn-danger {
+    height: 38px; /* Match the height of the input fields */
+}
+
+/* Adjust the vertical alignment of the remove button */
+.partner-entry .col-md-2 {
+    display: flex;
+    align-items: flex-end;
+}
+
+/* Add some spacing between partner entries */
+.partner-entry + .partner-entry {
+    margin-top: 15px;
+}
+
+.dash-dropdown {
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.filter-section {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.form-group {
+    flex: 1;
+    min-width: 200px;
+}
+
+#transactions-header {
+    margin-top: 30px;
+    margin-bottom: 15px;
+}
+
+/* Styles for Dash table header */
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th {
+    background-color: navy !important;
+    color: white !important;
+    font-weight: bold !important;
+    height: 40px !important;
+    line-height: 40px !important;
+    padding: 0 10px !important;
+    text-overflow: ellipsis !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+}
+
+/* Ensure the sort arrow in the header is visible */
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th .dash-header-cell-value {
+    color: white !important;
+}
+
+/* Style for the sort arrow */
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th .dash-sort {
+    color: white !important;
+    opacity: 0.7;
+}
+
+/* Hover effect for header cells */
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th:hover {
+    background-color: #000080 !important; /* Slightly darker shade of navy for hover effect */
+}
+
+ 

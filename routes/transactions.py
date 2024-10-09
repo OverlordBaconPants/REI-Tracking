@@ -1,54 +1,87 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, send_from_directory
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, send_from_directory, jsonify, send_from_directory
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
-from services.transaction_service import add_transaction, get_transactions_for_user, get_unresolved_transactions, resolve_reimbursement, get_properties_for_user
+from services.transaction_service import add_transaction, get_transactions_for_user, is_duplicate_transaction, get_properties_for_user
+from utils.utils import admin_required
 import os
 import logging
+import json
+import uuid
+import traceback
 
 transactions_bp = Blueprint('transactions', __name__)
 
+@transactions_bp.route('/')
+@login_required
+def transactions_list():
+    return render_template('transactions/transactions_list.html')
+
 @transactions_bp.route('/add', methods=['GET', 'POST'])
 @login_required
-def add_transaction():
-    logging.debug("Entering add_transaction route")
+def add_transactions():
     logging.info(f"Add transaction route accessed by user: {current_user.name} (ID: {current_user.id})")
-    logging.info(f"User role: {current_user.role}")
+    logging.debug(f"Request headers: {request.headers}")
+    logging.debug(f"Request body: {request.data}")
 
-    is_admin = current_user.role == 'Admin'
-    properties = get_properties_for_user(current_user.id, current_user.name, is_admin)
-    logging.info(f"Properties fetched for user: {len(properties)}")
+    properties = get_properties_for_user(current_user.id, current_user.name)
+    properties = get_properties_for_user(current_user.id, current_user.name)
+    
+    # Log properties data
+    for prop in properties:
+        logging.info(f"Property: {prop.get('address')}, Partners: {prop.get('partners')}")
 
     if request.method == 'POST':
         logging.info("Processing POST request for add_transaction")
-        transaction_data = {
-            'property_id': request.form['property_id'],
-            'type': request.form['type'],
-            'category': request.form['category'],
-            'description': request.form['description'],
-            'amount': float(request.form['amount']),
-            'date': request.form['date'],
-            'collector_payer': request.form['collector_payer'],
-            'reimbursement': {
-                'date_shared': request.form.get('date_shared'),
-                'description': request.form.get('share_description')
+        try:
+            # Get form data
+            transaction_data = {
+                'property_id': request.form.get('property_id'),
+                'type': request.form.get('type'),
+                'category': request.form.get('category'),
+                'description': request.form.get('description'),
+                'amount': float(request.form.get('amount')),
+                'date': request.form.get('date'),
+                'collector_payer': request.form.get('collector_payer'),
+                'reimbursement': {
+                    'date_shared': request.form.get('date_shared'),
+                    'share_description': request.form.get('share_description'),
+                    'reimbursement_status': request.form.get('reimbursement_status')
+                }
             }
-        }
-        
-        if 'documentation_file' in request.files:
-            file = request.files['documentation_file']
-            if file and allowed_file(file.filename):
-                filename = secure_filename(file.filename)
-                file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
-                transaction_data['documentation_file'] = filename
 
-        add_transaction(transaction_data)
-        flash('Transaction added successfully', 'success')
-        return redirect(url_for('main.transactions'))
-    
-    else:
-        logging.info("Processing GET request for add_transaction")
-        return render_template('main/add_transactions.html', properties=properties)
-        
+            # Handle file upload
+            if 'documentation_file' in request.files:
+                file = request.files['documentation_file']
+                if file and allowed_file(file.filename):
+                    filename = secure_filename(file.filename)
+                    file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                    file.save(file_path)
+                    transaction_data['documentation_file'] = filename
+                else:
+                    flash('Invalid file type. Allowed types are: ' + ', '.join(current_app.config['ALLOWED_EXTENSIONS']), 'error')
+                    return jsonify({'success': False, 'message': 'Invalid file type.'}), 400
+
+            logging.debug(f"Received transaction data: {json.dumps(transaction_data, indent=2)}")
+
+            # Check for duplicate transaction
+            if is_duplicate_transaction(transaction_data):
+                flash("This transaction appears to be a duplicate and was not added.", "warning")
+                return jsonify({'success': False, 'message': "This transaction appears to be a duplicate and was not added."}), 400
+
+            # Process the transaction data
+            add_transaction(transaction_data)
+            
+            flash('Transaction added successfully!', 'success')
+            return jsonify({'success': True, 'message': 'Transaction added successfully'})
+        except Exception as e:
+            logging.error(f"Error adding transaction: {str(e)}")
+            flash(f"Error adding transaction: {str(e)}", "error")
+            return jsonify({'success': False, 'message': str(e)}), 400
+
+    # For GET requests, render the template
+    properties = get_properties_for_user(current_user.id, current_user.name)
+    return render_template('transactions/add_transactions.html', properties=properties)
+
 @transactions_bp.route('/reimbursements')
 @login_required
 def reimbursements():
@@ -77,7 +110,46 @@ def uploaded_file(filename):
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in current_app.config['ALLOWED_EXTENSIONS']
+    logging.info("transactions.py blueprint loaded")
 
-# You might want to add more routes here for other transaction-related functionalities
+@transactions_bp.route('/edit', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def edit_transactions():
+    if request.method == 'POST':
+        # Handle the form submission for editing a transaction
+        # This is where you'd process the form data and update the transaction in the database
+        flash('Transaction updated successfully', 'success')
+    # Render the template for editing transactions
+    return render_template('transactions/edit_transactions.html')
 
-logging.info("transactions.py blueprint loaded")
+@transactions_bp.route('/remove', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def remove_transactions():
+    if request.method == 'POST':
+        # Handle the form submission for removing a transaction
+        # This is where you'd process the request and remove the transaction from the database
+        flash('Transaction removed successfully', 'success')
+    # Render the template for removing transactions
+    return render_template('transaction/remove_transactions.html')
+
+@transactions_bp.route('/view/')
+@login_required
+def view_transactions():
+    try:
+        current_app.logger.info(f"View transactions accessed by user: {current_user.id}")
+        return render_template('transactions/view_transactions.html')
+    except Exception as e:
+        current_app.logger.error(f"Error in view_transactions: {str(e)}")
+        flash(f"An error occurred while loading the transactions view: {str(e)}", "error")
+        return redirect(url_for('main.index'))
+
+@transactions_bp.route('/test')
+def test_route():
+    return "Transactions blueprint is working!"
+
+@transactions_bp.route('/artifact/<path:filename>')
+@login_required
+def get_artifact(filename):
+    return send_from_directory(current_app.config['UPLOAD_FOLDER'], filename)

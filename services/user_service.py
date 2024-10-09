@@ -1,5 +1,6 @@
 # /services/user_services.py
 
+
 import json
 import logging
 from flask import current_app
@@ -38,7 +39,7 @@ def get_user_by_email(email):
 def create_user(email, name, password, role='User'):
     users = load_users()
     if email not in users:
-        hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
+        hashed_password = hash_password(password)
         users[email] = {
             'name': name,
             'email': email,
@@ -51,18 +52,18 @@ def create_user(email, name, password, role='User'):
     logger.warning(f"Attempt to create existing user: {email}")
     return False
 
-def check_password(stored_password, provided_password):
-    logger.debug(f"Stored hashed password: {stored_password}")
-    logger.debug(f"Provided password (not hashed): {provided_password}")
+def hash_password(password):
+    return generate_password_hash(password, method='pbkdf2:sha256')
+
+def verify_password(stored_password, provided_password):
     result = check_password_hash(stored_password, provided_password)
-    logger.debug(f"Password check result: {result}")
+    logger.debug(f"Password verification result: {result}")
     return result
 
 def update_user_password(email, new_password):
     users = load_users()
     if email in users:
-        hashed_password = generate_password_hash(new_password, method='pbkdf2:sha256')
-        logger.debug(f"New hashed password for {email}: {hashed_password}")
+        hashed_password = hash_password(new_password)
         users[email]['password'] = hashed_password
         save_users(users)
         logger.info(f"Password updated for user: {email}")

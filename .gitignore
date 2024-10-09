@@ -4,3 +4,8 @@ __pycache__
 config.py
 uploads/*
 !uploads/.gitkeep
+bin/*
+tree.txt
+app.log
+share/*
+share/jupyter/*

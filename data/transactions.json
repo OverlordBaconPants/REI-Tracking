@@ -1,1 +1,178 @@
-[]
+[
+  {
+    "property_id": "2212 Logan Street, Harrisburg, PA 17102, United States of America, Harrisburg, Pennsylvania, 17102",
+    "type": "income",
+    "category": "Rent",
+    "description": "Section 8 Allotment",
+    "amount": 1900.0,
+    "date": "2024-10-01",
+    "collector_payer": "BJ Marshall",
+    "reimbursement": {
+      "date_shared": "",
+      "share_description": "",
+      "reimbursement_status": "pending"
+    },
+    "documentation_file": "2024.10.01_Logan_Rent.png",
+    "id": "1"
+  },
+  {
+    "property_id": "164 Dunrobin Drive, Martinsburg, WV 25404, United States of America, Martinsburg, West Virginia, 25404",
+    "type": "income",
+    "category": "Rent",
+    "description": "Rent Prior to Wrap Sale",
+    "amount": 1625.0,
+    "date": "2024-07-05",
+    "collector_payer": "BJ Marshall",
+    "reimbursement": {
+      "date_shared": "2024-07-23",
+      "share_description": "Rebalanced through Partnership",
+      "reimbursement_status": "completed"
+    },
+    "documentation_file": "2024.07-08_Dunrobin_Mortgage_Payments.png",
+    "id": "2"
+  },
+  {
+    "property_id": "164 Dunrobin Drive, Martinsburg, WV 25404, United States of America, Martinsburg, West Virginia, 25404",
+    "type": "income",
+    "category": "Rent",
+    "description": "Rent Prior to Wrap Sale",
+    "amount": 1625.0,
+    "date": "2024-08-01",
+    "collector_payer": "BJ Marshall",
+    "reimbursement": {
+      "date_shared": "",
+      "share_description": "Pending Consolidated Adjudication",
+      "reimbursement_status": "pending"
+    },
+    "documentation_file": "2024.07-08_Dunrobin_Mortgage_Payments.png",
+    "id": "3"
+  },
+  {
+    "property_id": "2212 Logan Street, Harrisburg, PA 17102, United States of America, Harrisburg, Pennsylvania, 17102",
+    "type": "expense",
+    "category": "Utilities",
+    "description": "Water Bill",
+    "amount": 83.64,
+    "date": "2024-10-02",
+    "collector_payer": "BJ Marshall",
+    "reimbursement": {
+      "date_shared": "",
+      "share_description": "",
+      "reimbursement_status": "pending"
+    },
+    "documentation_file": "2024.09.28_Logan_Water.jpg",
+    "id": "4"
+  },
+  {
+    "property_id": "2212 Logan Street, Harrisburg, PA 17102, United States of America, Harrisburg, Pennsylvania, 17102",
+    "type": "income",
+    "category": "Rent",
+    "description": "Section 8 Allotment",
+    "amount": 1400.0,
+    "date": "2024-09-01",
+    "collector_payer": "BJ Marshall",
+    "reimbursement": {
+      "date_shared": "2024-09-10",
+      "share_description": "Sent via Zelle",
+      "reimbursement_status": "completed"
+    },
+    "documentation_file": "2024.09.03_Logan_Rent_Payment.PNG",
+    "id": "5"
+  },
+  {
+    "property_id": "2212 Logan Street, Harrisburg, PA 17102, United States of America, Harrisburg, Pennsylvania, 17102",
+    "type": "expense",
+    "category": "Mortgage",
+    "description": "2024.10 PennyMac",
+    "amount": 830.2,
+    "date": "2024-09-30",
+    "collector_payer": "BJ Marshall",
+    "reimbursement": {
+      "date_shared": "2024-10-02",
+      "share_description": "Sent via Zelle",
+      "reimbursement_status": "completed"
+    },
+    "documentation_file": "2024.10.01_Logan_Mortgage_Payment.png",
+    "id": "6"
+  },
+  {
+    "property_id": "164 Dunrobin Drive, Martinsburg, WV 25404, United States of America, Martinsburg, West Virginia, 25404",
+    "type": "expense",
+    "category": "Association Dues",
+    "description": "HOA",
+    "amount": 47.47,
+    "date": "2024-07-01",
+    "collector_payer": "BJ Marshall",
+    "reimbursement": {
+      "date_shared": "2024-07-23",
+      "share_description": "Rebalanced through Partnership",
+      "reimbursement_status": "completed"
+    },
+    "documentation_file": "2024.07.01_Dunrobin_HOA.png",
+    "id": "7"
+  },
+  {
+    "property_id": "164 Dunrobin Drive, Martinsburg, WV 25404, United States of America, Martinsburg, West Virginia, 25404",
+    "type": "expense",
+    "category": "Mortgage",
+    "description": "2024.07 M&T Payment",
+    "amount": 1294.66,
+    "date": "2024-07-01",
+    "collector_payer": "BJ Marshall",
+    "reimbursement": {
+      "date_shared": "",
+      "share_description": "",
+      "reimbursement_status": "pending"
+    },
+    "documentation_file": "2024.07_Dunrobin_Mortgage_Statement.pdf",
+    "id": "8"
+  },
+  {
+    "property_id": "454 Guilford Avenue, Hagerstown, MD 21740, United States of America, Hagerstown, Maryland, 21740",
+    "type": "income",
+    "category": "Rent",
+    "description": "2024.09 Rent",
+    "amount": 1900.0,
+    "date": "2024-09-05",
+    "collector_payer": "BJ Marshall",
+    "reimbursement": {
+      "date_shared": "2024-09-05",
+      "share_description": "Sent via Zelle",
+      "reimbursement_status": "completed"
+    },
+    "documentation_file": "2024.09.05_Guilford_Rent.PNG",
+    "id": "9"
+  },
+  {
+    "property_id": "454 Guilford Avenue, Hagerstown, MD 21740, United States of America, Hagerstown, Maryland, 21740",
+    "type": "income",
+    "category": "Rent",
+    "description": "2024.10 Rent",
+    "amount": 1900.0,
+    "date": "2024-10-03",
+    "collector_payer": "BJ Marshall",
+    "reimbursement": {
+      "date_shared": "",
+      "share_description": "",
+      "reimbursement_status": "pending"
+    },
+    "documentation_file": "2024.10.05_Guilford_Rent.PNG",
+    "id": "10"
+  },
+  {
+    "property_id": "164 Dunrobin Drive, Martinsburg, WV 25404, United States of America, Martinsburg, West Virginia, 25404",
+    "type": "expense",
+    "category": "Mortgage",
+    "description": "test test test test ",
+    "amount": 4000.0,
+    "date": "2024-10-10",
+    "collector_payer": "BJ Marshall",
+    "reimbursement": {
+      "date_shared": "2024-10-10",
+      "share_description": "Received via Zelle",
+      "reimbursement_status": "completed"
+    },
+    "documentation_file": "2024.10.05_Guilford_Rent.PNG",
+    "id": "11"
+  }
+]

@@ -3,14 +3,45 @@
 
 {% block title %}Profile{% endblock %}
 
-{% block breadcrumb %}
-<li class="breadcrumb-item active" aria-current="page">Main</li>
-{% endblock %}
-
 {% block content %}
 <h1>Welcome, {{ name }}!</h1>
 <p>This is the main page that's only accessible to logged-in users.</p>
 <p>To add income or expense transaction information, use the Transactions menu.</p>
-<p>To view information about properties, loans, and transactions for properties you are involved in, use the Dashboard menu.</p>
+<p>To view information transactions for properties you are involved in, use the View Transactions menu.</p>
+<p>To view information property information like Key Performance Indicators and Amortization Schedules and Charts for properties you are involved in, use the Dashboards menu.</p>
+
+<h1>Version History</h1>
+<li>2024.10.09: View Transactions: Implemented Filters, Restricted Property View based on Partnerships, View/Download Content</li>
+<li>2024.10.07: Add Transactions Show Reimbursement Status</li>
+<li>2024.10.03: Admin-Only: Improved Edit Properties to Prepopulate with Data.</li>
+<li>2024.10.02: Admin-Only: Remove Properties (Dangerous!) and Improved Add Property</li>
+<li>2024.09.30: Refactored Codebase for Modularity and Ease of Maintenance (for MVP, at least)</li> 
+<li>2024.09.28: Finalized Login, Logout, Signup, and Forgot Passsword Flows</li>
+<p></p>
+
+<h3>📝 Description</h3>
+
+<p>This project is a Flask- and eventually Dash-based Python web application that allows partners to track and adjudicate incomes and expenses (per equity splits) and create and access useful reports tracking Key Performance Indicators such as CoC Return, net monthly cash flow, and amortization schedules.</p>
+
+<h4>✨ Features</h4>
+
+<li> 🔑 User Authentication (Login/Logout)</li>
+<li> 📝 User Registration</li>
+<li> 🔄 Password Reset</li>
+<li> 🚀 Bootstrap-based Responsive Design</li>
+<li> 💰 Income and Expense Tracking</li>
+<li> 📊 KPI Reporting (CoC Return, Net Monthly Cash Flow, Amortization Schedules)</li>
+<li> 👥 Partner Equity Split Management</li>
+<p></p>
+
+<h4> 🛠️ Technologies Used</h4>
+
+<li>Flask</li>
+<li>Dash</li>
+<li>Flask-Login</li>
+<li>Bootstrap (Spacelab theme)</li>
+<li>Jinja2 Templates</li>
+
+
 <!-- Add more content here as needed -->
 {% endblock %}

@@ -1,14 +1,9 @@
 # routes/auth.py
 
-# Keep authentication-related routes (Login, Logout, Signup, Forgot Password).
-
-# routes/auth.py
-
 from flask import Blueprint, render_template, redirect, url_for, request, flash
 from flask_login import login_user, login_required, logout_user, current_user
-from werkzeug.security import generate_password_hash, check_password_hash
 from models import User
-from services.user_service import get_user_by_email, create_user, check_password, update_user_password
+from services.user_service import get_user_by_email, create_user, update_user_password, hash_password, verify_password
 import logging
 
 auth_bp = Blueprint('auth', __name__)
@@ -29,10 +24,7 @@ def signup():
             flash('Email address already exists', 'danger')
             return redirect(url_for('auth.signup'))
         
-        hashed_password = generate_password_hash(password, method='sha256')
-        new_user = create_user(email, name, hashed_password)
-        
-        if new_user:
+        if create_user(email, name, password):
             flash('Account created successfully. Please log in.', 'success')
             return redirect(url_for('auth.login'))
         else:
@@ -52,11 +44,8 @@ def login():
         logger.debug(f"Login attempt for email: {email}")
         
         user_data = get_user_by_email(email)
-        if not user_data:
-            logger.warning(f"User not found: {email}")
-            flash('Email not found. Please check your login details and try again.', 'danger')
-        elif not check_password_hash(user_data['password'], password):
-            logger.warning(f"Invalid password for user: {email}")
+        if not user_data or not verify_password(user_data['password'], password):
+            logger.warning(f"Invalid login attempt for user: {email}")
             flash('Please check your login details and try again.', 'danger')
         else:
             logger.debug(f"User found: {user_data}")
@@ -114,8 +103,7 @@ def forgot_password():
             return redirect(url_for('auth.forgot_password'))
 
         # If all checks pass, update the user's password
-        hashed_password = generate_password_hash(password, method='sha256')
-        if update_user_password(email, hashed_password):
+        if update_user_password(email, password):
             logger.info(f"Password successfully reset for user: {email}")
             flash('Your password has been successfully reset. Please log in with your new password.', 'success')
             return redirect(url_for('auth.login'))

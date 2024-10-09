@@ -3,10 +3,6 @@
 
 {% block title %}Login{% endblock %}
 
-{% block breadcrumb %}
-<li class="breadcrumb-item active" aria-current="page">Login</li>
-{% endblock %}
-
 {% block content %}
 <h2>Login</h2>
 <form method="POST" action="{{ url_for('auth.login') }}">

@@ -5,10 +5,10 @@
     "down_payment": 10000,
     "primary_loan_rate": 5.73,
     "primary_loan_term": 360,
-    "purchase_date": "2024-05-14",
+    "purchase_date": null,
     "loan_start_date": "2023-06-01",
     "seller_financing_amount": 40000,
-    "seller_financing_rate": 0.0,
+    "seller_financing_rate": 0,
     "seller_financing_term": 120,
     "closing_costs": 5800,
     "renovation_costs": 24435,
@@ -17,11 +17,11 @@
     "partners": [
       {
         "name": "BJ Marshall",
-        "equity_share": 50.0
+        "equity_share": 50
       },
       {
         "name": "Brian Poole",
-        "equity_share": 50.0
+        "equity_share": 50
       }
     ]
   },
