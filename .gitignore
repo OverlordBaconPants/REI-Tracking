@@ -9,3 +9,9 @@ tree.txt
 app.log
 share/*
 share/jupyter/*
+etc/*
+data/*
+lib/*
+lib64
+pyvenv.config
+tree.txt
