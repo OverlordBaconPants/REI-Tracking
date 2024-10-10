@@ -20,19 +20,30 @@ def transactions_list():
 @login_required
 def add_transactions():
     logging.info(f"Add transaction route accessed by user: {current_user.name} (ID: {current_user.id})")
-    logging.debug(f"Request headers: {request.headers}")
-    logging.debug(f"Request body: {request.data}")
 
-    properties = get_properties_for_user(current_user.id, current_user.name)
     properties = get_properties_for_user(current_user.id, current_user.name)
     
-    # Log properties data
-    for prop in properties:
-        logging.info(f"Property: {prop.get('address')}, Partners: {prop.get('partners')}")
-
     if request.method == 'POST':
         logging.info("Processing POST request for add_transaction")
         try:
+            # Check if a file is present in the request
+            if 'documentation_file' not in request.files:
+                flash('No file provided. Please attach supporting documentation.', 'error')
+                return redirect(url_for('transactions.add_transactions'))
+            
+            file = request.files['documentation_file']
+            if file.filename == '':
+                flash('No file selected. Please attach supporting documentation.', 'error')
+                return redirect(url_for('transactions.add_transactions'))
+
+            if file and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                file.save(file_path)
+            else:
+                flash('Invalid file type. Allowed types are: ' + ', '.join(current_app.config['ALLOWED_EXTENSIONS']), 'error')
+                return redirect(url_for('transactions.add_transactions'))
+
             # Get form data
             transaction_data = {
                 'property_id': request.form.get('property_id'),
@@ -42,6 +53,7 @@ def add_transactions():
                 'amount': float(request.form.get('amount')),
                 'date': request.form.get('date'),
                 'collector_payer': request.form.get('collector_payer'),
+                'documentation_file': filename,
                 'reimbursement': {
                     'date_shared': request.form.get('date_shared'),
                     'share_description': request.form.get('share_description'),
@@ -49,57 +61,23 @@ def add_transactions():
                 }
             }
 
-            # Handle file upload
-            if 'documentation_file' in request.files:
-                file = request.files['documentation_file']
-                if file and allowed_file(file.filename):
-                    filename = secure_filename(file.filename)
-                    file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
-                    file.save(file_path)
-                    transaction_data['documentation_file'] = filename
-                else:
-                    flash('Invalid file type. Allowed types are: ' + ', '.join(current_app.config['ALLOWED_EXTENSIONS']), 'error')
-                    return jsonify({'success': False, 'message': 'Invalid file type.'}), 400
-
-            logging.debug(f"Received transaction data: {json.dumps(transaction_data, indent=2)}")
-
             # Check for duplicate transaction
             if is_duplicate_transaction(transaction_data):
                 flash("This transaction appears to be a duplicate and was not added.", "warning")
-                return jsonify({'success': False, 'message': "This transaction appears to be a duplicate and was not added."}), 400
+                return redirect(url_for('transactions.add_transactions'))
 
             # Process the transaction data
             add_transaction(transaction_data)
             
             flash('Transaction added successfully!', 'success')
-            return jsonify({'success': True, 'message': 'Transaction added successfully'})
+            return redirect(url_for('transactions.add_transactions'))
         except Exception as e:
             logging.error(f"Error adding transaction: {str(e)}")
             flash(f"Error adding transaction: {str(e)}", "error")
-            return jsonify({'success': False, 'message': str(e)}), 400
+            return redirect(url_for('transactions.add_transactions'))
 
     # For GET requests, render the template
-    properties = get_properties_for_user(current_user.id, current_user.name)
     return render_template('transactions/add_transactions.html', properties=properties)
-
-@transactions_bp.route('/reimbursements')
-@login_required
-def reimbursements():
-    logging.info(f"Reimbursements route accessed by user: {current_user.id}")
-    unresolved_transactions = get_unresolved_transactions()
-    logging.info(f"Number of unresolved transactions: {len(unresolved_transactions)}")
-    return render_template('transactions/reimbursements.html', transactions=unresolved_transactions)
-
-@transactions_bp.route('/resolve_reimbursement/<transaction_id>', methods=['POST'])
-@login_required
-def resolve_reimbursement_route(transaction_id):
-    logging.info(f"Resolve reimbursement route accessed by user: {current_user.id} for transaction: {transaction_id}")
-    comment = request.form.get('comment')
-    if resolve_reimbursement(transaction_id, comment):
-        flash('Reimbursement resolved successfully', 'success')
-    else:
-        flash('Failed to resolve reimbursement', 'error')
-    return redirect(url_for('transactions.reimbursements'))
 
 @transactions_bp.route('/uploads/<filename>')
 @login_required

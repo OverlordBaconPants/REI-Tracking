@@ -195,6 +195,7 @@ const addPropertiesModule = {
             primary_loan_rate: parseFloat(formData.get('primary_loan_rate')),
             primary_loan_term: parseInt(formData.get('primary_loan_term')),
             purchase_date: formData.get('purchase_date'),
+            loan_amount: formData.get('loan_amount'),
             loan_start_date: formData.get('loan_start_date'),
             seller_financing_amount: parseInt(formData.get('seller_financing_amount') || '0'),
             seller_financing_rate: parseFloat(formData.get('seller_financing_rate') || '0'),

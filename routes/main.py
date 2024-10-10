@@ -18,8 +18,3 @@ def main():
 @login_required
 def properties():
     return render_template('main/properties.html')
-
-@main_bp.route('/dashboards')
-@login_required
-def dashboards():
-    return render_template('main/dashboards.html')

@@ -224,11 +224,52 @@ const addTransactionsModule = {
         elements.reimbursementDetails.innerHTML = html;
     },
 
+    showFlashMessage: function(message, category) {
+        const flashMessagesContainer = document.querySelector('.flash-messages');
+        if (flashMessagesContainer) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${category} alert-dismissible fade show`;
+            alertDiv.role = 'alert';
+
+            // Apply specific styles based on the category
+            if (category === 'success') {
+                alertDiv.style.backgroundColor = '#d4edda';
+                alertDiv.style.borderColor = '#c3e6cb';
+                alertDiv.style.color = '#155724';
+            } else if (category === 'danger' || category === 'error') {
+                alertDiv.style.backgroundColor = '#f8d7da';
+                alertDiv.style.borderColor = '#f5c6cb';
+                alertDiv.style.color = '#721c24';
+            }
+
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            flashMessagesContainer.appendChild(alertDiv);         
+
+            // Automatically remove the flash message after 5 seconds
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 5000);
+        } else {
+            console.error('Flash messages container not found');
+        }
+    },
+
     validateForm: function() {
         const propertySelect = document.getElementById('property_id');
+        const documentationFile = document.getElementById('documentation_file');
+    
         if (!propertySelect || !propertySelect.value) {
             console.error('Property not selected. propertySelect:', propertySelect);
-            alert('Please select a property.');
+            this.showFlashMessage('Please select a property.', 'error');
+            return false;
+        }
+    
+        if (!documentationFile || !documentationFile.files || documentationFile.files.length === 0) {
+            console.error('No documentation file provided.');
+            this.showFlashMessage('Please attach supporting documentation for the transaction.', 'error');
             return false;
         }
         // Add other validation checks here
@@ -251,39 +292,26 @@ const addTransactionsModule = {
         const form = event.target;
         const formData = new FormData(form);
 
-        // Instead of creating a separate transactionData object, we'll use the FormData directly
-        // This allows us to include file data
-
         console.log('Sending form data');
 
         fetch('/transactions/add', {
             method: 'POST',
-            body: formData  // Send the FormData object directly
+            body: formData
         })
         .then(response => {
             if (!response.ok) {
-                return response.text().then(text => {
-                    throw new Error(`HTTP error! status: ${response.status}, body: ${text}`);
-                });
+                throw new Error('Network response was not ok');
             }
-            return response.json();
-        })
-        .then(data => {
-            console.log('Parsed server response:', data);
-            if (data.success) {
-                // Redirect to the same page to show the server-side flash message
-                window.location.href = '/transactions/add';
-            } else {
-                throw new Error(data.message || 'Unknown error occurred');
-            }
+            // Redirect to the same page to show the server-side flash message
+            window.location.href = '/transactions/add';
         })
         .catch(error => {
             console.error('Error details:', error);
-            alert('An error occurred while adding the transaction: ' + error.message);
+            this.showFlashMessage('An error occurred while adding the transaction: ' + error.message, 'error');
         })
         .finally(() => {
             // Re-enable the submit button
-            submitButton.disabled = false
+            submitButton.disabled = false;
         })
     }
 }

@@ -31,8 +31,8 @@ body {
 }
 
 .sidebar .accordion-button:not(.collapsed) {
-    background-color: #f8f9fa;
-    color: navy !important;
+    color: white !important;
+    background-color: navy;
 }
 
 .sidebar .accordion-button:hover {
@@ -209,6 +209,33 @@ main {
 /* Hover effect for header cells */
 .dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th:hover {
     background-color: #000080 !important; /* Slightly darker shade of navy for hover effect */
+}
+
+.loan-status-box {
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    padding: 20px;
+    max-width: 600px;
+    margin: 20px auto;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    font-family: Arial, sans-serif;
+}
+.loan-status-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.loan-status-item {
+    flex: 1;
+    padding: 0 10px;
+}
+.loan-status-label {
+    font-weight: bold;
+    margin-right: 5px;
+}
+.loan-status-value {
+    font-weight: bold;
+    color: #007bff;
 }
 
  

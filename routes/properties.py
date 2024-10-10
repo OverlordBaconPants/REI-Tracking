@@ -45,7 +45,7 @@ def add_properties():
 
             # Validate the new property data
             required_fields = ['address', 'purchase_price', 'down_payment', 'primary_loan_rate', 
-                               'primary_loan_term', 'purchase_date', 'loan_start_date', 'partners']
+                               'primary_loan_term', 'purchase_date', 'loan_amount', 'loan_start_date', 'partners']
             for field in required_fields:
                 if field not in new_property or new_property[field] is None:
                     logging.error(f"Missing or null required field: {field}")
@@ -177,7 +177,7 @@ def edit_properties():
 
             # Update property fields
             for key in ['purchase_price', 'down_payment', 'primary_loan_rate', 'primary_loan_term',
-                        'purchase_date', 'loan_start_date', 'seller_financing_amount',
+                        'purchase_date', 'loan_amount', 'loan_start_date', 'seller_financing_amount',
                         'seller_financing_rate', 'seller_financing_term', 'closing_costs',
                         'renovation_costs', 'marketing_costs', 'holding_costs']:
                 if key in data:

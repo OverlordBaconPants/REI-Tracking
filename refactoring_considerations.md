@@ -1,5 +1,18 @@
 # Refactoring Considerations for Real Estate Management Application
 
+## 0. Nice to Have Features 
+- Add comprehensive docstrings to all functions and classes.
+- Maintain up-to-date README files for each major component of the application.
+- Transactions: Bulk upload from CSV
+- Transactions: Edit/Remove transactions
+- Transactions: Upload/Retrieve multiple pieces of supporting documentation
+- Transactions: OCR of uploaded content to populate transaction data fields automatically
+- Transactions: Generate income and expense reports per property for tax purposes
+- Properties: Separate address into "full address" and "house number/street only"
+- Dashboards: Include seller financing terms into amortization schedules and charts
+- UI: Consider React instead of JavaScript
+- Backend: Consider something like MongoDB instead of JSON for expansion
+
 ## 1. Backend Structure
 
 ### 1.1 Database Migration
@@ -150,3 +163,5 @@
 - Implement in-app help and tooltips for complex features.
 
 Remember to prioritize these refactoring tasks based on their impact and your application's specific needs. Implement changes gradually, ensuring thorough testing at each step to maintain the stability and functionality of your application.
+
+
