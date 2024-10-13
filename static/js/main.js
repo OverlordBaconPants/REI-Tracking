@@ -50,12 +50,15 @@
         } else if (body.classList.contains('add-properties-page')) {
             console.log('Add properties page detected');
             moduleToLoad = 'add_properties';
-        } else if (body.classList.contains('edit-properties-page')) {
-            console.log('Edit properties page detected');
-            moduleToLoad = 'edit_properties';
+        } else if (body.classList.contains('view-transactions-page')) {
+            console.log('View transactions page detected');
+            moduleToLoad = 'view_transactions';
         } else if (body.classList.contains('remove-properties-page')) {
             console.log('Remove properties page detected');
             moduleToLoad = 'remove_properties';
+        } else if (body.classList.contains('edit-transactions-page')) {
+            console.log('Edit transactions page detected');
+            moduleToLoad = 'edit_transactions';
         }
 
         if (moduleToLoad) {

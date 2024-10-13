@@ -8,11 +8,11 @@
     "date": "2024-10-01",
     "collector_payer": "BJ Marshall",
     "reimbursement": {
-      "date_shared": "",
-      "share_description": "",
-      "reimbursement_status": "pending"
+      "date_shared": "2024-10-05",
+      "share_description": "Shared via Zelle",
+      "reimbursement_status": "completed"
     },
-    "documentation_file": "2024.10.01_Logan_Rent.png",
+    "documentation_file": "2024.10_Guilford_Rent.png",
     "id": "1"
   },
   {

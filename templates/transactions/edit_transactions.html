@@ -1,72 +1,106 @@
+{% extends "base.html" %}
+{% block body_class %}edit-transactions-page{% endblock %}
+{% block title %}Edit Transaction{% endblock %}
+{% block content %}
 <div class="container mt-4">
     <h2 class="mb-4">Edit Transaction</h2>
+    <form id="edit-transaction-form" method="POST" enctype="multipart/form-data">
+        <input type="hidden" id="transaction_id" name="transaction_id" value="{{ transaction.id }}">
+        
+        <div class="form-group mb-3">
+            <label for="property_id">Property:</label>
+            <input type="text" class="form-control" id="property_id" name="property_id" value="{{ transaction.property_id }}" readonly>
+        </div>
 
-    <form id="editTransactionForm" method="POST" action="{{ url_for('transactions.edit_transactions', transaction_id=transaction.id) }}">
+        <div class="form-group mb-3">
+            <label>Type:</label>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="type" id="type_income" value="income" {% if transaction.type == 'income' %}checked{% endif %}>
+                <label class="form-check-label" for="type_income">Income</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="type" id="type_expense" value="expense" {% if transaction.type == 'expense' %}checked{% endif %}>
+                <label class="form-check-label" for="type_expense">Expense</label>
+            </div>
+        </div>
+
+        <div class="form-group mb-3">
+            <label for="category">Category:</label>
+            <select class="form-control" id="category" name="category" required>
+                <option value="">Select a category</option>
+            </select>
+        </div>
+
+        <div class="form-group mb-3">
+            <label for="description">Description:</label>
+            <input type="text" class="form-control" id="description" name="description" value="{{ transaction.description }}" required>
+        </div>
+
+        <div class="form-group mb-3">
+            <label for="amount">Amount ($):</label>
+            <input type="number" class="form-control" id="amount" name="amount" value="{{ transaction.amount }}" step="0.01" required>
+        </div>
+
+        <div class="form-group mb-3">
+            <label for="date">Date:</label>
+            <input type="date" class="form-control" id="date" name="date" value="{{ transaction.date }}" required>
+        </div>
+
+        <div class="form-group mb-3">
+            <label for="collector_payer" id="collector_payer_label">Collector/Payer:</label>
+            <select class="form-control" id="collector_payer" name="collector_payer" required>
+                <option value="">Select a partner</option>
+            </select>
+        </div>
+
+        <div class="form-group mb-3">
+            <label for="documentation_file">Documentation File:</label>
+            <input type="file" class="form-control" id="documentation_file" name="documentation_file">
+            {% if transaction.documentation_file %}
+            <p>Current file: {{ transaction.documentation_file }}</p>
+            {% endif %}
+        </div>
+
+        <h3>Manage Reimbursement</h3>
+        <div id="reimbursement-details" class="mb-3"></div>
         <div class="row">
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <div class="form-group mb-3">
-                    <label for="property_id">Property Address:</label>
-                    <input type="text" class="form-control" id="property_id" name="property_id" value="{{ transaction.property_id }}" readonly>
-                    <small class="form-text text-muted">Property address is not editable.</small>
-                </div>
-
-                <div class="form-group mb-3">
-                    <label for="type">Transaction Type:</label>
-                    <select class="form-control" id="type" name="type">
-                        <option value="income" {% if transaction.type == 'income' %}selected{% endif %}>Income</option>
-                        <option value="expense" {% if transaction.type == 'expense' %}selected{% endif %}>Expense</option>
-                    </select>
-                </div>
-
-                <div class="form-group mb-3">
-                    <label for="category">Category:</label>
-                    <select class="form-control" id="category" name="category">
-                        <!-- Options will be populated dynamically -->
-                    </select>
-                </div>
-
-                <div class="form-group mb-3">
-                    <label for="description">Description:</label>
-                    <input type="text" class="form-control" id="description" name="description" value="{{ transaction.description }}" required>
+                    <label for="date_shared">Date Shared:</label>
+                    <input type="date" class="form-control" id="date_shared" name="date_shared" value="{{ transaction.reimbursement.date_shared }}">
                 </div>
             </div>
-
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <div class="form-group mb-3">
-                    <label for="amount">Amount ($):</label>
-                    <input type="number" step="0.01" class="form-control" id="amount" name="amount" value="{{ transaction.amount }}" required>
+                    <label for="share_description">Share Description:</label>
+                    <input type="text" class="form-control" id="share_description" name="share_description" value="{{ transaction.reimbursement.share_description }}">
                 </div>
-
-                <div class="form-group mb-3">
-                    <label for="date">Date:</label>
-                    <input type="date" class="form-control" id="date" name="date" value="{{ transaction.date }}" required>
-                </div>
-
-                <div class="form-group mb-3">
-                    <label for="collector_payer" id="collector_payer_label">Collector/Payer:</label>
-                    <input type="text" class="form-control" id="collector_payer" name="collector_payer" value="{{ transaction.collector_payer }}" required>
-                </div>
-
+            </div>
+            <div class="col-md-4">
                 <div class="form-group mb-3">
                     <label for="reimbursement_status">Reimbursement Status:</label>
                     <select class="form-control" id="reimbursement_status" name="reimbursement_status">
                         <option value="pending" {% if transaction.reimbursement.reimbursement_status == 'pending' %}selected{% endif %}>Pending</option>
                         <option value="completed" {% if transaction.reimbursement.reimbursement_status == 'completed' %}selected{% endif %}>Completed</option>
+                        <option value="not_required" {% if transaction.reimbursement.reimbursement_status == 'not_required' %}selected{% endif %}>Not Required</option>
                     </select>
                 </div>
             </div>
         </div>
 
-        <div class="row mt-3">
-            <div class="col-12">
-                <button type="submit" class="btn btn-primary">Update Transaction</button>
-                <a href="{{ url_for('transactions.view_transactions') }}" class="btn btn-secondary">Cancel</a>
-            </div>
+        <div class="mt-3">
+            <button type="submit" class="btn btn-primary">Update Transaction</button>
+            <button type="button" class="btn btn-secondary" id="cancel-edit">Cancel</button>
         </div>
     </form>
 </div>
+{% endblock %}
 
+{% block scripts %}
+{{ super() }}
+<script src="/static/js/main.js"></script>
 <script type="module">
-    import editTransactionsModule from '/static/js/edit_transactions.js';
-    document.addEventListener('DOMContentLoaded', editTransactionsModule.init);
+    import editTransactionsModule from "{{ url_for('static', filename='js/edit_transactions.js') }}";
+    document.addEventListener('DOMContentLoaded', () => editTransactionsModule.init());
 </script>
+{% endblock %}

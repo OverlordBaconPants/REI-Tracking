@@ -34,6 +34,9 @@ def create_transactions_dash(flask_app):
 
     dash_app.layout = dbc.Container([
         dcc.Location(id='url', refresh=False),
+        dcc.Store(id='transaction-update-trigger', storage_type='memory'),
+        html.Div(id='hidden-div', style={'display': 'none'}),
+        html.Div(id='flash-message-container', className='flash-messages'),
         html.H2('Filter Transactions to View', className='mt-4 mb-4'),
         dbc.Row([
             dbc.Col([
@@ -124,13 +127,18 @@ def create_transactions_dash(flask_app):
         dbc.Modal(
             [
                 dbc.ModalHeader("Edit Transaction"),
-                dbc.ModalBody(id="edit-transaction-content"),
+                dbc.ModalBody([
+                    html.Iframe(
+                        id="edit-transaction-iframe",
+                        style={"width": "100%", "height": "600px", "border": "none"}
+                    )
+                ]),
                 dbc.ModalFooter(
                     dbc.Button("Close", id="close-edit-modal", className="ml-auto")
                 ),
             ],
             id="edit-transaction-modal",
-            size="lg",
+            size="xl",
         ),
     ], fluid=True)
 
@@ -143,14 +151,22 @@ def create_transactions_dash(flask_app):
          Input('type-filter', 'value'),
          Input('reimbursement-filter', 'value'),
          Input('date-range', 'start_date'),
-         Input('date-range', 'end_date')]
+         Input('date-range', 'end_date'),
+         Input('transaction-update-trigger', 'data')]
     )
-    def update_table(property_id, transaction_type, reimbursement_status, start_date, end_date):
+    def update_table(property_id, transaction_type, reimbursement_status, start_date, end_date, _):
         try:
             current_app.logger.debug(f"update_table called with: property_id={property_id}, transaction_type={transaction_type}, reimbursement_status={reimbursement_status}, start_date={start_date}, end_date={end_date}")
             
+            # Get properties
+            properties = get_properties_for_user(current_user.id, current_user.name, current_user.role == 'Admin')
+            current_app.logger.debug(f"Properties retrieved: {properties}")
+            property_options = [{'label': f"{prop['address'][:15]}..." if len(prop['address']) > 15 else prop['address'], 
+                                'value': prop['address']} for prop in properties]
+            property_options.insert(0, {'label': 'All Properties', 'value': 'all'})
+            
             # Get transactions
-            transactions = get_transactions_for_view(current_user.id, current_user.name, property_id, reimbursement_status, start_date, end_date)
+            transactions = get_transactions_for_view(current_user.id, current_user.name, property_id, reimbursement_status, start_date, end_date, current_user.role == 'Admin')
             current_app.logger.debug(f"Transactions retrieved: {transactions}")
             
             df = pd.DataFrame(transactions)
@@ -178,8 +194,8 @@ def create_transactions_dash(flask_app):
                     )
         
                 # Add Edit links for admin users
-            if current_user.is_authenticated and current_user.role == 'Admin':
-                df['edit'] = df.apply(lambda row: f'[Edit]({url_for("transactions.edit_transactions", transaction_id=row["id"])})', axis=1)
+                if current_user.is_authenticated and current_user.role == 'Admin':
+                    df['edit'] = df.apply(lambda row: f'[Edit]', axis=1)
 
                 # Create header
                 type_str = 'Income' if transaction_type == 'income' else 'Expense' if transaction_type == 'expense' else 'All'
@@ -212,6 +228,74 @@ def create_transactions_dash(flask_app):
             current_app.logger.error(traceback.format_exc())
             raise
 
-       
+    @dash_app.callback(
+        [Output("edit-transaction-modal", "is_open"),
+         Output("edit-transaction-iframe", "src")],
+        [Input("transactions-table", "active_cell"),
+         Input("close-edit-modal", "n_clicks")],
+        [State("transactions-table", "data"),
+         State("edit-transaction-modal", "is_open")]
+    )
+    def toggle_modal(active_cell, close_clicks, data, is_open):
+        ctx = dash.callback_context
+        if not ctx.triggered:
+            return is_open, ""
+        
+        trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
+        
+        if trigger_id == "transactions-table" and active_cell and active_cell['column_id'] == 'edit':
+            transaction_id = data[active_cell['row']]['id']
+            iframe_src = url_for('transactions.edit_transactions', transaction_id=transaction_id)
+            return True, iframe_src
+        elif trigger_id == "close-edit-modal":
+            return False, ""
+        
+        return is_open, ""
+
+    @dash_app.callback(
+        Output('flash-message-container', 'children'),
+        Input('transaction-update-trigger', 'data'),
+    )
+
+    def display_flash_message(data):
+        if data and data.get('message'):
+            return dbc.Alert(data['message'], color="success", dismissable=True, duration=4000)
+        return []
+
+    dash_app.clientside_callback(
+        """
+        function(n_clicks) {
+            if (window.closeEditModal === undefined) {
+                window.closeEditModal = function() {
+                    document.getElementById('close-edit-modal').click();
+                    setTimeout(function() {
+                        window.dash_clientside.no_update = false;
+                        window.dash_clientside.callback_context.triggered = [{
+                            'prop_id': 'transaction-update-trigger.data',
+                            'value': {'message': 'Transaction updated successfully!'}
+                        }];
+                    }, 500);
+                }
+            }
+
+            window.addEventListener('message', function(event) {
+                if (event.data.type === 'transactionUpdated') {
+                    if (window.dash_clientside) {
+                        window.dash_clientside.no_update = false;
+                        window.dash_clientside.callback_context.triggered = [{
+                            'prop_id': 'transaction-update-trigger.data',
+                            'value': {'message': event.data.message}
+                        }];
+                    }
+                }
+            });
+
+            return '';
+        }
+        """,
+        Output('hidden-div', 'children'),
+        Input('close-edit-modal', 'n_clicks')
+    )
+
     print(f"Dash app created with server: {dash_app.server}")
     return dash_app

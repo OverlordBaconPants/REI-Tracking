@@ -1,7 +1,7 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, send_from_directory
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, send_from_directory, jsonify
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
-from services.transaction_service import add_transaction, is_duplicate_transaction, get_properties_for_user, get_transaction_by_id, update_transaction
+from services.transaction_service import add_transaction, is_duplicate_transaction, get_properties_for_user, get_transaction_by_id, update_transaction, get_categories, get_partners_for_property
 from utils.utils import admin_required
 import os
 import logging
@@ -99,46 +99,59 @@ def edit_transactions(transaction_id):
         
         if not transaction:
             current_app.logger.warning(f"Transaction not found for ID: {transaction_id}")
-            flash('Transaction not found.', 'danger')
-            return redirect(url_for('transactions.view_transactions'))
+            return jsonify({'success': False, 'message': 'Transaction not found.'}), 404
 
         if request.method == 'POST':
             try:
                 current_app.logger.info(f"Processing POST request to edit transaction ID: {transaction_id}")
+                form_data = request.form.to_dict()
+                current_app.logger.debug(f"Received form data: {form_data}")
+
                 updated_transaction = {
                     'id': transaction_id,
-                    'property_id': request.form.get('property_id'),
-                    'type': request.form.get('type'),
-                    'category': request.form.get('category'),
-                    'description': request.form.get('description'),
-                    'amount': float(request.form.get('amount')),
-                    'date': request.form.get('date'),
-                    'collector_payer': request.form.get('collector_payer'),
+                    'property_id': form_data.get('property_id'),
+                    'type': form_data.get('type'),
+                    'category': form_data.get('category'),
+                    'description': form_data.get('description'),
+                    'amount': float(form_data.get('amount')),
+                    'date': form_data.get('date'),
+                    'collector_payer': form_data.get('collector_payer'),
                     'reimbursement': {
-                        'reimbursement_status': request.form.get('reimbursement_status')
+                        'date_shared': form_data.get('date_shared'),
+                        'share_description': form_data.get('share_description'),
+                        'reimbursement_status': form_data.get('reimbursement_status')
                     }
                 }
+                
+                # Handle file upload if a new file is provided
+                if 'documentation_file' in request.files:
+                    file = request.files['documentation_file']
+                    if file.filename != '':
+                        if allowed_file(file.filename):
+                            filename = secure_filename(file.filename)
+                            file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                            file.save(file_path)
+                            updated_transaction['documentation_file'] = filename
+                        else:
+                            return jsonify({'success': False, 'message': 'Invalid file type.'}), 400
+
                 update_transaction(updated_transaction)
                 current_app.logger.info(f"Transaction ID: {transaction_id} updated successfully")
-                flash('Transaction updated successfully.', 'success')
-                return redirect(url_for('transactions.view_transactions'))
+                return jsonify({'success': True, 'message': 'Transaction updated successfully.'})
 
             except Exception as e:
                 current_app.logger.error(f"Error updating transaction: {str(e)}")
                 current_app.logger.error(traceback.format_exc())
-                flash(f'An error occurred while updating the transaction: {str(e)}', 'danger')
+                return jsonify({'success': False, 'message': f'An error occurred while updating the transaction: {str(e)}'}), 500
         
         current_app.logger.info(f"Rendering edit form for transaction ID: {transaction_id}")
-        if request.args.get('form_only') == 'true':
-            return render_template('transactions/edit_transactions_form.html', transaction=transaction)
-        else:
-            return render_template('transactions/edit_transactions.html', transaction=transaction)
+        properties = get_properties_for_user(current_user.id, current_user.name)
+        return render_template('transactions/edit_transactions.html', transaction=transaction, properties=properties)
 
     except Exception as e:
         current_app.logger.error(f"Unexpected error in edit_transactions route: {str(e)}")
         current_app.logger.error(traceback.format_exc())
-        flash('An unexpected error occurred. Please try again later.', 'danger')
-        return redirect(url_for('transactions.view_transactions'))
+        return jsonify({'success': False, 'message': 'An unexpected error occurred. Please try again later.'}), 500
 
 @transactions_bp.route('/remove', methods=['GET', 'POST'])
 @login_required
@@ -170,3 +183,17 @@ def test_route():
 @login_required
 def get_artifact(filename):
     return send_from_directory(current_app.config['UPLOAD_FOLDER'], filename)
+
+@transactions_bp.route('/api/categories')
+@login_required
+def get_transaction_categories():
+    transaction_type = request.args.get('type')
+    categories = get_categories(transaction_type)
+    return jsonify(categories)
+
+@transactions_bp.route('/api/partners')
+@login_required
+def get_property_partners():
+    property_id = request.args.get('property_id')
+    partners = get_partners_for_property(property_id)
+    return jsonify(partners)

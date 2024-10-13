@@ -77,13 +77,24 @@ const editPropertiesModule = {
 
     fetchPartnersForProperty: function(propertyId) {
         return fetch(`/properties/get_partners_for_property?property_id=${encodeURIComponent(propertyId)}`)
-            .then(response => response.json())
-            .then(partners => {
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.error) {
+                    throw new Error(data.error);
+                }
                 this.allPartners.clear(); // Clear existing partners
-                partners.forEach(partner => this.allPartners.add(partner.name));
+                data.forEach(partner => this.allPartners.add(partner.name));
                 this.updatePartnerSelects();
             })
-            .catch(error => console.error('Error fetching partners:', error));
+            .catch(error => {
+                console.error('Error fetching partners:', error);
+                alert(`An error occurred while fetching partners: ${error.message}`);
+            });
     },
 
     populateForm: function(property) {

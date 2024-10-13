@@ -104,24 +104,27 @@ def get_partners_for_property(property_id):
         return property_data.get('partners', [])
     return []
 
-def get_transactions_for_view(user_id, user_name, property_id=None, reimbursement_status=None, start_date=None, end_date=None):
-    current_app.logger.debug(f"get_transactions_for_view called with: user_id={user_id}, user_name={user_name}, property_id={property_id}, reimbursement_status={reimbursement_status}, start_date={start_date}, end_date={end_date}")
+def get_transactions_for_view(user_id, user_name, property_id=None, reimbursement_status=None, start_date=None, end_date=None, is_admin=False):
+    current_app.logger.debug(f"get_transactions_for_view called with: user_id={user_id}, user_name={user_name}, property_id={property_id}, reimbursement_status={reimbursement_status}, start_date={start_date}, end_date={end_date}, is_admin={is_admin}")
     
     transactions = read_json(current_app.config['TRANSACTIONS_FILE'])
     properties = read_json(current_app.config['PROPERTIES_FILE'])
     
     current_app.logger.debug(f"All transactions: {transactions}")
     
-    # Get properties where the user is a partner
-    user_properties = [
-        prop['address'] for prop in properties
-        if any(partner['name'].lower() == user_name.lower() for partner in prop.get('partners', []))
-    ]
-    
-    current_app.logger.debug(f"User properties: {user_properties}")
-    
-    # Filter transactions based on user's properties
-    user_transactions = [t for t in transactions if t.get('property_id') in user_properties]
+    if is_admin:
+        user_transactions = transactions
+    else:
+        # Get properties where the user is a partner
+        user_properties = [
+            prop['address'] for prop in properties
+            if any(partner['name'].lower() == user_name.lower() for partner in prop.get('partners', []))
+        ]
+        
+        current_app.logger.debug(f"User properties: {user_properties}")
+        
+        # Filter transactions based on user's properties
+        user_transactions = [t for t in transactions if t.get('property_id') in user_properties]
     
     current_app.logger.debug(f"User transactions: {user_transactions}")
     
@@ -159,6 +162,26 @@ def update_transaction(updated_transaction):
     transactions = read_json(current_app.config['TRANSACTIONS_FILE'])
     for i, transaction in enumerate(transactions):
         if transaction['id'] == str(updated_transaction['id']):
-            transactions[i] = updated_transaction
+            # Preserve the structure of the original transaction
+            updated = {
+                "property_id": updated_transaction['property_id'],
+                "type": updated_transaction['type'],
+                "category": updated_transaction['category'],
+                "description": updated_transaction['description'],
+                "amount": float(updated_transaction['amount']),
+                "date": updated_transaction['date'],
+                "collector_payer": updated_transaction['collector_payer'],
+                "reimbursement": {
+                    "date_shared": updated_transaction['reimbursement']['date_shared'],
+                    "share_description": updated_transaction['reimbursement']['share_description'],
+                    "reimbursement_status": updated_transaction['reimbursement']['reimbursement_status']
+                },
+                "documentation_file": updated_transaction.get('documentation_file', transaction['documentation_file']),
+                "id": str(updated_transaction['id'])
+            }
+            transactions[i] = updated
             break
+    else:
+        raise ValueError(f"Transaction with id {updated_transaction['id']} not found")
+    
     write_json(current_app.config['TRANSACTIONS_FILE'], transactions)

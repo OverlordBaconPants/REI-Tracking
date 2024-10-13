@@ -88,6 +88,27 @@ main {
     color: #721c24;
 }
 
+.flash-messages-top,
+.flash-messages-bottom {
+    position: sticky;
+    z-index: 1000;
+    width: 100%;
+}
+
+.flash-messages-top {
+    top: 0;
+}
+
+.flash-messages-bottom {
+    bottom: 0;
+}
+
+.flash-messages-top .alert,
+.flash-messages-bottom .alert {
+    margin-bottom: 0;
+    border-radius: 0;
+}
+
 .autocomplete-container {
     position: relative;
 }
