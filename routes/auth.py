@@ -16,15 +16,23 @@ def signup():
 
     if request.method == 'POST':
         email = request.form.get('email')
-        name = request.form.get('name')
+        first_name = request.form.get('first_name')
+        last_name = request.form.get('last_name')
+        phone = request.form.get('phone')
         password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
+        
+        if password != confirm_password:
+            flash('Passwords do not match', 'danger')
+            return redirect(url_for('auth.signup'))
         
         user = get_user_by_email(email)
         if user:
             flash('Email address already exists', 'danger')
             return redirect(url_for('auth.signup'))
         
-        if create_user(email, name, password):
+        name = f"{first_name} {last_name}"
+        if create_user(email, name, password, phone):
             flash('Account created successfully. Please log in.', 'success')
             return redirect(url_for('auth.login'))
         else:

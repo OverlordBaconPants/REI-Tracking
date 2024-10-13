@@ -1,24 +1,43 @@
 <!-- templates/signup.html -->
 {% extends "base.html" %}
-
 {% block title %}Sign Up{% endblock %}
-
 {% block content %}
+
 <h2>Sign Up</h2>
-<form method="POST">
+
+<form method="POST" action="{{ url_for('auth.signup') }}">
     <div class="form-group">
-        <input type="text" class="form-control" name="name" placeholder="Enter Your First and Last Names" required>
+        <label for="first_name">First Name</label>
+        <input type="text" class="form-control" id="first_name" name="first_name" required>
     </div>
+
     <div class="form-group">
-        <input type="email" class="form-control" name="email" placeholder="Enter Your Email Address" required>
+        <label for="last_name">Last Name</label>
+        <input type="text" class="form-control" id="last_name" name="last_name" required>
     </div>
+
     <div class="form-group">
-        <input type="password" class="form-control" name="password" placeholder="Enter a Password" required>
+        <label for="email">Email</label>
+        <input type="email" class="form-control" id="email" name="email" required>
     </div>
+
     <div class="form-group">
-        <input type="password" class="form-control" name="confirm_password" placeholder="Do It Again" required>
+        <label for="phone">Phone Number</label>
+        <input type="tel" class="form-control" id="phone" name="phone" required>
     </div>
+
+    <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" class="form-control" id="password" name="password" required>
+    </div>
+
+    <div class="form-group">
+        <label for="confirm_password">Confirm Password</label>
+        <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+    </div>
+
     <button type="submit" class="btn btn-primary">Submit</button>
     <a href="{{ url_for('auth.login') }}" class="btn btn-secondary">Cancel</a>
 </form>
+
 {% endblock %}

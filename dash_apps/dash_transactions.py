@@ -6,9 +6,15 @@ import pandas as pd
 from flask_login import current_user
 from services.transaction_service import get_transactions_for_view, get_properties_for_user
 import plotly.graph_objs as go
-import traceback
 from flask import current_app, url_for
-import requests
+import io
+import base64
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.lib.enums import TA_CENTER
 
 def create_transactions_dash(flask_app):
     print("Creating Dash app for transactions...")
@@ -75,6 +81,28 @@ def create_transactions_dash(flask_app):
                     end_date_placeholder_text='End Date'
                 )
             ], width=3)
+        ], className='mb-4'),
+        dbc.Row([
+            dbc.Col([
+                dbc.Label('Report Type'),
+                dcc.Dropdown(
+                    id='report-type',
+                    options=[
+                        {'label': 'Summary Report', 'value': 'summary'},
+                        {'label': 'Detailed Report', 'value': 'detailed'}
+                    ],
+                    value='summary',
+                    placeholder='Select Report Type'
+                ),
+                html.Div([
+                    html.P("Summary Report: Provides an overview of transactions grouped by category and type, showing totals and date ranges.", className="text-muted mt-2"),
+                    html.P("Detailed Report: Includes all individual transaction details as shown in the table above.", className="text-muted")
+                ], id="report-description")
+            ], width=9),
+            dbc.Col([
+                dbc.Button("Generate PDF Report", id="generate-report-btn", color="primary", className="mb-2 w-100"),
+                html.Div(id="report-link-container", className="w-100")
+            ], width=3, className="d-flex flex-column justify-content-end")
         ], className='mb-4'),
         
         html.H2(id='transactions-header', className='mt-4 mb-3'),
@@ -296,6 +324,109 @@ def create_transactions_dash(flask_app):
         Output('hidden-div', 'children'),
         Input('close-edit-modal', 'n_clicks')
     )
+
+    @dash_app.callback(
+        Output('report-link-container', 'children'),
+        Input('generate-report-btn', 'n_clicks'),
+        [State('transactions-table', 'data'),
+         State('report-type', 'value'),
+         State('transactions-header', 'children')]
+    )
+    def generate_pdf_report(n_clicks, table_data, report_type, header):
+        if n_clicks is None:
+            return ""
+
+        pdf_buffer = io.BytesIO()
+        doc = SimpleDocTemplate(pdf_buffer, pagesize=letter,
+                                leftMargin=inch, rightMargin=inch,
+                                topMargin=inch, bottomMargin=inch)
+        elements = []
+
+        # Add logo
+        logo_path = "static/images/logo.png"
+        img = Image(logo_path, width=1.5*inch, height=1.5*inch)
+        img.hAlign = 'RIGHT'
+        elements.append(img)
+        elements.append(Spacer(1, 0.5*inch))
+
+        # Create a custom style for the title
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Title'],
+            fontSize=16,
+            alignment=TA_CENTER,
+            spaceAfter=12
+        )
+
+        # Parse the header and add line breaks
+        header_parts = header.split(' for ')
+        if len(header_parts) == 2:
+            transaction_type, rest = header_parts
+            address_and_date = rest.split(' from ')
+            if len(address_and_date) == 2:
+                address, date_range = address_and_date
+                formatted_header = f"{transaction_type} Transactions<br/>for {address}<br/>from {date_range}"
+            else:
+                formatted_header = header.replace(' for ', '<br/>for ').replace(' from ', '<br/>from ')
+        else:
+            formatted_header = header.replace(' for ', '<br/>for ').replace(' from ', '<br/>from ')
+
+        elements.append(Paragraph(formatted_header, title_style))
+        elements.append(Spacer(1, 0.25*inch))
+
+        if report_type == 'summary':
+            # elements.append(Paragraph("Summary Report", styles['Heading1']))
+            summary_data = summarize_transactions(table_data)
+            table = Table(summary_data)
+        else:
+            # elements.append(Paragraph("Detailed Report", styles['Heading1']))
+            # Filter out unnecessary columns and prepare data
+            columns_to_include = ['type', 'category', 'description', 'amount', 'date', 'collector_payer','reimbursement_status']
+            table_data = [[col for col in columns_to_include]] + \
+                         [[row.get(col, '') for col in columns_to_include] for row in table_data]
+            table = Table(table_data)
+
+        style = TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 12),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 10),
+            ('TOPPADDING', (0, 1), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ])
+        table.setStyle(style)
+        elements.append(table)
+
+        doc.build(elements)
+        pdf_data = base64.b64encode(pdf_buffer.getvalue()).decode('utf-8')
+
+        return dbc.Button(
+            'Download PDF Report',
+            href=f"data:application/pdf;base64,{pdf_data}",
+            download="transaction_report.pdf",
+            external_link=True,
+            color="success",
+            className="w-100"
+        )
+
+    def summarize_transactions(table_data):
+        df = pd.DataFrame(table_data)
+        summary = df.groupby(['category', 'type']).agg({
+            'amount': 'sum',
+            'date': ['min', 'max']
+        }).reset_index()
+        summary.columns = ['Category', 'Type', 'Total Amount', 'Start Date', 'End Date']
+        summary = summary.sort_values(['Type', 'Total Amount'], ascending=[True, False])
+        return [summary.columns.tolist()] + summary.values.tolist()
 
     print(f"Dash app created with server: {dash_app.server}")
     return dash_app

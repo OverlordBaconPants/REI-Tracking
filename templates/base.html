@@ -12,8 +12,20 @@
 <body class="{% block body_class %}{% endblock %}" data-current-user="{{ current_user.name }}">
     <div class="container-fluid">
         <div class="row">
-            <nav id="accordionSidebar" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+            <nav id="accordionSidebar" class="col-md-2 col-lg-1 d-md-block bg-light sidebar collapse">
                 <div class="position-sticky">
+                    <div class="row">
+                        <!-- Logo container -->
+                        <div class="col-12 mb-3 mt-2">
+                            <div class="logo-container">
+                                <img src="/static/images/logo.png" 
+                                alt="Your Logo" 
+                                class="img-fluid" 
+                                style="max-height: 150px" 
+                                onerror="console.log('Error loading image:', this.src);">
+                            </div>
+                        </div>
+                    </div>
                     <div class="accordion">
                         {% if current_user.is_authenticated %}
                             <div class="accordion-item">

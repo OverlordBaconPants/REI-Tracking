@@ -36,7 +36,7 @@ def get_user_by_email(email):
     logger.debug(f"User not found: {email}")
     return None
 
-def create_user(email, name, password, role='User'):
+def create_user(email, name, password, phone, role='User'):
     users = load_users()
     if email not in users:
         hashed_password = hash_password(password)
@@ -44,6 +44,7 @@ def create_user(email, name, password, role='User'):
             'name': name,
             'email': email,
             'password': hashed_password,
+            'phone': phone,
             'role': role
         }
         save_users(users)

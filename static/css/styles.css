@@ -19,7 +19,7 @@ body {
     padding: 48px 0 0;
     box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
     background-color: navy;
-    width: 250px;
+    width: 200px;
 }
 
 .sidebar .accordion-button {
@@ -68,7 +68,7 @@ body {
 }
 
 main {
-    margin-left: 250px;
+    margin-left: 200px;
     padding: 20px;
 }
 
