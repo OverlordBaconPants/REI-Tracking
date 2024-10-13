@@ -93,17 +93,6 @@ def get_unresolved_transactions():
     
     return unresolved_transactions
 
-def resolve_reimbursement(transaction_id, comment):
-    reimbursements = read_json(current_app.config['REIMBURSEMENTS_FILE'])
-    reimbursement = {
-        'transaction_id': transaction_id,
-        'date_resolved': datetime.now().isoformat(),
-        'comment': comment
-    }
-    reimbursements.append(reimbursement)
-    write_json(current_app.config['REIMBURSEMENTS_FILE'], reimbursements)
-    return True
-
 def get_categories(transaction_type):
     categories = read_json(current_app.config['CATEGORIES_FILE'])
     return categories.get(transaction_type, [])
@@ -161,3 +150,15 @@ def get_transactions_for_view(user_id, user_name, property_id=None, reimbursemen
         flattened_transactions.append(flat_t)
     
     return flattened_transactions
+
+def get_transaction_by_id(transaction_id):
+    transactions = read_json(current_app.config['TRANSACTIONS_FILE'])
+    return next((t for t in transactions if t['id'] == str(transaction_id)), None)
+
+def update_transaction(updated_transaction):
+    transactions = read_json(current_app.config['TRANSACTIONS_FILE'])
+    for i, transaction in enumerate(transactions):
+        if transaction['id'] == str(updated_transaction['id']):
+            transactions[i] = updated_transaction
+            break
+    write_json(current_app.config['TRANSACTIONS_FILE'], transactions)

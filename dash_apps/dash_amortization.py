@@ -67,8 +67,12 @@ def create_amortization_dash(flask_app):
                 dcc.Dropdown(id='property-selector', placeholder='Select Property')
             ], width=6),
         ], className='mb-4'),
-        html.Div(id='loan-info'),
         dcc.Graph(id='amortization-graph'),
+        dbc.Card(
+            dbc.CardBody(id='loan-info'),
+            className="mb-4",
+            style={"border-radius": "15px"}
+        ),
         html.H3('Amortization Table', className='mt-4 mb-3'),
         dash_table.DataTable(
             id='amortization-table',
@@ -100,9 +104,10 @@ def create_amortization_dash(flask_app):
 
     @dash_app.callback(
         [Output('loan-info', 'children'),
-         Output('amortization-graph', 'figure'),
-         Output('amortization-table', 'data'),
-         Output('amortization-table', 'columns')],
+        Output('amortization-graph', 'figure'),
+        Output('amortization-table', 'data'),
+        Output('amortization-table', 'columns'),
+        Output('amortization-table', 'style_data_conditional')],
         [Input('property-selector', 'value')]
     )
     def update_amortization(selected_property):
@@ -121,12 +126,8 @@ def create_amortization_dash(flask_app):
             )
             
             # Return empty data for other components
-            return (
-                html.Div("No property selected"),  # loan-info
-                fig,  # amortization-graph
-                [],  # amortization-table data
-                []   # amortization-table columns
-            )
+            return html.Div("No property selected"), go.Figure(), [], [], []
+        
         try:
             properties = get_properties_for_user(current_user.id, current_user.name)
             
@@ -155,12 +156,16 @@ def create_amortization_dash(flask_app):
 
             # Calculate current loan status
             today = date.today()
+            current_month = (today.year - loan_start_date.year) * 12 + today.month - loan_start_date.month + 1
             months_into_loan = relativedelta(today, loan_start_date).months + relativedelta(today, loan_start_date).years * 12
             last_month_equity = df.iloc[months_into_loan - 1]['principal'] if months_into_loan > 0 else 0
 
+            # Create loan_info content
             loan_info = html.Div([
-                html.P(f"Months into Loan Repayment: {months_into_loan}", className='font-weight-bold'),
-                html.P(f"Equity Gained Last Month: ${last_month_equity:.2f}", className='font-weight-bold')
+                dbc.Row([
+                    dbc.Col(html.P(f"Months into Loan Repayment: {months_into_loan}", className='font-weight-bold mb-0'), width=6),
+                    dbc.Col(html.P(f"Equity Gained Last Month: ${last_month_equity:.2f}", className='font-weight-bold mb-0'), width=6)
+                ])
             ])
 
             # Create date strings manually without using .dt accessor
@@ -168,7 +173,7 @@ def create_amortization_dash(flask_app):
             df['date_str'] = [d.strftime('%y-%m') for d in df['date']]
 
             # Filter data points for every 6 months and create an explicit copy
-            df_filtered = df[df.index % 6 == 0].copy()
+            df_filtered = df[df.index % 24 == 0].copy()
 
             # Debug: Print the shape of df_filtered
             print(f"\nShape of df_filtered: {df_filtered.shape}")
@@ -183,6 +188,46 @@ def create_amortization_dash(flask_app):
             fig.add_trace(go.Scatter(x=df_filtered['date_str'], y=df_filtered['cumulative_interest'], name='Cumulative Interest'))
             fig.add_trace(go.Scatter(x=df_filtered['date_str'], y=df_filtered['cumulative_principal'], name='Cumulative Principal'))
 
+            # Add a vertical line for today's date
+            today_str = date.today().strftime('%y-%m')
+            fig.add_shape(
+                type="line",
+                x0=today_str,
+                x1=today_str,
+                y0=0,
+                y1=1,
+                yref="paper",
+                line=dict(color="black", width=2, dash="solid"),
+            )
+
+            # Add annotation for today's date
+            fig.add_annotation(
+                x=today_str,
+                y=1,
+                yref="paper",
+                text="Today",
+                showarrow=True,
+                arrowhead=2,
+                arrowsize=1,
+                arrowwidth=2,
+                arrowcolor="black",
+                font=dict(size=12, color="black"),
+                align="center",
+                xanchor="left",
+                yanchor="bottom"
+            )
+
+            fig.update_layout(
+                xaxis_title='Date',
+                yaxis_title='Amount ($)',
+                xaxis=dict(
+                    tickmode='array',
+                    tickvals=df_filtered['date_str'],
+                    ticktext=[d[:4] for d in df_filtered['date_str']],  # Show only the year
+                    tickangle=45
+                )
+            )
+            
             # Debug: Print the range of values for each trace
             print("\nValue ranges:")
             print(f"Loan Balance: {df_filtered['balance'].min()} to {df_filtered['balance'].max()}")
@@ -219,7 +264,19 @@ def create_amortization_dash(flask_app):
                 {"name": "Cumulative Principal", "id": "cumulative_principal"}
             ]
 
-            return loan_info, fig, table_data, columns
+            style_data_conditional = [
+                {
+                    'if': {'row_index': 'odd'},
+                    'backgroundColor': 'rgb(248, 248, 248)'
+                },
+                {
+                    'if': {'filter_query': f'{{month}} = {current_month}'},
+                    'backgroundColor': 'yellow',
+                    'fontWeight': 'bold'
+                }
+            ]
+
+            return loan_info, fig, table_data, columns, style_data_conditional
 
         except Exception as e:
             print(f"Error in update_amortization: {str(e)}")

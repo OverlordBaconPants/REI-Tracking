@@ -53,7 +53,6 @@
                                             <li><a href="{{ url_for('transactions.add_transactions') }}">Add Transactions</a></li>
                                             <li><a href="{{ url_for('transactions.view_transactions') }}">View Transactions</a></li>
                                             {% if current_user.role == 'Admin' %}
-                                                <li><a href="{{ url_for('transactions.edit_transactions') }}">Edit Transactions</a></li>
                                                 <li><a href="{{ url_for('transactions.remove_transactions') }}">Remove Transactions</a></li>
                                             {% endif %}
                                         </ul>

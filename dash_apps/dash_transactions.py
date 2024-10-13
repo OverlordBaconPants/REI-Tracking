@@ -8,16 +8,32 @@ from services.transaction_service import get_transactions_for_view, get_properti
 import plotly.graph_objs as go
 import traceback
 from flask import current_app, url_for
+import requests
 
-def create_transactions_dash(server):
+def create_transactions_dash(flask_app):
     print("Creating Dash app for transactions...")
     
     external_stylesheets = [dbc.themes.BOOTSTRAP, '/static/css/styles.css']
     
-    dash_app = dash.Dash(__name__, server=server, url_base_pathname='/transactions/view/dash/',
+    dash_app = dash.Dash(__name__, 
+                         server=flask_app, 
+                         url_base_pathname='/transactions/view/dash/',
                          external_stylesheets=external_stylesheets)
 
+    # Define columns without the 'Edit' column
+    base_columns = [
+        {'name': 'Category', 'id': 'category'},
+        {'name': 'Description', 'id': 'description'},
+        {'name': 'Amount', 'id': 'amount'},
+        {'name': 'Date Incurred', 'id': 'date'},
+        {'name': 'Collector/Payer', 'id': 'collector_payer'},
+        {'name': 'Reimb. Date', 'id': 'reimbursement_date'},
+        {'name': 'Reimb. Description', 'id': 'reimbursement_description'},
+        {'name': 'Artifact', 'id': 'documentation_file', 'presentation': 'markdown'},
+    ]
+
     dash_app.layout = dbc.Container([
+        dcc.Location(id='url', refresh=False),
         html.H2('Filter Transactions to View', className='mt-4 mb-4'),
         dbc.Row([
             dbc.Col([
@@ -61,16 +77,7 @@ def create_transactions_dash(server):
         html.H2(id='transactions-header', className='mt-4 mb-3'),
         dash_table.DataTable(
             id='transactions-table',
-            columns=[
-                {'name': 'Category', 'id': 'category'},
-                {'name': 'Description', 'id': 'description'},
-                {'name': 'Amount', 'id': 'amount'},
-                {'name': 'Date Incurred', 'id': 'date'},
-                {'name': 'Collector/Payer', 'id': 'collector_payer'},
-                {'name': 'Reimb. Date', 'id': 'reimbursement_date'},
-                {'name': 'Reimb. Description', 'id': 'reimbursement_description'},
-                {'name': 'Artifact', 'id': 'documentation_file', 'presentation': 'markdown'}
-            ],
+            columns=base_columns,
             style_table={'overflowX': 'auto'},
             style_cell={
                 'textAlign': 'left',
@@ -88,7 +95,7 @@ def create_transactions_dash(server):
                 'backgroundColor': '#f8f9fa',
                 'fontWeight': 'bold',
                 'border': '1px solid #dee2e6',
-                'whiteSpace': 'nowrap',  # Change this line
+                'whiteSpace': 'nowrap',
                 'height': '40px',
                 'lineHeight': '40px',
                 'padding': '0 10px',
@@ -113,19 +120,31 @@ def create_transactions_dash(server):
             sort_action='native',
             sort_mode='multi',
             filter_action='none'
-        )
+        ),
+        dbc.Modal(
+            [
+                dbc.ModalHeader("Edit Transaction"),
+                dbc.ModalBody(id="edit-transaction-content"),
+                dbc.ModalFooter(
+                    dbc.Button("Close", id="close-edit-modal", className="ml-auto")
+                ),
+            ],
+            id="edit-transaction-modal",
+            size="lg",
+        ),
     ], fluid=True)
 
     @dash_app.callback(
-    [Output('transactions-table', 'data'),
-     Output('transactions-header', 'children'),
-     Output('property-filter', 'options')],
-    [Input('property-filter', 'value'),
-     Input('type-filter', 'value'),
-     Input('reimbursement-filter', 'value'),
-     Input('date-range', 'start_date'),
-     Input('date-range', 'end_date')]
-)
+        [Output('transactions-table', 'data'),
+         Output('transactions-header', 'children'),
+         Output('property-filter', 'options'),
+         Output('transactions-table', 'columns')],
+        [Input('property-filter', 'value'),
+         Input('type-filter', 'value'),
+         Input('reimbursement-filter', 'value'),
+         Input('date-range', 'start_date'),
+         Input('date-range', 'end_date')]
+    )
     def update_table(property_id, transaction_type, reimbursement_status, start_date, end_date):
         try:
             current_app.logger.debug(f"update_table called with: property_id={property_id}, transaction_type={transaction_type}, reimbursement_status={reimbursement_status}, start_date={start_date}, end_date={end_date}")
@@ -157,7 +176,11 @@ def create_transactions_dash(server):
                     df['documentation_file'] = df['documentation_file'].apply(
                         lambda x: f'[View/Download]({url_for("transactions.get_artifact", filename=x)})' if x else ''
                     )
-                
+        
+                # Add Edit links for admin users
+            if current_user.is_authenticated and current_user.role == 'Admin':
+                df['edit'] = df.apply(lambda row: f'[Edit]({url_for("transactions.edit_transactions", transaction_id=row["id"])})', axis=1)
+
                 # Create header
                 type_str = 'Income' if transaction_type == 'income' else 'Expense' if transaction_type == 'expense' else 'All'
                 property_str = property_id[:20] + '...' if property_id else 'All Properties'
@@ -174,12 +197,21 @@ def create_transactions_dash(server):
                                 'value': prop['address']} for prop in properties]
             property_options.insert(0, {'label': 'All Properties', 'value': 'all'})
             
-            current_app.logger.debug(f"Returning: data={data}, header={header}, property_options={property_options}")
-            return data, header, property_options
+            # Determine columns based on user role
+            columns = base_columns.copy()
+            if current_user.is_authenticated and current_user.role == 'Admin':
+                columns.append({'name': 'Edit', 'id': 'edit', 'presentation': 'markdown'})
+            
+            current_app.logger.debug(f"User role: {current_user.role if current_user.is_authenticated else 'Not authenticated'}")
+            current_app.logger.debug(f"Columns: {columns}")
+            
+            current_app.logger.debug(f"Returning: data={data}, header={header}, property_options={property_options}, columns={columns}")
+            return data, header, property_options, columns
         except Exception as e:
             current_app.logger.error(f"Error in update_table: {str(e)}")
             current_app.logger.error(traceback.format_exc())
             raise
 
+       
     print(f"Dash app created with server: {dash_app.server}")
     return dash_app

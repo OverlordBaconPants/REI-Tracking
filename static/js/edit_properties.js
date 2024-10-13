@@ -1,6 +1,8 @@
 // edit_properties.js
 
 const editPropertiesModule = {
+    allPartners: new Set(), // Use a Set to store unique partner names
+
     init: function() {
         console.log('Initializing edit properties module');
         const propertySelect = document.getElementById('property_select');
@@ -10,6 +12,10 @@ const editPropertiesModule = {
         
         if (propertySelect) {
             propertySelect.addEventListener('change', this.handlePropertySelect.bind(this));
+            // Fetch partners for the initially selected property
+            if (propertySelect.value) {
+                this.fetchPartnersForProperty(propertySelect.value);
+            }
         }
 
         if (form) {
@@ -17,7 +23,7 @@ const editPropertiesModule = {
         }
 
         if (addPartnerButton) {
-            addPartnerButton.addEventListener('click', this.addPartner.bind(this));
+            addPartnerButton.addEventListener('click', () => this.addPartner());
         }
 
         this.initPartnersSection();
@@ -36,6 +42,7 @@ const editPropertiesModule = {
         const selectedAddress = event.target.value;
         if (selectedAddress) {
             this.fetchPropertyDetails(selectedAddress);
+            this.fetchPartnersForProperty(selectedAddress);
         } else {
             this.clearForm();
         }
@@ -68,8 +75,20 @@ const editPropertiesModule = {
         });
     },
 
+    fetchPartnersForProperty: function(propertyId) {
+        return fetch(`/properties/get_partners_for_property?property_id=${encodeURIComponent(propertyId)}`)
+            .then(response => response.json())
+            .then(partners => {
+                this.allPartners.clear(); // Clear existing partners
+                partners.forEach(partner => this.allPartners.add(partner.name));
+                this.updatePartnerSelects();
+            })
+            .catch(error => console.error('Error fetching partners:', error));
+    },
+
     populateForm: function(property) {
         document.getElementById('purchase-date').value = property.purchase_date;
+        document.getElementById('loan_amount').value = property.loan_amount;
         document.getElementById('loan_start_date').value = property.loan_start_date;
         document.getElementById('purchase_price').value = property.purchase_price;
         document.getElementById('down_payment').value = property.down_payment;
@@ -86,8 +105,8 @@ const editPropertiesModule = {
         const partnersContainer = document.getElementById('partners-container');
         partnersContainer.innerHTML = '<h4>Partners</h4>';
         if (property.partners && Array.isArray(property.partners)) {
-            property.partners.forEach((partner, index) => {
-                this.addPartnerFields(partner, index);
+            property.partners.forEach((partner) => {
+                this.addPartner(partner);
             });
         }
         this.updateTotalEquity();
@@ -97,7 +116,7 @@ const editPropertiesModule = {
         const form = document.getElementById('editPropertyForm');
         if (form) form.reset();
         if (document.getElementById('partners-container')) {
-            document.getElementById('partners-container').innerHTML = '';
+            document.getElementById('partners-container').innerHTML = '<h4>Partners</h4>';
         }
         if (document.getElementById('total-equity')) {
             document.getElementById('total-equity').textContent = 'Total Equity: 0%';
@@ -109,20 +128,21 @@ const editPropertiesModule = {
 
     initPartnersSection: function() {
         const partnersContainer = document.getElementById('partners-container');
-        const addPartnerButton = document.getElementById('add-partner');
-        
-        if (partnersContainer && addPartnerButton) {
-            addPartnerButton.addEventListener('click', () => this.addPartnerFields());
+        if (partnersContainer) {
             partnersContainer.addEventListener('change', this.handlePartnerChange.bind(this));
             partnersContainer.addEventListener('input', this.updateTotalEquity.bind(this));
-            partnersContainer.addEventListener('click', this.removePartner.bind(this));
+            partnersContainer.addEventListener('click', (event) => {
+                if (event.target.classList.contains('remove-partner')) {
+                    this.removePartner(event);
+                }
+            });
             console.log('Partners section initialized');
         } else {
-            console.log('Partners container or add partner button not found');
+            console.log('Partners container not found');
         }
     },
 
-    addPartnerFields: function(partner = {}, index) {
+    addPartner: function(partner = {}) {
         const partnersContainer = document.getElementById('partners-container');
         const partnerCount = partnersContainer.querySelectorAll('.partner-entry').length;
         const newPartnerHtml = `
@@ -130,8 +150,16 @@ const editPropertiesModule = {
                 <div class="row align-items-end">
                     <div class="col-md-5">
                         <div class="form-group">
-                            <label for="partner-name-${partnerCount}">Partner Name:</label>
-                            <input type="text" id="partner-name-${partnerCount}" name="partners[${partnerCount}][name]" class="form-control partner-name" value="${partner.name || ''}" ${partner.name ? 'readonly' : ''}>
+                            <label for="partner-select-${partnerCount}">Partner:</label>
+                            <select id="partner-select-${partnerCount}" name="partners[${partnerCount}][name]" class="form-control partner-select">
+                                <option value="">Select a partner</option>
+                                ${this.getPartnerOptions(partner.name)}
+                                <option value="new">Add new partner</option>
+                            </select>
+                        </div>
+                        <div class="form-group mt-2 new-partner-name" style="display: none;">
+                            <label for="new-partner-name-${partnerCount}">New Partner Name:</label>
+                            <input type="text" id="new-partner-name-${partnerCount}" name="partners[${partnerCount}][new_name]" class="form-control">
                         </div>
                     </div>
                     <div class="col-md-5">
@@ -147,29 +175,60 @@ const editPropertiesModule = {
             </div>
         `;
         partnersContainer.insertAdjacentHTML('beforeend', newPartnerHtml);
+        
+        if (partner.name) {
+            const partnerSelect = partnersContainer.querySelector(`#partner-select-${partnerCount}`);
+            if (partnerSelect) {
+                partnerSelect.value = partner.name;
+            }
+        }
+        
         this.updateTotalEquity();
     },
 
-    addPartner: function() {
-        this.addPartnerFields();
+    getPartnerOptions: function(selectedPartner = '') {
+        const currentPartners = Array.from(document.querySelectorAll('.partner-select'))
+            .map(select => select.value)
+            .filter(value => value && value !== 'new');
+
+        return Array.from(this.allPartners)
+            .filter(partner => !currentPartners.includes(partner) || partner === selectedPartner)
+            .map(partner => `<option value="${partner}" ${partner === selectedPartner ? 'selected' : ''}>${partner}</option>`)
+            .join('');
     },
 
-    initPartnersSection: function() {
-        const partnersContainer = document.getElementById('partners-container');
-        if (partnersContainer) {
-            partnersContainer.addEventListener('input', this.updateTotalEquity.bind(this));
-            partnersContainer.addEventListener('click', this.removePartner.bind(this));
-            console.log('Partners section initialized');
-        } else {
-            console.log('Partners container not found');
+    handlePartnerChange: function(event) {
+        if (event.target.classList.contains('partner-select')) {
+            console.log('Partner select changed:', event.target.value);
+            const partnerEntry = event.target.closest('.partner-entry');
+            const newPartnerNameInput = partnerEntry.querySelector('.new-partner-name');
+            if (event.target.value === 'new') {
+                console.log('New partner selected, showing input field');
+                newPartnerNameInput.style.display = 'block';
+            } else {
+                console.log('Existing partner selected, hiding input field');
+                newPartnerNameInput.style.display = 'none';
+            }
         }
     },
 
     removePartner: function(event) {
-        if (event.target.classList.contains('remove-partner')) {
-            event.target.closest('.partner-entry').remove();
-            this.updateTotalEquity();
-        }
+        event.target.closest('.partner-entry').remove();
+        this.updateTotalEquity();
+        this.updatePartnerSelects();
+    },
+
+    updatePartnerSelects: function() {
+        const partnerSelects = document.querySelectorAll('.partner-select');
+        partnerSelects.forEach(select => {
+            const currentValue = select.value;
+            select.innerHTML = `
+                <option value="">Select a partner</option>
+                ${this.getPartnerOptions(currentValue)}
+                <option value="new">Add new partner</option>
+            `;
+            select.value = currentValue;
+        });
     },
 
     updateTotalEquity: function() {
@@ -199,6 +258,7 @@ const editPropertiesModule = {
         const propertyData = {
             address: formData.get('property_select'),
             purchase_date: formData.get('purchase-date'),
+            loan_amount: formData.get('loan_amount'),
             loan_start_date: formData.get('loan_start_date'),
             purchase_price: parseInt(formData.get('purchase_price')),
             down_payment: parseInt(formData.get('down_payment')),
@@ -220,8 +280,15 @@ const editPropertiesModule = {
             const equityInput = entry.querySelector(`[name="partners[${index}][equity_share]"]`);
             
             if (nameInput && equityInput) {
-                const name = nameInput.value.trim();
+                let name = nameInput.value.trim();
                 const equityShare = parseFloat(equityInput.value);
+                
+                if (name === 'new') {
+                    const newPartnerNameInput = entry.querySelector(`[name="partners[${index}][new_name]"]`);
+                    if (newPartnerNameInput) {
+                        name = newPartnerNameInput.value.trim();
+                    }
+                }
                 
                 if (name && !isNaN(equityShare)) {
                     propertyData.partners.push({ name, equity_share: equityShare });

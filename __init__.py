@@ -50,11 +50,17 @@ def create_app(config_class=Config):
     
     # Create and integrate Dash apps
     app.logger.debug("About to create Dash apps...")
+    
     app.amortization_dash = create_amortization_dash(app)
-
     if app.amortization_dash is None:
         app.logger.error("Failed to create Amortization Dash app")
     else:
         app.logger.debug("Amortization Dash app created successfully")
+
+    app.transactions_dash = create_transactions_dash(app)
+    if app.transactions_dash is None:
+        app.logger.error("Failed to create Transactions Dash app")
+    else:
+        app.logger.debug("Transactions Dash app created successfully")
 
     return app

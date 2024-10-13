@@ -1,10 +1,9 @@
-# routes/admin.py
-
 # Import necessary modules
 from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app, jsonify
 from flask_login import login_required, current_user
 from functools import wraps
 from utils.utils import admin_required
+from services.transaction_service import get_partners_for_property
 from services.user_service import get_user_by_email, create_user, update_user_password, hash_password, verify_password
 import logging
 import json
@@ -212,3 +211,17 @@ def get_property_details():
     except Exception as e:
         return jsonify({'success': False, 'message': f'Error fetching property details: {str(e)}'}), 500
 
+@properties_bp.route('/get_partners_for_property', methods=['GET'])
+@login_required
+@admin_required
+def api_get_partners_for_property():
+    property_id = request.args.get('property_id')
+    if not property_id:
+        return jsonify({'error': 'Property ID is required'}), 400
+    
+    try:
+        partners = get_partners_for_property(property_id)
+        return jsonify(partners)
+    except Exception as e:
+        current_app.logger.error(f"Error fetching partners for property {property_id}: {str(e)}")
+        return jsonify({'error': 'An error occurred while fetching partners'}), 500

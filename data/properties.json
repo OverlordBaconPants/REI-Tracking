@@ -125,5 +125,32 @@
         "equity_share": 100.0
       }
     ]
+  },
+  {
+    "address": "1234 Main Street, Ellicott City, MD 21043, United States of America",
+    "purchase_price": 300000,
+    "down_payment": 30000,
+    "primary_loan_rate": 3,
+    "primary_loan_term": 360,
+    "purchase_date": "2024-10-01",
+    "loan_amount": "270000",
+    "loan_start_date": "2024-11-01",
+    "seller_financing_amount": 0,
+    "seller_financing_rate": 0,
+    "seller_financing_term": 0,
+    "closing_costs": 500,
+    "renovation_costs": 500,
+    "marketing_costs": 500,
+    "holding_costs": 500,
+    "partners": [
+      {
+        "name": "BJ Marshall",
+        "equity_share": 50
+      },
+      {
+        "name": "Kelly Clarkson",
+        "equity_share": 50
+      }
+    ]
   }
 ]

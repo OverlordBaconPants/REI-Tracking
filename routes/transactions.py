@@ -1,12 +1,11 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, send_from_directory, jsonify, send_from_directory
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, send_from_directory
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
-from services.transaction_service import add_transaction, get_transactions_for_user, is_duplicate_transaction, get_properties_for_user
+from services.transaction_service import add_transaction, is_duplicate_transaction, get_properties_for_user, get_transaction_by_id, update_transaction
 from utils.utils import admin_required
 import os
 import logging
 import json
-import uuid
 import traceback
 
 transactions_bp = Blueprint('transactions', __name__)
@@ -90,16 +89,56 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in current_app.config['ALLOWED_EXTENSIONS']
     logging.info("transactions.py blueprint loaded")
 
-@transactions_bp.route('/edit', methods=['GET', 'POST'])
+@transactions_bp.route('/edit/<int:transaction_id>', methods=['GET', 'POST'])
 @login_required
 @admin_required
-def edit_transactions():
-    if request.method == 'POST':
-        # Handle the form submission for editing a transaction
-        # This is where you'd process the form data and update the transaction in the database
-        flash('Transaction updated successfully', 'success')
-    # Render the template for editing transactions
-    return render_template('transactions/edit_transactions.html')
+def edit_transactions(transaction_id):
+    try:
+        current_app.logger.info(f"Edit transactions route accessed for transaction ID: {transaction_id}")
+        transaction = get_transaction_by_id(transaction_id)
+        
+        if not transaction:
+            current_app.logger.warning(f"Transaction not found for ID: {transaction_id}")
+            flash('Transaction not found.', 'danger')
+            return redirect(url_for('transactions.view_transactions'))
+
+        if request.method == 'POST':
+            try:
+                current_app.logger.info(f"Processing POST request to edit transaction ID: {transaction_id}")
+                updated_transaction = {
+                    'id': transaction_id,
+                    'property_id': request.form.get('property_id'),
+                    'type': request.form.get('type'),
+                    'category': request.form.get('category'),
+                    'description': request.form.get('description'),
+                    'amount': float(request.form.get('amount')),
+                    'date': request.form.get('date'),
+                    'collector_payer': request.form.get('collector_payer'),
+                    'reimbursement': {
+                        'reimbursement_status': request.form.get('reimbursement_status')
+                    }
+                }
+                update_transaction(updated_transaction)
+                current_app.logger.info(f"Transaction ID: {transaction_id} updated successfully")
+                flash('Transaction updated successfully.', 'success')
+                return redirect(url_for('transactions.view_transactions'))
+
+            except Exception as e:
+                current_app.logger.error(f"Error updating transaction: {str(e)}")
+                current_app.logger.error(traceback.format_exc())
+                flash(f'An error occurred while updating the transaction: {str(e)}', 'danger')
+        
+        current_app.logger.info(f"Rendering edit form for transaction ID: {transaction_id}")
+        if request.args.get('form_only') == 'true':
+            return render_template('transactions/edit_transactions_form.html', transaction=transaction)
+        else:
+            return render_template('transactions/edit_transactions.html', transaction=transaction)
+
+    except Exception as e:
+        current_app.logger.error(f"Unexpected error in edit_transactions route: {str(e)}")
+        current_app.logger.error(traceback.format_exc())
+        flash('An unexpected error occurred. Please try again later.', 'danger')
+        return redirect(url_for('transactions.view_transactions'))
 
 @transactions_bp.route('/remove', methods=['GET', 'POST'])
 @login_required
