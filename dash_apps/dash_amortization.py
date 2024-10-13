@@ -146,25 +146,21 @@ def create_amortization_dash(flask_app):
             schedule = list(amortize(loan_amount, interest_rate, loan_term))
             df = pd.DataFrame(schedule)
 
-            # Debug: Print the first few rows of the dataframe
-            print("First few rows of the amortization schedule:")
-            print(df.head())
-
-            # Debug: Print summary statistics
-            print("\nSummary statistics:")
-            print(df.describe())
-
             # Calculate current loan status
             today = date.today()
             current_month = (today.year - loan_start_date.year) * 12 + today.month - loan_start_date.month + 1
             months_into_loan = relativedelta(today, loan_start_date).months + relativedelta(today, loan_start_date).years * 12
             last_month_equity = df.iloc[months_into_loan - 1]['principal'] if months_into_loan > 0 else 0
 
+            # Calculate equity gained since acquisition
+            equity_gained_since_acquisition = df.iloc[:months_into_loan]['principal'].sum() if months_into_loan > 0 else 0
+
             # Create loan_info content
             loan_info = html.Div([
                 dbc.Row([
-                    dbc.Col(html.P(f"Months into Loan Repayment: {months_into_loan}", className='font-weight-bold mb-0'), width=6),
-                    dbc.Col(html.P(f"Equity Gained Last Month: ${last_month_equity:.2f}", className='font-weight-bold mb-0'), width=6)
+                    dbc.Col(html.P(f"Months into Loan Repayment: {months_into_loan}", className='font-weight-bold mb-0'), width=4),
+                    dbc.Col(html.P(f"Equity Gained Last Month: ${last_month_equity:.2f}", className='font-weight-bold mb-0'), width=4),
+                    dbc.Col(html.P(f"Equity Gained Since Acquisition: ${equity_gained_since_acquisition:,.2f}", className='font-weight-bold mb-0'), width=4)
                 ])
             ])
 
