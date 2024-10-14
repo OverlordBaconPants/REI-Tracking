@@ -59,6 +59,9 @@
         } else if (body.classList.contains('edit-transactions-page')) {
             console.log('Edit transactions page detected');
             moduleToLoad = 'edit_transactions';
+        } else if (body.classList.contains('edit-properties-page')) {
+            console.log('Edit properties page detected');
+            moduleToLoad = 'edit_properties';
         }
 
         if (moduleToLoad) {

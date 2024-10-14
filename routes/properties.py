@@ -176,7 +176,7 @@ def edit_properties():
 
             # Update property fields
             for key in ['purchase_price', 'down_payment', 'primary_loan_rate', 'primary_loan_term',
-                        'purchase_date', 'loan_amount', 'loan_start_date', 'seller_financing_amount',
+                        'purchase_date', 'loan_start_date', 'seller_financing_amount',
                         'seller_financing_rate', 'seller_financing_term', 'closing_costs',
                         'renovation_costs', 'marketing_costs', 'holding_costs']:
                 if key in data:
