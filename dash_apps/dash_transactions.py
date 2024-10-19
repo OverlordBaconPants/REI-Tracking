@@ -33,8 +33,8 @@ def create_transactions_dash(flask_app):
         {'name': 'Amount', 'id': 'amount'},
         {'name': 'Date Incurred', 'id': 'date'},
         {'name': 'Collector/Payer', 'id': 'collector_payer'},
-        {'name': 'Reimb. Date', 'id': 'reimbursement_date'},
-        {'name': 'Reimb. Description', 'id': 'reimbursement_description'},
+        {'name': 'Reimb. Date', 'id': 'date_shared'},
+        {'name': 'Reimb. Description', 'id': 'share_description'},
         {'name': 'Artifact', 'id': 'documentation_file', 'presentation': 'markdown'},
     ]
 
@@ -293,27 +293,42 @@ def create_transactions_dash(flask_app):
     dash_app.clientside_callback(
         """
         function(n_clicks) {
-            if (window.closeEditModal === undefined) {
-                window.closeEditModal = function() {
+            console.log('Initializing closeEditModal function');
+            window.closeEditModal = function() {
+                console.log('closeEditModal called');
+                setTimeout(function() {
                     document.getElementById('close-edit-modal').click();
+                    console.log('Modal close button clicked');
                     setTimeout(function() {
-                        window.dash_clientside.no_update = false;
-                        window.dash_clientside.callback_context.triggered = [{
-                            'prop_id': 'transaction-update-trigger.data',
-                            'value': {'message': 'Transaction updated successfully!'}
-                        }];
-                    }, 500);
-                }
-            }
+                        console.log('Triggering Dash update');
+                        if (window.dash_clientside) {
+                            window.dash_clientside.no_update = false;
+                            if (window.dash_clientside.callback_context) {
+                                window.dash_clientside.callback_context.triggered = [{
+                                    'prop_id': 'transaction-update-trigger.data',
+                                    'value': {'message': 'Transaction updated successfully!'}
+                                }];
+                            }
+                        }
+                        // Refresh the transactions table
+                        if (window.refreshTransactionsTable) {
+                            console.log('Refreshing transactions table');
+                            window.refreshTransactionsTable();
+                        }
+                    }, 500); // Short delay to ensure the modal is closed before updating
+                }, 1000); // Wait 1 seconds before closing the modal
+            };
 
+            console.log('Setting up message event listener');
             window.addEventListener('message', function(event) {
+                console.log('Received message:', event.data);
                 if (event.data.type === 'transactionUpdated') {
-                    if (window.dash_clientside) {
-                        window.dash_clientside.no_update = false;
-                        window.dash_clientside.callback_context.triggered = [{
-                            'prop_id': 'transaction-update-trigger.data',
-                            'value': {'message': event.data.message}
-                        }];
+                    console.log('Transaction updated message received');
+                    if (window.closeEditModal) {
+                        console.log('Calling closeEditModal');
+                        window.closeEditModal();
+                    } else {
+                        console.log('closeEditModal not found');
                     }
                 }
             });

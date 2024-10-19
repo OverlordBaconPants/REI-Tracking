@@ -2,6 +2,9 @@ const editTransactionsModule = {
     init: function() {
         console.log('Initializing edit transactions module');
         this.form = document.getElementById('edit-transaction-form');
+        this.flashContainerTop = document.querySelector('.flash-messages-top');
+        this.flashContainerBottom = document.querySelector('.flash-messages-bottom');
+
         if (this.form) {
             this.initEventListeners();
             this.populateCategories();
@@ -21,6 +24,7 @@ const editTransactionsModule = {
         });
         document.getElementById('amount').addEventListener('input', this.updateReimbursementDetails.bind(this));
         document.getElementById('collector_payer').addEventListener('change', this.updateReimbursementDetails.bind(this));
+        document.getElementById('property_id').addEventListener('change', this.populatePartners.bind(this));
     },
 
     populateCategories: function() {
@@ -74,27 +78,25 @@ const editTransactionsModule = {
     },
 
     populatePartners: function() {
-        const propertyId = encodeURIComponent(document.getElementById('property_id').value);
-        fetch(`/transactions/api/partners?property_id=${propertyId}`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
+        const propertyId = document.getElementById('property_id').value;
+        console.log('Populating partners for property:', propertyId);
+        
+        fetch(`/transactions/api/partners?property_id=${encodeURIComponent(propertyId)}`)
+            .then(response => response.json())
             .then(partners => {
-                const partnerSelect = document.getElementById('collector_payer');
-                partnerSelect.innerHTML = '<option value="">Select a partner</option>';
+                const collectorPayerSelect = document.getElementById('collector_payer');
+                collectorPayerSelect.innerHTML = '<option value="">Select a partner</option>';
                 partners.forEach(partner => {
                     const option = document.createElement('option');
                     option.value = partner.name;
                     option.textContent = partner.name;
-                    partnerSelect.appendChild(option);
+                    collectorPayerSelect.appendChild(option);
                 });
-                // Set the current collector/payer
+                
+                // Set the current collector/payer if it exists
                 const currentCollectorPayer = this.form.querySelector('input[name="collector_payer"]').value;
                 if (currentCollectorPayer) {
-                    partnerSelect.value = currentCollectorPayer;
+                    collectorPayerSelect.value = currentCollectorPayer;
                 }
             })
             .catch(error => console.error('Error fetching partners:', error));
@@ -111,11 +113,6 @@ const editTransactionsModule = {
     
         const formData = new FormData(this.form);
         
-        // Log form data
-        for (let [key, value] of formData.entries()) {
-            console.log(key, value);
-        }
-    
         fetch(this.form.action, {
             method: 'POST',
             body: formData
@@ -127,14 +124,18 @@ const editTransactionsModule = {
         .then(data => {
             console.log('Response data:', data);
             if (data.success) {
-                this.showFlashMessage('Transaction Changed Successfully!', 'success');
+                this.showFlashMessage('Transaction updated successfully!', 'success');
+                
+                this.disableFormInputs();
+                
+                console.log('Setting timeout to close modal');
                 setTimeout(() => {
-                    if (window.parent && typeof window.parent.closeEditModal === 'function') {
-                        window.parent.closeEditModal();
-                    } else {
-                        window.parent.location.reload();
-                    }
-                }, 2000);
+                    console.log('Sending message to parent window');
+                    window.parent.postMessage({
+                        type: 'transactionUpdated',
+                        message: 'Transaction updated successfully!'
+                    }, '*');
+                }, 2000); // Wait 2 seconds before sending the message to close the modal
             } else {
                 this.showFlashMessage('Error updating transaction: ' + (data.message || 'Unknown error'), 'error');
             }
@@ -145,16 +146,8 @@ const editTransactionsModule = {
         });
     },
 
-    handleCancel: function() {
-        this.showFlashMessage('Transaction Edit Canceled', 'success');
-        setTimeout(() => {
-            window.parent.location.reload();
-        }, 3000);
-    },
-
     showFlashMessage: function(message, category) {
-        const flashMessagesContainer = document.querySelector('.flash-messages');
-        if (flashMessagesContainer) {
+        const createAlertDiv = () => {
             const alertDiv = document.createElement('div');
             alertDiv.className = `alert alert-${category} alert-dismissible fade show`;
             alertDiv.role = 'alert';
@@ -162,13 +155,46 @@ const editTransactionsModule = {
                 ${message}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             `;
-            flashMessagesContainer.appendChild(alertDiv);
-            setTimeout(() => {
-                alertDiv.remove();
-            }, 3000);
-        } else {
-            console.error('Flash messages container not found');
+            return alertDiv;
+        };
+
+        if (this.flashContainerTop) {
+            this.flashContainerTop.innerHTML = '';
+            this.flashContainerTop.appendChild(createAlertDiv());
         }
+
+        if (this.flashContainerBottom) {
+            this.flashContainerBottom.innerHTML = '';
+            this.flashContainerBottom.appendChild(createAlertDiv());
+        }
+
+        if (!this.flashContainerTop && !this.flashContainerBottom) {
+            console.error('Flash containers not found');
+        } else {
+            console.log('Flash message displayed:', message);
+        }
+    },
+
+    handleCancel: function() {
+        this.sendFlashMessage('Transaction Edit Canceled', 'info');
+        setTimeout(() => {
+            window.parent.location.reload();
+        }, 3000);
+    },
+
+    disableFormInputs: function() {
+        const inputs = this.form.querySelectorAll('input, select, textarea, button');
+        inputs.forEach(input => {
+            input.disabled = true;
+        });
+    },
+
+    sendFlashMessage: function(message, category) {
+        window.parent.postMessage({
+            type: 'flashMessage',
+            message: message,
+            category: category
+        }, '*');
     }
 };
 
