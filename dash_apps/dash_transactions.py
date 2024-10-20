@@ -29,6 +29,7 @@ def create_transactions_dash(flask_app):
 
     # Define columns without the 'Edit' column
     base_columns = [
+        {'name': 'ID', 'id': 'id', 'hidden': True},
         {'name': 'Category', 'id': 'category'},
         {'name': 'Description', 'id': 'description'},
         {'name': 'Amount', 'id': 'amount'},
@@ -47,6 +48,7 @@ def create_transactions_dash(flask_app):
         html.Div(id='hidden-div', style={'display': 'none'}),
         html.Div(id='flash-message-container', className='flash-messages'),
         html.H2('Filter Transactions to View', className='mt-4 mb-4'),
+        
         dbc.Row([
             dbc.Col([
                 dbc.Label('Property Address'),
@@ -109,10 +111,10 @@ def create_transactions_dash(flask_app):
         ], className='mb-4'),
         
         html.H2(id='transactions-header', className='mt-4 mb-3'),
+
         dash_table.DataTable(
             id='transactions-table',
             columns=base_columns,
-            style_table={'overflowX': 'auto'},
             style_cell={
                 'textAlign': 'left',
                 'padding': '10px',
@@ -122,7 +124,6 @@ def create_transactions_dash(flask_app):
                 'height': 'auto',
                 'minWidth': '100px',
                 'maxWidth': '180px',
-                'overflow': 'hidden',
                 'textOverflow': 'ellipsis',
             },
             style_header={
@@ -149,19 +150,22 @@ def create_transactions_dash(flask_app):
             ],
             tooltip_duration=None,
             markdown_options={'html': True},
-            page_size=10,
             page_action='native',
+            page_current=0,
+            page_size=10,  # Display 15 transactions per page
             sort_action='native',
             sort_mode='multi',
             filter_action='none'
         ),
+        html.Div(id='table-container', style={'height': 'calc(100vh)', 'overflow': 'auto'}),
+
         dbc.Modal(
             [
                 dbc.ModalHeader("Edit Transaction"),
                 dbc.ModalBody([
                     html.Iframe(
                         id="edit-transaction-iframe",
-                        style={"width": "100%", "height": "600px", "border": "none"}
+                        style={"width": "100%", "height": "100%", "border": "none"}
                     )
                 ]),
                 dbc.ModalFooter(
@@ -169,10 +173,10 @@ def create_transactions_dash(flask_app):
                 ),
             ],
             id="edit-transaction-modal",
-            size="xl",
+            size="xl",          
         ),
-    ], fluid=True)
-
+        
+    ], fluid=True, style={'height': '100vh', 'display': 'flex', 'flexDirection': 'column'})
 
     @dash_app.callback(
         [Output('transactions-table', 'data'),
@@ -229,6 +233,13 @@ def create_transactions_dash(flask_app):
                 # Add Edit links for admin users
                 if current_user.is_authenticated and current_user.role == 'Admin':
                     df['edit'] = df.apply(lambda row: f'[Edit]', axis=1)
+                
+                if 'id' not in df.columns:
+                    current_app.logger.warning("Transaction ID not found in data. This may cause issues with editing.")
+                else:
+                    # Add Edit links for admin users
+                    if current_user.is_authenticated and current_user.role == 'Admin':
+                        df['edit'] = df.apply(lambda row: f'[Edit](#{row["id"]})', axis=1)
 
                 # Create header
                 type_str = 'Income' if transaction_type == 'income' else 'Expense' if transaction_type == 'expense' else 'All'
@@ -273,14 +284,16 @@ def create_transactions_dash(flask_app):
 
     @dash_app.callback(
         [Output("edit-transaction-modal", "is_open"),
-         Output("edit-transaction-iframe", "src")],
+        Output("edit-transaction-iframe", "src")],
         [Input("transactions-table", "active_cell"),
-         Input("close-edit-modal", "n_clicks")],
+        Input("close-edit-modal", "n_clicks")],
         [State("transactions-table", "data"),
-         State("edit-transaction-modal", "is_open"),
-         State("filter-options", "data")]
+        State("transactions-table", "page_current"),
+        State("transactions-table", "page_size"),
+        State("edit-transaction-modal", "is_open"),
+        State("filter-options", "data")]
     )
-    def toggle_modal(active_cell, close_clicks, data, is_open, filter_options):
+    def toggle_modal(active_cell, close_clicks, data, page_current, page_size, is_open, filter_options):
         ctx = dash.callback_context
         if not ctx.triggered:
             return is_open, ""
@@ -288,9 +301,17 @@ def create_transactions_dash(flask_app):
         trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
         
         if trigger_id == "transactions-table" and active_cell and active_cell['column_id'] == 'edit':
-            transaction_id = data[active_cell['row']]['id']
+            # Calculate the correct row index based on the current page
+            row_index = (page_current * page_size) + active_cell['row']
+            row = data[row_index]
+            transaction_id = row.get('id')
+            if transaction_id is None:
+                current_app.logger.error(f"Transaction ID not found in row data: {row}")
+                return is_open, ""
+            
             filter_options_str = json.dumps(filter_options)
             iframe_src = url_for('transactions.edit_transactions', transaction_id=transaction_id, filter_options=filter_options_str)
+            current_app.logger.debug(f"Opening edit modal for transaction ID: {transaction_id}")
             return True, iframe_src
         elif trigger_id == "close-edit-modal":
             return False, ""
