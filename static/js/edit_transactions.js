@@ -28,18 +28,13 @@ const editTransactionsModule = {
     },
 
     populateCategories: function() {
-        const typeRadios = document.querySelectorAll('input[name="type"]');
-        let type = '';
-        for (let radio of typeRadios) {
-            if (radio.checked) {
-                type = radio.value;
-                break;
-            }
-        }
-        if (!type) {
+        const typeElement = document.querySelector('input[name="type"]:checked');
+        if (!typeElement) {
             console.error('No transaction type selected');
             return;
         }
+        const type = typeElement.value;
+        
         fetch(`/transactions/api/categories?type=${type}`)
             .then(response => {
                 if (!response.ok) {
@@ -49,6 +44,10 @@ const editTransactionsModule = {
             })
             .then(categories => {
                 const categorySelect = document.getElementById('category');
+                if (!categorySelect) {
+                    console.error('Category select element not found');
+                    return;
+                }
                 categorySelect.innerHTML = '<option value="">Select a category</option>';
                 categories.forEach(category => {
                     const option = document.createElement('option');
@@ -57,12 +56,15 @@ const editTransactionsModule = {
                     categorySelect.appendChild(option);
                 });
                 // Set the current category
-                const currentCategory = this.form.querySelector('input[name="category"]').value;
-                if (currentCategory) {
-                    categorySelect.value = currentCategory;
+                const currentCategory = this.form.querySelector('input[name="category"]');
+                if (currentCategory && currentCategory.value) {
+                    categorySelect.value = currentCategory.value;
                 }
             })
-            .catch(error => console.error('Error fetching categories:', error));
+            .catch(error => {
+                console.error('Error fetching categories:', error);
+                this.showFlashMessage('Error fetching categories. Please try again.', 'error');
+            });
     },
 
     handleTypeChange: function(event) {
@@ -78,13 +80,27 @@ const editTransactionsModule = {
     },
 
     populatePartners: function() {
-        const propertyId = document.getElementById('property_id').value;
+        const propertyIdElement = document.getElementById('property_id');
+        if (!propertyIdElement) {
+            console.error('Property ID element not found');
+            return;
+        }
+        const propertyId = propertyIdElement.value;
         console.log('Populating partners for property:', propertyId);
         
         fetch(`/transactions/api/partners?property_id=${encodeURIComponent(propertyId)}`)
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(partners => {
                 const collectorPayerSelect = document.getElementById('collector_payer');
+                if (!collectorPayerSelect) {
+                    console.error('Collector/Payer select element not found');
+                    return;
+                }
                 collectorPayerSelect.innerHTML = '<option value="">Select a partner</option>';
                 partners.forEach(partner => {
                     const option = document.createElement('option');
@@ -94,12 +110,15 @@ const editTransactionsModule = {
                 });
                 
                 // Set the current collector/payer if it exists
-                const currentCollectorPayer = this.form.querySelector('input[name="collector_payer"]').value;
-                if (currentCollectorPayer) {
-                    collectorPayerSelect.value = currentCollectorPayer;
+                const currentCollectorPayer = this.form.querySelector('input[name="collector_payer"]');
+                if (currentCollectorPayer && currentCollectorPayer.value) {
+                    collectorPayerSelect.value = currentCollectorPayer.value;
                 }
             })
-            .catch(error => console.error('Error fetching partners:', error));
+            .catch(error => {
+                console.error('Error fetching partners:', error);
+                this.showFlashMessage('Error fetching partners. Please try again.', 'error');
+            });
     },
 
     updateReimbursementDetails: function() {
@@ -112,13 +131,18 @@ const editTransactionsModule = {
         console.log('Form submission started');
     
         const formData = new FormData(this.form);
-        
+        const filterOptions = formData.get('filter_options') || '{}';
+        console.log('Filter options before send:', filterOptions);
+    
         fetch(this.form.action, {
             method: 'POST',
             body: formData
         })
         .then(response => {
             console.log('Response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
             return response.json();
         })
         .then(data => {
@@ -126,23 +150,29 @@ const editTransactionsModule = {
             if (data.success) {
                 this.showFlashMessage('Transaction updated successfully!', 'success');
                 
-                this.disableFormInputs();
-                
-                console.log('Setting timeout to close modal');
+                console.log('Setting timeout to close modal and refresh');
                 setTimeout(() => {
                     console.log('Sending message to parent window');
+                    let parsedFilterOptions;
+                    try {
+                        parsedFilterOptions = JSON.parse(filterOptions);
+                    } catch (error) {
+                        console.error('Error parsing filter options:', error);
+                        parsedFilterOptions = {};
+                    }
                     window.parent.postMessage({
                         type: 'transactionUpdated',
-                        message: 'Transaction updated successfully!'
+                        shouldRefresh: true,
+                        filterOptions: parsedFilterOptions
                     }, '*');
-                }, 2000); // Wait 2 seconds before sending the message to close the modal
+                }, 1000);
             } else {
-                this.showFlashMessage('Error updating transaction: ' + (data.message || 'Unknown error'), 'error');
+                throw new Error(data.message || 'Unknown error occurred');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            this.showFlashMessage('An error occurred while updating the transaction', 'error');
+            this.showFlashMessage('Error updating transaction: ' + error.message, 'error');
         });
     },
 

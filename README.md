@@ -2,7 +2,7 @@
 
 ## 📝 Description
 
-This project is a Flask- and eventually Dash-based Python web application that allows partners to track and adjudicate incomes and expenses (per equity splits) and create and access useful reports tracking Key Performance Indicators such as CoC Return, net monthly cash flow, and amortization schedules.
+This project is a Flask- and Dash-based Python web application that allows partners to track and adjudicate incomes and expenses (per equity splits) and create and access useful reports tracking Key Performance Indicators such as CoC Return, net monthly cash flow, and amortization schedules.
 
 ## ✨ Features
 

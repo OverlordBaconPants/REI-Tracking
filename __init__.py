@@ -10,6 +10,7 @@ from dash_apps.dash_amortization import create_amortization_dash
 from flask.helpers import get_root_path
 
 login_manager = LoginManager()
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 def create_app(config_class=Config):
     app = Flask(__name__, template_folder='templates', 
@@ -35,6 +36,7 @@ def create_app(config_class=Config):
     from routes.transactions import transactions_bp
     from routes.api import api_bp
     from routes.dashboards import dashboards_bp
+    from routes.analyses import analyses_bp  # Add this line
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
@@ -42,6 +44,7 @@ def create_app(config_class=Config):
     app.register_blueprint(transactions_bp, url_prefix='/transactions')
     app.register_blueprint(api_bp, url_prefix='/api')
     app.register_blueprint(dashboards_bp)
+    app.register_blueprint(analyses_bp, url_prefix='/analyses')
 
     # Set up login loader
     @login_manager.user_loader

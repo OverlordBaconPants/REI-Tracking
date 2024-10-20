@@ -91,6 +91,16 @@
 
 })(window);
 
+document.addEventListener('DOMContentLoaded', function() {
+    var closeButtons = document.querySelectorAll('.alert .close');
+    closeButtons.forEach(function(button) {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            this.closest('.alert').style.display = 'none';
+        });
+    });
+});
+
 // Initialize when the DOM is fully loaded
 document.addEventListener('DOMContentLoaded', function() {
     if (window.mainInit) {

@@ -2,7 +2,10 @@ import json
 import logging
 from utils.json_handler import read_json, write_json
 from flask import current_app
-from datetime import datetime, timedelta
+from datetime import datetime
+import pandas as pd
+from fuzzywuzzy import process
+import re
 
 def get_properties_for_user(user_id, user_name, is_admin=False):
     logging.debug(f"Getting properties for user: {user_name} (ID: {user_id}), is_admin: {is_admin}")
@@ -39,33 +42,6 @@ def add_transaction(transaction_data):
         json.dump(transactions, f, indent=2)
 
     return True
-
-def is_duplicate_transaction(new_transaction):
-    transactions = read_json(current_app.config['TRANSACTIONS_FILE'])
-    
-    # Convert the new transaction's date to a datetime object
-    new_date = datetime.strptime(new_transaction['date'], '%Y-%m-%d').date()
-    
-    for transaction in transactions:
-        # Check if the transaction is within 1 day of the new transaction
-        transaction_date = datetime.strptime(transaction['date'], '%Y-%m-%d').date()
-        date_difference = abs((new_date - transaction_date).days)
-        
-        # Add a small tolerance for amount comparison
-        amount_difference = abs(float(transaction['amount']) - float(new_transaction['amount']))
-        
-        if (transaction['property_id'] == new_transaction['property_id'] and
-            transaction['type'] == new_transaction['type'] and
-            transaction['category'] == new_transaction['category'] and
-            amount_difference < 0.01 and
-            date_difference <= 1):
-            
-            logging.warning(f"Potential duplicate transaction detected:")
-            logging.warning(f"Existing: {transaction}")
-            logging.warning(f"New: {new_transaction}")
-            return True
-    
-    return False
 
 def get_transactions_for_user(user_id, property_id=None, start_date=None, end_date=None):
     transactions = read_json(current_app.config['TRANSACTIONS_FILE'])
@@ -185,3 +161,141 @@ def update_transaction(updated_transaction):
         raise ValueError(f"Transaction with id {updated_transaction['id']} not found")
     
     write_json(current_app.config['TRANSACTIONS_FILE'], transactions)
+
+def process_bulk_import(file_path, column_mapping, properties):
+    df = pd.read_excel(file_path) if file_path.endswith(('.xlsx', '.xls')) else pd.read_csv(file_path)
+    
+    total_rows = len(df)
+    skipped_rows = {'empty_date': 0, 'empty_amount': 0, 'unmatched_property': 0, 'other': 0}
+    
+    df['property_id'] = df[column_mapping['Property']].apply(lambda x: match_property(x, properties))
+    df['collector_payer'] = df[column_mapping['Paid By']].apply(match_collector_payer)
+    
+    mapped_data = []
+    for index, row in df.iterrows():
+        try:
+            amount, transaction_type = clean_amount(row[column_mapping['Amount']])
+            date = parse_date(row[column_mapping['Date Received or Paid']])
+            
+            if date is None:
+                skipped_rows['empty_date'] += 1
+                continue
+            
+            if amount is None:
+                skipped_rows['empty_amount'] += 1
+                continue
+            
+            if pd.isna(row['property_id']):
+                skipped_rows['unmatched_property'] += 1
+                continue
+            
+            transaction = {
+                'property_id': row['property_id'],
+                'type': transaction_type,
+                'category': row[column_mapping['Category']],
+                'description': row[column_mapping['Item Description']],
+                'amount': amount,
+                'date': date,
+                'collector_payer': row['collector_payer'],
+                'documentation_file': '',
+                'reimbursement': {
+                    'date_shared': '',
+                    'share_description': '',
+                    'reimbursement_status': 'pending'
+                }
+            }
+            
+            mapped_data.append(transaction)
+        
+        except Exception as e:
+            skipped_rows['other'] += 1
+    
+    imported_count = bulk_import_transactions(mapped_data)
+    
+    return {
+        'total_rows': total_rows,
+        'processed_rows': len(mapped_data),
+        'imported_count': imported_count,
+        'skipped_rows': sum(skipped_rows.values()),
+        'empty_dates': skipped_rows['empty_date'],
+        'empty_amounts': skipped_rows['empty_amount'],
+        'unmatched_properties': skipped_rows['unmatched_property'],
+        'other_issues': skipped_rows['other']
+    }
+
+def match_property(address, properties):
+    if pd.isna(address):
+        return None
+    matches = process.extractOne(address, [p['address'] for p in properties])
+    return matches[0] if matches and matches[1] >= 80 else None
+
+def match_collector_payer(name):
+    if pd.isna(name):
+        return None
+    # You might want to implement a more sophisticated matching here
+    return name
+
+def clean_amount(amount_str):
+    if pd.isna(amount_str) or amount_str == '':
+        return None, None
+    cleaned = re.sub(r'[^\d.-]', '', str(amount_str))
+    if not cleaned:
+        return None, None
+    try:
+        amount = float(cleaned)
+        transaction_type = 'expense' if amount < 0 else 'income'
+        return abs(amount), transaction_type
+    except ValueError:
+        return None, None
+
+def parse_date(date_str):
+    if pd.isna(date_str) or date_str == '':
+        return None
+    for fmt in ('%Y-%m-%d', '%m/%d/%Y', '%d/%m/%Y', '%Y/%m/%d'):
+        try:
+            return datetime.strptime(date_str, fmt).strftime('%Y-%m-%d')
+        except ValueError:
+            pass
+    return None
+
+def bulk_import_transactions(transactions):
+    existing_transactions = read_json(current_app.config['TRANSACTIONS_FILE'])
+    
+    imported_count = 0
+    for transaction in transactions:
+        if not is_duplicate_transaction(transaction):
+            transaction['id'] = str(len(existing_transactions) + 1)
+            existing_transactions.append(transaction)
+            imported_count += 1
+    
+    if imported_count > 0:
+        write_json(current_app.config['TRANSACTIONS_FILE'], existing_transactions)
+    
+    return imported_count
+
+def is_duplicate_transaction(new_transaction):
+    transactions = read_json(current_app.config['TRANSACTIONS_FILE'])
+    
+    # Convert the new transaction's date to a datetime object
+    new_date = datetime.strptime(new_transaction['date'], '%Y-%m-%d').date()
+    
+    for transaction in transactions:
+        # Check if the transaction is within 1 day of the new transaction
+        transaction_date = datetime.strptime(transaction['date'], '%Y-%m-%d').date()
+        date_difference = abs((new_date - transaction_date).days)
+        
+        # Add a small tolerance for amount comparison
+        amount_difference = abs(float(transaction['amount']) - float(new_transaction['amount']))
+        
+        if (transaction['property_id'] == new_transaction['property_id'] and
+            transaction['type'] == new_transaction['type'] and
+            transaction['category'] == new_transaction['category'] and
+            amount_difference < 0.01 and
+            date_difference <= 1):
+            
+            logging.warning(f"Potential duplicate transaction detected:")
+            logging.warning(f"Existing: {transaction}")
+            logging.warning(f"New: {new_transaction}")
+            return True
+    
+    return False

@@ -15,6 +15,7 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.lib.enums import TA_CENTER
+import json
 
 def create_transactions_dash(flask_app):
     print("Creating Dash app for transactions...")
@@ -41,6 +42,8 @@ def create_transactions_dash(flask_app):
     dash_app.layout = dbc.Container([
         dcc.Location(id='url', refresh=False),
         dcc.Store(id='transaction-update-trigger', storage_type='memory'),
+        dcc.Store(id='refresh-trigger', storage_type='memory'),
+        dcc.Store(id='filter-options', storage_type='session'),
         html.Div(id='hidden-div', style={'display': 'none'}),
         html.Div(id='flash-message-container', className='flash-messages'),
         html.H2('Filter Transactions to View', className='mt-4 mb-4'),
@@ -170,19 +173,21 @@ def create_transactions_dash(flask_app):
         ),
     ], fluid=True)
 
+
     @dash_app.callback(
         [Output('transactions-table', 'data'),
          Output('transactions-header', 'children'),
          Output('property-filter', 'options'),
          Output('transactions-table', 'columns')],
-        [Input('property-filter', 'value'),
+        [Input('transaction-update-trigger', 'data'),
+         Input('property-filter', 'value'),
          Input('type-filter', 'value'),
          Input('reimbursement-filter', 'value'),
          Input('date-range', 'start_date'),
          Input('date-range', 'end_date'),
-         Input('transaction-update-trigger', 'data')]
+         Input('refresh-trigger', 'data')]
     )
-    def update_table(property_id, transaction_type, reimbursement_status, start_date, end_date, _):
+    def update_table(trigger, property_id, transaction_type, reimbursement_status, start_date, end_date, refresh_trigger):
         try:
             current_app.logger.debug(f"update_table called with: property_id={property_id}, transaction_type={transaction_type}, reimbursement_status={reimbursement_status}, start_date={start_date}, end_date={end_date}")
             
@@ -227,19 +232,12 @@ def create_transactions_dash(flask_app):
 
                 # Create header
                 type_str = 'Income' if transaction_type == 'income' else 'Expense' if transaction_type == 'expense' else 'All'
-                property_str = property_id[:20] + '...' if property_id else 'All Properties'
+                property_str = property_id[:20] + '...' if property_id and property_id != 'all' else 'All Properties'
                 start_str = start_date if start_date else 'Earliest'
                 end_str = end_date if end_date else 'Latest'
                 header = f"{type_str} Transactions for {property_str} from {start_str} to {end_str}"
                 
                 data = df.to_dict('records')
-            
-            # Get property options
-            properties = get_properties_for_user(current_user.id, current_user.name)
-            current_app.logger.debug(f"Properties retrieved: {properties}")
-            property_options = [{'label': f"{prop['address'][:15]}..." if len(prop['address']) > 15 else prop['address'], 
-                                'value': prop['address']} for prop in properties]
-            property_options.insert(0, {'label': 'All Properties', 'value': 'all'})
             
             # Determine columns based on user role
             columns = base_columns.copy()
@@ -257,14 +255,32 @@ def create_transactions_dash(flask_app):
             raise
 
     @dash_app.callback(
+        Output('filter-options', 'data'),
+        [Input('property-filter', 'value'),
+         Input('type-filter', 'value'),
+         Input('reimbursement-filter', 'value'),
+         Input('date-range', 'start_date'),
+         Input('date-range', 'end_date')]
+    )
+    def update_filter_options(property_id, transaction_type, reimbursement_status, start_date, end_date):
+        return {
+            'property_id': property_id,
+            'transaction_type': transaction_type,
+            'reimbursement_status': reimbursement_status,
+            'start_date': start_date,
+            'end_date': end_date
+        }
+
+    @dash_app.callback(
         [Output("edit-transaction-modal", "is_open"),
          Output("edit-transaction-iframe", "src")],
         [Input("transactions-table", "active_cell"),
          Input("close-edit-modal", "n_clicks")],
         [State("transactions-table", "data"),
-         State("edit-transaction-modal", "is_open")]
+         State("edit-transaction-modal", "is_open"),
+         State("filter-options", "data")]
     )
-    def toggle_modal(active_cell, close_clicks, data, is_open):
+    def toggle_modal(active_cell, close_clicks, data, is_open, filter_options):
         ctx = dash.callback_context
         if not ctx.triggered:
             return is_open, ""
@@ -273,7 +289,8 @@ def create_transactions_dash(flask_app):
         
         if trigger_id == "transactions-table" and active_cell and active_cell['column_id'] == 'edit':
             transaction_id = data[active_cell['row']]['id']
-            iframe_src = url_for('transactions.edit_transactions', transaction_id=transaction_id)
+            filter_options_str = json.dumps(filter_options)
+            iframe_src = url_for('transactions.edit_transactions', transaction_id=transaction_id, filter_options=filter_options_str)
             return True, iframe_src
         elif trigger_id == "close-edit-modal":
             return False, ""
@@ -284,39 +301,57 @@ def create_transactions_dash(flask_app):
         Output('flash-message-container', 'children'),
         Input('transaction-update-trigger', 'data'),
     )
-
     def display_flash_message(data):
         if data and data.get('message'):
-            return dbc.Alert(data['message'], color="success", dismissable=True, duration=4000)
+            return dbc.Alert(data['message'], color="success", dismissable=True, duration=2000)
         return []
 
     dash_app.clientside_callback(
         """
         function(n_clicks) {
             console.log('Initializing closeEditModal function');
-            window.closeEditModal = function() {
+            window.closeEditModal = function(shouldRefresh, filterOptions) {
                 console.log('closeEditModal called');
                 setTimeout(function() {
                     document.getElementById('close-edit-modal').click();
                     console.log('Modal close button clicked');
                     setTimeout(function() {
                         console.log('Triggering Dash update');
-                        if (window.dash_clientside) {
-                            window.dash_clientside.no_update = false;
-                            if (window.dash_clientside.callback_context) {
+                        if (shouldRefresh) {
+                            // Apply the stored filter options
+                            if (filterOptions) {
+                                Object.keys(filterOptions).forEach(key => {
+                                    const element = document.getElementById(key + '-filter');
+                                    if (element) {
+                                        element.value = filterOptions[key];
+                                    }
+                                });
+                            }
+                            
+                            // Trigger the Dash update
+                            if (window.dash_clientside && window.dash_clientside.callback_context) {
                                 window.dash_clientside.callback_context.triggered = [{
                                     'prop_id': 'transaction-update-trigger.data',
-                                    'value': {'message': 'Transaction updated successfully!'}
+                                    'value': {'message': 'Transaction updated successfully!', 'refresh': true}
                                 }];
+                            } else {
+                                // Fallback: manually trigger an update
+                                console.log('Fallback: Manually triggering update');
+                                return {
+                                    'transaction-update-trigger': {'time': new Date().getTime()}
+                                };
+                            }
+                            
+                            // Trigger a refresh of the transactions table
+                            if (window.dash_clientside) {
+                                window.dash_clientside.no_update = Symbol('no_update');
+                                return {
+                                    'refresh-trigger': {'time': new Date().getTime()}
+                                };
                             }
                         }
-                        // Refresh the transactions table
-                        if (window.refreshTransactionsTable) {
-                            console.log('Refreshing transactions table');
-                            window.refreshTransactionsTable();
-                        }
-                    }, 500); // Short delay to ensure the modal is closed before updating
-                }, 1000); // Wait 1 seconds before closing the modal
+                    }, 500);
+                }, 500);
             };
 
             console.log('Setting up message event listener');
@@ -326,9 +361,9 @@ def create_transactions_dash(flask_app):
                     console.log('Transaction updated message received');
                     if (window.closeEditModal) {
                         console.log('Calling closeEditModal');
-                        window.closeEditModal();
+                        window.closeEditModal(event.data.shouldRefresh, event.data.filterOptions);
                     } else {
-                        console.log('closeEditModal not found');
+                        console.error('closeEditModal not found');
                     }
                 }
             });
@@ -336,10 +371,10 @@ def create_transactions_dash(flask_app):
             return '';
         }
         """,
-        Output('hidden-div', 'children'),
-        Input('close-edit-modal', 'n_clicks')
+        Output('transaction-update-trigger', 'data'),  # Changed from 'hidden-div' to 'transaction-update-trigger'
+        Input('close-edit-modal', 'n_clicks'),
     )
-
+  
     @dash_app.callback(
         Output('report-link-container', 'children'),
         Input('generate-report-btn', 'n_clicks'),
@@ -391,12 +426,9 @@ def create_transactions_dash(flask_app):
         elements.append(Spacer(1, 0.25*inch))
 
         if report_type == 'summary':
-            # elements.append(Paragraph("Summary Report", styles['Heading1']))
             summary_data = summarize_transactions(table_data)
             table = Table(summary_data)
         else:
-            # elements.append(Paragraph("Detailed Report", styles['Heading1']))
-            # Filter out unnecessary columns and prepare data
             columns_to_include = ['type', 'category', 'description', 'amount', 'date', 'collector_payer','reimbursement_status']
             table_data = [[col for col in columns_to_include]] + \
                          [[row.get(col, '') for col in columns_to_include] for row in table_data]
@@ -444,4 +476,4 @@ def create_transactions_dash(flask_app):
         return [summary.columns.tolist()] + summary.values.tolist()
 
     print(f"Dash app created with server: {dash_app.server}")
-    return dash_app
+    return dash_app                
