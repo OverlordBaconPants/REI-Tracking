@@ -165,7 +165,7 @@ def create_transactions_dash(flask_app):
                 dbc.ModalBody([
                     html.Iframe(
                         id="edit-transaction-iframe",
-                        style={"width": "100%", "height": "100%", "border": "none"}
+                        style={"width": "100%", "height": "100vh", "border": "none"}
                     )
                 ]),
                 dbc.ModalFooter(
