@@ -126,6 +126,9 @@ def get_transactions_for_view(user_id, user_name, property_id=None, reimbursemen
     for t in user_transactions:
         flat_t = t.copy()
         flat_t.update(t.get('reimbursement', {}))
+        # Ensure both documentation fields are included
+        flat_t['documentation_file'] = t.get('documentation_file', '')
+        flat_t['reimbursement_documentation'] = t.get('reimbursement', {}).get('documentation', '')
         flattened_transactions.append(flat_t)
     
     return flattened_transactions
@@ -147,13 +150,15 @@ def update_transaction(updated_transaction):
                 "amount": float(updated_transaction['amount']),
                 "date": updated_transaction['date'],
                 "collector_payer": updated_transaction['collector_payer'],
+                "documentation_file": updated_transaction.get('documentation_file', transaction.get('documentation_file')),
+                "id": str(updated_transaction['id']),
                 "reimbursement": {
                     "date_shared": updated_transaction['reimbursement']['date_shared'],
                     "share_description": updated_transaction['reimbursement']['share_description'],
-                    "reimbursement_status": updated_transaction['reimbursement']['reimbursement_status']
-                },
-                "documentation_file": updated_transaction.get('documentation_file', transaction['documentation_file']),
-                "id": str(updated_transaction['id'])
+                    "reimbursement_status": updated_transaction['reimbursement']['reimbursement_status'],
+                    "documentation": updated_transaction['reimbursement'].get('documentation', 
+                                   transaction.get('reimbursement', {}).get('documentation'))
+                }
             }
             transactions[i] = updated
             break

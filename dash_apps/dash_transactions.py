@@ -9,6 +9,7 @@ import plotly.graph_objs as go
 from flask import current_app, url_for
 import io
 import base64
+import traceback
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
@@ -35,9 +36,10 @@ def create_transactions_dash(flask_app):
         {'name': 'Amount', 'id': 'amount'},
         {'name': 'Date Incurred', 'id': 'date'},
         {'name': 'Collector/Payer', 'id': 'collector_payer'},
+        {'name': 'Transaction Doc', 'id': 'documentation_file', 'presentation': 'markdown'},
         {'name': 'Reimb. Date', 'id': 'date_shared'},
         {'name': 'Reimb. Description', 'id': 'share_description'},
-        {'name': 'Artifact', 'id': 'documentation_file', 'presentation': 'markdown'},
+        {'name': 'Reimb. Doc', 'id': 'reimbursement_documentation', 'presentation': 'markdown'},
     ]
 
     dash_app.layout = dbc.Container([
@@ -114,7 +116,21 @@ def create_transactions_dash(flask_app):
 
         dash_table.DataTable(
             id='transactions-table',
-            columns=base_columns,
+            columns=[
+                *[col for col in base_columns if col['id'] not in ['documentation_file', 'reimbursement_documentation']],
+                {
+                    'name': 'Transaction Doc',
+                    'id': 'documentation_file',
+                    'presentation': 'markdown',
+                    'type': 'text'
+                },
+                {
+                    'name': 'Reimb. Doc',
+                    'id': 'reimbursement_documentation',
+                    'presentation': 'markdown',
+                    'type': 'text'
+                }
+            ],
             style_cell={
                 'textAlign': 'left',
                 'padding': '10px',
@@ -127,7 +143,7 @@ def create_transactions_dash(flask_app):
                 'textOverflow': 'ellipsis',
             },
             style_header={
-                'backgroundColor': '#f8f9fa',
+                'backgroundColor': 'navy',
                 'fontWeight': 'bold',
                 'border': '1px solid #dee2e6',
                 'whiteSpace': 'nowrap',
@@ -136,16 +152,33 @@ def create_transactions_dash(flask_app):
                 'padding': '0 10px',
                 'textOverflow': 'ellipsis',
                 'overflow': 'hidden',
+                'color': 'white',  # Ensures text is visible on navy background
+
             },
             style_data={
                 'border': '1px solid #dee2e6',
                 'whiteSpace': 'normal',
                 'height': 'auto',
             },
+            # Add specific styling for document columns
+            style_cell_conditional=[
+                {
+                    'if': {'column_id': ['documentation_file', 'reimbursement_documentation']},
+                    'width': '130px',  # Slightly wider to accommodate "View/Download" links
+                    'minWidth': '130px',
+                    'maxWidth': '130px',
+                    'overflow': 'hidden',
+                    'textOverflow': 'ellipsis',
+                }
+            ],
             style_data_conditional=[
                 {
                     'if': {'column_id': 'amount'},
                     'color': 'green'
+                },
+                {
+                    'if': {'column_id': ['documentation_file', 'reimbursement_documentation']},
+                    'textAlign': 'center',  # Center the View/Download links
                 }
             ],
             tooltip_duration=None,
@@ -229,7 +262,14 @@ def create_transactions_dash(flask_app):
                     df['documentation_file'] = df['documentation_file'].apply(
                         lambda x: f'[View/Download]({url_for("transactions.get_artifact", filename=x)})' if x else ''
                     )
-        
+
+                if 'reimbursement' in df.columns:
+                    df['reimbursement_documentation'] = df.apply(
+                        lambda row: (f'[View/Download](/transactions/artifact/{row["reimbursement"]["documentation"]})'
+                                    if row.get('reimbursement', {}).get('documentation') else ''),
+                        axis=1
+                    )
+                        
                 # Add Edit links for admin users
                 if current_user.is_authenticated and current_user.role == 'Admin':
                     df['edit'] = df.apply(lambda row: f'[Edit]', axis=1)
@@ -450,7 +490,11 @@ def create_transactions_dash(flask_app):
             summary_data = summarize_transactions(table_data)
             table = Table(summary_data)
         else:
-            columns_to_include = ['type', 'category', 'description', 'amount', 'date', 'collector_payer','reimbursement_status']
+            columns_to_include = [
+                'type', 'category', 'description', 'amount', 'date', 
+                'collector_payer', 'reimbursement_status', 
+                'documentation_file', 'reimbursement_documentation'
+            ]
             table_data = [[col for col in columns_to_include]] + \
                          [[row.get(col, '') for col in columns_to_include] for row in table_data]
             table = Table(table_data)

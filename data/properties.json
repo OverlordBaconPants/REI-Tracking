@@ -125,5 +125,55 @@
         "equity_share": 100.0
       }
     ]
+  },
+  {
+    "address": "8845 Welbeck Way, Montgomery Village, MD 20886, United States of America",
+    "purchase_price": 322401,
+    "down_payment": 0,
+    "primary_loan_rate": 5.13,
+    "primary_loan_term": 360,
+    "purchase_date": "2024-06-27",
+    "loan_amount": "310000",
+    "loan_start_date": "2022-06-01",
+    "seller_financing_amount": 0,
+    "seller_financing_rate": 0,
+    "seller_financing_term": 0,
+    "closing_costs": 16500,
+    "renovation_costs": 0,
+    "marketing_costs": 0,
+    "holding_costs": 0,
+    "partners": [
+      {
+        "name": "Wayne Benny",
+        "equity_share": 50
+      },
+      {
+        "name": "BJ Marshall",
+        "equity_share": 50
+      }
+    ]
+  },
+  {
+    "address": "1911 Grinnalds Avenue, Baltimore, MD 21223, United States of America",
+    "purchase_price": 109700,
+    "down_payment": 30000,
+    "primary_loan_rate": 4.88,
+    "primary_loan_term": 360,
+    "purchase_date": "2023-01-11",
+    "loan_amount": "78750",
+    "loan_start_date": "2022-03-01",
+    "seller_financing_amount": 10000,
+    "seller_financing_rate": 0,
+    "seller_financing_term": 120,
+    "closing_costs": 9500,
+    "renovation_costs": 22403,
+    "marketing_costs": 0,
+    "holding_costs": 0,
+    "partners": [
+      {
+        "name": "BJ Marshall",
+        "equity_share": 100
+      }
+    ]
   }
 ]

@@ -47,18 +47,25 @@ const analysisModule = {
         const analysisForm = document.querySelector('#analysisForm');
         if (analysisForm) {
             console.log('Analysis form found');
-            analysisForm.addEventListener('submit', this.handleSubmit.bind(this));
-            this.initAddressAutocomplete();
-            this.initAnalysisTypeHandler();
             
             // Check if we're in edit mode
             const urlParams = new URLSearchParams(window.location.search);
             const analysisId = urlParams.get('analysis_id');
             
             if (analysisId) {
-                console.log('Edit mode detected, fetching analysis data');
+                // Edit mode - use handleEditSubmit
+                console.log('Edit mode detected, using handleEditSubmit');
+                analysisForm.addEventListener('submit', (event) => this.handleEditSubmit(event, analysisId));
                 this.loadAnalysisData(analysisId);
+            } else {
+                // Create mode - use handleSubmit
+                console.log('Create mode detected, using handleSubmit');
+                analysisForm.addEventListener('submit', (event) => this.handleSubmit(event));
             }
+            
+            this.initAddressAutocomplete();
+            this.initLoanHandlers();
+            this.initAnalysisTypeHandler();
         } else {
             console.log('Analysis form not found');
         }
@@ -149,13 +156,13 @@ const analysisModule = {
                 console.log('Loading fields for analysis type:', value);
                 switch(value) {
                     case 'Long-Term Rental':
-                        this.loadLongTermRentalFields(financialTab);
+                        financialTab.innerHTML = this.getLongTermRentalHTML();
                         break;
                     case 'PadSplit LTR':
                         this.loadPadSplitLTRFields(financialTab);
                         break;
                     case 'BRRRR':
-                        this.loadBRRRRFields(financialTab);
+                        financialTab.innerHTML = this.getBRRRRHTML();
                         break;
                     case 'PadSplit BRRRR':
                         this.loadPadSplitBRRRRFields(financialTab);
@@ -163,6 +170,8 @@ const analysisModule = {
                     default:
                         financialTab.innerHTML = '<p>Financial details for this analysis type are not yet implemented.</p>';
                 }
+                // Initialize loan handlers after loading new content
+                this.initLoanHandlers(financialTab);
             };
 
             // Set up event listener for changes
@@ -534,7 +543,7 @@ const analysisModule = {
                 </div>
             </div>
         `;
-        this.initLoanHandlers(container);
+        container.innerHTML = this.getBRRRRHTML();
     },
 
     loadPadSplitLTRFields: function(container) {
@@ -598,7 +607,7 @@ const analysisModule = {
     getLongTermRentalHTML: function() {
         return `
             <div class="card mb-4">
-                <div class="card-header">Direct Expenses</div>
+                <div class="card-header">Purchase Details</div>
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6 mb-3">
@@ -609,31 +618,7 @@ const analysisModule = {
                         <div class="col-md-6 mb-3">
                             <label for="after_repair_value" class="form-label">After Repair Value</label>
                             <input type="number" class="form-control" id="after_repair_value" name="after_repair_value" 
-                                   placeholder="How much the property is worth after renovation" required>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="cash_to_seller" class="form-label">Cash to Seller</label>
-                            <input type="number" class="form-control" id="cash_to_seller" name="cash_to_seller" 
-                                   placeholder="How much cash you gave the seller at closing" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="closing_costs" class="form-label">Closing Costs</label>
-                            <input type="number" class="form-control" id="closing_costs" name="closing_costs" 
-                                   placeholder="How much it cost to close at settlement" required>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="assignment_fee" class="form-label">Assignment Fee / Agent Commission</label>
-                            <input type="number" class="form-control" id="assignment_fee" name="assignment_fee" 
-                                   placeholder="How much it cost to work with someone to get you this property" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="marketing_costs" class="form-label">Marketing Costs</label>
-                            <input type="number" class="form-control" id="marketing_costs" name="marketing_costs" 
-                                   placeholder="How much you intend to pay to market the property once ready" required>
+                                   placeholder="How much the property will be worth after renovation" required>
                         </div>
                     </div>
                     <div class="row">
@@ -650,7 +635,37 @@ const analysisModule = {
                     </div>
                 </div>
             </div>
-
+    
+            <div class="card mb-4">
+                <div class="card-header">Purchase Closing Details</div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="cash_to_seller" class="form-label">Cash to Seller</label>
+                            <input type="number" class="form-control" id="cash_to_seller" name="cash_to_seller" 
+                                   placeholder="How much cash you gave the seller at closing" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="closing_costs" class="form-label">Closing Costs</label>
+                            <input type="number" class="form-control" id="closing_costs" name="closing_costs" 
+                                   placeholder="All costs associated with purchase closing" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="assignment_fee" class="form-label">Assignment Fee / Agent Commission</label>
+                            <input type="number" class="form-control" id="assignment_fee" name="assignment_fee" 
+                                   placeholder="Cost to work with someone to get this property" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="marketing_costs" class="form-label">Marketing Costs</label>
+                            <input type="number" class="form-control" id="marketing_costs" name="marketing_costs" 
+                                   placeholder="How much you intend to spend on marketing" required>
+                        </div>
+                    </div>
+                </div>
+            </div>
+    
             <div class="card mb-4">
                 <div class="card-header">Financing</div>
                 <div class="card-body" id="financing-section">
@@ -660,59 +675,65 @@ const analysisModule = {
                     <button type="button" class="btn btn-primary mb-3" id="add-loan-btn">Add Loan</button>
                 </div>
             </div>
-
+    
             <div class="card mb-4">
-                <div class="card-header">Operating Income</div>
+                <div class="card-header">Rental Income</div>
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="monthly_rent" class="form-label">Monthly Income</label>
+                            <label for="monthly_rent" class="form-label">Monthly Rent</label>
                             <input type="number" class="form-control" id="monthly_rent" name="monthly_rent" 
-                                   placeholder="Include rents, subsidies, leases, storage, and any other incomes" required>
+                                   placeholder="Expected monthly rental income" required>
                         </div>
                     </div>
                 </div>
             </div>
-
+    
             <div class="card mb-4">
                 <div class="card-header">Operating Expenses</div>
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="management_percentage" class="form-label">Management (%)</label>
-                            <input type="number" class="form-control" id="management_percentage" name="management_percentage" 
-                                   value="8" min="0" max="100" step="0.01" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="capex_percentage" class="form-label">CapEx (%)</label>
-                            <input type="number" class="form-control" id="capex_percentage" name="capex_percentage" 
-                                   value="2" min="0" max="100" step="0.01" required>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="repairs_percentage" class="form-label">Repairs (%)</label>
-                            <input type="number" class="form-control" id="repairs_percentage" name="repairs_percentage" 
-                                   value="2" min="0" max="100" step="0.01" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="vacancy_percentage" class="form-label">Vacancy (%)</label>
-                            <input type="number" class="form-control" id="vacancy_percentage" name="vacancy_percentage" 
-                                   value="4" min="0" max="100" step="0.01" required>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-4 mb-3">
-                            <label for="property_taxes" class="form-label">Property Taxes</label>
+                            <label for="property_taxes" class="form-label">Monthly Property Taxes</label>
                             <input type="number" class="form-control" id="property_taxes" name="property_taxes" 
-                                   placeholder="Monthly taxes" required>
+                                   placeholder="Monthly property tax amount" required>
                         </div>
-                        <div class="col-md-4 mb-3">
-                            <label for="insurance" class="form-label">Insurance</label>
+                        <div class="col-md-6 mb-3">
+                            <label for="insurance" class="form-label">Monthly Insurance</label>
                             <input type="number" class="form-control" id="insurance" name="insurance" 
                                    placeholder="Monthly insurance costs" required>
                         </div>
-                        <div class="col-md-4 mb-3">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="management_percentage" class="form-label">Management (% of rent)</label>
+                            <input type="number" class="form-control" id="management_percentage" name="management_percentage" 
+                                   value="8" min="0" max="100" step="0.1" 
+                                   placeholder="Percentage of rent for property management" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="capex_percentage" class="form-label">CapEx (% of rent)</label>
+                            <input type="number" class="form-control" id="capex_percentage" name="capex_percentage" 
+                                   value="2" min="0" max="100" step="0.1" 
+                                   placeholder="Percentage of rent for capital expenditures" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="repairs_percentage" class="form-label">Repairs (% of rent)</label>
+                            <input type="number" class="form-control" id="repairs_percentage" name="repairs_percentage" 
+                                   value="2" min="0" max="100" step="0.1" 
+                                   placeholder="Percentage of rent for repairs" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="vacancy_percentage" class="form-label">Vacancy (% of rent)</label>
+                            <input type="number" class="form-control" id="vacancy_percentage" name="vacancy_percentage" 
+                                   value="4" min="0" max="100" step="0.1" 
+                                   placeholder="Percentage of rent for vacancy" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
                             <label for="hoa_coa_coop" class="form-label">HOA/COA/COOP</label>
                             <input type="number" class="form-control" id="hoa_coa_coop" name="hoa_coa_coop" 
                                    placeholder="Monthly association costs, if any" required>
@@ -732,137 +753,158 @@ const analysisModule = {
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="purchase_price" class="form-label">Purchase Price</label>
-                            <input type="number" class="form-control" id="purchase_price" name="purchase_price" required>
+                            <input type="number" class="form-control" id="purchase_price" name="purchase_price" 
+                                   placeholder="The sales price as recorded on the ALTA or HUD" required>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="after_repair_value" class="form-label">After Repair Value (ARV)</label>
-                            <input type="number" class="form-control" id="after_repair_value" name="after_repair_value" required>
+                            <input type="number" class="form-control" id="after_repair_value" name="after_repair_value" 
+                                   placeholder="How much the property will be worth after renovation" required>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="renovation_costs" class="form-label">Renovation Costs</label>
-                            <input type="number" class="form-control" id="renovation_costs" name="renovation_costs" required>
+                            <input type="number" class="form-control" id="renovation_costs" name="renovation_costs" 
+                                   placeholder="How much you anticipate spending to renovate the property" required>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="renovation_duration" class="form-label">Renovation Duration (months)</label>
-                            <input type="number" class="form-control" id="renovation_duration" name="renovation_duration" required>
+                            <input type="number" class="form-control" id="renovation_duration" name="renovation_duration" 
+                                   placeholder="How long before the property is ready for refinance" required>
                         </div>
                     </div>
                 </div>
             </div>
-
+    
             <div class="card mb-4">
                 <div class="card-header">Initial Financing</div>
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="initial_loan_amount" class="form-label">Initial Loan Amount</label>
-                            <input type="number" class="form-control" id="initial_loan_amount" name="initial_loan_amount" required>
+                            <input type="number" class="form-control" id="initial_loan_amount" name="initial_loan_amount" 
+                                   placeholder="Amount of your initial purchase loan" required>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="initial_down_payment" class="form-label">Initial Down Payment</label>
-                            <input type="number" class="form-control" id="initial_down_payment" name="initial_down_payment" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="initial_interest_rate" class="form-label">Initial Interest Rate (%)</label>
-                            <input type="number" class="form-control" id="initial_interest_rate" name="initial_interest_rate" 
-                                   step="0.01" required>
+                            <input type="number" class="form-control" id="initial_down_payment" name="initial_down_payment" 
+                                   placeholder="Down payment required for initial purchase" required>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="initial_loan_term" class="form-label">Initial Loan Term (months)</label>
-                            <input type="number" class="form-control" id="initial_loan_term" name="initial_loan_term" required>
+                            <label for="initial_interest_rate" class="form-label">Initial Interest Rate (%)</label>
+                            <input type="number" class="form-control" id="initial_interest_rate" name="initial_interest_rate" 
+                                   placeholder="Interest rate for initial loan" step="0.01" required>
                         </div>
                         <div class="col-md-6 mb-3">
+                            <label for="initial_loan_term" class="form-label">Initial Loan Term (months)</label>
+                            <input type="number" class="form-control" id="initial_loan_term" name="initial_loan_term" 
+                                   placeholder="Duration of initial loan in months" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
                             <label for="initial_closing_costs" class="form-label">Initial Closing Costs</label>
-                            <input type="number" class="form-control" id="initial_closing_costs" name="initial_closing_costs" required>
+                            <input type="number" class="form-control" id="initial_closing_costs" name="initial_closing_costs" 
+                                   placeholder="All costs associated with initial purchase closing" required>
                         </div>
                     </div>
                 </div>
             </div>
-
+    
             <div class="card mb-4">
                 <div class="card-header">Refinance Details</div>
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="refinance_loan_amount" class="form-label">Refinance Loan Amount</label>
-                            <input type="number" class="form-control" id="refinance_loan_amount" name="refinance_loan_amount" required>
+                            <input type="number" class="form-control" id="refinance_loan_amount" name="refinance_loan_amount" 
+                                   placeholder="Amount of your refinance loan" required>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="refinance_down_payment" class="form-label">Refinance Down Payment</label>
-                            <input type="number" class="form-control" id="refinance_down_payment" name="refinance_down_payment" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="refinance_interest_rate" class="form-label">Refinance Interest Rate (%)</label>
-                            <input type="number" class="form-control" id="refinance_interest_rate" name="refinance_interest_rate" 
-                                   step="0.01" required>
+                            <input type="number" class="form-control" id="refinance_down_payment" name="refinance_down_payment" 
+                                   placeholder="Down payment required for refinance" required>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="refinance_loan_term" class="form-label">Refinance Loan Term (months)</label>
-                            <input type="number" class="form-control" id="refinance_loan_term" name="refinance_loan_term" required>
+                            <label for="refinance_interest_rate" class="form-label">Refinance Interest Rate (%)</label>
+                            <input type="number" class="form-control" id="refinance_interest_rate" name="refinance_interest_rate" 
+                                   placeholder="Interest rate for refinance loan" step="0.01" required>
                         </div>
                         <div class="col-md-6 mb-3">
+                            <label for="refinance_loan_term" class="form-label">Refinance Loan Term (months)</label>
+                            <input type="number" class="form-control" id="refinance_loan_term" name="refinance_loan_term" 
+                                   placeholder="Duration of refinance loan in months" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
                             <label for="refinance_closing_costs" class="form-label">Refinance Closing Costs</label>
-                            <input type="number" class="form-control" id="refinance_closing_costs" name="refinance_closing_costs" required>
+                            <input type="number" class="form-control" id="refinance_closing_costs" name="refinance_closing_costs" 
+                                   placeholder="All costs associated with refinance closing" required>
                         </div>
                     </div>
                 </div>
             </div>
-
+    
             <div class="card mb-4">
                 <div class="card-header">Rental Income</div>
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="monthly_rent" class="form-label">Monthly Rent</label>
-                            <input type="number" class="form-control" id="monthly_rent" name="monthly_rent" required>
+                            <input type="number" class="form-control" id="monthly_rent" name="monthly_rent" 
+                                   placeholder="Expected monthly rental income" required>
                         </div>
                     </div>
                 </div>
             </div>
-
+    
             <div class="card mb-4">
                 <div class="card-header">Operating Expenses</div>
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="property_taxes" class="form-label">Monthly Property Taxes</label>
-                            <input type="number" class="form-control" id="property_taxes" name="property_taxes" required>
+                            <input type="number" class="form-control" id="property_taxes" name="property_taxes" 
+                                   placeholder="Monthly property tax amount" required>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="insurance" class="form-label">Monthly Insurance</label>
-                            <input type="number" class="form-control" id="insurance" name="insurance" required>
+                            <input type="number" class="form-control" id="insurance" name="insurance" 
+                                   placeholder="Monthly insurance costs" required>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="maintenance_percentage" class="form-label">Maintenance (% of rent)</label>
-                            <input type="number" class="form-control" id="maintenance_percentage" name="maintenance_percentage" 
-                                   value="2" min="0" max="100" step="0.1" required>
+                            <label for="management_percentage" class="form-label">Management (% of rent)</label>
+                            <input type="number" class="form-control" id="management_percentage" name="management_percentage" 
+                                   value="8" min="0" max="100" step="0.1" 
+                                   placeholder="Percentage of rent for property management" required>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="vacancy_percentage" class="form-label">Vacancy (% of rent)</label>
-                            <input type="number" class="form-control" id="vacancy_percentage" name="vacancy_percentage" 
-                                   value="4" min="0" max="100" step="0.1" required>
-                        </div>
-                    </div>
-                    <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="capex_percentage" class="form-label">CapEx (% of rent)</label>
                             <input type="number" class="form-control" id="capex_percentage" name="capex_percentage" 
                                    value="2" min="0" max="100" step="0.1" 
                                    placeholder="Percentage of rent for capital expenditures" required>
                         </div>
+                    </div>
+                    <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="management_percentage" class="form-label">Management (% of rent)</label>
-                            <input type="number" class="form-control" id="management_percentage" name="management_percentage" 
-                                   value="8" min="0" max="100" step="0.1" 
-                                   placeholder="Percentage of rent for property management" required>
+                            <label for="maintenance_percentage" class="form-label">Maintenance (% of rent)</label>
+                            <input type="number" class="form-control" id="maintenance_percentage" name="maintenance_percentage" 
+                                   value="2" min="0" max="100" step="0.1" 
+                                   placeholder="Percentage of rent for maintenance" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="vacancy_percentage" class="form-label">Vacancy (% of rent)</label>
+                            <input type="number" class="form-control" id="vacancy_percentage" name="vacancy_percentage" 
+                                   value="4" min="0" max="100" step="0.1" 
+                                   placeholder="Percentage of rent for vacancy" required>
                         </div>
                     </div>
                 </div>
@@ -870,11 +912,20 @@ const analysisModule = {
         `;
     },
     
-    initLoanHandlers: function() {
-        const addLoanBtn = document.getElementById('add-loan-btn');
-        const loansContainer = document.getElementById('loans-container');
+    initLoanHandlers: function(container = null) {  // Add default value
+        // Only initialize if we haven't already done so for this container
+        const addLoanBtn = container ? container.querySelector('#add-loan-btn') : document.getElementById('add-loan-btn');
+        const loansContainer = container ? container.querySelector('#loans-container') : document.getElementById('loans-container');
         
+        // If we've already initialized this container, return early
+        if (addLoanBtn && addLoanBtn.hasAttribute('data-initialized')) {
+            return;
+        }
+
         if (addLoanBtn && loansContainer) {
+            // Mark as initialized
+            addLoanBtn.setAttribute('data-initialized', 'true');
+                    
             // Handle adding new loans
             addLoanBtn.addEventListener('click', () => {
                 const loanCount = loansContainer.querySelectorAll('.loan-section').length + 1;
@@ -981,7 +1032,7 @@ const analysisModule = {
 
     handleSubmit: function(event, analysisId = null) {
         event.preventDefault();
-        console.log('Form submission started');
+        console.log('Create form submission started');
         
         const form = event.target;
         const formData = new FormData(form);
@@ -990,13 +1041,7 @@ const analysisModule = {
             console.log('Form validation failed');
             return;
         }
-    
-        // Log all form fields for debugging
-        console.log('All form fields:');
-        for (let [key, value] of formData.entries()) {
-            console.log(`${key}: ${value}`);
-        }
-    
+
         const analysisData = Object.fromEntries(formData.entries());
         
         // Get analysis type
@@ -1016,7 +1061,7 @@ const analysisModule = {
                 });
             }
         }
-    
+   
         // Base fields to convert to numbers
         const numericFields = [
             'purchase_price', 'after_repair_value', 'cash_to_seller', 'closing_costs',
@@ -1080,7 +1125,13 @@ const analysisModule = {
     
     populateReportsTab: function(analysis) {
         console.log('Populating reports tab with analysis:', analysis);
-        this.currentAnalysisId = analysis.id;
+        console.log('Raw monthly rent:', analysis.monthly_rent);
+        console.log('Raw net monthly cash flow:', analysis.net_monthly_cash_flow);
+        console.log('Raw annual cash flow:', analysis.annual_cash_flow);
+        console.log('Raw operating expenses:', analysis.operating_expenses);
+
+        // Explicitly store the ID from the analysis object
+        this.currentAnalysisId = analysis.id || null;  // Add this line
         const reportsContent = document.querySelector('#reports');
         
         if (!reportsContent) {
@@ -1120,7 +1171,7 @@ const analysisModule = {
             <div class="col-md-6">
                 <h5>Income and Returns</h5>
                 <p>Monthly Rent: ${formatCurrency(analysis.monthly_rent)}</p>
-                <p>Monthly Cash Flow: ${formatCurrency(analysis.net_monthly_cash_flow)}</p>
+                <p>Monthly Cash Flow: ${formatCurrency(analysis.net_monthly_cash_flow || analysis.monthly_cash_flow)}</p>
                 <p>Annual Cash Flow: ${formatCurrency(analysis.annual_cash_flow)}</p>
                 <p>Cash-on-Cash Return: ${formatPercentage(analysis.cash_on_cash_return)}</p>
             </div>
@@ -1177,6 +1228,7 @@ const analysisModule = {
                     <span>${analysis.analysis_type} Analysis: ${analysis.analysis_name || 'Untitled'}</span>
                     <button id="downloadPdfBtn" class="btn btn-primary">Download PDF</button>
                 </div>
+                
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6">
@@ -1200,12 +1252,17 @@ const analysisModule = {
         const downloadPdfBtn = document.getElementById('downloadPdfBtn');
         if (downloadPdfBtn) {
             downloadPdfBtn.addEventListener('click', () => {
-                this.downloadPdf(analysis.id);
+                this.downloadPdf(this.currentAnalysisId);
             });
         }
     
         // Show the Edit and Create New buttons
+        // Add data attributes to the Edit button
         const editBtn = document.getElementById('editAnalysisBtn');
+        if (editBtn) {
+            editBtn.setAttribute('data-analysis-id', this.currentAnalysisId);
+            editBtn.style.display = 'inline-block';
+        }
         const createNewBtn = document.getElementById('createNewAnalysisBtn');
         
         if (editBtn && createNewBtn) {
@@ -1213,7 +1270,7 @@ const analysisModule = {
             createNewBtn.style.display = 'inline-block';
         }
     
-        this.currentAnalysisId = analysis.id;
+        // this.currentAnalysisId = analysis.id;
     },
 
     switchToReportsTab: function() {
@@ -1241,7 +1298,18 @@ const analysisModule = {
     },
 
     editAnalysis: function() {
-        console.log('Editing analysis with ID:', this.currentAnalysisId);
+        // Get ID from the button's data attribute
+        const editBtn = document.getElementById('editAnalysisBtn');
+        const analysisId = editBtn ? editBtn.getAttribute('data-analysis-id') : null;
+        
+        console.log('Editing analysis with ID:', analysisId);
+
+        if (!analysisId) {
+            console.error('No analysis ID found');
+            return;
+        }
+    
+        this.currentAnalysisId = analysisId;  // Store it in the instance
 
         // Switch to the Financial tab
         const financialTab = document.querySelector('#financial-tab');
@@ -1389,7 +1457,7 @@ const analysisModule = {
             alert('Error: No analysis ID found. Cannot update.');
             return;
         }
-    
+
         const form = event.target;
         const formData = new FormData(form);
         
@@ -1398,8 +1466,11 @@ const analysisModule = {
             return;
         }
     
-        const analysisData = Object.fromEntries(formData.entries());
-        analysisData.id = analysisId;  // Ensure the ID is included
+        // Create analysis data object and explicitly set the ID
+        const analysisData = {
+            id: analysisId,  // Explicitly set the ID
+            ...Object.fromEntries(formData.entries())
+        };
     
         console.log('Analysis data before processing:', analysisData);
     
@@ -1442,7 +1513,11 @@ const analysisModule = {
         .then(data => {
             console.log('Server response:', data);
             if (data.success) {
-                this.populateReportsTab(data.analysis);
+                const analysisWithId = {
+                    ...data.analysis,
+                    id: analysisId  // Ensure ID is preserved
+                };
+                this.populateReportsTab(analysisWithId);
                 this.switchToReportsTab();
                 this.showReportActions();
             } else {

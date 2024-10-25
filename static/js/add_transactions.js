@@ -85,6 +85,16 @@ const addTransactionsModule = {
         } else {
             console.error('Form element not found');
         }
+
+        const reimbursementStatus = document.getElementById('reimbursement_status');
+        if (reimbursementStatus) {
+            reimbursementStatus.addEventListener('change', (event) => {
+                if (event.target.value === 'completed') {
+                    const formData = new FormData(this.form);
+                    this.validateReimbursementStatus(formData);
+                }
+            });
+        }
     },
 
     updateCategories: function(type) {
@@ -257,6 +267,18 @@ const addTransactionsModule = {
         }
     },
 
+    validateReimbursementStatus: function(formData) {
+        const reimbursementStatus = formData.get('reimbursement_status');
+        const reimbursementDoc = formData.get('reimbursement_documentation');
+        const existingDoc = document.querySelector('[data-existing-reimbursement-doc]')?.dataset.existingReimbursementDoc;
+    
+        if (reimbursementStatus === 'completed' && !reimbursementDoc && !existingDoc) {
+            this.showFlashMessage('Supporting reimbursement documentation required to mark this as Complete.', 'danger');
+            return false;
+        }
+        return true;
+    },
+
     validateForm: function() {
         const propertySelect = document.getElementById('property_id');
         const documentationFile = document.getElementById('documentation_file');
@@ -285,12 +307,20 @@ const addTransactionsModule = {
             return;
         }
 
+        if (!this.validateForm()) {
+            console.error('Form validation failed');
+            return;
+        }
+
+        if (!this.validateReimbursementStatus(formData)) {
+            return;
+        }
+
         // Disable the submit button to prevent multiple submissions
         const submitButton = event.target.querySelector('button[type="submit"]');
         submitButton.disabled = true;
 
-        const form = event.target;
-        const formData = new FormData(form);
+        const formData = new FormData(this.form);
 
         console.log('Sending form data');
 

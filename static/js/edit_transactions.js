@@ -25,6 +25,16 @@ const editTransactionsModule = {
         document.getElementById('amount').addEventListener('input', this.updateReimbursementDetails.bind(this));
         document.getElementById('collector_payer').addEventListener('change', this.updateReimbursementDetails.bind(this));
         document.getElementById('property_id').addEventListener('change', this.populatePartners.bind(this));
+
+        const reimbursementStatus = document.getElementById('reimbursement_status');
+        if (reimbursementStatus) {
+            reimbursementStatus.addEventListener('change', (event) => {
+                if (event.target.value === 'completed') {
+                    const formData = new FormData(this.form);
+                    this.validateReimbursementStatus(formData);
+                }
+            });
+        }
     },
 
     populateCategories: function() {
@@ -126,20 +136,74 @@ const editTransactionsModule = {
         // This will be similar to the add_transactions.js implementation
     },
 
+    validateForm: function() {
+        // Add basic form validation
+        const requiredFields = [
+            'property_id',
+            'type',
+            'category',
+            'description',
+            'amount',
+            'date',
+            'collector_payer'
+        ];
+
+        let isValid = true;
+        requiredFields.forEach(field => {
+            const element = document.getElementById(field);
+            if (!element || !element.value.trim()) {
+                isValid = false;
+                if (element) {
+                    element.classList.add('is-invalid');
+                }
+            }
+        });
+
+        return isValid;
+    },
+
+    validateReimbursementStatus: function(formData) {
+        const reimbursementStatus = formData.get('reimbursement_status');
+        const reimbursementDoc = formData.get('reimbursement_documentation');
+        const existingDoc = document.querySelector('[data-existing-reimbursement-doc]')?.dataset.existingReimbursementDoc;
+    
+        if (reimbursementStatus === 'completed' && !reimbursementDoc && !existingDoc) {
+            this.showFlashMessage('Supporting reimbursement documentation required to mark this as Complete.', 'danger');
+            return false;
+        }
+        return true;
+    },
+
     handleSubmit: function(event) {
         event.preventDefault();
         console.log('Form submission started');
     
+        if (!this.validateForm()) {
+            console.log('Form validation failed');
+            return;
+        }
+    
         const formData = new FormData(this.form);
-        const filterOptions = formData.get('filter_options') || '{}';
-        console.log('Filter options before send:', filterOptions);
+        
+        // Get filter options from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const filterOptionsStr = urlParams.get('filter_options') || '{}';
+        
+        let filterOptions = {};
+        try {
+            // Decode the URL-encoded string and parse it
+            filterOptions = JSON.parse(decodeURIComponent(filterOptionsStr));
+            console.log('Successfully parsed filter options:', filterOptions);
+        } catch (e) {
+            console.log('No valid filter options found, using empty object');
+            filterOptions = {};
+        }
     
         fetch(this.form.action, {
             method: 'POST',
             body: formData
         })
         .then(response => {
-            console.log('Response status:', response.status);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -148,22 +212,16 @@ const editTransactionsModule = {
         .then(data => {
             console.log('Response data:', data);
             if (data.success) {
-                this.showFlashMessage('Transaction updated successfully!', 'success');
+                // Show success message at both top and bottom
+                this.showFlashMessage('Transaction updated successfully!', 'success', 'top');
+                this.showFlashMessage('Transaction updated successfully!', 'success', 'bottom');
                 
-                console.log('Setting timeout to close modal and refresh');
+                // Pass the original filter options back
                 setTimeout(() => {
-                    console.log('Sending message to parent window');
-                    let parsedFilterOptions;
-                    try {
-                        parsedFilterOptions = JSON.parse(filterOptions);
-                    } catch (error) {
-                        console.error('Error parsing filter options:', error);
-                        parsedFilterOptions = {};
-                    }
                     window.parent.postMessage({
                         type: 'transactionUpdated',
                         shouldRefresh: true,
-                        filterOptions: parsedFilterOptions
+                        filterOptions: filterOptions
                     }, '*');
                 }, 1000);
             } else {
@@ -176,7 +234,7 @@ const editTransactionsModule = {
         });
     },
 
-    showFlashMessage: function(message, category) {
+    showFlashMessage: function(message, category, location = 'both') {
         const createAlertDiv = () => {
             const alertDiv = document.createElement('div');
             alertDiv.className = `alert alert-${category} alert-dismissible fade show`;
@@ -187,17 +245,21 @@ const editTransactionsModule = {
             `;
             return alertDiv;
         };
-
-        if (this.flashContainerTop) {
-            this.flashContainerTop.innerHTML = '';
-            this.flashContainerTop.appendChild(createAlertDiv());
+    
+        if (location === 'top' || location === 'both') {
+            if (this.flashContainerTop) {
+                this.flashContainerTop.innerHTML = '';
+                this.flashContainerTop.appendChild(createAlertDiv());
+            }
         }
-
-        if (this.flashContainerBottom) {
-            this.flashContainerBottom.innerHTML = '';
-            this.flashContainerBottom.appendChild(createAlertDiv());
+    
+        if (location === 'bottom' || location === 'both') {
+            if (this.flashContainerBottom) {
+                this.flashContainerBottom.innerHTML = '';
+                this.flashContainerBottom.appendChild(createAlertDiv());
+            }
         }
-
+    
         if (!this.flashContainerTop && !this.flashContainerBottom) {
             console.error('Flash containers not found');
         } else {

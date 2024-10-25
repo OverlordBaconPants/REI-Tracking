@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, send_from_directory, jsonify
+from flask import abort, Blueprint, render_template, request, redirect, url_for, flash, current_app, send_from_directory, jsonify
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from services.transaction_service import add_transaction, is_duplicate_transaction, get_properties_for_user, get_transaction_by_id, update_transaction, get_categories, get_partners_for_property, process_bulk_import
@@ -217,19 +217,39 @@ def edit_transactions(transaction_id):
                     'reimbursement': {
                         'date_shared': form_data.get('date_shared'),
                         'share_description': form_data.get('share_description'),
-                        'reimbursement_status': form_data.get('reimbursement_status')
+                        'reimbursement_status': form_data.get('reimbursement_status'),
+                        'documentation': form_data.get('reimbursement_documentation')  # Add this line
                     }
                 }
                 
                 # Handle file upload if a new file is provided
                 if 'documentation_file' in request.files:
                     file = request.files['documentation_file']
-                    if file.filename != '':
+                    if file and file.filename:
                         if allowed_file(file.filename):
                             filename = secure_filename(file.filename)
-                            file_path = current_app.config['UPLOAD_FOLDER'] / filename
+                            file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
                             file.save(file_path)
                             updated_transaction['documentation_file'] = filename
+                        else:
+                            return jsonify({'success': False, 'message': 'Invalid file type.'}), 400
+
+                # Handle reimbursement documentation
+                if 'reimbursement_documentation' in request.files:
+                    file = request.files['reimbursement_documentation']
+                    if file and file.filename:
+                        if allowed_file(file.filename):
+                            filename = f"reimb_{secure_filename(file.filename)}"
+                            reimbursement_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'reimbursements')
+                            
+                            # Ensure reimbursements directory exists
+                            if not os.path.exists(reimbursement_dir):
+                                os.makedirs(reimbursement_dir)
+                                
+                            file_path = os.path.join(reimbursement_dir, filename)
+                            file.save(file_path)
+                            current_app.logger.debug(f"Saved reimbursement file to: {file_path}")
+                            updated_transaction['reimbursement']['documentation'] = filename
                         else:
                             return jsonify({'success': False, 'message': 'Invalid file type.'}), 400
 
@@ -295,7 +315,42 @@ def test_route():
 @transactions_bp.route('/artifact/<path:filename>')
 @login_required
 def get_artifact(filename):
-    return send_from_directory(current_app.config['UPLOAD_FOLDER'], filename)
+    current_app.logger.debug(f"Attempting to serve artifact: {filename}")
+    
+    try:
+        # Check if it's a reimbursement document
+        if filename.startswith('reimb_'):
+            # Use os.path.join to create proper path
+            artifact_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'reimbursements')
+            current_app.logger.debug(f"Reimbursement document detected, looking in: {artifact_dir}")
+            
+            # Ensure directory exists
+            if not os.path.exists(artifact_dir):
+                os.makedirs(artifact_dir)
+                current_app.logger.debug(f"Created reimbursements directory: {artifact_dir}")
+        else:
+            artifact_dir = current_app.config['UPLOAD_FOLDER']
+            current_app.logger.debug(f"Regular document, looking in: {artifact_dir}")
+
+        # Log the full path being attempted
+        full_path = os.path.join(artifact_dir, filename)
+        current_app.logger.debug(f"Attempting to serve file from: {full_path}")
+        
+        # Check if file exists
+        if not os.path.exists(full_path):
+            current_app.logger.error(f"File not found: {full_path}")
+            abort(404)
+
+        return send_from_directory(
+            artifact_dir, 
+            filename, 
+            as_attachment=False
+        )
+        
+    except Exception as e:
+        current_app.logger.error(f"Error serving artifact {filename}: {str(e)}")
+        current_app.logger.error(f"Full error traceback: {traceback.format_exc()}")
+        abort(404)
 
 @transactions_bp.route('/api/categories')
 @login_required

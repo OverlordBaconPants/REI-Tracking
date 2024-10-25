@@ -76,33 +76,54 @@
                 <label for="documentation_file">Documentation File:</label>
                 <input type="file" class="form-control" id="documentation_file" name="documentation_file">
                 {% if transaction.documentation_file %}
-                <p>Current file: {{ transaction.documentation_file }}</p>
+                <small class="form-text text-muted">Current file: {{ transaction.documentation_file }}</small>
                 {% endif %}
             </div>
 
             <h3>Manage Reimbursement</h3>
-            <div id="reimbursement-details" class="mb-3"></div>
-            <div class="row">
-                <div class="col-md-4">
+
+            <div id="reimbursement-details" class="mb-4">
+            </div>
+            
+            <div class="row mb-3">
+                <!-- First Row -->
+                <div class="col-md-6">
                     <div class="form-group mb-3">
                         <label for="date_shared">Date Shared:</label>
-                        <input type="date" class="form-control" id="date_shared" name="date_shared" value="{{ transaction.reimbursement.date_shared }}">
+                        <input type="date" class="form-control" id="date_shared" name="date_shared" 
+                               value="{{ transaction.reimbursement.date_shared if transaction else '' }}">
                     </div>
                 </div>
-                <div class="col-md-4">
+            
+                <div class="col-md-6">
                     <div class="form-group mb-3">
                         <label for="share_description">Share Description:</label>
-                        <input type="text" class="form-control" id="share_description" name="share_description" value="{{ transaction.reimbursement.share_description }}">
+                        <input type="text" class="form-control" id="share_description" name="share_description"
+                               value="{{ transaction.reimbursement.share_description if transaction else '' }}">
                     </div>
                 </div>
-                <div class="col-md-4">
+            </div>
+            
+            <div class="row">
+                <!-- Second Row -->
+                <div class="col-md-6">
                     <div class="form-group mb-3">
                         <label for="reimbursement_status">Reimbursement Status:</label>
                         <select class="form-control" id="reimbursement_status" name="reimbursement_status">
-                            <option value="pending" {% if transaction.reimbursement.reimbursement_status == 'pending' %}selected{% endif %}>Pending</option>
-                            <option value="completed" {% if transaction.reimbursement.reimbursement_status == 'completed' %}selected{% endif %}>Completed</option>
-                            <option value="not_required" {% if transaction.reimbursement.reimbursement_status == 'not_required' %}selected{% endif %}>Not Required</option>
+                            <option value="pending" {% if transaction and transaction.reimbursement.reimbursement_status == 'pending' %}selected{% endif %}>Pending</option>
+                            <option value="completed" {% if transaction and transaction.reimbursement.reimbursement_status == 'completed' %}selected{% endif %}>Completed</option>
+                            <option value="not_required" {% if transaction and transaction.reimbursement.reimbursement_status == 'not_required' %}selected{% endif %}>Not Required</option>
                         </select>
+                    </div>
+                </div>
+            
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="reimbursement_documentation">Reimbursement Documentation:</label>
+                        <input type="file" class="form-control" id="reimbursement_documentation" name="reimbursement_documentation">
+                        {% if transaction and transaction.reimbursement and transaction.reimbursement.documentation %}
+                        <small class="form-text text-muted">Current file: {{ transaction.reimbursement.documentation }}</small>
+                        {% endif %}
                     </div>
                 </div>
             </div>
