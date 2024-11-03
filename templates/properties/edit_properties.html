@@ -6,7 +6,7 @@
 <div class="container mt-4">
     <h2 class="mb-4">Edit Property</h2>
 
-    <form id="editPropertyForm" onsubmit="return false;">
+    <form id="editPropertyForm" method="POST">
         <div class="form-group mb-3">
             <label for="property_select">Select Property:</label>
             <select id="property_select" name="property_select" class="form-control" required>
@@ -16,95 +16,284 @@
                 {% endfor %}
             </select>
         </div>
-
+    
         <div id="propertyDetails" class="hidden">
-            <div class="form-group mb-3">
-                <label for="purchase-date">Purchase Date:</label>
-                <input type="date" id="purchase-date" name="purchase_date" class="form-control" required>
-            </div>
-
-            <div class="form-group mb-3">
-                <label for="loan-amount">Loan Amount ($):</label>
-                <input type="text" id="loan-amount" name="loan_amount" class="form-control" required>
-            </div>
-
-            <div class="form-group mb-3">
-                <label for="loan-start-date">Loan Start Date:</label>
-                <input type="date" id="loan-start-date" name="loan_start_date" class="form-control" required>
-            </div>
-
-            <div class="form-group mb-3">
-                <label for="purchase-price">Purchase Price ($):</label>
-                <input type="number" id="purchase-price" name="purchase_price" class="form-control" required>
-            </div>
-
-            <div class="form-group mb-3">
-                <label for="down-payment">Down Payment ($):</label>
-                <input type="number" id="down-payment" name="down_payment" class="form-control" required>
-            </div>
-
-            <div class="form-group mb-3">
-                <label for="primary-loan-rate">Primary Loan Rate (%):</label>
-                <input type="number" id="primary-loan-rate" name="primary_loan_rate" class="form-control" step="0.01" required>
-            </div>
-
-            <div class="form-group mb-3">
-                <label for="primary-loan-term">Primary Loan Term (months):</label>
-                <input type="number" id="primary-loan-term" name="primary_loan_term" class="form-control" required>
-            </div>
-
-            <div class="form-group mb-3">
-                <label for="seller-financing-amount">Seller Financing Amount ($):</label>
-                <input type="number" id="seller-financing-amount" name="seller_financing_amount" class="form-control">
-            </div>
-
-            <div class="form-group mb-3">
-                <label for="seller-financing-rate">Seller Financing Rate (%):</label>
-                <input type="number" id="seller-financing-rate" name="seller_financing_rate" class="form-control" step="0.01">
-            </div>
-
-            <div class="form-group mb-3">
-                <label for="seller-financing-term">Seller Financing Term (months):</label>
-                <input type="number" id="seller-financing-term" name="seller_financing_term" class="form-control">
-            </div>
-
-            <div class="form-group mb-3">
-                <label for="closing-costs">Closing Costs ($):</label>
-                <input type="number" id="closing-costs" name="closing_costs" class="form-control">
-            </div>
-
-            <div class="form-group mb-3">
-                <label for="renovation-costs">Renovation Costs ($):</label>
-                <input type="number" id="renovation-costs" name="renovation_costs" class="form-control">
-            </div>
-
-            <div class="form-group mb-3">
-                <label for="marketing-costs">Marketing Costs ($):</label>
-                <input type="number" id="marketing-costs" name="marketing_costs" class="form-control">
-            </div>
-
-            <div class="form-group mb-3">
-                <label for="holding-costs">Holding Costs ($):</label>
-                <input type="number" id="holding-costs" name="holding_costs" class="form-control">
-            </div>
-
-            <div class="partners-section mt-4">
-                <h4 class="mb-3">Partners</h4>
-                <div id="partners-container">
-                    <!-- Partner entries will be added here dynamically -->
+            <!-- Property Information -->
+            <div class="card mb-4">
+                <div class="card-header bg-navy">
+                    <h4 class="mb-0">Property Information</h4>
                 </div>
-            
-                <button type="button" id="add-partner-button" class="btn btn-secondary mt-3">
-                    Add Partner
-                </button>
-            
-                <div id="total-equity" class="mt-3 mb-3 font-weight-bold">
-                    Total Equity: 0%
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="purchase-date">Purchase Date:</label>
+                                <input type="date" id="purchase-date" name="purchase_date" class="form-control" required>
+                            </div>
+    
+                            <div class="form-group mb-3">
+                                <label for="purchase-price">Purchase Price ($):</label>
+                                <input type="number" id="purchase-price" name="purchase_price" class="form-control" required>
+                            </div>
+    
+                            <div class="form-group mb-3">
+                                <label for="down-payment">Down Payment ($):</label>
+                                <input type="number" id="down-payment" name="down_payment" class="form-control" required>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="closing-costs">Closing Costs ($):</label>
+                                <input type="number" id="closing-costs" name="closing_costs" class="form-control" value="0">
+                            </div>
+    
+                            <div class="form-group mb-3">
+                                <label for="renovation-costs">Renovation Costs ($):</label>
+                                <input type="number" id="renovation-costs" name="renovation_costs" class="form-control" value="0">
+                            </div>
+    
+                            <div class="form-group mb-3">
+                                <label for="marketing-costs">Marketing Costs ($):</label>
+                                <input type="number" id="marketing-costs" name="marketing_costs" class="form-control" value="0">
+                            </div>
+    
+                            <div class="form-group mb-3">
+                                <label for="holding-costs">Holding Costs ($):</label>
+                                <input type="number" id="holding-costs" name="holding_costs" class="form-control" value="0">
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-
+    
+            <!-- Loan Information -->
+            <div class="card mb-4">
+                <div class="card-header bg-navy">
+                    <h4 class="mb-0">Loan Information</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="loan-amount">Loan Amount ($):</label>
+                                <input type="number" id="loan-amount" name="loan_amount" class="form-control" required>
+                            </div>
+    
+                            <div class="form-group mb-3">
+                                <label for="loan-start-date">Loan Start Date:</label>
+                                <input type="date" id="loan-start-date" name="loan_start_date" class="form-control" required>
+                            </div>
+    
+                            <div class="form-group mb-3">
+                                <label for="primary-loan-rate">Primary Loan Rate (%):</label>
+                                <input type="number" id="primary-loan-rate" name="primary_loan_rate" class="form-control" step="0.01" required>
+                            </div>
+    
+                            <div class="form-group mb-3">
+                                <label for="primary-loan-term">Primary Loan Term (months):</label>
+                                <input type="number" id="primary-loan-term" name="primary_loan_term" class="form-control" required>
+                            </div>
+                        </div>
+    
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="seller-financing-amount">Seller Financing Amount ($):</label>
+                                <input type="number" id="seller-financing-amount" name="seller_financing_amount" class="form-control" value="0">
+                            </div>
+    
+                            <div class="form-group mb-3">
+                                <label for="seller-financing-rate">Seller Financing Rate (%):</label>
+                                <input type="number" id="seller-financing-rate" name="seller_financing_rate" class="form-control" step="0.01" value="0">
+                            </div>
+    
+                            <div class="form-group mb-3">
+                                <label for="seller-financing-term">Seller Financing Term (months):</label>
+                                <input type="number" id="seller-financing-term" name="seller_financing_term" class="form-control" value="0">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+    
+            <!-- Monthly Income -->
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">Monthly Income</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="rental-income">Rental Income ($):</label>
+                                <input type="number" id="rental-income" name="monthly_income[rental_income]" class="form-control income-input" value="0">
+                            </div>
+    
+                            <div class="form-group mb-3">
+                                <label for="parking-income">Parking Income ($):</label>
+                                <input type="number" id="parking-income" name="monthly_income[parking_income]" class="form-control income-input" value="0">
+                            </div>
+                        </div>
+    
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="laundry-income">Laundry Income ($):</label>
+                                <input type="number" id="laundry-income" name="monthly_income[laundry_income]" class="form-control income-input" value="0">
+                            </div>
+    
+                            <div class="form-group mb-3">
+                                <label for="other-income">Other Income ($):</label>
+                                <input type="number" id="other-income" name="monthly_income[other_income]" class="form-control income-input" value="0">
+                            </div>
+                        </div>
+    
+                        <div class="col-12">
+                            <div class="form-group mb-3">
+                                <label for="income-notes">Income Notes:</label>
+                                <textarea id="income-notes" name="monthly_income[income_notes]" class="form-control" rows="2"></textarea>
+                            </div>
+                        </div>
+    
+                        <div class="col-12">
+                            <div class="alert alert-info">
+                                Total Monthly Income: $<span id="total-monthly-income">0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+    
+            <!-- Monthly Expenses -->
+            <div class="card mb-4">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">Monthly Expenses</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="property-tax">Property Tax ($):</label>
+                                <input type="number" id="property-tax" name="monthly_expenses[property_tax]" class="form-control expense-input" value="0">
+                            </div>
+    
+                            <div class="form-group mb-3">
+                                <label for="insurance">Insurance ($):</label>
+                                <input type="number" id="insurance" name="monthly_expenses[insurance]" class="form-control expense-input" value="0">
+                            </div>
+    
+                            <div class="form-group mb-3">
+                                <label for="repairs">Repairs (% of Rent):</label>
+                                <input type="number" 
+                                       id="repairs" 
+                                       name="monthly_expenses[repairs]" 
+                                       class="form-control expense-input expense-percent" 
+                                       step="0.01" 
+                                       min="0" 
+                                       max="100"
+                                       value="0">
+                            </div>
+                            
+                            <div class="form-group mb-3">
+                                <label for="capex">CapEx (% of Rent):</label>
+                                <input type="number" 
+                                       id="capex" 
+                                       name="monthly_expenses[capex]" 
+                                       class="form-control expense-input expense-percent" 
+                                       step="0.01" 
+                                       min="0" 
+                                       max="100"
+                                       value="0">
+                            </div>
+                            
+                            <div class="form-group mb-3">
+                                <label for="property-management">Property Management (% of Rent):</label>
+                                <input type="number" 
+                                       id="property-management" 
+                                       name="monthly_expenses[property_management]" 
+                                       class="form-control expense-input expense-percent" 
+                                       step="0.01" 
+                                       min="0" 
+                                       max="100"
+                                       value="0">
+                            </div>
+    
+                            <div class="form-group mb-3">
+                                <label for="hoa-fees">HOA Fees ($):</label>
+                                <input type="number" id="hoa-fees" name="monthly_expenses[hoa_fees]" class="form-control expense-input" value="0">
+                            </div>
+                        </div>
+    
+                        <div class="col-md-6">
+                            <div class="card mb-3">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Utilities</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="form-group mb-2">
+                                        <label for="water">Water ($):</label>
+                                        <input type="number" id="water" name="monthly_expenses[utilities][water]" class="form-control expense-input utility-input" value="0">
+                                    </div>
+                                    <div class="form-group mb-2">
+                                        <label for="electricity">Electricity ($):</label>
+                                        <input type="number" id="electricity" name="monthly_expenses[utilities][electricity]" class="form-control expense-input utility-input" value="0">
+                                    </div>
+                                    <div class="form-group mb-2">
+                                        <label for="gas">Gas ($):</label>
+                                        <input type="number" id="gas" name="monthly_expenses[utilities][gas]" class="form-control expense-input utility-input" value="0">
+                                    </div>
+                                    <div class="form-group mb-2">
+                                        <label for="trash">Trash ($):</label>
+                                        <input type="number" id="trash" name="monthly_expenses[utilities][trash]" class="form-control expense-input utility-input" value="0">
+                                    </div>
+                                </div>
+                            </div>
+    
+                            <div class="form-group mb-3">
+                                <label for="other-expenses">Other Expenses ($):</label>
+                                <input type="number" id="other-expenses" name="monthly_expenses[other_expenses]" class="form-control expense-input" value="0">
+                            </div>
+                        </div>
+    
+                        <div class="col-12">
+                            <div class="form-group mb-3">
+                                <label for="expense-notes">Expense Notes:</label>
+                                <textarea id="expense-notes" name="monthly_expenses[expense_notes]" class="form-control" rows="2"></textarea>
+                            </div>
+                        </div>
+    
+                        <div class="col-12">
+                            <div class="alert alert-info">
+                                Total Monthly Expenses: $<span id="total-monthly-expenses">0.00</span>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="alert alert-info">
+                                Net Monthly Income: $<span id="net-monthly-income">0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+    
+            <!-- Partners Section -->
+            <div class="card mb-4">
+                <div class="card-header bg-royal-purple">
+                    <h4 class="mb-0">Partners</h4>
+                </div>
+                <div class="card-body">
+                    <div id="partners-container"></div>
+                    
+                    <button type="button" id="add-partner-button" class="btn btn-secondary mb-3">Add Partner</button>
+                    
+                    <div id="total-equity" class="mt-3 font-weight-bold">
+                        Total Equity: 0%
+                    </div>
+                </div>
+            </div>
+    
+            <!-- Form Actions -->
             <div class="mt-4">
-                <button type="submit" class="btn btn-primary" id="updatePropertyButton">Update Property</button>
+                <button type="submit" class="btn btn-primary">Update Property</button>
                 <a href="{{ url_for('properties.edit_properties') }}" class="btn btn-secondary ms-2">Cancel</a>
             </div>
         </div>

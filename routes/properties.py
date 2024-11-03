@@ -43,7 +43,7 @@ def add_properties():
 
             # Validate the new property data
             required_fields = ['address', 'purchase_price', 'down_payment', 'primary_loan_rate', 
-                               'primary_loan_term', 'purchase_date', 'loan_amount', 'loan_start_date', 'partners']
+                             'primary_loan_term', 'purchase_date', 'loan_amount', 'loan_start_date', 'partners']
             for field in required_fields:
                 if field not in new_property or new_property[field] is None:
                     logging.error(f"Missing or null required field: {field}")
@@ -68,14 +68,57 @@ def add_properties():
             if abs(total_equity - 100) > 0.01:  # Allow for small floating-point discrepancies
                 raise ValueError(f"Total equity must equal 100%, current total: {total_equity}%")
 
+            # Ensure all fields are present with default values if not provided
+            complete_property = {
+                'address': new_property['address'],
+                'purchase_price': new_property['purchase_price'],
+                'down_payment': new_property['down_payment'],
+                'primary_loan_rate': new_property['primary_loan_rate'],
+                'primary_loan_term': new_property['primary_loan_term'],
+                'purchase_date': new_property['purchase_date'],
+                'loan_amount': new_property['loan_amount'],
+                'loan_start_date': new_property['loan_start_date'],
+                'seller_financing_amount': new_property.get('seller_financing_amount', 0),
+                'seller_financing_rate': new_property.get('seller_financing_rate', 0),
+                'seller_financing_term': new_property.get('seller_financing_term', 0),
+                'closing_costs': new_property.get('closing_costs', 0),
+                'renovation_costs': new_property.get('renovation_costs', 0),
+                'marketing_costs': new_property.get('marketing_costs', 0),
+                'holding_costs': new_property.get('holding_costs', 0),
+                'monthly_income': {
+                    'rental_income': new_property.get('monthly_income', {}).get('rental_income', 0),
+                    'parking_income': new_property.get('monthly_income', {}).get('parking_income', 0),
+                    'laundry_income': new_property.get('monthly_income', {}).get('laundry_income', 0),
+                    'other_income': new_property.get('monthly_income', {}).get('other_income', 0),
+                    'income_notes': new_property.get('monthly_income', {}).get('income_notes', '')
+                },
+                'monthly_expenses': {
+                    'property_tax': new_property.get('monthly_expenses', {}).get('property_tax', 0),
+                    'insurance': new_property.get('monthly_expenses', {}).get('insurance', 0),
+                    'repairs': new_property.get('monthly_expenses', {}).get('repairs', 0),
+                    'capex': new_property.get('monthly_expenses', {}).get('capex', 0),
+                    'property_management': new_property.get('monthly_expenses', {}).get('property_management', 0),
+                    'hoa_fees': new_property.get('monthly_expenses', {}).get('hoa_fees', 0),
+                    'utilities': {
+                        'water': new_property.get('monthly_expenses', {}).get('utilities', {}).get('water', 0),
+                        'electricity': new_property.get('monthly_expenses', {}).get('utilities', {}).get('electricity', 0),
+                        'gas': new_property.get('monthly_expenses', {}).get('utilities', {}).get('gas', 0),
+                        'trash': new_property.get('monthly_expenses', {}).get('utilities', {}).get('trash', 0)
+                    },
+                    'other_expenses': new_property.get('monthly_expenses', {}).get('other_expenses', 0),
+                    'expense_notes': new_property.get('monthly_expenses', {}).get('expense_notes', '')
+                },
+                'partners': new_property['partners']
+            }
+
             # Add the new property
-            properties.append(new_property)
+            properties.append(complete_property)
 
             # Save updated properties
             with open(current_app.config['PROPERTIES_FILE'], 'w') as f:
                 json.dump(properties, f, indent=2)
 
-            logging.info(f"New property added: {new_property['address']}")
+            logging.info(f"New property added: {complete_property['address']}")
             flash_message('Property added successfully', 'success')
             return jsonify({'success': True, 'message': 'Property added successfully'})
 
@@ -206,9 +249,31 @@ def edit_properties():
                     'renovation_costs': data.get('renovation_costs', 0),
                     'marketing_costs': data.get('marketing_costs', 0),
                     'holding_costs': data.get('holding_costs', 0),
-                    'partners': data['partners']
+                    'partners': data['partners'],
+                    'monthly_income': {
+                        'rental_income': data.get('monthly_income', {}).get('rental_income', 0),
+                        'parking_income': data.get('monthly_income', {}).get('parking_income', 0),
+                        'laundry_income': data.get('monthly_income', {}).get('laundry_income', 0),
+                        'other_income': data.get('monthly_income', {}).get('other_income', 0),
+                        'income_notes': data.get('monthly_income', {}).get('income_notes', '')
+                    },
+                    'monthly_expenses': {
+                        'property_tax': data.get('monthly_expenses', {}).get('property_tax', 0),
+                        'insurance': data.get('monthly_expenses', {}).get('insurance', 0),
+                        'repairs': data.get('monthly_expenses', {}).get('repairs', 0),
+                        'capex': data.get('monthly_expenses', {}).get('capex', 0),
+                        'property_management': data.get('monthly_expenses', {}).get('property_management', 0),
+                        'hoa_fees': data.get('monthly_expenses', {}).get('hoa_fees', 0),
+                        'utilities': {
+                            'water': data.get('monthly_expenses', {}).get('utilities', {}).get('water', 0),
+                            'electricity': data.get('monthly_expenses', {}).get('utilities', {}).get('electricity', 0),
+                            'gas': data.get('monthly_expenses', {}).get('utilities', {}).get('gas', 0),
+                            'trash': data.get('monthly_expenses', {}).get('utilities', {}).get('trash', 0)
+                        },
+                        'other_expenses': data.get('monthly_expenses', {}).get('other_expenses', 0),
+                        'expense_notes': data.get('monthly_expenses', {}).get('expense_notes', '')
+                    }
                 })
-
                 # Save updated properties back to file
                 with open(current_app.config['PROPERTIES_FILE'], 'w') as f:
                     json.dump(properties, f, indent=2)

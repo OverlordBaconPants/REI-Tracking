@@ -1,9 +1,12 @@
+// @ts-nocheck
+
 // edit_properties.js
 
 const editPropertiesModule = {
-    // Add this as a class property
+    // Class property for available partners
     availablePartners: [],
 
+    // Initialization
     init: async function() {
         try {
             console.log('Initializing edit properties module');
@@ -16,8 +19,8 @@ const editPropertiesModule = {
         }
     },
 
+    // Form initialization and setup
     initializeForm: function() {
-        // Get all the elements we need
         const propertySelect = document.getElementById('property_select');
         const propertyDetails = document.getElementById('propertyDetails');
         const addPartnerButton = document.getElementById('add-partner-button');
@@ -25,17 +28,25 @@ const editPropertiesModule = {
         const form = document.getElementById('editPropertyForm');
         
         console.log('Form element found:', form !== null);
-
-        // Add property select handler
+    
+        // Bind 'this' to preserve context
+        const self = this;
+    
         if (propertySelect) {
-            propertySelect.addEventListener('change', (event) => this.handlePropertySelect(event));
+            propertySelect.addEventListener('change', function(event) {
+                self.handlePropertySelect(event);
+            });
+            propertySelect.addEventListener('change', function() {
+                setTimeout(() => {
+                    self.updateTotalIncome();
+                    self.updateTotalExpenses();
+                }, 100);
+            });
             console.log('Property select initialized');
         }
-
-        // Add form submit handler
+    
         if (form) {
             form.addEventListener('submit', (event) => this.handleSubmit(event));
-            // Also add click handler to the submit button as backup
             const submitButton = form.querySelector('button[type="submit"]');
             if (submitButton) {
                 submitButton.addEventListener('click', (event) => {
@@ -47,20 +58,112 @@ const editPropertiesModule = {
         } else {
             console.error('Edit property form not found');
         }
-
-        // Add partner button handler
+    
         if (addPartnerButton) {
             addPartnerButton.addEventListener('click', () => this.addPartnerFields());
             console.log('Add partner button initialized');
         }
-
-        // Initialize partners section if it exists
+    
         if (partnersContainer) {
             this.initPartnersSection();
             console.log('Partners section initialized');
         }
+    
+        this.initCalculations();
+        console.log('Income/expense calculations initialized');
     },
 
+    // Income and Expense Calculations
+    initCalculations: function() {
+        document.querySelectorAll('.income-input').forEach(input => {
+            input.addEventListener('input', this.updateTotalIncome.bind(this));
+        });
+
+        document.querySelectorAll('.expense-input').forEach(input => {
+            input.addEventListener('input', this.updateTotalExpenses.bind(this));
+        });
+
+        this.updateTotalIncome();
+        this.updateTotalExpenses();
+    },
+
+    updateTotalIncome: function() {
+        let total = 0;
+        const incomeInputs = document.querySelectorAll('.income-input');
+        
+        incomeInputs.forEach(input => {
+            const value = parseFloat(input.value) || 0;
+            total += value;
+        });
+
+        const totalIncomeElement = document.getElementById('total-monthly-income');
+        if (totalIncomeElement) {
+            totalIncomeElement.textContent = total.toFixed(2);
+        }
+
+        this.updateNetIncome();
+    },
+
+    updateTotalExpenses: function() {
+        let total = 0;
+        let utilityTotal = 0;
+        let rentalIncome = parseFloat(document.getElementById('rental-income').value) || 0;
+    
+        // Calculate utilities (fixed amounts)
+        const utilityInputs = document.querySelectorAll('.utility-input');
+        utilityInputs.forEach(input => {
+            const value = parseFloat(input.value) || 0;
+            utilityTotal += value;
+        });
+    
+        // Calculate percentage-based expenses
+        const percentageInputs = document.querySelectorAll('.expense-percent');
+        percentageInputs.forEach(input => {
+            const percentage = parseFloat(input.value) || 0;
+            const amount = (rentalIncome * percentage) / 100;
+            total += amount;
+        });
+    
+        // Calculate fixed amount expenses
+        const fixedExpenseInputs = document.querySelectorAll('.expense-input:not(.utility-input):not(.expense-percent)');
+        fixedExpenseInputs.forEach(input => {
+            const value = parseFloat(input.value) || 0;
+            total += value;
+        });
+    
+        total += utilityTotal;
+    
+        const totalExpensesElement = document.getElementById('total-monthly-expenses');
+        if (totalExpensesElement) {
+            totalExpensesElement.textContent = total.toFixed(2);
+        }
+    
+        this.updateNetIncome();
+    },
+
+    updateNetIncome: function() {
+        const totalIncomeElement = document.getElementById('total-monthly-income');
+        const totalExpensesElement = document.getElementById('total-monthly-expenses');
+        const netIncomeElement = document.getElementById('net-monthly-income');
+
+        if (totalIncomeElement && totalExpensesElement && netIncomeElement) {
+            const totalIncome = parseFloat(totalIncomeElement.textContent) || 0;
+            const totalExpenses = parseFloat(totalExpensesElement.textContent) || 0;
+            const netIncome = totalIncome - totalExpenses;
+
+            netIncomeElement.textContent = netIncome.toFixed(2);
+            
+            if (netIncome > 0) {
+                netIncomeElement.classList.remove('text-danger');
+                netIncomeElement.classList.add('text-success');
+            } else {
+                netIncomeElement.classList.remove('text-success');
+                netIncomeElement.classList.add('text-danger');
+            }
+        }
+    },
+
+    // Property Selection and Details
     handlePropertySelect: function(event) {
         const selectedAddress = event.target.value;
         const propertyDetails = document.getElementById('propertyDetails');
@@ -110,7 +213,6 @@ const editPropertiesModule = {
 
     populateForm: function(property) {
         try {
-            // Helper function to safely set input values
             const setInputValue = (id, value) => {
                 const element = document.getElementById(id);
                 if (element) {
@@ -120,7 +222,6 @@ const editPropertiesModule = {
                 }
             };
 
-            // Set values for all fields
             setInputValue('purchase-date', property.purchase_date);
             setInputValue('loan-amount', property.loan_amount);
             setInputValue('loan-start-date', property.loan_start_date);
@@ -136,21 +237,53 @@ const editPropertiesModule = {
             setInputValue('marketing-costs', property.marketing_costs);
             setInputValue('holding-costs', property.holding_costs);
 
-            // Handle partners
+            // Monthly Income
+            if (property.monthly_income) {
+                setInputValue('rental-income', property.monthly_income.rental_income);
+                setInputValue('parking-income', property.monthly_income.parking_income);
+                setInputValue('laundry-income', property.monthly_income.laundry_income);
+                setInputValue('other-income', property.monthly_income.other_income);
+                setInputValue('income-notes', property.monthly_income.income_notes);
+            }
+
+            // Monthly Expenses
+            if (property.monthly_expenses) {
+                setInputValue('property-tax', property.monthly_expenses.property_tax);
+                setInputValue('insurance', property.monthly_expenses.insurance);
+                setInputValue('repairs', property.monthly_expenses.repairs);
+                setInputValue('capex', property.monthly_expenses.capex);
+                setInputValue('property-management', property.monthly_expenses.property_management);
+                setInputValue('hoa-fees', property.monthly_expenses.hoa_fees);
+                
+                if (property.monthly_expenses.utilities) {
+                    setInputValue('water', property.monthly_expenses.utilities.water);
+                    setInputValue('electricity', property.monthly_expenses.utilities.electricity);
+                    setInputValue('gas', property.monthly_expenses.utilities.gas);
+                    setInputValue('trash', property.monthly_expenses.utilities.trash);
+                }
+                
+                setInputValue('other-expenses', property.monthly_expenses.other_expenses);
+                setInputValue('expense-notes', property.monthly_expenses.expense_notes);
+            }
+
             const partnersContainer = document.getElementById('partners-container');
             if (partnersContainer) {
-                partnersContainer.innerHTML = ''; // Clear existing partners
+                partnersContainer.innerHTML = '';
                 if (property.partners && Array.isArray(property.partners)) {
                     property.partners.forEach(partner => this.addPartnerFields(partner));
                 }
                 this.updateTotalEquity();
             }
 
+            // Update all totals
+            this.updateTotalIncome();
+            this.updateTotalExpenses();
+
             console.log('Form populated successfully');
         } catch (error) {
             console.error('Error populating form:', error);
             window.showNotification('Error populating form fields', 'error');
-            throw error; // Re-throw to be caught by the caller
+            throw error;
         }
     },
 
@@ -166,8 +299,11 @@ const editPropertiesModule = {
         }
 
         this.updateTotalEquity();
+        this.updateTotalIncome();
+        this.updateTotalExpenses();
     },
 
+    // Partners Management
     fetchAvailablePartners: async function() {
         try {
             const response = await fetch('/properties/get_available_partners');
@@ -199,9 +335,6 @@ const editPropertiesModule = {
         const addPartnerButton = document.getElementById('add-partner-button');
         
         if (partnersContainer && addPartnerButton) {
-            // Add partner button handler
-            addPartnerButton.addEventListener('click', () => this.addPartnerFields());
-            
             // Partner select change handler
             partnersContainer.addEventListener('change', (event) => {
                 this.handlePartnerChange(event);
@@ -222,7 +355,7 @@ const editPropertiesModule = {
                     this.updateTotalEquity();
                 }
             });
-
+    
             console.log('Partners section initialized');
         } else {
             console.warn('Partners container or add partner button not found');
@@ -285,7 +418,6 @@ const editPropertiesModule = {
         `;
         partnersContainer.insertAdjacentHTML('beforeend', partnerHtml);
         
-        // If we're adding an existing partner, set the select value
         if (partner.name) {
             const select = partnersContainer.querySelector(`#partner-select-${partnerCount}`);
             if (select) {
@@ -293,13 +425,18 @@ const editPropertiesModule = {
             }
         }
 
-        // Add change event listener for this new partner select
         const newSelect = partnersContainer.querySelector(`#partner-select-${partnerCount}`);
         if (newSelect) {
             newSelect.addEventListener('change', (event) => this.handlePartnerSelectChange(event));
         }
         
         this.updateTotalEquity();
+    },
+
+    handlePartnerChange: function(event) {
+        if (event.target.classList.contains('partner-select')) {
+            this.handlePartnerSelectChange(event);
+        }
     },
 
     handlePartnerSelectChange: function(event) {
@@ -315,17 +452,6 @@ const editPropertiesModule = {
             newPartnerInput.style.display = 'none';
             newPartnerNameInput.required = false;
             newPartnerNameInput.value = '';
-        }
-    },
-
-    initPartnersSection: function() {
-        const partnersContainer = document.getElementById('partners-container');
-        if (partnersContainer) {
-            partnersContainer.addEventListener('input', this.updateTotalEquity.bind(this));
-            partnersContainer.addEventListener('click', this.removePartner.bind(this));
-            console.log('Partners section initialized');
-        } else {
-            console.log('Partners container not found');
         }
     },
 
@@ -348,37 +474,6 @@ const editPropertiesModule = {
 
         totalEquityElement.textContent = `Total Equity: ${total.toFixed(2)}%`;
         totalEquityElement.className = total === 100 ? 'text-success' : 'text-danger';
-    },
-
-    collectPartnerData: function() {
-        const partners = [];
-        const partnerEntries = document.querySelectorAll('.partner-entry');
-
-        partnerEntries.forEach(entry => {
-            const select = entry.querySelector('.partner-select');
-            const equityInput = entry.querySelector('.partner-equity');
-            let partnerName;
-
-            if (select.value === 'new') {
-                const newNameInput = entry.querySelector('.new-partner-input input');
-                if (newNameInput && newNameInput.value.trim()) {
-                    partnerName = newNameInput.value.trim();
-                }
-            } else {
-                partnerName = select.value;
-            }
-
-            const equityShare = parseFloat(equityInput.value);
-
-            if (partnerName && !isNaN(equityShare)) {
-                partners.push({
-                    name: partnerName,
-                    equity_share: equityShare
-                });
-            }
-        });
-
-        return partners;
     },
 
     handleSubmit: function(event) {
@@ -417,6 +512,29 @@ const editPropertiesModule = {
             renovation_costs: parseInt(document.getElementById('renovation-costs').value || '0'),
             marketing_costs: parseInt(document.getElementById('marketing-costs').value || '0'),
             holding_costs: parseInt(document.getElementById('holding-costs').value || '0'),
+            monthly_income: {
+                rental_income: parseFloat(document.getElementById('rental-income').value || '0'),
+                parking_income: parseFloat(document.getElementById('parking-income').value || '0'),
+                laundry_income: parseFloat(document.getElementById('laundry-income').value || '0'),
+                other_income: parseFloat(document.getElementById('other-income').value || '0'),
+                income_notes: document.getElementById('income-notes').value
+            },
+            monthly_expenses: {
+                property_tax: parseFloat(document.getElementById('property-tax').value || '0'),
+                insurance: parseFloat(document.getElementById('insurance').value || '0'),
+                repairs: parseFloat(document.getElementById('repairs').value || '0'),
+                capex: parseFloat(document.getElementById('capex').value || '0'),
+                property_management: parseFloat(document.getElementById('property-management').value || '0'),
+                hoa_fees: parseFloat(document.getElementById('hoa-fees').value || '0'),
+                utilities: {
+                    water: parseFloat(document.getElementById('water').value || '0'),
+                    electricity: parseFloat(document.getElementById('electricity').value || '0'),
+                    gas: parseFloat(document.getElementById('gas').value || '0'),
+                    trash: parseFloat(document.getElementById('trash').value || '0')
+                },
+                other_expenses: parseFloat(document.getElementById('other-expenses').value || '0'),
+                expense_notes: document.getElementById('expense-notes').value
+            },
             partners: []
         };
 

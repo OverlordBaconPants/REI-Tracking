@@ -10,6 +10,7 @@ const addPropertiesModule = {
                 addPropertyForm.addEventListener('submit', this.handleSubmit.bind(this));
                 this.initAddressAutocomplete();
                 this.initPartnersSection();
+                this.initCalculations();  // Add this line
                 window.showNotification('Add Properties module loaded', 'success');
             } else {
                 console.log('Add Property form not found');
@@ -100,6 +101,104 @@ const addPropertiesModule = {
         }
     },
 
+    initCalculations: function() {
+        // Set up event listeners for income inputs
+        document.querySelectorAll('.income-input').forEach(input => {
+            input.addEventListener('input', this.updateTotalIncome.bind(this));
+        });
+    
+        // Set up event listeners for expense inputs
+        document.querySelectorAll('.expense-input').forEach(input => {
+            input.addEventListener('input', this.updateTotalExpenses.bind(this));
+        });
+    
+        // Only calculate totals if we have input fields
+        if (document.querySelector('.income-input') || document.querySelector('.expense-input')) {
+            this.updateTotalIncome();
+            this.updateTotalExpenses();
+        }
+    },
+    
+    updateTotalIncome: function() {
+        let total = 0;
+        const incomeInputs = document.querySelectorAll('.income-input');
+        
+        incomeInputs.forEach(input => {
+            const value = parseFloat(input.value) || 0;
+            total += value;
+        });
+    
+        const totalIncomeElement = document.getElementById('total-monthly-income');
+        if (totalIncomeElement) {
+            totalIncomeElement.textContent = total.toFixed(2);
+        }
+    
+        this.updateNetIncome();
+    },
+    
+    updateTotalExpenses: function() {
+        let total = 0;
+        let utilityTotal = 0;
+    
+        // Safely get rental income, default to 0 if element doesn't exist or has no value
+        const rentalIncomeElement = document.getElementById('rental-income');
+        const rentalIncome = rentalIncomeElement ? (parseFloat(rentalIncomeElement.value) || 0) : 0;
+    
+        // Calculate utilities (fixed amounts)
+        const utilityInputs = document.querySelectorAll('.utility-input');
+        utilityInputs.forEach(input => {
+            const value = parseFloat(input.value) || 0;
+            utilityTotal += value;
+        });
+    
+        // Calculate percentage-based expenses
+        const percentageInputs = document.querySelectorAll('.expense-percent');
+        percentageInputs.forEach(input => {
+            const percentage = parseFloat(input.value) || 0;
+            const amount = (rentalIncome * percentage) / 100;
+            total += amount;
+        });
+    
+        // Calculate fixed amount expenses
+        const fixedExpenseInputs = document.querySelectorAll('.expense-input:not(.utility-input):not(.expense-percent)');
+        fixedExpenseInputs.forEach(input => {
+            const value = parseFloat(input.value) || 0;
+            total += value;
+        });
+    
+        total += utilityTotal;
+    
+        const totalExpensesElement = document.getElementById('total-monthly-expenses');
+        if (totalExpensesElement) {
+            totalExpensesElement.textContent = total.toFixed(2);
+        }
+    
+        this.updateNetIncome();
+    },
+    
+    updateNetIncome: function() {
+        const totalIncomeElement = document.getElementById('total-monthly-income');
+        const totalExpensesElement = document.getElementById('total-monthly-expenses');
+        const netIncomeElement = document.getElementById('net-monthly-income');
+    
+        if (totalIncomeElement && totalExpensesElement && netIncomeElement) {
+            const totalIncome = parseFloat(totalIncomeElement.textContent) || 0;
+            const totalExpenses = parseFloat(totalExpensesElement.textContent) || 0;
+            const netIncome = totalIncome - totalExpenses;
+    
+            netIncomeElement.textContent = netIncome.toFixed(2);
+            
+            // Update color based on positive/negative net income
+            if (netIncome > 0) {
+                netIncomeElement.classList.remove('text-danger');
+                netIncomeElement.classList.add('text-success');
+            } else {
+                netIncomeElement.classList.remove('text-success');
+                netIncomeElement.classList.add('text-danger');
+            }
+        }
+    },
+
     addPartner: function() {
         const partnersContainer = document.getElementById('partners-container');
         const partnerCount = partnersContainer.querySelectorAll('.partner-entry').length;
@@ -138,10 +237,23 @@ const addPropertiesModule = {
     },
 
     getPartnerOptions: function() {
-        return Array.from(document.querySelector('.partner-select').options)
-            .filter(option => option.value !== 'new')
-            .map(option => `<option value="${option.value}">${option.textContent}</option>`)
-            .join('');
+        // Use partners from template
+        const partnerSelects = document.querySelectorAll('.partner-select');
+        if (partnerSelects.length > 0) {
+            // If we have existing selects, use their options
+            return Array.from(partnerSelects[0].options)
+                .filter(option => option.value !== 'new')
+                .map(option => `<option value="${option.value}">${option.textContent}</option>`)
+                .join('');
+        } else {
+            // If no existing selects, use partners array from the page
+            const partners = Array.from(document.querySelectorAll('#partners-list option'))
+                .map(option => option.value)
+                .filter(value => value && value !== 'new');
+            return partners
+                .map(partner => `<option value="${partner}">${partner}</option>`)
+                .join('');
+        }
     },
 
     handlePartnerChange: function(event) {
@@ -194,70 +306,116 @@ const addPropertiesModule = {
             console.log('Form validation failed');
             return;
         }
-
-        const propertyData = {
-            address: formData.get('property_address'),
-            purchase_price: parseInt(formData.get('purchase_price')),
-            down_payment: parseInt(formData.get('down_payment')),
-            primary_loan_rate: parseFloat(formData.get('primary_loan_rate')),
-            primary_loan_term: parseInt(formData.get('primary_loan_term')),
-            purchase_date: formData.get('purchase_date'),
-            loan_amount: formData.get('loan_amount'),
-            loan_start_date: formData.get('loan_start_date'),
-            seller_financing_amount: parseInt(formData.get('seller_financing_amount') || '0'),
-            seller_financing_rate: parseFloat(formData.get('seller_financing_rate') || '0'),
-            seller_financing_term: parseFloat(formData.get('seller_financing_term') || '0'),
-            closing_costs: parseInt(formData.get('closing_costs') || '0'),
-            renovation_costs: parseInt(formData.get('renovation_costs') || '0'),
-            marketing_costs: parseInt(formData.get('marketing_costs') || '0'),
-            holding_costs: parseInt(formData.get('holding_costs') || '0'),
-            partners: []
+    
+        // Helper function to safely get and parse numeric values
+        const getNumericValue = (fieldName, defaultValue = 0) => {
+            const value = formData.get(fieldName);
+            if (value === null || value === '') {
+                console.warn(`Field ${fieldName} is missing or empty, using default value: ${defaultValue}`);
+                return defaultValue;
+            }
+            return isNaN(parseFloat(value)) ? defaultValue : parseFloat(value);
         };
-        
-        const partnerEntries = form.querySelectorAll('.partner-entry');
-        partnerEntries.forEach((entry, index) => {
-            const nameInput = entry.querySelector(`[name="partners[${index}][name]"]`);
-            const equityInput = entry.querySelector(`[name="partners[${index}][equity_share]"]`);
-            
-            if (nameInput && equityInput) {
-                let name = nameInput.value.trim();
-                const equityShare = parseFloat(equityInput.value);
+    
+        // Helper function to safely get string values
+        const getStringValue = (fieldName, defaultValue = '') => {
+            const value = formData.get(fieldName);
+            return value === null ? defaultValue : value;
+        };
+    
+        try {
+            const propertyData = {
+                address: getStringValue('property_address'),
+                purchase_price: getNumericValue('purchase_price'),
+                down_payment: getNumericValue('down_payment'),
+                primary_loan_rate: getNumericValue('primary_loan_rate'),
+                primary_loan_term: getNumericValue('primary_loan_term'),
+                purchase_date: getStringValue('purchase_date'),
+                loan_amount: getStringValue('loan_amount'),
+                loan_start_date: getStringValue('loan_start_date'),
+                seller_financing_amount: getNumericValue('seller_financing_amount'),
+                seller_financing_rate: getNumericValue('seller_financing_rate'),
+                seller_financing_term: getNumericValue('seller_financing_term'),
+                closing_costs: getNumericValue('closing_costs'),
+                renovation_costs: getNumericValue('renovation_costs'),
+                marketing_costs: getNumericValue('marketing_costs'),
+                holding_costs: getNumericValue('holding_costs'),
+                monthly_income: {
+                    rental_income: getNumericValue('monthly_income[rental_income]'),
+                    parking_income: getNumericValue('monthly_income[parking_income]'),
+                    laundry_income: getNumericValue('monthly_income[laundry_income]'),
+                    other_income: getNumericValue('monthly_income[other_income]'),
+                    income_notes: getStringValue('monthly_income[income_notes]')
+                },
+                monthly_expenses: {
+                    property_tax: getNumericValue('monthly_expenses[property_tax]'),
+                    insurance: getNumericValue('monthly_expenses[insurance]'),
+                    repairs: getNumericValue('monthly_expenses[repairs]'),
+                    capex: getNumericValue('monthly_expenses[capex]'),
+                    property_management: getNumericValue('monthly_expenses[property_management]'),
+                    hoa_fees: getNumericValue('monthly_expenses[hoa_fees]'),
+                    utilities: {
+                        water: getNumericValue('monthly_expenses[utilities][water]'),
+                        electricity: getNumericValue('monthly_expenses[utilities][electricity]'),
+                        gas: getNumericValue('monthly_expenses[utilities][gas]'),
+                        trash: getNumericValue('monthly_expenses[utilities][trash]')
+                    },
+                    other_expenses: getNumericValue('monthly_expenses[other_expenses]'),
+                    expense_notes: getStringValue('monthly_expenses[expense_notes]')
+                },
+                partners: []
+            };
+    
+            // Collect partner data
+            const partnerEntries = form.querySelectorAll('.partner-entry');
+            partnerEntries.forEach((entry, index) => {
+                const nameInput = entry.querySelector(`[name="partners[${index}][name]"]`);
+                const equityInput = entry.querySelector(`[name="partners[${index}][equity_share]"]`);
                 
-                if (name === 'new') {
-                    const newPartnerNameInput = entry.querySelector(`[name="partners[${index}][new_name]"]`);
-                    if (newPartnerNameInput) {
-                        name = newPartnerNameInput.value.trim();
+                if (nameInput && equityInput) {
+                    let name = nameInput.value.trim();
+                    const equityShare = parseFloat(equityInput.value);
+                    
+                    if (name === 'new') {
+                        const newPartnerNameInput = entry.querySelector(`[name="partners[${index}][new_name]"]`);
+                        if (newPartnerNameInput) {
+                            name = newPartnerNameInput.value.trim();
+                        }
+                    }
+                    
+                    if (name && !isNaN(equityShare)) {
+                        propertyData.partners.push({ name, equity_share: equityShare });
                     }
                 }
-                
-                if (name && !isNaN(equityShare)) {
-                    propertyData.partners.push({ name, equity_share: equityShare });
-                }
-            }
-        });
-        
-        console.log('Sending property data:', JSON.stringify(propertyData, null, 2));
+            });
     
-        fetch('/properties/add_properties', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(propertyData)
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Server response:', data);
-            if (data.success) {
-                window.location.reload();
-            } else {
-                alert('Error: ' + data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred while adding the property. Please check the console for more details.');
-        });
+            console.log('Sending property data:', JSON.stringify(propertyData, null, 2));
+    
+            fetch('/properties/add_properties', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(propertyData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Server response:', data);
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    window.showNotification('Error: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                window.showNotification('An error occurred while adding the property. Please check the console for more details.', 'error');
+            });
+    
+        } catch (error) {
+            console.error('Error preparing property data:', error);
+            window.showNotification('Error preparing property data: ' + error.message, 'error');
+        }
     },
 
     validateForm: function(form) {

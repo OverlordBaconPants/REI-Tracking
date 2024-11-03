@@ -67,6 +67,16 @@ body {
     text-align: center;
 }
 
+.bg-navy {
+    background-color: navy !important;
+    color: white !important;
+}
+
+.bg-royal-purple {
+    background-color: #4B0082 !important;
+    color: white !important;
+}
+
 main {
     margin-left: 200px;
     padding: 20px;
