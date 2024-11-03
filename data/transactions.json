@@ -792,13 +792,14 @@
     "amount": 3800.0,
     "date": "2024-07-24",
     "collector_payer": "BJ Marshall",
+    "documentation_file": "2024.07.24_Guilford_-_Rent_and_Security_Deposit.png",
+    "id": "51",
     "reimbursement": {
       "date_shared": "2024-07-25",
       "share_description": "Sent via Zelle",
-      "reimbursement_status": "completed"
-    },
-    "documentation_file": "2024.07.24_Guilford_-_Rent_and_Security_Deposit.png",
-    "id": "51"
+      "reimbursement_status": "completed",
+      "documentation": null
+    }
   },
   {
     "property_id": "454 Guilford Avenue, Hagerstown, MD 21740, United States of America, Hagerstown, Maryland, 21740",
@@ -863,5 +864,39 @@
     },
     "documentation_file": "2024.10_Guilford_Rent_and_Utilities.png",
     "id": "55"
+  },
+  {
+    "property_id": "2212 Logan Street, Harrisburg, PA 17102, United States of America, Harrisburg, Pennsylvania, 17102",
+    "type": "income",
+    "category": "Rent",
+    "description": "2024.11 HAP Portion",
+    "amount": 1500.0,
+    "date": "2024-10-31",
+    "collector_payer": "BJ Marshall",
+    "documentation_file": "2024.11_Logan_HAP_Rent_Portion.pdf",
+    "id": "56",
+    "reimbursement": {
+      "date_shared": "",
+      "share_description": "",
+      "reimbursement_status": "pending",
+      "documentation": null
+    }
+  },
+  {
+    "property_id": "5920 Watch Chain Way, Columbia, MD 21044, United States of America, Columbia, Maryland, 21044",
+    "type": "expense",
+    "category": "Association Dues",
+    "description": "2024.11 COA",
+    "amount": 362.81,
+    "date": "2024-11-01",
+    "collector_payer": "BJ Marshall",
+    "documentation_file": "2024.11_Watch_Chain_COA.pdf",
+    "id": "57",
+    "reimbursement": {
+      "date_shared": "2024-11-01",
+      "share_description": "",
+      "reimbursement_status": "completed",
+      "documentation": null
+    }
   }
 ]

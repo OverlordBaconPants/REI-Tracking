@@ -1,6 +1,8 @@
-from flask import abort, Blueprint, render_template, request, redirect, url_for, flash, current_app, send_from_directory, jsonify
+from utils.flash import flash_message
+from flask import abort, Blueprint, render_template, request, redirect, url_for, current_app, send_from_directory, jsonify
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
+from services.transaction_import_service import TransactionImportService
 from services.transaction_service import add_transaction, is_duplicate_transaction, get_properties_for_user, get_transaction_by_id, update_transaction, get_categories, get_partners_for_property, process_bulk_import
 from utils.utils import admin_required
 import os
@@ -30,12 +32,12 @@ def add_transactions():
         try:
             # Check if a file is present in the request
             if 'documentation_file' not in request.files:
-                flash('No file provided. Please attach supporting documentation.', 'error')
+                flash_message('No file provided. Please attach supporting documentation.', 'error')
                 return redirect(url_for('transactions.add_transactions'))
             
             file = request.files['documentation_file']
             if file.filename == '':
-                flash('No file selected. Please attach supporting documentation.', 'error')
+                flash_message('No file selected. Please attach supporting documentation.', 'error')
                 return redirect(url_for('transactions.add_transactions'))
 
             if file and allowed_file(file.filename, file_type='documentation'):
@@ -43,7 +45,7 @@ def add_transactions():
                 file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
                 file.save(file_path)
             else:
-                flash('Invalid file type. Allowed types are: ' + ', '.join(current_app.config['ALLOWED_DOCUMENTATION_EXTENSIONS']), 'error')
+                flash_message('Invalid file type. Allowed types are: ' + ', '.join(current_app.config['ALLOWED_DOCUMENTATION_EXTENSIONS']), 'error')
                 return redirect(url_for('transactions.add_transactions'))
 
             # Get form data
@@ -65,17 +67,17 @@ def add_transactions():
 
             # Check for duplicate transaction
             if is_duplicate_transaction(transaction_data):
-                flash("This transaction appears to be a duplicate and was not added.", "warning")
+                flash_message("This transaction appears to be a duplicate and was not added.", "warning")
                 return redirect(url_for('transactions.add_transactions'))
 
             # Process the transaction data
             add_transaction(transaction_data)
             
-            flash('Transaction added successfully!', 'success')
+            flash_message('Transaction added successfully!', 'success')
             return redirect(url_for('transactions.add_transactions'))
         except Exception as e:
             logging.error(f"Error adding transaction: {str(e)}")
-            flash(f"Error adding transaction: {str(e)}", "error")
+            flash_message(f"Error adding transaction: {str(e)}", "error")
             return redirect(url_for('transactions.add_transactions'))
 
     # For GET requests, render the template
@@ -95,38 +97,90 @@ def allowed_file(filename):
 @login_required
 def bulk_import():
     if request.method == 'POST':
-        if 'file' not in request.files:
-            flash('No file part', 'error')
-            return redirect(request.url)
-        
-        file = request.files['file']
-        if file.filename == '':
-            flash('No selected file', 'error')
-            return redirect(request.url)
-        
-        if file and allowed_file(file.filename, file_type='import'):
+        try:
+            # Log the incoming request
+            current_app.logger.debug(f"Received bulk import request: {request.files}")
+
+            if 'file' not in request.files:
+                return jsonify({
+                    'success': False,
+                    'error': 'No file uploaded'
+                }), 400, {'Content-Type': 'application/json'}
+            
+            file = request.files['file']
+            if file.filename == '':
+                return jsonify({
+                    'success': False,
+                    'error': 'No selected file'
+                }), 400, {'Content-Type': 'application/json'}
+            
+            if not allowed_file(file.filename, file_type='import'):
+                return jsonify({
+                    'success': False,
+                    'error': f'Invalid file type. Allowed types are: {", ".join(current_app.config["ALLOWED_IMPORT_EXTENSIONS"])}'
+                }), 400, {'Content-Type': 'application/json'}
+            
             filename = secure_filename(file.filename)
             file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
             file.save(file_path)
             
             try:
-                column_mapping = json.loads(request.form.get('column_mapping'))
-                properties = get_properties_for_user(current_user.id, current_user.name, current_user.role == 'Admin')
+                # Log the received form data
+                current_app.logger.debug(f"Column mapping data: {request.form.get('column_mapping')}")
                 
-                import_results = process_bulk_import(file_path, column_mapping, properties)
+                column_mapping = json.loads(request.form.get('column_mapping', '{}'))
                 
-                flash_import_results(import_results)
-                return redirect(url_for('transactions.view_transactions'))
+                # Process the import using the service
+                import_service = TransactionImportService()
+                results = import_service.process_import_file(file_path, column_mapping)
+                
+                # Log the processing results
+                current_app.logger.debug(f"Import processing results: {results}")
+                
+                # Save all transactions (they now have invalid values replaced with None)
+                transactions_saved = 0
+                for transaction in results['successful_rows']:
+                    if any(transaction.values()):  # Only save if at least one field has a value
+                        add_transaction(transaction)
+                        transactions_saved += 1
+                
+                response_data = {
+                    'success': True,
+                    'redirect': url_for('transactions.view_transactions'),
+                    'modifications': results['modifications'],
+                    'stats': {
+                        'total_processed': results['stats']['processed_rows'],
+                        'total_saved': transactions_saved,
+                        'total_modified': results['stats']['modified_rows']
+                    }
+                }
+                
+                current_app.logger.debug(f"Sending response: {response_data}")
+                return jsonify(response_data), 200, {'Content-Type': 'application/json'}
             
+            except json.JSONDecodeError as e:
+                current_app.logger.error(f"JSON decode error: {str(e)}")
+                return jsonify({
+                    'success': False,
+                    'error': 'Invalid column mapping format'
+                }), 400, {'Content-Type': 'application/json'}
             except Exception as e:
                 current_app.logger.error(f"Error processing file: {str(e)}")
-                flash(f'Error processing file: {str(e)}', 'error')
+                return jsonify({
+                    'success': False,
+                    'error': f'Error processing file: {str(e)}'
+                }), 500, {'Content-Type': 'application/json'}
             finally:
-                os.remove(file_path)  # Clean up the temporary file
-        else:
-            flash('Invalid file type', 'error')
+                # Clean up the temporary file
+                if os.path.exists(file_path):
+                    os.remove(file_path)
         
-        return redirect(request.url)
+        except Exception as e:
+            current_app.logger.error(f"Unexpected error in bulk import: {str(e)}")
+            return jsonify({
+                'success': False,
+                'error': 'An unexpected error occurred'
+            }), 500, {'Content-Type': 'application/json'}
     
     # GET request: render the upload form
     return render_template('transactions/bulk_import.html')
@@ -138,15 +192,15 @@ def allowed_file(filename, file_type='documentation'):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extensions
 
 def flash_import_results(results):
-    flash('Import summary:', 'info')
-    flash(f'Total rows in file: {results["total_rows"]}', 'info')
-    flash(f'Successfully processed: {results["processed_rows"]}', 'info')
-    flash(f'Successfully imported: {results["imported_count"]}', 'success')
-    flash(f'Skipped rows: {results["skipped_rows"]}', 'warning')
-    flash(f'  - Empty dates: {results["empty_dates"]}', 'warning')
-    flash(f'  - Empty amounts: {results["empty_amounts"]}', 'warning')
-    flash(f'  - Unmatched properties: {results["unmatched_properties"]}', 'warning')
-    flash(f'  - Other issues: {results["other_issues"]}', 'warning')
+    flash_message('Import summary:', 'info')
+    flash_message(f'Total rows in file: {results["total_rows"]}', 'info')
+    flash_message(f'Successfully processed: {results["processed_rows"]}', 'info')
+    flash_message(f'Successfully imported: {results["imported_count"]}', 'success')
+    flash_message(f'Skipped rows: {results["skipped_rows"]}', 'warning')
+    flash_message(f'  - Empty dates: {results["empty_dates"]}', 'warning')
+    flash_message(f'  - Empty amounts: {results["empty_amounts"]}', 'warning')
+    flash_message(f'  - Unmatched properties: {results["unmatched_properties"]}', 'warning')
+    flash_message(f'  - Other issues: {results["other_issues"]}', 'warning')
 
 @transactions_bp.route('/get_columns', methods=['POST'])
 @login_required
@@ -192,19 +246,19 @@ def get_columns():
 @admin_required
 def edit_transactions(transaction_id):
     try:
-        current_app.logger.info(f"Edit transactions route accessed for transaction ID: {transaction_id}")
-        transaction = get_transaction_by_id(transaction_id)
+        # Get filter state from URL
+        filters = request.args.get('filters', '{}')
         
+        transaction = get_transaction_by_id(transaction_id)
         if not transaction:
-            current_app.logger.warning(f"Transaction not found for ID: {transaction_id}")
-            return jsonify({'success': False, 'message': f'Transaction with id {transaction_id} not found'}), 404
+            flash_message('Transaction not found', 'error')
+            return redirect(url_for('transactions.view_transactions'))
 
         if request.method == 'POST':
             try:
                 current_app.logger.info(f"Processing POST request to edit transaction ID: {transaction_id}")
                 form_data = request.form.to_dict()
-                current_app.logger.debug(f"Received form data: {form_data}")
-
+                
                 updated_transaction = {
                     'id': transaction_id,
                     'property_id': form_data.get('property_id'),
@@ -214,15 +268,16 @@ def edit_transactions(transaction_id):
                     'amount': float(form_data.get('amount')),
                     'date': form_data.get('date'),
                     'collector_payer': form_data.get('collector_payer'),
+                    'documentation_file': transaction.get('documentation_file'),
                     'reimbursement': {
                         'date_shared': form_data.get('date_shared'),
                         'share_description': form_data.get('share_description'),
                         'reimbursement_status': form_data.get('reimbursement_status'),
-                        'documentation': form_data.get('reimbursement_documentation')  # Add this line
+                        'documentation': transaction.get('reimbursement', {}).get('documentation')
                     }
                 }
-                
-                # Handle file upload if a new file is provided
+
+                # Handle file uploads
                 if 'documentation_file' in request.files:
                     file = request.files['documentation_file']
                     if file and file.filename:
@@ -231,8 +286,6 @@ def edit_transactions(transaction_id):
                             file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
                             file.save(file_path)
                             updated_transaction['documentation_file'] = filename
-                        else:
-                            return jsonify({'success': False, 'message': 'Invalid file type.'}), 400
 
                 # Handle reimbursement documentation
                 if 'reimbursement_documentation' in request.files:
@@ -240,51 +293,36 @@ def edit_transactions(transaction_id):
                     if file and file.filename:
                         if allowed_file(file.filename):
                             filename = f"reimb_{secure_filename(file.filename)}"
-                            reimbursement_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'reimbursements')
-                            
-                            # Ensure reimbursements directory exists
-                            if not os.path.exists(reimbursement_dir):
-                                os.makedirs(reimbursement_dir)
-                                
-                            file_path = os.path.join(reimbursement_dir, filename)
+                            file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
                             file.save(file_path)
-                            current_app.logger.debug(f"Saved reimbursement file to: {file_path}")
                             updated_transaction['reimbursement']['documentation'] = filename
-                        else:
-                            return jsonify({'success': False, 'message': 'Invalid file type.'}), 400
 
                 update_transaction(updated_transaction)
-                current_app.logger.info(f"Transaction ID: {transaction_id} updated successfully")
                 
-                # Get the filter options from the form data
-                filter_options = form_data.get('filter_options', '{}')
-                current_app.logger.debug(f"Filter options: {filter_options}")
-                
-                return jsonify({
-                    'success': True, 
-                    'message': 'Transaction updated successfully.',
-                    'filter_options': filter_options
-                })
+                # Redirect with filters and success message
+                return redirect(url_for('transactions.view_transactions') + 
+                    f'?filters={filters}&message=Transaction updated successfully&message_type=success')
 
             except Exception as e:
                 current_app.logger.error(f"Error updating transaction: {str(e)}")
-                current_app.logger.error(traceback.format_exc())
-                return jsonify({'success': False, 'message': f'An error occurred while updating the transaction: {str(e)}'}), 500
-        
-        # For GET requests
-        current_app.logger.info(f"Rendering edit form for transaction ID: {transaction_id}")
-        properties = get_properties_for_user(current_user.id, current_user.name)
-        filter_options = request.args.get('filter_options', '{}')
-        current_app.logger.debug(f"GET request filter options: {filter_options}")
-        return render_template('transactions/edit_transactions.html', 
-                               transaction=transaction, 
-                               properties=properties,
-                               filter_options=filter_options)
+                flash_message(f'Error updating transaction: {str(e)}', 'error')
+                return redirect(url_for('transactions.edit_transactions', 
+                    transaction_id=transaction_id, 
+                    filters=filters))
+
+        # GET request: render the edit form
+        properties = get_properties_for_user(current_user.id, current_user.name, current_user.role == 'Admin')
+        return render_template(
+            'transactions/edit_transactions.html',
+            transaction=transaction,
+            properties=properties,
+            filters=filters
+        )
 
     except Exception as e:
-        current_app.logger.error(f"Unexpected error in edit_transactions route: {str(e)}")
-        current_app.logger.error(traceback.format_exc())
-        return jsonify({'success': False, 'message': 'An unexpected error occurred. Please try again later.'}), 500
+        current_app.logger.error(f"Error in edit_transactions: {str(e)}")
+        flash_message(f'Error: {str(e)}', 'error')
+        return redirect(url_for('transactions.view_transactions'))
 
 @transactions_bp.route('/remove', methods=['GET', 'POST'])
 @login_required
@@ -293,7 +331,7 @@ def remove_transactions():
     if request.method == 'POST':
         # Handle the form submission for removing a transaction
         # This is where you'd process the request and remove the transaction from the database
-        flash('Transaction removed successfully', 'success')
+        flash_message('Transaction removed successfully', 'success')
     # Render the template for removing transactions
     return render_template('transaction/remove_transactions.html')
 
@@ -305,7 +343,7 @@ def view_transactions():
         return render_template('transactions/view_transactions.html', show_bulk_import=True)
     except Exception as e:
         current_app.logger.error(f"Error in view_transactions: {str(e)}")
-        flash(f"An error occurred while loading the transactions view: {str(e)}", "error")
+        flash_message(f"An error occurred while loading the transactions view: {str(e)}", "error")
         return redirect(url_for('main.index'))
 
 @transactions_bp.route('/test')
@@ -365,3 +403,31 @@ def get_property_partners():
     property_id = request.args.get('property_id')
     partners = get_partners_for_property(property_id)
     return jsonify(partners)
+
+@transactions_bp.route('/debug/api-test')
+@login_required
+def debug_api_test():
+    """Debug endpoint to test API responses"""
+    try:
+        # Test categories
+        income_categories = get_categories('income')
+        expense_categories = get_categories('expense')
+        
+        # Test partners
+        properties = get_properties_for_user(current_user.id, current_user.name)
+        test_property = properties[0] if properties else None
+        partners = get_partners_for_property(test_property['address']) if test_property else []
+        
+        debug_info = {
+            'categories': {
+                'income': income_categories,
+                'expense': expense_categories
+            },
+            'test_property': test_property,
+            'partners': partners
+        }
+        
+        return jsonify(debug_info)
+    except Exception as e:
+        current_app.logger.error(f"Debug API test error: {str(e)}")
+        return jsonify({'error': str(e)}), 500

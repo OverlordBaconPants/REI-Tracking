@@ -1,0 +1,107 @@
+2024-11-02 17:53:55,088 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
+2024-11-02 17:54:55,186 INFO: Starting PDF generation for analysis 1eca6f0e-821c-4d38-afa7-d228f0cb4106 [in /home/bj/python/REI-Tracker/routes/analyses.py:1066]
+2024-11-02 17:54:55,191 INFO: Starting PDF generation [in /home/bj/python/REI-Tracker/services/report_generator.py:303]
+2024-11-02 17:54:55,201 INFO: PDF generation completed successfully [in /home/bj/python/REI-Tracker/services/report_generator.py:389]
+2024-11-02 18:02:36,032 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
+2024-11-02 18:02:37,574 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
+2024-11-02 18:03:20,316 INFO: Starting PDF generation for analysis 1eca6f0e-821c-4d38-afa7-d228f0cb4106 [in /home/bj/python/REI-Tracker/routes/analyses.py:1066]
+2024-11-02 18:03:20,317 INFO: Starting PDF generation [in /home/bj/python/REI-Tracker/services/report_generator.py:303]
+2024-11-02 18:03:20,318 ERROR: Error generating PDF: cannot access local variable 'create_table' where it is not associated with a value [in /home/bj/python/REI-Tracker/services/report_generator.py:352]
+2024-11-02 18:03:20,318 ERROR: Full traceback: [in /home/bj/python/REI-Tracker/services/report_generator.py:353]
+Traceback (most recent call last):
+  File "/home/bj/python/REI-Tracker/services/report_generator.py", line 336, in generate_lender_report
+    story.append(create_table(property_info))
+                 ^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'create_table' where it is not associated with a value
+2024-11-02 18:03:20,319 ERROR: Error generating PDF: cannot access local variable 'create_table' where it is not associated with a value [in /home/bj/python/REI-Tracker/routes/analyses.py:1108]
+2024-11-02 18:03:20,321 ERROR: Full traceback: [in /home/bj/python/REI-Tracker/routes/analyses.py:1109]
+Traceback (most recent call last):
+  File "/home/bj/python/REI-Tracker/routes/analyses.py", line 1094, in generate_pdf
+    generate_lender_report(analysis_data, calculator, buffer)
+  File "/home/bj/python/REI-Tracker/services/report_generator.py", line 336, in generate_lender_report
+    story.append(create_table(property_info))
+                 ^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'create_table' where it is not associated with a value
+2024-11-02 18:03:26,946 INFO: Starting PDF generation for analysis 1eca6f0e-821c-4d38-afa7-d228f0cb4106 [in /home/bj/python/REI-Tracker/routes/analyses.py:1066]
+2024-11-02 18:03:26,952 ERROR: Error generating PDF: Expecting value: line 1 column 1 (char 0) [in /home/bj/python/REI-Tracker/routes/analyses.py:1108]
+2024-11-02 18:03:26,955 ERROR: Full traceback: [in /home/bj/python/REI-Tracker/routes/analyses.py:1109]
+Traceback (most recent call last):
+  File "/home/bj/python/REI-Tracker/routes/analyses.py", line 1085, in generate_pdf
+    analysis_data = json.load(f)
+                    ^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/__init__.py", line 293, in load
+    return loads(fp.read(),
+           ^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2024-11-02 18:04:32,295 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
+2024-11-02 18:05:25,258 INFO: Starting PDF generation for analysis 1eca6f0e-821c-4d38-afa7-d228f0cb4106 [in /home/bj/python/REI-Tracker/routes/analyses.py:1066]
+2024-11-02 18:05:25,259 INFO: Starting PDF generation [in /home/bj/python/REI-Tracker/services/report_generator.py:303]
+2024-11-02 18:05:25,261 ERROR: Error generating PDF: cannot access local variable 'create_table' where it is not associated with a value [in /home/bj/python/REI-Tracker/services/report_generator.py:352]
+2024-11-02 18:05:25,268 ERROR: Full traceback: [in /home/bj/python/REI-Tracker/services/report_generator.py:353]
+Traceback (most recent call last):
+  File "/home/bj/python/REI-Tracker/services/report_generator.py", line 336, in generate_lender_report
+    story.append(create_table(property_info))
+                 ^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'create_table' where it is not associated with a value
+2024-11-02 18:05:25,270 ERROR: Error in report generation: cannot access local variable 'create_table' where it is not associated with a value [in /home/bj/python/REI-Tracker/routes/analyses.py:1108]
+2024-11-02 18:05:25,270 ERROR: Full traceback: [in /home/bj/python/REI-Tracker/routes/analyses.py:1109]
+Traceback (most recent call last):
+  File "/home/bj/python/REI-Tracker/routes/analyses.py", line 1106, in generate_pdf
+    generate_lender_report(analysis_data, calculator, buffer)
+  File "/home/bj/python/REI-Tracker/services/report_generator.py", line 336, in generate_lender_report
+    story.append(create_table(property_info))
+                 ^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'create_table' where it is not associated with a value
+2024-11-02 18:06:30,262 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
+2024-11-02 18:07:26,305 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
+2024-11-02 18:07:33,528 INFO: Starting PDF generation for analysis 1eca6f0e-821c-4d38-afa7-d228f0cb4106 [in /home/bj/python/REI-Tracker/routes/analyses.py:1066]
+2024-11-02 18:07:33,533 INFO: Starting PDF generation [in /home/bj/python/REI-Tracker/services/report_generator.py:303]
+2024-11-02 18:07:33,533 ERROR: Error generating PDF: cannot access local variable 'create_table' where it is not associated with a value [in /home/bj/python/REI-Tracker/services/report_generator.py:352]
+2024-11-02 18:07:33,534 ERROR: Full traceback: [in /home/bj/python/REI-Tracker/services/report_generator.py:353]
+Traceback (most recent call last):
+  File "/home/bj/python/REI-Tracker/services/report_generator.py", line 336, in generate_lender_report
+    story.append(create_table(property_info))
+                 ^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'create_table' where it is not associated with a value
+2024-11-02 18:07:33,535 ERROR: Error in report generation: cannot access local variable 'create_table' where it is not associated with a value [in /home/bj/python/REI-Tracker/routes/analyses.py:1108]
+2024-11-02 18:07:33,535 ERROR: Full traceback: [in /home/bj/python/REI-Tracker/routes/analyses.py:1109]
+Traceback (most recent call last):
+  File "/home/bj/python/REI-Tracker/routes/analyses.py", line 1106, in generate_pdf
+    generate_lender_report(analysis_data, calculator, buffer)
+  File "/home/bj/python/REI-Tracker/services/report_generator.py", line 336, in generate_lender_report
+    story.append(create_table(property_info))
+                 ^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'create_table' where it is not associated with a value
+2024-11-02 18:09:39,178 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
+2024-11-02 18:09:44,391 INFO: Starting PDF generation for analysis 1eca6f0e-821c-4d38-afa7-d228f0cb4106 [in /home/bj/python/REI-Tracker/routes/analyses.py:1066]
+2024-11-02 18:09:44,392 INFO: Starting PDF generation [in /home/bj/python/REI-Tracker/services/report_generator.py:320]
+2024-11-02 18:09:44,397 INFO: PDF generation completed successfully [in /home/bj/python/REI-Tracker/services/report_generator.py:381]
+2024-11-02 18:15:34,260 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
+2024-11-02 18:15:41,786 INFO: Starting PDF generation for analysis 1eca6f0e-821c-4d38-afa7-d228f0cb4106 [in /home/bj/python/REI-Tracker/routes/analyses.py:1066]
+2024-11-02 18:15:41,791 INFO: Starting PDF generation [in /home/bj/python/REI-Tracker/services/report_generator.py:320]
+2024-11-02 18:15:41,802 INFO: PDF generation completed successfully [in /home/bj/python/REI-Tracker/services/report_generator.py:381]
+2024-11-02 18:25:12,803 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
+2024-11-02 18:29:27,977 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
+2024-11-02 18:33:49,475 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
+2024-11-02 18:34:22,353 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
+2024-11-02 18:36:11,023 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
+2024-11-02 18:38:12,835 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
+2024-11-02 18:38:33,640 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
+2024-11-02 18:39:35,383 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
+2024-11-02 18:39:57,101 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
+2024-11-02 18:40:55,735 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
+2024-11-02 18:40:56,159 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
+2024-11-02 18:42:13,477 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
+2024-11-02 18:42:52,029 ERROR: Error rendering portfolio view: 'Flask' object has no attribute 'portfolio_dash' [in /home/bj/python/REI-Tracker/routes/dashboards.py:25]
+2024-11-02 18:43:23,995 ERROR: Error rendering portfolio view: 'Flask' object has no attribute 'portfolio_dash' [in /home/bj/python/REI-Tracker/routes/dashboards.py:25]
+2024-11-02 18:46:58,219 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
+2024-11-02 18:48:19,576 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:43]
+2024-11-02 18:48:19,643 INFO: All Dash apps initialized successfully [in /home/bj/python/REI-Tracker/__init__.py:118]

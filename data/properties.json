@@ -6,7 +6,7 @@
     "primary_loan_rate": 5.73,
     "primary_loan_term": 360,
     "purchase_date": "2024-05-15",
-    "loan_amount": 112800,
+    "loan_amount": "112800",
     "loan_start_date": "2022-08-03",
     "seller_financing_amount": 40000,
     "seller_financing_rate": 0,

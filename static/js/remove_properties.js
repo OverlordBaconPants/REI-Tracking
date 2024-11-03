@@ -1,88 +1,87 @@
 // remove_properties.js
 
 const removePropertiesModule = {
-    init: function() {
-        const form = document.querySelector('#remove-property-form');
-        const propertySelect = document.querySelector('#property-select');
-        const confirmInput = document.querySelector('#confirm-input');
-        const removeButton = document.querySelector('#remove-button');
-
-        if (form && propertySelect && confirmInput && removeButton) {
-            form.addEventListener('submit', this.handleSubmit.bind(this));
-            propertySelect.addEventListener('change', this.updateRemoveButton.bind(this));
-            confirmInput.addEventListener('input', this.updateRemoveButton.bind(this));
+    init: async function() {
+        try {
+            console.log('RemovePropertiesModule initialized');
+            const form = document.querySelector('.remove-properties-container form');
+            if (form) {
+                this.initializeForm(form);
+                window.showNotification('Remove Properties module loaded', 'success');
+            } else {
+                console.error('Remove properties form not found');
+                window.showNotification('Form not found', 'error');
+            }
+        } catch (error) {
+            console.error('Error initializing Remove Properties module:', error);
+            window.showNotification('Error loading Remove Properties module: ' + error.message, 'error');
         }
     },
 
-    handleSubmit: function(event) {
-        event.preventDefault();
-        console.log('Form submission started');
+    initializeForm: function(form) {
+        const propertySelect = form.querySelector('select[name="property_select"]');
+        const confirmInput = form.querySelector('input[name="confirm_input"]');
         
-        const form = event.target;
-        const formData = new FormData(form);
-        
-        const propertyAddress = formData.get('property_select');
-        const confirmPhrase = formData.get('confirm_input');
+        if (propertySelect && confirmInput) {
+            // Add change listener to property select
+            propertySelect.addEventListener('change', () => {
+                confirmInput.disabled = !propertySelect.value;
+                confirmInput.value = '';
+            });
 
-        if (!this.validateForm(propertyAddress, confirmPhrase)) {
-            console.log('Form validation failed');
+            // Add form submit handler
+            form.addEventListener('submit', (event) => this.handleSubmit(event, propertySelect, confirmInput));
+        }
+    },
+
+    handleSubmit: function(event, propertySelect, confirmInput) {
+        event.preventDefault();
+        
+        // Validate selection
+        if (!propertySelect.value) {
+            window.showNotification('Please select a property to remove', 'error');
             return;
         }
 
-        const removeData = {
-            address: propertyAddress
-        };
+        // Validate confirmation phrase
+        const expectedPhrase = "I am sure I want to do this.";
+        if (confirmInput.value !== expectedPhrase) {
+            window.showNotification('Please enter the correct confirmation phrase', 'error');
+            return;
+        }
 
-        console.log('Sending remove property data:', JSON.stringify(removeData, null, 2));
+        // Create and submit form data
+        const formData = new FormData();
+        formData.append('property_select', propertySelect.value);
+        formData.append('confirm_input', confirmInput.value);
 
-        fetch('/admin/remove_properties', {
+        fetch('/properties/remove_properties', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(removeData)
+            body: formData
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
         .then(data => {
-            console.log('Server response:', data);
             if (data.success) {
-                alert('Property removed successfully!');
-                window.location.reload();
+                window.showNotification('Property successfully removed', 'success');
+                // Reload page after a short delay to show the success message
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
             } else {
-                alert('Error: ' + (data.message || 'Failed to remove property'));
+                window.showNotification(data.message || 'Error removing property', 'error');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('An error occurred while removing the property. Please check the console for more details.');
+            window.showNotification('Error removing property: ' + error.message, 'error');
         });
-    },
-
-    validateForm: function(propertyAddress, confirmPhrase) {
-        if (!propertyAddress) {
-            alert('Please select a property to remove.');
-            return false;
-        }
-
-        if (confirmPhrase !== this.getConfirmPhrase()) {
-            alert('Please enter the correct confirmation phrase.');
-            return false;
-        }
-
-        return true;
-    },
-
-    updateRemoveButton: function() {
-        const propertySelect = document.querySelector('#property-select');
-        const confirmInput = document.querySelector('#confirm-input');
-        const removeButton = document.querySelector('#remove-button');
-        
-        removeButton.disabled = !(propertySelect.value && confirmInput.value === this.getConfirmPhrase());
-    },
-
-    getConfirmPhrase: function() {
-        return "I am sure I want to do this.";
     }
 };
 
+// Single export at the end of the file
 export default removePropertiesModule;

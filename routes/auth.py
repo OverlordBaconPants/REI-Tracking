@@ -1,5 +1,6 @@
 # routes/auth.py
 
+from utils.flash import flash_message
 from flask import Blueprint, render_template, redirect, url_for, request, flash
 from flask_login import login_user, login_required, logout_user, current_user
 from models import User
@@ -23,20 +24,20 @@ def signup():
         confirm_password = request.form.get('confirm_password')
         
         if password != confirm_password:
-            flash('Passwords do not match', 'danger')
+            flash_message('Passwords do not match', 'error')
             return redirect(url_for('auth.signup'))
         
         user = get_user_by_email(email)
         if user:
-            flash('Email address already exists', 'danger')
+            flash_message('Email address already exists', 'error')
             return redirect(url_for('auth.signup'))
         
         name = f"{first_name} {last_name}"
         if create_user(email, name, password, phone):
-            flash('Account created successfully. Please log in.', 'success')
+            flash_message('Account created successfully. Please log in.', 'success')
             return redirect(url_for('auth.login'))
         else:
-            flash('An error occurred. Please try again.', 'danger')
+            flash_message('An error occurred. Please try again.', 'error')
     
     return render_template('signup.html')
 
@@ -54,7 +55,7 @@ def login():
         user_data = get_user_by_email(email)
         if not user_data or not verify_password(user_data['password'], password):
             logger.warning(f"Invalid login attempt for user: {email}")
-            flash('Please check your login details and try again.', 'danger')
+            flash_message('Please check your login details and try again.', 'error')
         else:
             logger.debug(f"User found: {user_data}")
             try:
@@ -67,7 +68,7 @@ def login():
                 )
                 login_user(user, remember=remember)
                 logger.info(f"User logged in successfully: {email}")
-                flash('Logged in successfully.', 'success')
+                flash_message('Logged in successfully.', 'success')
                 next_page = request.args.get('next')
                 if not next_page or not next_page.startswith('/'):
                     next_page = url_for('main.main')
@@ -75,7 +76,7 @@ def login():
                 return redirect(next_page)
             except Exception as e:
                 logger.error(f"Error during login process: {str(e)}")
-                flash('An error occurred during login. Please try again.', 'danger')
+                flash_message('An error occurred during login. Please try again.', 'error')
     
     return render_template('login.html')
 
@@ -83,7 +84,7 @@ def login():
 @login_required
 def logout():
     logout_user()
-    flash('You have been logged out.', 'success')
+    flash_message('You have been logged out.', 'success')
     return redirect(url_for('main.index'))
 
 @auth_bp.route('/forgot-password', methods=['GET', 'POST'])
@@ -102,22 +103,22 @@ def forgot_password():
 
         if not user_data:
             logger.warning(f"Email not found for password reset: {email}")
-            flash('Email address not found. Please check and try again.', 'danger')
+            flash_message('Email address not found. Please check and try again.', 'error')
             return redirect(url_for('auth.forgot_password'))
 
         if password != confirm_password:
             logger.warning(f"Passwords do not match for reset attempt: {email}")
-            flash('Passwords do not match. Please try again.', 'danger')
+            flash_message('Passwords do not match. Please try again.', 'error')
             return redirect(url_for('auth.forgot_password'))
 
         # If all checks pass, update the user's password
         if update_user_password(email, password):
             logger.info(f"Password successfully reset for user: {email}")
-            flash('Your password has been successfully reset. Please log in with your new password.', 'success')
+            flash_message('Your password has been successfully reset. Please log in with your new password.', 'success')
             return redirect(url_for('auth.login'))
         else:
             logger.error(f"Error occurred while resetting password for user: {email}")
-            flash('An error occurred while resetting your password. Please try again.', 'danger')
+            flash_message('An error occurred while resetting your password. Please try again.', 'error')
             return redirect(url_for('auth.forgot_password'))
 
     return render_template('forgot_password.html')

@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 {% block body_class %}edit-properties-page{% endblock %}
 {% block title %}Edit Property{% endblock %}
-{% block content %}
 
+{% block content %}
 <div class="container mt-4">
     <h2 class="mb-4">Edit Property</h2>
 
-    <form id="editPropertyForm">
+    <form id="editPropertyForm" onsubmit="return false;">
         <div class="form-group mb-3">
             <label for="property_select">Select Property:</label>
             <select id="property_select" name="property_select" class="form-control" required>
@@ -20,101 +20,94 @@
         <div id="propertyDetails" class="hidden">
             <div class="form-group mb-3">
                 <label for="purchase-date">Purchase Date:</label>
-                <input type="date" id="purchase-date" name="purchase-date" class="form-control" required>
+                <input type="date" id="purchase-date" name="purchase_date" class="form-control" required>
             </div>
 
             <div class="form-group mb-3">
-                <label for="loan_amount">Loan Amount:</label>
-                <input type="number" id="loan_amount" name="loan_amount" class="form-control" required>
+                <label for="loan-amount">Loan Amount ($):</label>
+                <input type="text" id="loan-amount" name="loan_amount" class="form-control" required>
             </div>
 
             <div class="form-group mb-3">
-                <label for="loan_start_date">Loan Start Date:</label>
-                <input type="date" id="loan_start_date" name="loan_start_date" class="form-control" required>
+                <label for="loan-start-date">Loan Start Date:</label>
+                <input type="date" id="loan-start-date" name="loan_start_date" class="form-control" required>
             </div>
 
             <div class="form-group mb-3">
-                <label for="purchase_price">Purchase Price:</label>
-                <input type="number" id="purchase_price" name="purchase_price" class="form-control" required>
+                <label for="purchase-price">Purchase Price ($):</label>
+                <input type="number" id="purchase-price" name="purchase_price" class="form-control" required>
             </div>
 
             <div class="form-group mb-3">
-                <label for="down_payment">Down Payment:</label>
-                <input type="number" id="down_payment" name="down_payment" class="form-control" required>
+                <label for="down-payment">Down Payment ($):</label>
+                <input type="number" id="down-payment" name="down_payment" class="form-control" required>
             </div>
 
             <div class="form-group mb-3">
-                <label for="primary_loan_rate">Primary Loan Rate (%):</label>
-                <input type="number" id="primary_loan_rate" name="primary_loan_rate" class="form-control" step="0.01" required>
+                <label for="primary-loan-rate">Primary Loan Rate (%):</label>
+                <input type="number" id="primary-loan-rate" name="primary_loan_rate" class="form-control" step="0.01" required>
             </div>
 
             <div class="form-group mb-3">
-                <label for="primary_loan_term">Primary Loan Term (months):</label>
-                <input type="number" id="primary_loan_term" name="primary_loan_term" class="form-control" required>
+                <label for="primary-loan-term">Primary Loan Term (months):</label>
+                <input type="number" id="primary-loan-term" name="primary_loan_term" class="form-control" required>
             </div>
 
             <div class="form-group mb-3">
-                <label for="seller_financing_amount">Seller Financing Amount:</label>
-                <input type="number" id="seller_financing_amount" name="seller_financing_amount" class="form-control">
+                <label for="seller-financing-amount">Seller Financing Amount ($):</label>
+                <input type="number" id="seller-financing-amount" name="seller_financing_amount" class="form-control">
             </div>
 
             <div class="form-group mb-3">
-                <label for="seller_financing_rate">Seller Financing Rate (%):</label>
-                <input type="number" id="seller_financing_rate" name="seller_financing_rate" class="form-control" step="0.01">
+                <label for="seller-financing-rate">Seller Financing Rate (%):</label>
+                <input type="number" id="seller-financing-rate" name="seller_financing_rate" class="form-control" step="0.01">
             </div>
 
             <div class="form-group mb-3">
-                <label for="seller_financing_term">Seller Financing Term (months):</label>
-                <input type="number" id="seller_financing_term" name="seller_financing_term" class="form-control">
+                <label for="seller-financing-term">Seller Financing Term (months):</label>
+                <input type="number" id="seller-financing-term" name="seller_financing_term" class="form-control">
             </div>
 
             <div class="form-group mb-3">
-                <label for="closing_costs">Closing Costs:</label>
-                <input type="number" id="closing_costs" name="closing_costs" class="form-control">
+                <label for="closing-costs">Closing Costs ($):</label>
+                <input type="number" id="closing-costs" name="closing_costs" class="form-control">
             </div>
 
             <div class="form-group mb-3">
-                <label for="renovation_costs">Renovation Costs:</label>
-                <input type="number" id="renovation_costs" name="renovation_costs" class="form-control">
+                <label for="renovation-costs">Renovation Costs ($):</label>
+                <input type="number" id="renovation-costs" name="renovation_costs" class="form-control">
             </div>
 
             <div class="form-group mb-3">
-                <label for="marketing_costs">Marketing Costs:</label>
-                <input type="number" id="marketing_costs" name="marketing_costs" class="form-control">
+                <label for="marketing-costs">Marketing Costs ($):</label>
+                <input type="number" id="marketing-costs" name="marketing_costs" class="form-control">
             </div>
 
             <div class="form-group mb-3">
-                <label for="holding_costs">Holding Costs:</label>
-                <input type="number" id="holding_costs" name="holding_costs" class="form-control">
+                <label for="holding-costs">Holding Costs ($):</label>
+                <input type="number" id="holding-costs" name="holding_costs" class="form-control">
             </div>
 
-            <h4>Partners</h4>
-            <div id="partners-container">
-                <!-- Partner entries will be dynamically added here -->
+            <div class="partners-section mt-4">
+                <h4 class="mb-3">Partners</h4>
+                <div id="partners-container">
+                    <!-- Partner entries will be added here dynamically -->
+                </div>
+            
+                <button type="button" id="add-partner-button" class="btn btn-secondary mt-3">
+                    Add Partner
+                </button>
+            
+                <div id="total-equity" class="mt-3 mb-3 font-weight-bold">
+                    Total Equity: 0%
+                </div>
             </div>
 
-            <button type="button" id="add-partner-button" class="btn btn-secondary mt-2">Add Partner</button>
-
-            <div id="total-equity" class="mt-3 font-weight-bold"></div>
-
-            <div class="mt-3">
-                <button type="submit" class="btn btn-primary">Update Property</button>
-                <a href="{{ url_for('properties.edit_properties') }}" class="btn btn-secondary">Cancel</a>
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary" id="updatePropertyButton">Update Property</button>
+                <a href="{{ url_for('properties.edit_properties') }}" class="btn btn-secondary ms-2">Cancel</a>
             </div>
         </div>
     </form>
 </div>
-
-{% endblock %}
-
-{% block scripts %}
-{{ super() }}
-<script src="/static/js/main.js"></script>
-<script type="module">
-    import editPropertiesModule from "{{ url_for('static', filename='js/edit_properties.js') }}";
-    document.addEventListener('DOMContentLoaded', () => {
-        console.log('Initializing edit properties module');
-        editPropertiesModule.init();
-    });
-</script>
 {% endblock %}

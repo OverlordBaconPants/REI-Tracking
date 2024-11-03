@@ -1,27 +1,40 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Bulk Import Transactions</h1>
 
-<p>Use this form to upload a CSV or XLS file to add multiple transactions at once.</p>
-<ul>
-    <li>You don't need to have all information available to proceed. You can fill in the blanks later on the View/Edit Transactions page.</li>
-    <li>You don't need to have the column names exact, or even the exact complete Property Address. We'll help you match rows.</li>
-</ul>
+<div class="container">
+    <h1 class="mb-4">Bulk Import Transactions</h1>
+    <p></p>
+    <p>After selecting a file to upload, we'll walk you through mapping your columns to the fields we expect.</p>
 
-<form id="bulk-import-form" method="POST" enctype="multipart/form-data">
-    <div class="mb-3">
-        <label for="file" class="form-label">Select XLS or CSV file</label>
-        <input type="file" class="form-control" id="file" name="file" accept=".xls,.xlsx,.csv" required>
+    <div class="card">
+        <div class="card-body">
+            <form id="bulk-import-form" action="{{ url_for('transactions.bulk_import') }}" method="post" enctype="multipart/form-data">
+                <div class="mb-3">
+                    <label for="file" class="form-label">Select XLS or CSV file</label>
+                    <input type="file" class="form-control" id="file" name="file" accept=".csv,.xls,.xlsx">
+                </div>
+
+                <div id="column-mapping" class="mb-3">
+                    <!-- Column mapping will be dynamically inserted here -->
+                </div>
+
+                <button type="submit" class="btn btn-primary">Import</button>
+            </form>
+        </div>
     </div>
+</div>
 
-    <div id="column-mapping" class="mb-3">
-        <!-- Column mapping will be dynamically populated here -->
-    </div>
-
-    <button type="submit" class="btn btn-primary">Import</button>
-</form>
 {% endblock %}
 
 {% block extra_js %}
 <script src="{{ url_for('static', filename='js/bulk_import.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        if (window.BulkImportModule) {
+            window.BulkImportModule.init();
+        } else {
+            toastr.error('Bulk import module failed to load');
+        }
+    });
+</script>
 {% endblock %}

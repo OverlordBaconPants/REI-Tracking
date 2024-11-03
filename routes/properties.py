@@ -1,13 +1,12 @@
 # Import necessary modules
-from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app, jsonify
+from utils.flash import flash_message
+from flask import Blueprint, render_template, request, current_app, jsonify
 from flask_login import login_required, current_user
-from functools import wraps
 from utils.utils import admin_required
 from services.transaction_service import get_partners_for_property
-from services.user_service import get_user_by_email, create_user, update_user_password, hash_password, verify_password
 import logging
 import json
-import requests
+from datetime import datetime
 
 # Create a Blueprint for properties routes
 # The url_prefix means all routes defined here will start with '/properties'
@@ -31,7 +30,7 @@ def add_properties():
             logging.info(f"Extracted partners: {partners}")
     except Exception as e:
         logging.error(f"Error when processing properties file: {str(e)}")
-        flash(f'An error occurred while loading properties: {str(e)}', 'danger')
+        flash_message(f'An error occurred while loading properties: {str(e)}', 'error')
         return jsonify({'success': False, 'message': str(e)}), 500
 
     if request.method == 'POST':
@@ -77,16 +76,16 @@ def add_properties():
                 json.dump(properties, f, indent=2)
 
             logging.info(f"New property added: {new_property['address']}")
-            flash('Property added successfully', 'success')
+            flash_message('Property added successfully', 'success')
             return jsonify({'success': True, 'message': 'Property added successfully'})
 
         except ValueError as ve:
             logging.error(f"Validation error: {str(ve)}")
-            flash(str(ve), 'danger')
+            flash_message(str(ve), 'error')
             return jsonify({'success': False, 'message': str(ve)}), 400
         except Exception as e:
             logging.error(f"Error processing form submission: {str(e)}")
-            flash(f'An error occurred while adding the property: {str(e)}', 'danger')
+            flash_message(f'An error occurred while adding the property: {str(e)}', 'error')
             return jsonify({'success': False, 'message': f'An error occurred while adding the property: {str(e)}'}), 500
 
     # For GET requests, render the template
@@ -105,8 +104,8 @@ def remove_properties():
             properties = json.load(f)
     except Exception as e:
         logging.error(f"Error loading properties: {str(e)}")
-        flash('Error loading properties.', 'danger')
-        return redirect(url_for('main.dashboard'))
+        flash_message('Error loading properties.', 'error')
+        return jsonify({'success': False, 'message': 'Error loading properties'})
 
     if request.method == 'POST':
         logging.info("Processing POST request in remove_properties")
@@ -118,26 +117,23 @@ def remove_properties():
 
         if not property_to_remove:
             logging.warning("No property selected for removal")
-            flash('No property selected for removal.', 'danger')
-            return redirect(url_for('properties.remove_properties'))
+            return jsonify({'success': False, 'message': 'No property selected for removal'})
 
         expected_confirm_phrase = "I am sure I want to do this."
         if confirm_input != expected_confirm_phrase:
             logging.warning(f"Incorrect confirmation phrase. Expected: {expected_confirm_phrase}, Got: {confirm_input}")
-            flash('Incorrect confirmation phrase. Property not removed.', 'danger')
-            return redirect(url_for('properties.remove_properties'))
+            return jsonify({'success': False, 'message': 'Incorrect confirmation phrase. Property not removed'})
 
         try:
             properties = [p for p in properties if p['address'] != property_to_remove]
             with open(current_app.config['PROPERTIES_FILE'], 'w') as f:
                 json.dump(properties, f, indent=2)
             logging.info(f"Property successfully removed: {property_to_remove}")
-            flash('Property Successfully Removed!', 'success')
+            flash_message('Property Successfully Removed!', 'success')
+            return jsonify({'success': True, 'message': 'Property successfully removed'})
         except Exception as e:
             logging.error(f"Error removing property: {str(e)}")
-            flash('Error removing property.', 'danger')
-
-        return redirect(url_for('properties.remove_properties'))
+            return jsonify({'success': False, 'message': f'Error removing property: {str(e)}'})
 
     logging.info(f"Rendering remove_properties template with {len(properties)} properties")
     return render_template('properties/remove_properties.html', properties=properties)
@@ -147,70 +143,157 @@ def remove_properties():
 @login_required
 @admin_required
 def edit_properties():
-    properties_file = current_app.config['PROPERTIES_FILE']
-
-    if request.method == 'GET':
-        # Read properties from JSON file
-        with open(properties_file, 'r') as f:
-            properties = json.load(f)
-        return render_template('properties/edit_properties.html', properties=properties)
+    logging.info("Entering edit_properties route")
     
-    elif request.method == 'POST':
-        data = request.json
-        if not data:
-            return jsonify({'success': False, 'message': 'No data provided'}), 400
+    try:
+        # Load properties from JSON file
+        with open(current_app.config['PROPERTIES_FILE'], 'r') as f:
+            properties = json.load(f)
+            logging.info(f"Successfully loaded {len(properties)} properties")
+    except Exception as e:
+        error_msg = f"Error loading properties file: {str(e)}"
+        logging.error(error_msg)
+        flash_message(error_msg, 'error')
+        return jsonify({'success': False, 'message': error_msg}), 500
 
-        address = data.get('address')
-        if not address:
-            return jsonify({'success': False, 'message': 'No property address provided'}), 400
-
+    if request.method == 'POST':
         try:
-            # Read current properties
-            with open(properties_file, 'r') as f:
-                properties = json.load(f)
+            data = request.get_json()
+            logging.info(f"Received edit request data: {json.dumps(data, indent=2)}")
 
-            # Find the property to edit
-            property_to_edit = next((prop for prop in properties if prop['address'] == address), None)
-            if not property_to_edit:
-                return jsonify({'success': False, 'message': 'Property not found'}), 404
+            if not data:
+                raise ValueError("No data received")
 
-            # Update property fields
-            for key in ['purchase_price', 'down_payment', 'primary_loan_rate', 'primary_loan_term',
-                        'purchase_date', 'loan_start_date', 'seller_financing_amount',
-                        'seller_financing_rate', 'seller_financing_term', 'closing_costs',
-                        'renovation_costs', 'marketing_costs', 'holding_costs']:
-                if key in data:
-                    property_to_edit[key] = data[key]
+            if 'address' not in data:
+                raise ValueError("Property address is required")
 
-            # Update partners
-            if 'partners' in data:
-                property_to_edit['partners'] = data['partners']
+            # Validate partners data
+            if 'partners' not in data or not data['partners']:
+                raise ValueError("At least one partner is required")
 
-            # Write updated properties back to file
-            with open(properties_file, 'w') as f:
-                json.dump(properties, f, indent=2)
+            total_equity = sum(float(partner.get('equity_share', 0)) for partner in data['partners'])
+            logging.info(f"Total equity calculated: {total_equity}")
+            
+            if abs(total_equity - 100) > 0.01:
+                raise ValueError(f"Total equity must equal 100%. Current total: {total_equity}%")
 
-            return jsonify({'success': True, 'message': 'Property updated successfully'})
+            # Find the property to update
+            property_index = None
+            for i, prop in enumerate(properties):
+                if prop['address'] == data['address']:
+                    property_index = i
+                    break
+
+            if property_index is None:
+                raise ValueError(f"Property not found: {data['address']}")
+
+            logging.info(f"Found property at index {property_index}")
+
+            # Update the property
+            try:
+                properties[property_index].update({
+                    'purchase_date': data['purchase_date'],
+                    'loan_amount': data['loan_amount'],
+                    'loan_start_date': data['loan_start_date'],
+                    'purchase_price': data['purchase_price'],
+                    'down_payment': data['down_payment'],
+                    'primary_loan_rate': data['primary_loan_rate'],
+                    'primary_loan_term': data['primary_loan_term'],
+                    'seller_financing_amount': data.get('seller_financing_amount', 0),
+                    'seller_financing_rate': data.get('seller_financing_rate', 0),
+                    'seller_financing_term': data.get('seller_financing_term', 0),
+                    'closing_costs': data.get('closing_costs', 0),
+                    'renovation_costs': data.get('renovation_costs', 0),
+                    'marketing_costs': data.get('marketing_costs', 0),
+                    'holding_costs': data.get('holding_costs', 0),
+                    'partners': data['partners']
+                })
+
+                # Save updated properties back to file
+                with open(current_app.config['PROPERTIES_FILE'], 'w') as f:
+                    json.dump(properties, f, indent=2)
+
+                success_msg = f"Property {data['address']} updated successfully"
+                logging.info(success_msg)
+                flash_message(success_msg, 'success')
+                return jsonify({'success': True, 'message': success_msg})
+
+            except Exception as e:
+                error_msg = f"Error updating property data: {str(e)}"
+                logging.error(error_msg)
+                return jsonify({'success': False, 'message': error_msg}), 500
+
+        except ValueError as ve:
+            error_msg = str(ve)
+            logging.error(f"Validation error: {error_msg}")
+            return jsonify({'success': False, 'message': error_msg}), 400
+
         except Exception as e:
-            current_app.logger.error(f"Error updating property: {str(e)}")
-            return jsonify({'success': False, 'message': str(e)}), 500
+            error_msg = f"Error processing request: {str(e)}"
+            logging.error(error_msg, exc_info=True)
+            return jsonify({'success': False, 'message': error_msg}), 500
+
+    # GET request - render template with properties list
+    return render_template('properties/edit_properties.html', properties=properties)
 
 @properties_bp.route('/get_property_details', methods=['GET'])
 @login_required
-@admin_required
 def get_property_details():
-    address = request.args.get('address')
+    """Endpoint to fetch property details for editing"""
     try:
-        with open(current_app.config['PROPERTIES_FILE'], 'r') as f:
-            properties = json.load(f)
-            property_details = next((prop for prop in properties if prop['address'] == address), None)
-            if property_details:
-                return jsonify({'success': True, 'property': property_details})
-            else:
-                return jsonify({'success': False, 'message': 'Property not found'}), 404
-    except Exception as e:
-        return jsonify({'success': False, 'message': f'Error fetching property details: {str(e)}'}), 500
+        # Get address from query parameters
+        address = request.args.get('address')
+        if not address:
+            return jsonify({
+                'success': False,
+                'message': 'No address provided'
+            }), 400
 
+        logging.info(f"Fetching details for property: {address}")
+
+        # Load properties file
+        try:
+            with open(current_app.config['PROPERTIES_FILE'], 'r') as f:
+                properties = json.load(f)
+        except FileNotFoundError:
+            logging.error("Properties file not found")
+            return jsonify({
+                'success': False,
+                'message': 'Properties database not found'
+            }), 500
+        except json.JSONDecodeError as e:
+            logging.error(f"Error decoding properties JSON: {str(e)}")
+            return jsonify({
+                'success': False,
+                'message': 'Error reading properties database'
+            }), 500
+
+        # Find the property
+        property_details = next(
+            (prop for prop in properties if prop['address'] == address),
+            None
+        )
+
+        if property_details:
+            logging.info(f"Found property details for: {address}")
+            return jsonify({
+                'success': True,
+                'property': property_details
+            })
+        else:
+            logging.warning(f"Property not found: {address}")
+            return jsonify({
+                'success': False,
+                'message': 'Property not found'
+            }), 404
+
+    except Exception as e:
+        logging.error(f"Unexpected error in get_property_details: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Server error: {str(e)}'
+        }), 500
+    
 @properties_bp.route('/get_partners_for_property', methods=['GET'])
 @login_required
 @admin_required
@@ -225,3 +308,59 @@ def api_get_partners_for_property():
     except Exception as e:
         current_app.logger.error(f"Error fetching partners for property {property_id}: {str(e)}")
         return jsonify({'error': 'An error occurred while fetching partners'}), 500
+
+@properties_bp.route('/test_properties', methods=['GET'])
+def test_properties():
+    try:
+        with open(current_app.config['PROPERTIES_FILE'], 'r') as f:
+            properties = json.load(f)
+            return jsonify({
+                'success': True,
+                'count': len(properties)
+            })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+    
+@properties_bp.route('/get_available_partners', methods=['GET'])
+@login_required
+def get_available_partners():
+    try:
+        current_user_email = current_user.id  # Assuming email is stored as the user ID
+        available_partners = set()  # Use set to avoid duplicates
+        
+        # Add current user
+        available_partners.add(current_user.name)
+        
+        # Load properties
+        with open(current_app.config['PROPERTIES_FILE'], 'r') as f:
+            properties = json.load(f)
+            
+        # Find properties where current user is a partner
+        for property in properties:
+            user_is_partner = any(
+                partner['name'] == current_user.name 
+                for partner in property.get('partners', [])
+            )
+            
+            if user_is_partner:
+                # Add all partners from these properties
+                for partner in property.get('partners', []):
+                    available_partners.add(partner['name'])
+        
+        # Convert set to sorted list
+        partners_list = sorted(list(available_partners))
+        
+        return jsonify({
+            'success': True,
+            'partners': partners_list
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Error fetching available partners: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Error fetching partners: {str(e)}'
+        }), 500

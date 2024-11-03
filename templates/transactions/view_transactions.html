@@ -1,20 +1,66 @@
 {% extends "base.html" %}
 
-{% block title %}View Transaction{% endblock %}
+{% block title %}View Transactions{% endblock %}
+
 {% block body_class %}view-transactions-page{% endblock %}
 
-{% if show_bulk_import %}
-<a href="{{ url_for('transactions.bulk_import') }}" class="btn btn-primary mb-3">Bulk Import Transactions</a>
-{% endif %}
-
 {% block content %}
-<div>
-  <iframe src="{{ url_for('transactions.view_transactions') }}dash/" width="100%" height="800px" frameborder="0"></iframe>
-</div>
+    {% if show_bulk_import %}
+        <a href="{{ url_for('transactions.bulk_import') }}" class="btn btn-primary mb-3">Bulk Import Transactions</a>
+    {% endif %}
+
+    <div>
+        <iframe src="{{ url_for('transactions.view_transactions') }}dash/" width="100%" height="800px" frameborder="0"></iframe>
+    </div>
+    
+    <div id="edit-transaction-modal" class="modal fade" tabindex="-1" aria-labelledby="editTransactionModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editTransactionModalLabel">Edit Transaction</h5>
+                </div>
+                <div class="modal-body">
+                    <div id="edit-transaction-content"></div>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}
 
-{% block scripts %}
-{{ super() }}
-<script src="/static/js/main.js"></script>
-</script>
+{% block extra_js %}
+    <!-- Add Toastr CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    
+    <!-- Add Toastr JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+    <script>
+        // Initialize toastr options
+        toastr.options = {
+            closeButton: true,
+            newestOnTop: false,
+            progressBar: true,
+            positionClass: "toast-bottom-right",
+            preventDuplicates: false,
+            onclick: null,
+            showDuration: "300",
+            hideDuration: "1000",
+            timeOut: "5000",
+            extendedTimeOut: "1000",
+            showEasing: "swing",
+            hideEasing: "linear",
+            showMethod: "fadeIn",
+            hideMethod: "fadeOut"
+        };
+
+        // Add a global message handler for the iframe
+        window.addEventListener('message', function(event) {
+            console.log('Message received in parent:', event.data);
+            
+            if (event.data.type === 'notification') {
+                console.log('Showing notification:', event.data.message);
+                toastr[event.data.notificationType](event.data.message);
+            }
+        });
+    </script>
 {% endblock %}

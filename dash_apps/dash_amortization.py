@@ -40,10 +40,13 @@ def amortize(principal, annual_rate, years):
         }
 
 def create_amortization_dash(flask_app):
-    dash_app = dash.Dash(__name__, 
-                         server=flask_app,
-                         url_base_pathname='/dashboards/amortization/',
-                         external_stylesheets=[dbc.themes.BOOTSTRAP])
+    dash_app = dash.Dash(
+        __name__,
+        server=flask_app,
+        routes_pathname_prefix='/dashboards/_dash/amortization/',
+        requests_pathname_prefix='/dashboards/_dash/amortization/',
+        external_stylesheets=[dbc.themes.BOOTSTRAP]
+    )
 
     # Define table styles
     table_header_style = {

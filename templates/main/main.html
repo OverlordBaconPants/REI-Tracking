@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Splash Page{% endblock %}
 
+{% block body_class %}main-page{% endblock %}
+
 {# Custom filter to truncate address #}
 {% macro truncate_address(address) %}
     {% set parts = address.split(',') %}

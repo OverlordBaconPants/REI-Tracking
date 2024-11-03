@@ -1,6 +1,8 @@
-from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, send_file, abort
+from utils.flash import flash_message
+import logging
+from flask import Blueprint, render_template, request, current_app, jsonify, redirect, url_for, send_file
 from flask_login import login_required, current_user
-from werkzeug.utils import secure_filename
+from services.report_generator import generate_lender_report, LenderMetricsCalculator
 import uuid
 from datetime import datetime, timezone
 import locale
@@ -13,13 +15,12 @@ import logging
 import traceback
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, 
-    Image, BaseDocTemplate, Frame, PageTemplate, NextFrameFlowable,
-    KeepTogether, FrameBreak
+    Paragraph, Spacer, Table, TableStyle, 
+    BaseDocTemplate, Frame, PageTemplate, FrameBreak
 )
 from config import Config
 
@@ -28,8 +29,54 @@ analyses_bp = Blueprint('analyses', __name__)
 # Set the locale to handle comma formatting
 locale.setlocale(locale.LC_ALL, '')
 
+def safe_float(value, default=0.0):
+    """
+    Safely convert a value to float, handling currency formatting.
+    
+    Args:
+        value: The value to convert (string, int, or float)
+        default: Default value to return if conversion fails (default: 0.0)
+        
+    Returns:
+        float: The converted number or default value
+    """
+    try:
+        if isinstance(value, (int, float)):
+            return float(value)
+        if isinstance(value, str):
+            # Remove currency symbols, commas, and spaces
+            cleaned = value.replace('$', '').replace(',', '').replace(' ', '').strip()
+            return float(cleaned) if cleaned else default
+        return default
+    except (ValueError, TypeError):
+        return default
+
 def format_currency(value):
     return locale.format_string("%.2f", value, grouping=True)
+
+def sanitize_analysis_data(data):
+    """
+    Recursively sanitize all numeric values in the analysis data.
+    
+    Args:
+        data: The data structure to sanitize (dict, list, or value)
+        
+    Returns:
+        The sanitized data structure
+    """
+    if isinstance(data, dict):
+        return {k: sanitize_analysis_data(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [sanitize_analysis_data(x) for x in data]
+    elif isinstance(data, str):
+        # Check if it looks like a number
+        if any(c.isdigit() for c in data):
+            try:
+                return safe_float(data)
+            except (ValueError, TypeError):
+                return data
+        return data
+    return data
 
 @analyses_bp.route('/create_analysis', methods=['GET', 'POST'])
 @login_required
@@ -45,16 +92,11 @@ def create_analysis():
             
             # Check if response is a tuple (error response)
             if isinstance(response, tuple):
-                if response[1] == 404:  # Not found
-                    flash('Analysis not found', 'error')
-                else:  # Other error
-                    flash('Error loading analysis', 'error')
                 return redirect(url_for('analyses.view_edit_analysis'))
             
             # Extract analysis data from response
             analysis_data = response.get_json()
             if not analysis_data or not analysis_data.get('success'):
-                flash('Error loading analysis data', 'error')
                 return redirect(url_for('analyses.view_edit_analysis'))
                 
             existing_analysis = analysis_data['analysis']
@@ -63,7 +105,6 @@ def create_analysis():
             filename = f"{analysis_id}_{current_user.id}.json"
             analyses_dir = os.path.join(Config.DATA_DIR, 'analyses')
             if not os.path.exists(os.path.join(analyses_dir, filename)):
-                flash('Access denied', 'error')
                 return redirect(url_for('analyses.view_edit_analysis'))
             
             # Set edit mode flag
@@ -72,9 +113,8 @@ def create_analysis():
         except Exception as e:
             logging.error(f"Error fetching analysis: {str(e)}")
             logging.error(traceback.format_exc())
-            flash('Error loading analysis', 'error')
             return redirect(url_for('analyses.view_edit_analysis'))
-    
+
     if request.method == 'POST':
         try:
             analysis_data = request.json
@@ -184,16 +224,6 @@ def calculate_analysis_results(data):
 
 def calculate_long_term_rental_analysis(data):
     try:
-        # Ensure all input values are converted to floats first
-        def safe_float(value):
-            if isinstance(value, str):
-                # Remove any currency symbols and commas
-                value = value.replace('$', '').replace(',', '').strip()
-            try:
-                return float(value)
-            except (ValueError, TypeError):
-                return 0.0
-
         # Gross Monthly Income
         gross_monthly_income = safe_float(data['monthly_rent'])
 
@@ -274,146 +304,148 @@ def calculate_long_term_rental_analysis(data):
 
 def calculate_brrrr_analysis(data):
     try:
-        # Convert all numeric values with proper error handling
-        def safe_float(value, default=0):
-            try:
-                if isinstance(value, str):
-                    # Remove any currency symbols and commas
-                    value = value.replace('$', '').replace(',', '').strip()
-                return float(value) if value else default
-            except (ValueError, TypeError):
-                return default
-
-        def safe_int(value, default=0):
-            try:
-                return int(float(value)) if value else default
-            except (ValueError, TypeError):
-                return default
-
         # Purchase and Renovation
         purchase_price = safe_float(data.get('purchase_price'))
         renovation_costs = safe_float(data.get('renovation_costs'))
-        renovation_duration = safe_int(data.get('renovation_duration'))
+        renovation_duration = int(safe_float(data.get('renovation_duration')))
         after_repair_value = safe_float(data.get('after_repair_value'))
-        total_investment = purchase_price + renovation_costs
-
-        # Initial Financing
+        
+        # Initial costs
         initial_loan_amount = safe_float(data.get('initial_loan_amount'))
         initial_down_payment = safe_float(data.get('initial_down_payment'))
-        initial_interest_rate = safe_float(data.get('initial_interest_rate'))
-        initial_loan_term = safe_int(data.get('initial_loan_term'))
         initial_closing_costs = safe_float(data.get('initial_closing_costs'))
+        
+        # Total initial investment before refinance
+        total_initial_investment = (initial_down_payment + 
+                                  renovation_costs + 
+                                  initial_closing_costs)
 
-        # Refinance
+        # Refinance details
         refinance_loan_amount = safe_float(data.get('refinance_loan_amount'))
         refinance_down_payment = safe_float(data.get('refinance_down_payment'))
-        refinance_interest_rate = safe_float(data.get('refinance_interest_rate'))
-        refinance_loan_term = safe_int(data.get('refinance_loan_term'))
         refinance_closing_costs = safe_float(data.get('refinance_closing_costs'))
+        
+        # Calculate actual cash left in deal after refinance
+        total_costs = (purchase_price + renovation_costs + 
+                      initial_closing_costs + refinance_closing_costs)
+        cash_recouped = refinance_loan_amount - initial_loan_amount
+        actual_cash_invested = total_initial_investment - cash_recouped + refinance_closing_costs
 
-        # Rental Income and Expenses
+        # Income calculations
         monthly_rent = safe_float(data.get('monthly_rent'))
+
+        # Operating expense calculations
         property_taxes = safe_float(data.get('property_taxes'))
         insurance = safe_float(data.get('insurance'))
+        
+        # Calculate percentage-based expenses
         maintenance_percentage = safe_float(data.get('maintenance_percentage'))
         vacancy_percentage = safe_float(data.get('vacancy_percentage'))
         capex_percentage = safe_float(data.get('capex_percentage'))
         management_percentage = safe_float(data.get('management_percentage'))
 
-        # Calculate expense amounts
         maintenance = monthly_rent * maintenance_percentage / 100
         vacancy = monthly_rent * vacancy_percentage / 100
         capex = monthly_rent * capex_percentage / 100
         management = monthly_rent * management_percentage / 100
 
-        # Calculate monthly payments
-        initial_monthly_payment = calculate_monthly_payment(initial_loan_amount, initial_interest_rate, initial_loan_term)
-        refinance_monthly_payment = calculate_monthly_payment(refinance_loan_amount, refinance_interest_rate, refinance_loan_term)
+        # Organize operating expenses
+        operating_expenses = {
+            'Property Taxes': property_taxes,
+            'Insurance': insurance,
+            'Maintenance': maintenance,
+            'Vacancy': vacancy,
+            'CapEx': capex,
+            'Property Management': management
+        }
 
-        # Calculate cash flow
-        total_expenses = property_taxes + insurance + maintenance + vacancy + capex + management + refinance_monthly_payment
-        monthly_cash_flow = monthly_rent - total_expenses
+        # Calculate monthly payments
+        initial_monthly_payment = calculate_monthly_payment(
+            initial_loan_amount, 
+            safe_float(data.get('initial_interest_rate')), 
+            int(safe_float(data.get('initial_loan_term')))
+        )
+        
+        refinance_monthly_payment = calculate_monthly_payment(
+            refinance_loan_amount, 
+            safe_float(data.get('refinance_interest_rate')), 
+            int(safe_float(data.get('refinance_loan_term')))
+        )
+
+        # Calculate total expenses and cash flow
+        total_monthly_expenses = (sum(operating_expenses.values()) + 
+                                refinance_monthly_payment)
+        monthly_cash_flow = monthly_rent - total_monthly_expenses
         annual_cash_flow = monthly_cash_flow * 12
 
-        # Calculate total cash invested
-        total_cash_invested = initial_down_payment + renovation_costs + initial_closing_costs + refinance_down_payment + refinance_closing_costs
-
-        # Calculate cash-on-cash return
-        cash_on_cash_return = (annual_cash_flow / total_cash_invested) * 100 if total_cash_invested > 0 else 0
-
-        # Calculate equity captured
-        equity_captured = after_repair_value - total_investment
-
-        # Calculate ROI
+        # Calculate returns
+        cash_on_cash_return = ((annual_cash_flow / actual_cash_invested) * 100 
+                             if actual_cash_invested > 0 else 0)
+        equity_captured = after_repair_value - total_costs
         total_profit = equity_captured + annual_cash_flow
-        roi = (total_profit / total_cash_invested) * 100 if total_cash_invested > 0 else 0
+        roi = ((total_profit / actual_cash_invested) * 100 
+               if actual_cash_invested > 0 else 0)
 
-        # Calculate cash recouped
-        cash_recouped = refinance_loan_amount - initial_loan_amount
-
-        # Calculate all-in cost
-        all_in_cost = purchase_price + renovation_costs + initial_closing_costs + refinance_closing_costs
-
-        # Preserve all original non-calculated fields
+        # Format the results
         results = {
+            # Basic Information
             'analysis_name': data.get('analysis_name', ''),
             'analysis_type': 'BRRRR',
             'property_address': data.get('property_address', ''),
             'property_type': data.get('property_type', ''),
             'home_square_footage': data.get('home_square_footage', ''),
             'lot_square_footage': data.get('lot_square_footage', ''),
-            'year_built': data.get('year_built', '')
-        }
-
-        # Add all calculated results
-        calculated_results = {
+            'year_built': data.get('year_built', ''),
+            
+            # Purchase and Renovation
             'purchase_price': format_currency(purchase_price),
             'renovation_costs': format_currency(renovation_costs),
             'renovation_duration': renovation_duration,
             'after_repair_value': format_currency(after_repair_value),
-            'total_investment': format_currency(total_investment),
+            'total_initial_investment': format_currency(total_initial_investment),
             
+            # Initial Financing
             'initial_loan_amount': format_currency(initial_loan_amount),
             'initial_down_payment': format_currency(initial_down_payment),
-            'initial_interest_rate': f"{initial_interest_rate:.2f}",
-            'initial_loan_term': initial_loan_term,
+            'initial_interest_rate': f"{safe_float(data.get('initial_interest_rate')):.2f}",
+            'initial_loan_term': int(safe_float(data.get('initial_loan_term'))),
             'initial_monthly_payment': format_currency(initial_monthly_payment),
             'initial_closing_costs': format_currency(initial_closing_costs),
             
+            # Refinance
             'refinance_loan_amount': format_currency(refinance_loan_amount),
             'refinance_down_payment': format_currency(refinance_down_payment),
-            'refinance_interest_rate': f"{refinance_interest_rate:.2f}",
-            'refinance_loan_term': refinance_loan_term,
+            'refinance_interest_rate': f"{safe_float(data.get('refinance_interest_rate')):.2f}",
+            'refinance_loan_term': int(safe_float(data.get('refinance_loan_term'))),
             'refinance_monthly_payment': format_currency(refinance_monthly_payment),
             'refinance_closing_costs': format_currency(refinance_closing_costs),
             
+            # Operating Income and Expenses
             'monthly_rent': format_currency(monthly_rent),
-            'total_expenses': format_currency(total_expenses),
+            'operating_expenses': {k: format_currency(v) for k, v in operating_expenses.items()},
+            'total_monthly_expenses': format_currency(total_monthly_expenses),
             'monthly_cash_flow': format_currency(monthly_cash_flow),
             'annual_cash_flow': format_currency(annual_cash_flow),
-            'total_cash_invested': format_currency(total_cash_invested),
             
-            'property_taxes': format_currency(property_taxes),
-            'insurance': format_currency(insurance),
+            # Percentage Values
             'maintenance_percentage': f"{maintenance_percentage:.1f}",
             'vacancy_percentage': f"{vacancy_percentage:.1f}",
             'capex_percentage': f"{capex_percentage:.1f}",
             'management_percentage': f"{management_percentage:.1f}",
             
-            'cash_on_cash_return': f"{cash_on_cash_return:.2f}%",
-            'equity_captured': format_currency(equity_captured),
-            'roi': f"{roi:.2f}%",
+            # Returns and Metrics
+            'actual_cash_invested': format_currency(actual_cash_invested),
             'cash_recouped': format_currency(cash_recouped),
-            'all_in_cost': format_currency(all_in_cost)
+            'equity_captured': format_currency(equity_captured),
+            'cash_on_cash_return': f"{cash_on_cash_return:.2f}%",
+            'roi': f"{roi:.2f}%",
+            'total_costs': format_currency(total_costs)
         }
 
-        # Merge all results
-        results.update(calculated_results)
-
         return results
+
     except Exception as e:
         logging.error(f"Error in calculate_brrrr_analysis: {str(e)}")
-        logging.error(f"Input data: {data}")
         logging.error(traceback.format_exc())
         raise
         
@@ -864,14 +896,14 @@ def view_analysis(analysis_id):
     try:
         analysis = get_analysis(analysis_id)
         if not analysis:
-            flash('Analysis not found', 'error')
+            flash_message('Analysis not found', 'error')
             return redirect(url_for('analyses.view_edit_analysis'))
             
         return render_template('analyses/view_analysis.html', analysis=analysis)
         
     except Exception as e:
         logging.error(f"Error viewing analysis: {str(e)}")
-        flash('Error loading analysis', 'error')
+        flash_message('Error loading analysis', 'error')
         return redirect(url_for('analyses.view_edit_analysis'))
 
 @analyses_bp.route('/view_edit_analysis')
@@ -892,7 +924,7 @@ def view_edit_analysis():
     except Exception as e:
         logging.error(f"Error in view_edit_analysis: {str(e)}")
         logging.error(traceback.format_exc())
-        flash('Error loading analyses', 'error')
+        flash_message('Error loading analyses', 'error')
         # Change to correct dashboard endpoint
         return redirect(url_for('dashboards.dashboards'))  # Updated endpoint
 
@@ -1031,295 +1063,137 @@ def update_analysis():
 @login_required
 def generate_pdf(analysis_id):
     try:
-        # Required imports
-        from flask import send_file
-        from io import BytesIO
-        from reportlab.lib import colors
-        from reportlab.lib.pagesizes import letter
-        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-        from reportlab.lib.units import inch
-        from reportlab.lib.enums import TA_CENTER
-        from reportlab.platypus import (
-            SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
-            Image, KeepTogether, FrameBreak, Frame, PageTemplate
-        )
-
-        def format_currency(value):
-            """Helper function to format currency values"""
-            try:
-                if isinstance(value, str):
-                    value = value.replace('$', '').replace(',', '').strip()
-                amount = float(value)
-                return "${:,.2f}".format(amount)
-            except (ValueError, TypeError):
-                return "$0.00"
-
-        # Load analysis data
+        current_app.logger.info(f"Starting PDF generation for analysis {analysis_id}")
+        
+        # Get analysis data
         analyses_dir = os.path.join(Config.DATA_DIR, 'analyses')
-        if not os.path.exists(analyses_dir):
-            logging.error("Analyses directory not found")
-            return jsonify({"success": False, "message": "Analyses directory not found"}), 500
-
         analysis_file = None
+        
+        # Find the correct analysis file
         for filename in os.listdir(analyses_dir):
             if filename.startswith(f"{analysis_id}_") and filename.endswith(f"_{current_user.id}.json"):
                 analysis_file = filename
                 break
 
         if not analysis_file:
-            logging.error(f"Analysis file not found for analysis_id: {analysis_id}")
-            return jsonify({"success": False, "message": "Analysis not found"}), 404
+            current_app.logger.error(f"Analysis file not found for ID: {analysis_id}")
+            return jsonify({'error': 'Analysis not found'}), 404
 
-        with open(os.path.join(analyses_dir, analysis_file), 'r') as f:
-            analysis_data = json.load(f)
-
-        # Create buffer for PDF
-        buffer = BytesIO()
-
-        # Define document class
-        class AnalysisReport(SimpleDocTemplate):
-            def __init__(self, filename, pagesize=letter, **kwargs):
-                super().__init__(filename, pagesize=pagesize, **kwargs)
-                self.page_width, self.page_height = self.pagesize
-
-            def build(self, flowables, **kwargs):
-                template = PageTemplate(
-                    'normal',
-                    [
-                        Frame(  # Title frame
-                            self.leftMargin,
-                            self.page_height - 1.5*inch,
-                            self.page_width - 2*self.leftMargin,
-                            1*inch,
-                            id='header'
-                        ),
-                        Frame(  # Left column
-                            self.leftMargin,
-                            self.bottomMargin,
-                            (self.page_width - 2*self.leftMargin - 12)/2,
-                            self.page_height - 2*inch - self.bottomMargin,
-                            id='left'
-                        ),
-                        Frame(  # Right column
-                            self.leftMargin + (self.page_width - 2*self.leftMargin + 12)/2,
-                            self.bottomMargin,
-                            (self.page_width - 2*self.leftMargin - 12)/2,
-                            self.page_height - 2*inch - self.bottomMargin,
-                            id='right'
-                        )
-                    ]
-                )
-                self.addPageTemplates(template)
-                super().build(flowables, **kwargs)
-
-        # Create PDF document
-        doc = AnalysisReport(
-            buffer,
-            pagesize=letter,
-            rightMargin=36,
-            leftMargin=36,
-            topMargin=36,
-            bottomMargin=36
-        )
-
-        # Define styles
-        styles = getSampleStyleSheet()
-        title_style = ParagraphStyle(
-            'CustomTitle',
-            parent=styles['Heading1'],
-            fontSize=20,
-            alignment=TA_CENTER,
-            spaceAfter=30
-        )
-        heading_style = ParagraphStyle(
-            'CustomHeading',
-            parent=styles['Heading2'],
-            fontSize=14,
-            spaceBefore=12,
-            spaceAfter=6
-        )
-
-        # Define table style
-        table_style = TableStyle([
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-            ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-            ('TOPPADDING', (0, 0), (-1, -1), 8),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-            ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('WORDWRAP', (0, 0), (-1, -1), True)
-        ])
-
-        # Build content
-        story = []
-
-        # Title section with logo
-        logo_path = os.path.join(Config.BASE_DIR, 'static', 'images', 'logo.png')
-        try:
-            img = Image(logo_path, width=0.75*inch, height=0.75*inch)
-            title = Paragraph(f"Analysis Report: {analysis_data.get('analysis_name', 'Untitled')}", title_style)
-            title_table = Table([[img, title]], colWidths=[inch, None])
-            title_table.setStyle(TableStyle([
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                ('LEFTPADDING', (0, 0), (-1, -1), 0),
-                ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-            ]))
-            story.append(title_table)
-        except Exception as e:
-            logging.error(f"Error adding logo: {str(e)}")
-            story.append(Paragraph(
-                f"Analysis Report: {analysis_data.get('analysis_name', 'Untitled')}", 
-                title_style
-            ))
-
-        # Left Column Content
-        left_content = []
+        filepath = os.path.join(analyses_dir, analysis_file)
         
-        # Financial Summary
-        left_content.append(Paragraph("Financial Summary", heading_style))
-        financial_data = [
-            ["Purchase Price:", format_currency(analysis_data.get('purchase_price', '0.00'))],
-            ["After Repair Value:", format_currency(analysis_data.get('after_repair_value', '0.00'))],
-            ["Renovation Costs:", format_currency(analysis_data.get('renovation_costs', '0.00'))],
-            ["Monthly Rent:", format_currency(analysis_data.get('monthly_rent', '0.00'))],
-            ["Net Monthly Cash Flow:", format_currency(analysis_data.get('net_monthly_cash_flow', '0.00'))],
-            ["Annual Cash Flow:", format_currency(analysis_data.get('annual_cash_flow', '0.00'))],
-            ["Cash on Cash Return:", analysis_data.get('cash_on_cash_return', '0.00%')]
-        ]
-        financial_table = Table(financial_data, colWidths=['45%', '55%'])
-        financial_table.setStyle(table_style)
-        left_content.append(financial_table)
-        left_content.append(Spacer(1, 12))
+        try:
+            # Read and parse the JSON file
+            with open(filepath, 'r') as f:
+                try:
+                    analysis_data = json.load(f)
+                except json.JSONDecodeError as e:
+                    current_app.logger.error(f"JSON decode error: {str(e)}")
+                    return jsonify({'error': f'Invalid analysis data: {str(e)}'}), 500
 
-        # Operating Expenses
-        if 'operating_expenses' in analysis_data:
-            left_content.append(Paragraph("Operating Expenses", heading_style))
-            expenses_data = [
-                [k, format_currency(v)] 
-                for k, v in analysis_data['operating_expenses'].items()
-            ]
-            expenses_table = Table(expenses_data, colWidths=['45%', '55%'])
-            expenses_table.setStyle(table_style)
-            left_content.append(expenses_table)
+            # Validate the analysis data
+            if not isinstance(analysis_data, dict):
+                current_app.logger.error("Analysis data is not a dictionary")
+                return jsonify({'error': 'Invalid analysis data format'}), 500
 
-        # Add left column content
-        story.append(KeepTogether(left_content))
-        story.append(FrameBreak())
+            # Create metrics calculator
+            calculator = LenderMetricsCalculator(analysis_data)
+            
+            # Create PDF buffer
+            buffer = BytesIO()
+            
+            # Generate report
+            try:
+                generate_lender_report(analysis_data, calculator, buffer)
+            except Exception as e:
+                current_app.logger.error(f"Error in report generation: {str(e)}")
+                current_app.logger.exception("Full traceback:")
+                return jsonify({'error': f'Error generating report: {str(e)}'}), 500
+            
+            # Prepare response
+            buffer.seek(0)
+            filename = f"{analysis_data.get('analysis_name', 'analysis')}_report.pdf"
+            
+            return send_file(
+                buffer,
+                as_attachment=True,
+                download_name=filename,
+                mimetype='application/pdf'
+            )
 
-        # Right Column Content
-        right_content = []
-
-        # Loan Information
-        if 'loans' in analysis_data and analysis_data['loans']:
-            right_content.append(Paragraph("Loan Information", heading_style))
-            for idx, loan in enumerate(analysis_data['loans'], 1):
-                if idx > 1:
-                    right_content.append(Spacer(1, 12))
-                loan_data = [
-                    [f"Loan {idx} - {loan.get('name', 'Untitled')}", ""],
-                    ["Amount:", format_currency(loan.get('amount', '0.00'))],
-                    ["Down Payment:", format_currency(loan.get('down_payment', '0.00'))],
-                    ["Monthly Payment:", format_currency(loan.get('monthly_payment', '0.00'))],
-                    ["Interest Rate:", f"{loan.get('interest_rate', '0')}%"],
-                    ["Term:", f"{loan.get('term', '0')} months"],
-                    ["Closing Costs:", format_currency(loan.get('closing_costs', '0.00'))]
-                ]
-                loan_table = Table(loan_data, colWidths=['45%', '55%'])
-                loan_table.setStyle(table_style)
-                right_content.append(loan_table)
-
-        # Add right column content
-        story.append(KeepTogether(right_content))
-
-        # Build PDF
-        doc.build(story)
-        buffer.seek(0)
-
-        return send_file(
-            buffer,
-            as_attachment=True,
-            download_name=f"{analysis_data.get('analysis_name', 'analysis')}_report.pdf",
-            mimetype='application/pdf'
-        )
+        except IOError as e:
+            current_app.logger.error(f"File read error: {str(e)}")
+            return jsonify({'error': 'Error reading analysis file'}), 500
+        except Exception as e:
+            current_app.logger.error(f"Unexpected error: {str(e)}")
+            current_app.logger.exception("Full traceback:")
+            return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
 
     except Exception as e:
-        logging.error(f"Error generating PDF: {str(e)}")
-        logging.error(traceback.format_exc())
-        return jsonify({
-            "success": False,
-            "message": f"An error occurred while generating the PDF: {str(e)}"
-        }), 500
-
-def generate_brrrr_report(data, styles):
+        current_app.logger.error(f"Global error in generate_pdf: {str(e)}")
+        current_app.logger.exception("Full traceback:")
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+        
+def generate_brrrr_report(metrics, styles):
+    """Generate BRRRR-specific report sections"""
     story = []
     
-    # Create a centered style for sub-headers
-    centered_style = ParagraphStyle(
-        'Centered',
-        parent=styles['Heading3'],
-        alignment=TA_CENTER,
-        spaceAfter=12
-    )
-
-    # Left Column
-    story.append(Paragraph("Purchase and Renovation", styles['Heading2']))
+    # Purchase and Renovation
     purchase_data = [
-        ["Purchase Price", f"${data.get('purchase_price', 'N/A')}"],
-        ["Renovation Costs", f"${data.get('renovation_costs', 'N/A')}"],
-        ["Total Investment", f"${data.get('total_investment', 'N/A')}"],
-        ["After Repair Value (ARV)", f"${data.get('after_repair_value', 'N/A')}"],
-        ["All-in Cost", f"${data.get('all_in_cost', 'N/A')}"]
+        ["Purchase Price", metrics.get('purchase_price', '$0.00')],
+        ["Renovation Costs", metrics.get('renovation_costs', '$0.00')],
+        ["After Repair Value (ARV)", metrics.get('after_repair_value', '$0.00')],
+        ["Total Initial Investment", metrics.get('total_initial_investment', '$0.00')],
+        ["All-in Cost", metrics.get('total_costs', '$0.00')]
     ]
+    story.append(Paragraph("Purchase and Renovation", styles))
     story.append(create_table(purchase_data))
     story.append(Spacer(1, 0.25*inch))
 
-    story.append(Paragraph("Initial Financing", styles['Heading2']))
-    initial_financing_data = [
-        ["Initial Loan Amount", f"${data.get('initial_loan_amount', 'N/A')}"],
-        ["Initial Down Payment", f"${data.get('initial_down_payment', 'N/A')}"],
-        ["Initial Monthly Payment", f"${data.get('initial_monthly_payment', 'N/A')}"]
-    ]
-    story.append(create_table(initial_financing_data))
-    story.append(Spacer(1, 0.25*inch))
-
-    story.append(Paragraph("Refinance", styles['Heading2']))
-    refinance_data = [
-        ["Refinance Loan Amount", f"${data.get('refinance_loan_amount', 'N/A')}"],
-        ["Refinance Down Payment", f"${data.get('refinance_down_payment', 'N/A')}"],
-        ["Refinance Monthly Payment", f"${data.get('refinance_monthly_payment', 'N/A')}"]
-    ]
-    story.append(create_table(refinance_data))
-    story.append(Spacer(1, 0.25*inch))
-
-    # Add a FrameBreak to move to the second column
-    story.append(FrameBreak())
-
-    # Right Column
-    story.append(Paragraph("Income and Expenses", styles['Heading2']))
+    # Income and Operating Expenses
     income_expense_data = [
-        ["Monthly Rent", f"${data.get('monthly_rent', 'N/A')}"],
-        ["Total Monthly Expenses", f"${data.get('total_expenses', 'N/A')}"],
-        ["Monthly Cash Flow", f"${data.get('monthly_cash_flow', 'N/A')}"],
-        ["Annual Cash Flow", f"${data.get('annual_cash_flow', 'N/A')}"]
+        ["Monthly Rent", metrics.get('monthly_rent', '$0.00')],
+        ["Property Taxes", metrics.get('property_taxes', '$0.00')],
+        ["Insurance", metrics.get('insurance', '$0.00')],
+        ["CapEx", metrics.get('capex', '$0.00')],
+        ["Maintenance", metrics.get('maintenance', '$0.00')],
+        ["Vacancy", metrics.get('vacancy', '$0.00')],
+        ["Property Management", metrics.get('management', '$0.00')],
+        ["Total Monthly Expenses", metrics.get('total_monthly_expenses', '$0.00')],
+        ["Monthly Cash Flow", metrics.get('monthly_cash_flow', '$0.00')],
+        ["Annual Cash Flow", metrics.get('annual_cash_flow', '$0.00')]
     ]
+    story.append(Paragraph("Income and Expenses", styles))
     story.append(create_table(income_expense_data))
     story.append(Spacer(1, 0.25*inch))
 
-    story.append(Paragraph("Investment Returns", styles['Heading2']))
-    returns_data = [
-        ["Total Cash Invested", f"${data.get('total_cash_invested', 'N/A')}"],
-        ["Cash-on-Cash Return", data.get('cash_on_cash_return', 'N/A')],
-        ["Return on Investment (ROI)", data.get('roi', 'N/A')],
-        ["Equity Captured", f"${data.get('equity_captured', 'N/A')}"],
-        ["Cash Recouped", f"${data.get('cash_recouped', 'N/A')}"]
+    # Financing Details
+    financing_data = [
+        ["Initial Loan Amount", metrics.get('initial_loan_amount', '$0.00')],
+        ["Initial Monthly Payment", metrics.get('initial_monthly_payment', '$0.00')],
+        ["Initial Interest Rate", metrics.get('initial_interest_rate', '0.00') + '%'],
+        ["Initial Down Payment", metrics.get('initial_down_payment', '$0.00')],
+        ["Initial Closing Costs", metrics.get('initial_closing_costs', '$0.00')],
+        ["Refinance Loan Amount", metrics.get('refinance_loan_amount', '$0.00')],
+        ["Refinance Monthly Payment", metrics.get('refinance_monthly_payment', '$0.00')],
+        ["Refinance Interest Rate", metrics.get('refinance_interest_rate', '0.00') + '%'],
+        ["Refinance Down Payment", metrics.get('refinance_down_payment', '$0.00')],
+        ["Refinance Closing Costs", metrics.get('refinance_closing_costs', '$0.00')]
     ]
-    story.append(create_table(returns_data))
+    story.append(Paragraph("Financing Details", styles))
+    story.append(create_table(financing_data))
     story.append(Spacer(1, 0.25*inch))
 
+    # Investment Returns
+    returns_data = [
+        ["Actual Cash Invested", metrics.get('actual_cash_invested', '$0.00')],
+        ["Cash Recouped in Refinance", metrics.get('cash_recouped', '$0.00')],
+        ["Equity Captured", metrics.get('equity_captured', '$0.00')],
+        ["Cash on Cash Return", metrics.get('cash_on_cash_return', '0.00%')],
+        ["Return on Investment (ROI)", metrics.get('roi', '0.00%')]
+    ]
+    story.append(Paragraph("Investment Returns", styles))
+    story.append(create_table(returns_data))
+    
     return story
 
 def generate_long_term_rental_report(data, styles):

@@ -4,18 +4,24 @@ const addTransactionsModule = {
     categories: {},
     currentUser: '',
 
-    init: function() {
-        console.log('Initializing add transactions module');
-        this.form = document.getElementById('add-transaction-form');
-        if (this.form) {
-            console.log('Add Transaction form found');
-            this.fetchCategories().then(() => {
+    init: async function() {
+        try {
+            console.log('Initializing add transactions module');
+            this.form = document.getElementById('add-transaction-form');
+            if (this.form) {
+                console.log('Add Transaction form found');
+                await this.fetchCategories();
                 this.initEventListeners();
                 this.updateCategories('income'); // Default to income
                 this.updateCollectorPayerLabel('income'); // Default to income
-            });
-        } else {
-            console.error('Add Transaction form not found');
+                window.showNotification('Add Transactions module loaded', 'success');
+            } else {
+                console.error('Add Transaction form not found');
+                window.showNotification('Form not found', 'error');
+            }
+        } catch (error) {
+            console.error('Error initializing Add Transactions module:', error);
+            window.showNotification('Error loading Add Transactions module: ' + error.message, 'error');
         }
     },
 
@@ -235,36 +241,8 @@ const addTransactionsModule = {
     },
 
     showFlashMessage: function(message, category) {
-        const flashMessagesContainer = document.querySelector('.flash-messages');
-        if (flashMessagesContainer) {
-            const alertDiv = document.createElement('div');
-            alertDiv.className = `alert alert-${category} alert-dismissible fade show`;
-            alertDiv.role = 'alert';
-
-            // Apply specific styles based on the category
-            if (category === 'success') {
-                alertDiv.style.backgroundColor = '#d4edda';
-                alertDiv.style.borderColor = '#c3e6cb';
-                alertDiv.style.color = '#155724';
-            } else if (category === 'danger' || category === 'error') {
-                alertDiv.style.backgroundColor = '#f8d7da';
-                alertDiv.style.borderColor = '#f5c6cb';
-                alertDiv.style.color = '#721c24';
-            }
-
-            alertDiv.innerHTML = `
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            `;
-            flashMessagesContainer.appendChild(alertDiv);         
-
-            // Automatically remove the flash message after 5 seconds
-            setTimeout(() => {
-                alertDiv.remove();
-            }, 5000);
-        } else {
-            console.error('Flash messages container not found');
-        }
+        // Replace this with window.showNotification
+        window.showNotification(message, category === 'danger' ? 'error' : category);
     },
 
     validateReimbursementStatus: function(formData) {
@@ -307,11 +285,7 @@ const addTransactionsModule = {
             return;
         }
 
-        if (!this.validateForm()) {
-            console.error('Form validation failed');
-            return;
-        }
-
+        const formData = new FormData(this.form);
         if (!this.validateReimbursementStatus(formData)) {
             return;
         }
@@ -319,8 +293,6 @@ const addTransactionsModule = {
         // Disable the submit button to prevent multiple submissions
         const submitButton = event.target.querySelector('button[type="submit"]');
         submitButton.disabled = true;
-
-        const formData = new FormData(this.form);
 
         console.log('Sending form data');
 
@@ -332,17 +304,19 @@ const addTransactionsModule = {
             if (!response.ok) {
                 throw new Error('Network response was not ok');
             }
-            // Redirect to the same page to show the server-side flash message
-            window.location.href = '/transactions/add';
+            window.showNotification('Transaction added successfully', 'success');
+            setTimeout(() => {
+                window.location.href = '/transactions/add';
+            }, 1500);
         })
         .catch(error => {
             console.error('Error details:', error);
-            this.showFlashMessage('An error occurred while adding the transaction: ' + error.message, 'error');
+            window.showNotification('Error adding transaction: ' + error.message, 'error');
         })
         .finally(() => {
             // Re-enable the submit button
             submitButton.disabled = false;
-        })
+        });
     }
 }
 export default addTransactionsModule

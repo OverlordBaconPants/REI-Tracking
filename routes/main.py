@@ -1,12 +1,12 @@
-from flask import Blueprint, render_template, request, jsonify, current_app
 from flask_login import login_required, current_user
 from services.user_service import get_user_by_email
 from services.transaction_service import get_properties_for_user, get_transactions_for_view
 from datetime import datetime, date
 from dateutil.relativedelta import relativedelta
 import logging
-import requests
 import pandas as pd
+from flask import Blueprint, render_template, redirect, url_for
+from utils.flash import flash_success, flash_error, flash_warning, flash_info
 
 main_bp = Blueprint('main', __name__)
 
@@ -141,3 +141,11 @@ def main():
 @login_required
 def properties():
     return render_template('main/properties.html')
+
+@main_bp.route('/test-flash')
+def test_flash():
+    flash_success("This is a success message")
+    flash_error("This is an error message")
+    flash_warning("This is a warning message")
+    flash_info("This is an info message")
+    return redirect(url_for('index'))

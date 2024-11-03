@@ -8,7 +8,7 @@
 <div class="container mt-4">
     <h2 id="add-transaction" class="mb-4">Add Transaction</h2>
 
-    <form id="add-transaction-form" method="POST" enctype="multipart/form-data">
+    <form id="add-transaction-form" enctype="multipart/form-data">
         <div class="row">
             <div class="col-md-6">
                 <div class="form-group mb-3">
@@ -130,16 +130,4 @@
         </div>
     </form>
 </div>
-{% endblock %}
-
-{% block scripts %}
-{{ super() }}
-<script src="/static/js/main.js"></script>
-<script type="module">
-    import addTransactionsModule from '/static/js/add_transactions.js';
-    
-    if (addTransactionsModule && typeof addTransactionsModule.init === 'function') {
-        addTransactionsModule.init();
-    }
-</script>
 {% endblock %}

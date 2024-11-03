@@ -42,7 +42,24 @@ const padSplitExpensesHTML = `
 `;
 
 const analysisModule = {
+    // Configure toastr options
+    initToastr: function() {
+        toastr.options = {
+            closeButton: true,
+            progressBar: true,
+            positionClass: 'toast-top-right',
+            preventDuplicates: true,
+            timeOut: 3000,
+            extendedTimeOut: 1000,
+            showEasing: 'swing',
+            hideEasing: 'linear',
+            showMethod: 'fadeIn',
+            hideMethod: 'fadeOut'
+        };
+    },
+
     init: function() {
+        this.initToastr(); // Initialize toastr settings
         console.log('AnalysisModule initialized');
         const analysisForm = document.querySelector('#analysisForm');
         if (analysisForm) {
@@ -209,7 +226,13 @@ const analysisModule = {
 
     loadAnalysisData: function(analysisId) {
         fetch(`/analyses/get_analysis/${analysisId}`)
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    toastr.error('Error loading analysis data');
+                    return null;
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.success) {
                     // Store the current analysis ID
@@ -242,12 +265,12 @@ const analysisModule = {
                     }, 100);
                 } else {
                     console.error('Failed to fetch analysis data');
-                    alert('Error loading analysis data');
+                    toastr.error('Error loading analysis data');
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Error loading analysis data');
+                toastr.error('Error loading analysis data');
             });
     },
 
@@ -1119,7 +1142,7 @@ const analysisModule = {
         })
         .catch(error => {
             console.error('Error:', error);
-            alert(`An error occurred while creating the analysis: ${error.message || 'Please try again.'}`);
+            toastr.error('An error occurred while creating the analysis. Please try again.');
         });
     },
     
@@ -1454,7 +1477,7 @@ const analysisModule = {
         
         if (!analysisId) {
             console.error('No analysis ID provided for update');
-            alert('Error: No analysis ID found. Cannot update.');
+            toastr.error('No analysis ID found. Cannot update.');
             return;
         }
 
@@ -1526,7 +1549,7 @@ const analysisModule = {
         })
         .catch(error => {
             console.error('Error:', error);
-            alert(`An error occurred while updating the analysis: ${error.message || 'Please try again.'}`);
+            toastr.error('An error occurred while updating the analysis. Please try again.');
         });
     },
 
@@ -1556,26 +1579,50 @@ const analysisModule = {
     },
 
     downloadPdf: function(analysisId) {
+        const downloadButton = document.getElementById('downloadPdfBtn');
+        if (downloadButton) {
+            downloadButton.disabled = true;
+            downloadButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generating PDF...';
+        }
+    
         fetch(`/analyses/generate_pdf/${encodeURIComponent(analysisId)}`)
             .then(response => {
                 if (!response.ok) {
-                    throw new Error('Network response was not ok');
+                    return response.json().then(data => {
+                        throw new Error(data.error || 'Error generating PDF');
+                    });
                 }
                 return response.blob();
             })
             .then(blob => {
+                // Create download link
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.style.display = 'none';
                 a.href = url;
-                a.download = `${analysisId}_report.pdf`;
+                
+                // Set filename from Content-Disposition header if available
+                const filename = 'analysis_report.pdf';
+                a.download = filename;
+                
+                // Trigger download
                 document.body.appendChild(a);
                 a.click();
+                
+                // Cleanup
                 window.URL.revokeObjectURL(url);
+                toastr.success('Report downloaded successfully');
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('An error occurred while downloading the PDF. Please try again.');
+                toastr.error(error.message || 'Error downloading PDF. Please try again.');
+            })
+            .finally(() => {
+                // Re-enable download button
+                if (downloadButton) {
+                    downloadButton.disabled = false;
+                    downloadButton.innerHTML = 'Download PDF';
+                }
             });
     },
 
@@ -1653,13 +1700,14 @@ const analysisModule = {
         });
 
         if (!isValid) {
-            alert('Please fill out all required fields correctly.');
+            toastr.error('Please fill out all required fields correctly.');
         }
 
         return isValid;
-    }
+    },
 };
 
+// Initialize when the DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
     analysisModule.init();
 });

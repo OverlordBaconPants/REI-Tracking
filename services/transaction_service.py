@@ -28,20 +28,37 @@ def add_transaction(transaction_data):
         # Load existing transactions
         with open(current_app.config['TRANSACTIONS_FILE'], 'r') as f:
             transactions = json.load(f)
-    except FileNotFoundError:
-        transactions = []
 
-    # Add a unique ID to the transaction
-    transaction_data['id'] = str(len(transactions) + 1)
+        # Find the highest existing ID
+        highest_id = 0
+        for transaction in transactions:
+            try:
+                current_id = int(transaction.get('id', 0))
+                highest_id = max(highest_id, current_id)
+            except (ValueError, TypeError):
+                current_app.logger.warning(f"Invalid ID format found: {transaction.get('id')}")
+                continue
 
-    # Append the new transaction
-    transactions.append(transaction_data)
+        # Generate new ID by incrementing the highest existing ID
+        new_id = str(highest_id + 1)
+        current_app.logger.debug(f"Generated new transaction ID: {new_id}")
 
-    # Save the updated transactions
-    with open(current_app.config['TRANSACTIONS_FILE'], 'w') as f:
-        json.dump(transactions, f, indent=2)
+        # Add the new ID to the transaction data
+        transaction_data['id'] = new_id
 
-    return True
+        # Append the new transaction
+        transactions.append(transaction_data)
+
+        # Save the updated transactions
+        with open(current_app.config['TRANSACTIONS_FILE'], 'w') as f:
+            json.dump(transactions, f, indent=2)
+
+        current_app.logger.info(f"Successfully added transaction with ID: {new_id}")
+        return True
+
+    except Exception as e:
+        current_app.logger.error(f"Error adding transaction: {str(e)}")
+        raise
 
 def get_transactions_for_user(user_id, property_id=None, start_date=None, end_date=None):
     transactions = read_json(current_app.config['TRANSACTIONS_FILE'])

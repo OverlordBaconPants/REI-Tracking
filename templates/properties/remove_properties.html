@@ -1,30 +1,38 @@
 {% extends "base.html" %}
 {% block title %}Remove Properties{% endblock %}
+{% block body_class %}remove-properties-page{% endblock %}
 
-{% block head %}
-{{ super() }}
-{% endblock %}
 {% block content %}
 <div class="container mt-4 remove-properties-container">
-    <h2 class="mb-4">Remove Properties</h2>
-    <form id="remove-property-form" method="POST">
+    <h2 id="remove-properties" class="mb-4">Remove Properties</h2>
+
+    <form method="POST">
         <div class="form-group mb-3 remove-properties-select">
-            <label for="property-select">Select Property to Remove:</label>
-            <select id="property-select" name="property_select" class="form-control" required>
+            <label for="property_select">Select Property to Remove:</label>
+            <select name="property_select" id="property_select" class="form-control" required>
                 <option value="">Select a property</option>
                 {% for property in properties %}
-                    <option value="{{ property.address }}">{{ property.address }}</option>
+                <option value="{{ property.address }}">{{ property.address }}</option>
                 {% endfor %}
             </select>
         </div>
+
         <div class="form-group mb-3 remove-properties-confirm">
-            <label id="confirm-label" for="confirm-input">Type the confirmation phrase:</label>
-            <input type="text" id="confirm-input" name="confirm_input" class="form-control" required placeholder="I am sure I want to do this.">
+            <label for="confirm_input">Type the confirmation phrase: "I am sure I want to do this."</label>
+            <input type="text" 
+                   class="form-control" 
+                   id="confirm_input" 
+                   name="confirm_input" 
+                   required 
+                   placeholder="I am sure I want to do this."
+                   disabled>
         </div>
+
         <div class="alert alert-danger mt-3 remove-properties-warning">
             <strong>Warning:</strong> Removing this property will permanently delete it from the system.
         </div>
-        <button type="submit" id="remove-button" class="btn btn-danger remove-properties-button">Remove Property</button>
+
+        <button type="submit" class="btn btn-danger remove-properties-button">Remove Property</button>
     </form>
 </div>
 {% endblock %}

@@ -1,16 +1,23 @@
 // add_properties.js
 
 const addPropertiesModule = {
-    init: function() {
-        console.log('AddPropertiesModule initialized');
-        const addPropertyForm = document.querySelector('#add-property-form');
-        if (addPropertyForm) {
-            console.log('Add Property form found');
-            addPropertyForm.addEventListener('submit', this.handleSubmit.bind(this));
-            this.initAddressAutocomplete();
-            this.initPartnersSection();
-        } else {
-            console.log('Add Property form not found');
+    init: async function() {
+        try {
+            console.log('AddPropertiesModule initialized');
+            const addPropertyForm = document.querySelector('#add-property-form');
+            if (addPropertyForm) {
+                console.log('Add Property form found');
+                addPropertyForm.addEventListener('submit', this.handleSubmit.bind(this));
+                this.initAddressAutocomplete();
+                this.initPartnersSection();
+                window.showNotification('Add Properties module loaded', 'success');
+            } else {
+                console.log('Add Property form not found');
+                window.showNotification('Form not found', 'error');
+            }
+        } catch (error) {
+            console.error('Error initializing Add Properties module:', error);
+            window.showNotification('Error loading Add Properties module: ' + error.message, 'error');
         }
     },
    
@@ -257,27 +264,27 @@ const addPropertiesModule = {
         let isValid = true;
 
         if (!form.property_address.value.trim()) {
-            alert('Please enter a property address.');
+            window.showNotification('Please enter a property address.', 'error');
             isValid = false;
         }
 
         if (!form.purchase_price.value || isNaN(form.purchase_price.value)) {
-            alert('Please enter a valid purchase price.');
+            window.showNotification('Please enter a valid purchase price.', 'error');
             isValid = false;
         }
 
         if (!form.down_payment.value || isNaN(form.down_payment.value)) {
-            alert('Please enter a valid down payment amount.');
+            window.showNotification('Please enter a valid down payment amount.', 'error');
             isValid = false;
         }
 
         if (!form.primary_loan_rate.value || isNaN(form.primary_loan_rate.value)) {
-            alert('Please enter a valid primary loan rate.');
+            window.showNotification('Please enter a valid primary loan rate.', 'error');
             isValid = false;
         }
 
         if (!form.primary_loan_term.value || isNaN(form.primary_loan_term.value)) {
-            alert('Please enter a valid primary loan term.');
+            window.showNotification('Please enter a valid primary loan term.', 'error');
             isValid = false;
         }
 
@@ -288,12 +295,12 @@ const addPropertiesModule = {
             const equityInput = partner.querySelector(`[name="partners[${index}][equity_share]"]`);
             
             if (!nameInput.value.trim()) {
-                alert(`Please enter a name for partner ${index + 1}.`);
+                window.showNotification(`Please enter a name for partner ${index + 1}.`, 'error');
                 isValid = false;
             }
 
             if (!equityInput.value || isNaN(equityInput.value)) {
-                alert(`Please enter a valid equity share for partner ${index + 1}.`);
+                window.showNotification(`Please enter a valid equity share for partner ${index + 1}.`, 'error');
                 isValid = false;
             } else {
                 totalEquity += parseFloat(equityInput.value);
@@ -301,7 +308,7 @@ const addPropertiesModule = {
         });
 
         if (Math.abs(totalEquity - 100) > 0.01) {
-            alert(`Total equity must equal 100%. Current total: ${totalEquity.toFixed(2)}%`);
+            window.showNotification(`Total equity must equal 100%. Current total: ${totalEquity.toFixed(2)}%`, 'error');
             isValid = false;
         }
 
