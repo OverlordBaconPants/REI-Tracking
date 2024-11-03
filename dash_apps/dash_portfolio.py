@@ -10,9 +10,21 @@ import plotly.graph_objs as go
 import plotly.express as px
 from decimal import Decimal
 
-def calculate_loan_metrics(property_data):
-    """Calculate loan and equity metrics for a property."""
+def calculate_user_equity_share(property_data, username):
+    """Calculate the user's equity share percentage for a property."""
+    for partner in property_data.get('partners', []):
+        if partner['name'] == username:
+            return partner['equity_share'] / 100.0
+    return 0.0
+
+def calculate_loan_metrics(property_data, username):
+    """Calculate loan and equity metrics for a property, adjusted for user's equity share."""
     try:
+        # Get user's equity share
+        equity_share = calculate_user_equity_share(property_data, username)
+        if equity_share == 0:
+            return None
+            
         loan_amount = float(property_data.get('loan_amount', 0))
         interest_rate = float(property_data.get('primary_loan_rate', 0)) / 100
         loan_term_months = float(property_data.get('primary_loan_term', 360))
@@ -44,17 +56,18 @@ def calculate_loan_metrics(property_data):
                 current_month_principal = principal_payment
             total_principal_paid += principal_payment
         
-        # Calculate metrics
+        # Adjust metrics based on user's equity share
         property_metrics = {
             'address': property_data.get('address', 'Unknown'),
-            'purchase_price': purchase_price,
-            'loan_amount': loan_amount,
-            'current_balance': balance,
-            'monthly_payment': monthly_payment,
-            'equity_from_principal': total_principal_paid,
-            'equity_this_month': current_month_principal,
-            'total_equity': purchase_price - balance,  # Simple equity calculation
-            'months_paid': months_into_loan
+            'purchase_price': purchase_price * equity_share,
+            'loan_amount': loan_amount * equity_share,
+            'current_balance': balance * equity_share,
+            'monthly_payment': monthly_payment * equity_share,
+            'equity_from_principal': total_principal_paid * equity_share,
+            'equity_this_month': current_month_principal * equity_share,
+            'total_equity': (purchase_price - balance) * equity_share,
+            'months_paid': months_into_loan,
+            'equity_share': equity_share * 100  # Store as percentage
         }
         
         return property_metrics
@@ -76,50 +89,58 @@ def create_portfolio_dash(flask_app):
     # Define layout
     dash_app.layout = dbc.Container([
         html.Div([
-            # Summary Cards Row - Now with 4 cards
+            # Header with user context
+            dbc.Row([
+                dbc.Col([
+                    
+                    html.P(id="user-context", className="text-muted")
+                ], width=12)
+            ], className="mb-4"),
+            
+            # Summary Cards Row
             dbc.Row([
                 dbc.Col(
                     dbc.Card([
                         dbc.CardBody([
-                            html.H4("Total Portfolio Value", className="card-title text-center"),
+                            html.H4("Your Portfolio Value", className="card-title text-center"),
                             html.H2(id="total-portfolio-value", className="text-center text-primary")
                         ])
                     ], className="mb-4")
-                , width=3),  # Changed from width=4 to width=3
+                , width=3),
                 dbc.Col(
                     dbc.Card([
                         dbc.CardBody([
-                            html.H4("Total Monthly Payments", className="card-title text-center"),
+                            html.H4("Your Monthly Payments", className="card-title text-center"),
                             html.H2(id="total-monthly-payments", className="text-center text-danger")
                         ])
                     ], className="mb-4")
-                , width=3),  # Changed from width=4 to width=3
+                , width=3),
                 dbc.Col(
                     dbc.Card([
                         dbc.CardBody([
-                            html.H4("Total Equity", className="card-title text-center"),
+                            html.H4("Your Total Equity", className="card-title text-center"),
                             html.H2(id="total-equity", className="text-center text-success")
                         ])
                     ], className="mb-4")
-                , width=3),  # Changed from width=4 to width=3
+                , width=3),
                 dbc.Col(
                     dbc.Card([
                         dbc.CardBody([
-                            html.H4("Equity Gained This Month", className="card-title text-center"),
+                            html.H4("Your Equity Gained This Month", className="card-title text-center"),
                             html.H2(id="equity-gained-month", className="text-center text-info")
                         ])
                     ], className="mb-4")
-                , width=3),  # New card with width=3
+                , width=3),
             ], className="mb-4"),
             
-            # Rest of the layout remains the same...
+            # Charts Row
             dbc.Row([
                 dbc.Col([
-                    html.H4("Equity Distribution", className="text-center mb-4"),
+                    html.H4("Your Equity Distribution", className="text-center mb-4"),
                     dcc.Graph(id='equity-pie-chart')
                 ], width=6),
                 dbc.Col([
-                    html.H4("Monthly Payments by Property", className="text-center mb-4"),
+                    html.H4("Your Monthly Payments by Property", className="text-center mb-4"),
                     dcc.Graph(id='payments-bar-chart')
                 ], width=6),
             ], className="mb-4"),
@@ -127,7 +148,7 @@ def create_portfolio_dash(flask_app):
             # Property Details Table
             dbc.Row([
                 dbc.Col([
-                    html.H4("Property Details", className="text-center mb-4"),
+                    html.H4("Your Property Details", className="text-center mb-4"),
                     html.Div(id='property-table')
                 ], width=12)
             ]),
@@ -141,10 +162,11 @@ def create_portfolio_dash(flask_app):
     ], fluid=True)
     
     @dash_app.callback(
-        [Output('total-portfolio-value', 'children'),
+        [Output('user-context', 'children'),
+         Output('total-portfolio-value', 'children'),
          Output('total-monthly-payments', 'children'),
          Output('total-equity', 'children'),
-         Output('equity-gained-month', 'children'),  # Added new output
+         Output('equity-gained-month', 'children'),
          Output('equity-pie-chart', 'figure'),
          Output('payments-bar-chart', 'figure'),
          Output('property-table', 'children')],
@@ -163,44 +185,46 @@ def create_portfolio_dash(flask_app):
         total_equity_this_month = 0
         
         for prop in properties:
-            metrics = calculate_loan_metrics(prop)
-            if metrics:
+            metrics = calculate_loan_metrics(prop, current_user.name)
+            if metrics:  # Only include properties where user has an equity share
                 property_metrics.append(metrics)
                 total_value += metrics['purchase_price']
                 total_payments += metrics['monthly_payment']
                 total_equity += metrics['total_equity']
                 total_equity_this_month += metrics['equity_this_month']
         
-        # Create equity pie chart
+        # Create equity pie chart with equity share information
         equity_fig = px.pie(
             values=[m['total_equity'] for m in property_metrics],
-            names=[m['address'].split(',')[0] for m in property_metrics],
-            title='Equity Distribution',
+            names=[f"{m['address'].split(',')[0]} ({m['equity_share']}%)" for m in property_metrics],
+            title='Your Equity Distribution',
             hole=0.3
         )
         
-        # Create payments bar chart
+        # Create payments bar chart with equity share information
         payments_fig = px.bar(
-            x=[m['address'].split(',')[0] for m in property_metrics],
+            x=[f"{m['address'].split(',')[0]} ({m['equity_share']}%)" for m in property_metrics],
             y=[m['monthly_payment'] for m in property_metrics],
-            title='Monthly Payments by Property'
+            title='Your Monthly Payments by Property'
         )
         
-        # Create property table
+        # Create property table with equity share information
         table = dbc.Table([
             html.Thead(
                 html.Tr([
                     html.Th("Property"),
-                    html.Th("Purchase Price"),
-                    html.Th("Current Balance"),
-                    html.Th("Monthly Payment"),
-                    html.Th("Total Equity"),
-                    html.Th("Equity This Month")
+                    html.Th("Your Share"),
+                    html.Th("Your Purchase Value"),
+                    html.Th("Your Current Balance"),
+                    html.Th("Your Monthly Payment"),
+                    html.Th("Your Total Equity"),
+                    html.Th("Your Equity This Month")
                 ])
             ),
             html.Tbody([
                 html.Tr([
                     html.Td(m['address'].split(',')[0]),
+                    html.Td(f"{m['equity_share']}%"),
                     html.Td(f"${m['purchase_price']:,.2f}"),
                     html.Td(f"${m['current_balance']:,.2f}"),
                     html.Td(f"${m['monthly_payment']:,.2f}"),
@@ -211,10 +235,11 @@ def create_portfolio_dash(flask_app):
         ], bordered=True, hover=True, responsive=True)
         
         return (
+            f"Showing portfolio data for {current_user.name}",
             f"${total_value:,.2f}",
             f"${total_payments:,.2f}",
             f"${total_equity:,.2f}",
-            f"${total_equity_this_month:,.2f}",  # Added new return value
+            f"${total_equity_this_month:,.2f}",
             equity_fig,
             payments_fig,
             table
