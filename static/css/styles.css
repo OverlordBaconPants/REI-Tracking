@@ -77,6 +77,23 @@ body {
     color: white !important;
 }
 
+.card .card-header h4,
+.card .card-header h5 {
+    color: white !important;
+    font-weight: bold;
+    margin-bottom: 0;
+}
+
+/* Make the utility section header match as well */
+.card .card-header h5 {
+    font-size: 1.25rem;  /* Makes h5 same size as h4 */
+}
+
+/* Optional: Add a bit more padding to match the navbar styling */
+.card .card-header {
+    padding: 10px 15px;
+}
+
 main {
     margin-left: 200px;
     padding: 20px;
