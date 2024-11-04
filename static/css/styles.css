@@ -94,6 +94,11 @@ body {
     padding: 10px 15px;
 }
 
+/* Target specifically the utilities card header while preserving other card header styles */
+.card .card-body .card .card-header h5 {
+    color: black !important;
+}
+
 main {
     margin-left: 200px;
     padding: 20px;
