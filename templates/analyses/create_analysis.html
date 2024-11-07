@@ -14,7 +14,7 @@
             {% endif %}
         </div>
         <div class="card-body">
-            <form id="analysisForm">
+            <form id="analysisForm" method="POST" onsubmit="return false;">
                 <div class="card mb-4">
                     <div class="card-header">Property Information</div>
                     <div class="card-body">
@@ -26,7 +26,8 @@
                             <div class="col-md-6 mb-3">
                                 <label for="property_address" class="form-label">Property Address</label>
                                 <div class="autocomplete-container">
-                                    <input type="text" class="form-control" id="property_address" name="property_address">
+                                    <input type="text" class="form-control" id="property_address" name="property_address" 
+                                           placeholder="Enter property address" required>
                                     <ul id="addressSuggestions" class="autocomplete-results"></ul>
                                 </div>
                             </div>
@@ -111,8 +112,9 @@
                             Create Analysis
                         {% endif %}
                     </button>
+                    
                     {% if analysis and analysis.edit_mode %}
-                        <a href="{{ url_for('analyses.view_edit_analysis') }}" class="btn btn-secondary" id="cancelBtn">Cancel</a>
+                        <a href="{{ url_for('analyses.view_edit_analysis') }}" id="cancelBtn" class="btn btn-secondary">Cancel</a>
                     {% endif %}
                 </div>
             </form>

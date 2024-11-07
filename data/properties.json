@@ -1,20 +1,43 @@
 [
   {
     "address": "454 Guilford Avenue, Hagerstown, MD 21740, United States of America, Hagerstown, Maryland, 21740",
-    "purchase_price": 160000,
-    "down_payment": 10000,
+    "purchase_price": 160000.0,
+    "down_payment": 10000.0,
     "primary_loan_rate": 5.73,
-    "primary_loan_term": 360,
+    "primary_loan_term": 360.0,
     "purchase_date": "2024-05-15",
-    "loan_amount": "112800",
+    "loan_amount": 112800.0,
     "loan_start_date": "2022-08-03",
-    "seller_financing_amount": 40000,
-    "seller_financing_rate": 0,
-    "seller_financing_term": 120,
-    "closing_costs": 5800,
-    "renovation_costs": 24435,
-    "marketing_costs": 0,
-    "holding_costs": 1175,
+    "seller_financing_amount": 40000.0,
+    "seller_financing_rate": 0.0,
+    "seller_financing_term": 120.0,
+    "closing_costs": 5800.0,
+    "renovation_costs": 24435.0,
+    "marketing_costs": 0.0,
+    "holding_costs": 1175.0,
+    "monthly_income": {
+      "rental_income": 1900.0,
+      "parking_income": 0.0,
+      "laundry_income": 0.0,
+      "other_income": 0.0,
+      "income_notes": ""
+    },
+    "monthly_expenses": {
+      "property_tax": 153.0,
+      "insurance": 90.0,
+      "repairs": 2.0,
+      "capex": 2.0,
+      "property_management": 0.0,
+      "hoa_fees": 0.0,
+      "utilities": {
+        "water": 0.0,
+        "electricity": 0.0,
+        "gas": 0.0,
+        "trash": 0.0
+      },
+      "other_expenses": 0.0,
+      "expense_notes": ""
+    },
     "partners": [
       {
         "name": "BJ Marshall",
@@ -24,30 +47,7 @@
         "name": "Brian Poole",
         "equity_share": 50
       }
-    ],
-    "monthly_income": {
-      "rental_income": 1900,
-      "parking_income": 0,
-      "laundry_income": 0,
-      "other_income": 0,
-      "income_notes": ""
-    },
-    "monthly_expenses": {
-      "property_tax": 153,
-      "insurance": 0,
-      "repairs": 2,
-      "capex": 2,
-      "property_management": 0,
-      "hoa_fees": 0,
-      "utilities": {
-        "water": 0,
-        "electricity": 0,
-        "gas": 0,
-        "trash": 0
-      },
-      "other_expenses": 0,
-      "expense_notes": ""
-    }
+    ]
   },
   {
     "address": "2212 Logan Street, Harrisburg, PA 17102, United States of America, Harrisburg, Pennsylvania, 17102",

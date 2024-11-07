@@ -898,5 +898,70 @@
       "reimbursement_status": "completed",
       "documentation": null
     }
+  },
+  {
+    "property_id": "5451 El Camino, Columbia, MD 21044, United States of America, Columbia, Maryland, 21044",
+    "type": "income",
+    "category": "Rent",
+    "description": "2024.11 PennyMac",
+    "amount": 2325.0,
+    "date": "2024-11-01",
+    "collector_payer": "BJ Marshall",
+    "documentation_file": "2024.11_El_Camino_Rent.png",
+    "reimbursement": {
+      "date_shared": "2024-11-01",
+      "share_description": "Auto-completed - Single owner property",
+      "reimbursement_status": "completed"
+    },
+    "id": "58"
+  },
+  {
+    "property_id": "454 Guilford Avenue, Hagerstown, MD 21740, United States of America, Hagerstown, Maryland, 21740",
+    "type": "income",
+    "category": "Rent",
+    "description": "2024.11 Rent",
+    "amount": 1900.0,
+    "date": "2024-11-06",
+    "collector_payer": "BJ Marshall",
+    "documentation_file": "2024.11_Guilford_Rent_and_Utilities.png",
+    "id": "59",
+    "reimbursement": {
+      "date_shared": "2024-11-04",
+      "share_description": "Shared via Zelle",
+      "reimbursement_status": "completed",
+      "documentation": "reimb_2024.11_Guilford_Rent_and_Utilities.png"
+    }
+  },
+  {
+    "property_id": "1911 Grinnalds Avenue, Baltimore, MD 21223, United States of America",
+    "type": "expense",
+    "category": "Asset Acquisition",
+    "description": "2024.11.07 Grinnalds Rental License Fee",
+    "amount": 155.0,
+    "date": "2024-11-07",
+    "collector_payer": "BJ Marshall",
+    "documentation_file": "2024.11.07_Grinnalds_Rental_License_Fee.pdf",
+    "reimbursement": {
+      "date_shared": "2024-11-07",
+      "share_description": "Auto-completed - Single owner property",
+      "reimbursement_status": "completed"
+    },
+    "id": "60"
+  },
+  {
+    "property_id": "454 Guilford Avenue, Hagerstown, MD 21740, United States of America, Hagerstown, Maryland, 21740",
+    "type": "expense",
+    "category": "Mortgage",
+    "description": "2024.11 Fay Mortgage",
+    "amount": 830.2,
+    "date": "2024-11-01",
+    "collector_payer": "BJ Marshall",
+    "documentation_file": "2024.11_Guilford_Mortgage.png",
+    "reimbursement": {
+      "date_shared": "2024-11-04",
+      "share_description": "Shared via Zelle",
+      "reimbursement_status": "completed"
+    },
+    "id": "61"
   }
 ]

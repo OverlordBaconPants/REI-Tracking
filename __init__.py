@@ -2,6 +2,7 @@ from flask import Flask
 from flask_login import LoginManager, login_required
 from config import Config
 from models import User
+from routes.api import api_bp
 import os
 import dash
 import logging

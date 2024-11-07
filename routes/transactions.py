@@ -26,6 +26,9 @@ def add_transactions():
     logging.info(f"Add transaction route accessed by user: {current_user.name} (ID: {current_user.id})")
 
     properties = get_properties_for_user(current_user.id, current_user.name)
+
+    # Debug log the properties data
+    logging.debug(f"Properties data: {json.dumps(properties, indent=2)}")
     
     if request.method == 'POST':
         logging.info("Processing POST request for add_transaction")
@@ -81,7 +84,9 @@ def add_transactions():
             return redirect(url_for('transactions.add_transactions'))
 
     # For GET requests, render the template
-    return render_template('transactions/add_transactions.html', properties=properties)
+    return render_template(
+        'transactions/add_transactions.html', 
+        properties=properties)
 
 @transactions_bp.route('/uploads/<filename>')
 @login_required
@@ -253,6 +258,12 @@ def edit_transactions(transaction_id):
         if not transaction:
             flash_message('Transaction not found', 'error')
             return redirect(url_for('transactions.view_transactions'))
+        
+        # Get properties and ensure proper partner data
+        properties = get_properties_for_user(current_user.id, current_user.name, current_user.role == 'Admin')
+        
+        # Debug log the properties data
+        logging.debug(f"Properties data for edit: {json.dumps(properties, indent=2)}")
 
         if request.method == 'POST':
             try:
@@ -339,7 +350,13 @@ def remove_transactions():
 @login_required
 def view_transactions():
     try:
-        current_app.logger.info(f"View transactions accessed by user: {current_user.id}")
+        user_info = {
+            'id': current_user.id,
+            'name': current_user.name,
+            'role': current_user.role,
+            'is_authenticated': current_user.is_authenticated
+        }
+        current_app.logger.info(f"View transactions accessed by user: {user_info}")
         return render_template('transactions/view_transactions.html', show_bulk_import=True)
     except Exception as e:
         current_app.logger.error(f"Error in view_transactions: {str(e)}")
@@ -389,13 +406,6 @@ def get_artifact(filename):
         current_app.logger.error(f"Error serving artifact {filename}: {str(e)}")
         current_app.logger.error(f"Full error traceback: {traceback.format_exc()}")
         abort(404)
-
-@transactions_bp.route('/api/categories')
-@login_required
-def get_transaction_categories():
-    transaction_type = request.args.get('type')
-    categories = get_categories(transaction_type)
-    return jsonify(categories)
 
 @transactions_bp.route('/api/partners')
 @login_required

@@ -9,19 +9,27 @@ import re
 
 def get_properties_for_user(user_id, user_name, is_admin=False):
     logging.debug(f"Getting properties for user: {user_name} (ID: {user_id}), is_admin: {is_admin}")
-    properties = read_json(current_app.config['PROPERTIES_FILE'])
-    
-    if is_admin:
-        logging.info(f"Admin user, returning all {len(properties)} properties")
-        return properties
-    
-    user_properties = [
-        prop for prop in properties
-        if any(partner.get('name').lower() == user_name.lower() for partner in prop.get('partners', []))
-    ]
-    
-    logging.info(f"Found {len(user_properties)} properties for user {user_name}")
-    return user_properties
+    try:
+        properties = read_json(current_app.config['PROPERTIES_FILE'])
+        logging.debug(f"Read properties file, found {len(properties)} properties")
+        
+        if is_admin:
+            logging.info(f"Admin user, returning all {len(properties)} properties")
+            return properties
+        
+        user_properties = [
+            prop for prop in properties
+            if any(partner.get('name', '').lower() == user_name.lower() for partner in prop.get('partners', []))
+        ]
+        
+        logging.debug(f"Found {len(user_properties)} properties for user {user_name}")
+        logging.debug(f"User properties: {user_properties}")
+        return user_properties
+        
+    except Exception as e:
+        logging.error(f"Error in get_properties_for_user: {str(e)}")
+        logging.error(traceback.format_exc())
+        raise
 
 def add_transaction(transaction_data):
     try:

@@ -7,6 +7,7 @@ import dash_bootstrap_components as dbc
 import pandas as pd
 import json
 import urllib.parse
+from datetime import datetime, timedelta
 
 # Flask imports
 from flask_login import current_user
@@ -23,9 +24,21 @@ from reportlab.lib.enums import TA_CENTER
 
 # Utility imports
 import traceback
+import logging
+from typing import Dict, List, Optional, Union, Any
 
 # Local imports
 from services.transaction_service import get_transactions_for_view, get_properties_for_user
+
+# Configure logging
+logger = logging.getLogger(__name__)
+
+# Constants for validation
+MAX_DESCRIPTION_LENGTH = 500
+VALID_TRANSACTION_TYPES = ['income', 'expense']
+VALID_REIMBURSEMENT_STATUS = ['all', 'pending', 'completed']
+MIN_DATE = '2000-01-01'  # Reasonable minimum date
+MAX_FUTURE_DAYS = 30     # Maximum days into future for datesr
 
 # Base columns definition for the transactions table
 base_columns = [
@@ -40,6 +53,56 @@ base_columns = [
     {'name': 'Reimb. Description', 'id': 'share_description'},
     {'name': 'Reimb. Doc', 'id': 'reimbursement_documentation', 'presentation': 'markdown'},
 ]
+
+def validate_date_range(start_date: Optional[str], end_date: Optional[str]) -> tuple[bool, str]:
+    """
+    Validates the date range for transactions.
+    
+    Args:
+        start_date: Start date string in YYYY-MM-DD format
+        end_date: End date string in YYYY-MM-DD format
+        
+    Returns:
+        tuple: (is_valid: bool, error_message: str)
+    """
+    try:
+        # Allow None values for open-ended ranges
+        if not start_date and not end_date:
+            return True, ""
+
+        if start_date:
+            start = datetime.strptime(start_date, '%Y-%m-%d')
+            min_date = datetime.strptime(MIN_DATE, '%Y-%m-%d')
+            if start < min_date:
+                return False, f"Start date cannot be before {MIN_DATE}"
+
+        if end_date:
+            end = datetime.strptime(end_date, '%Y-%m-%d')
+            max_date = datetime.now() + timedelta(days=MAX_FUTURE_DAYS)
+            if end > max_date:
+                return False, f"End date cannot be more than {MAX_FUTURE_DAYS} days in the future"
+
+        if start_date and end_date and start > end:
+            return False, "Start date cannot be after end date"
+
+        return True, ""
+    except ValueError as e:
+        return False, f"Invalid date format: {str(e)}"
+
+def validate_property_id(property_id: Optional[str], available_properties: List[Dict]) -> bool:
+    """
+    Validates that the property ID exists in the available properties list.
+    
+    Args:
+        property_id: Property ID to validate
+        available_properties: List of available properties
+        
+    Returns:
+        bool: True if valid, False otherwise
+    """
+    if not property_id or property_id == 'all':
+        return True
+    return any(prop['address'] == property_id for prop in available_properties)
 
 def create_transactions_dash(flask_app):
     """
@@ -246,51 +309,91 @@ def create_transactions_dash(flask_app):
         ),
     ], fluid=True)
 
+    def create_header(type_str, property_str, start_str, end_str):
+        """Helper function to create header with truncated address"""
+        # If property string exists and isn't 'All Properties', truncate it
+        if property_str and property_str != 'All Properties':
+            # Split by commas and take only the first two parts
+            parts = property_str.split(',')
+            if len(parts) >= 2:
+                property_str = ', '.join(parts[:2]).strip()
+            
+        return f"{type_str} Transactions for {property_str} from {start_str} to {end_str}"
+
     # Register callbacks
     @dash_app.callback(
         [Output('transactions-table', 'data'),
-        Output('transactions-header', 'children'),
-        Output('property-filter', 'options'),
-        Output('transactions-table', 'columns')],
-        [Input('refresh-trigger', 'data'),  # Changed from transaction-update-trigger to refresh-trigger
-        Input('property-filter', 'value'),
-        Input('type-filter', 'value'),
-        Input('reimbursement-filter', 'value'),
-        Input('date-range', 'start_date'),
-        Input('date-range', 'end_date')]  # Removed duplicate refresh-trigger input
+         Output('transactions-header', 'children'),
+         Output('property-filter', 'options'),
+         Output('transactions-table', 'columns')],
+        [Input('refresh-trigger', 'data'),
+         Input('property-filter', 'value'),
+         Input('type-filter', 'value'),
+         Input('reimbursement-filter', 'value'),
+         Input('date-range', 'start_date'),
+         Input('date-range', 'end_date')]
     )
     def update_table(refresh_trigger, property_id, transaction_type, reimbursement_status, start_date, end_date):
+        """
+        Updates the transactions table based on filter criteria.
+        
+        Args:
+            refresh_trigger: Trigger for refresh
+            property_id: Selected property ID
+            transaction_type: Type of transaction (income/expense)
+            reimbursement_status: Status of reimbursement
+            start_date: Start date for filtering
+            end_date: End date for filtering
+            
+        Returns:
+            tuple: (table_data, header, property_options, columns)
+        """
         try:
-            current_app.logger.debug("Starting update_table callback")
-            
-            # Get properties
-            properties = get_properties_for_user(current_user.id, current_user.name, current_user.role == 'Admin')
-            current_app.logger.debug(f"Retrieved properties: {properties}")
-            
+            logger.debug(f"Updating table with filters: property={property_id}, "
+                        f"type={transaction_type}, status={reimbursement_status}, "
+                        f"dates={start_date} to {end_date}")
+
+            # Validate inputs
+            if transaction_type and transaction_type not in VALID_TRANSACTION_TYPES:
+                logger.warning(f"Invalid transaction type received: {transaction_type}")
+                return [], "Invalid transaction type", [], base_columns
+
+            if reimbursement_status not in VALID_REIMBURSEMENT_STATUS:
+                logger.warning(f"Invalid reimbursement status received: {reimbursement_status}")
+                return [], "Invalid reimbursement status", [], base_columns
+
+            date_valid, date_error = validate_date_range(start_date, end_date)
+            if not date_valid:
+                logger.warning(f"Invalid date range: {date_error}")
+                return [], date_error, [], base_columns
+
+            # Get and validate properties
+            try:
+                properties = get_properties_for_user(
+                    current_user.id,
+                    current_user.name,
+                    current_user.role == 'Admin'
+                )
+                if not validate_property_id(property_id, properties):
+                    logger.warning(f"Invalid property ID received: {property_id}")
+                    return [], "Invalid property selected", [], base_columns
+                
+            except Exception as e:
+                logger.error(f"Error retrieving properties: {str(e)}")
+                return [], "Error loading properties", [], base_columns
+
             # Create property options
             property_options = [{'label': 'All Properties', 'value': 'all'}]
             for prop in properties:
                 if prop.get('address'):
-                    full_address = prop['address']
-                    display_address = full_address.split(',')[0] if ',' in full_address else full_address
+                    parts = prop['address'].split(',')
+                    display_address = ', '.join(parts[:2]).strip() if len(parts) >= 2 else parts[0]
                     property_options.append({
                         'label': display_address,
-                        'value': full_address
+                        'value': prop['address']
                     })
 
-            # Create filter options dictionary
-            filter_options = {
-                'property_id': property_id,
-                'transaction_type': transaction_type,
-                'reimbursement_status': reimbursement_status,
-                'start_date': start_date,
-                'end_date': end_date
-            }
-
-            # Encode filter options for URL
-            encoded_filter_options = urllib.parse.quote(json.dumps(filter_options))
-
-            # Get transactions - Pass None as property_id when 'all' is selected
+            # Get transactions with error handling
             try:
                 effective_property_id = None if property_id == 'all' or not property_id else property_id
                 transactions = get_transactions_for_view(
@@ -302,33 +405,34 @@ def create_transactions_dash(flask_app):
                     end_date,
                     current_user.role == 'Admin'
                 )
-                current_app.logger.debug(f"Retrieved {len(transactions)} transactions")
+                logger.info(f"Retrieved {len(transactions)} transactions for user {current_user.id}")
+                
             except Exception as e:
-                current_app.logger.error(f"Error getting transactions: {str(e)}")
+                logger.error(f"Error retrieving transactions: {str(e)}")
                 return [], "Error loading transactions", property_options, base_columns
 
-            if not transactions:
-                return [], "No transactions found", property_options, base_columns
+            # Process transactions
+            try:
+                df = pd.DataFrame(transactions)
+                if df.empty:
+                    logger.info("No transactions found matching criteria")
+                    return [], "No transactions found", property_options, base_columns
 
-            # Convert to DataFrame
-            df = pd.DataFrame(transactions)
+                # Apply type filter
+                if transaction_type:
+                    df = df[df['type'].str.lower() == transaction_type.lower()]
 
-            # Apply type filter if specified
-            if transaction_type:
-                df = df[df['type'].str.lower() == transaction_type.lower()]
+                # Format amounts with validation
+                df['amount'] = df['amount'].apply(
+                    lambda x: f"${abs(float(x)):.2f}" if pd.notnull(x) and isinstance(x, (int, float)) else ''
+                )
 
-            # Handle amount formatting
-            if 'amount' in df.columns:
-                df['amount'] = df['amount'].apply(lambda x: f"${abs(float(x)):.2f}" if pd.notnull(x) else '')
-
-            # Handle documentation links
-            if 'documentation_file' in df.columns:
+                # Format documentation links
                 df['documentation_file'] = df['documentation_file'].apply(
                     lambda x: f'[View/Download]({url_for("transactions.get_artifact", filename=x)})' if x else ''
                 )
 
-            # Handle reimbursement documentation
-            if 'reimbursement_documentation' in df.columns:
+                # Handle reimbursement documentation with validation
                 df['reimbursement_documentation'] = df.apply(
                     lambda row: (f'[View/Download]({url_for("transactions.get_artifact", filename=row.get("reimbursement", {}).get("documentation"))})'
                                 if isinstance(row.get('reimbursement'), dict) 
@@ -337,46 +441,42 @@ def create_transactions_dash(flask_app):
                     axis=1
                 )
 
-            # Add edit links for admin users
-            columns = base_columns.copy()
-            if current_user.is_authenticated and current_user.role == 'Admin':
-                
-                # Create filter state
-                filter_state = {
-                    'property_id': property_id,
-                    'transaction_type': transaction_type,
-                    'reimbursement_status': reimbursement_status,
-                    'start_date': start_date,
-                    'end_date': end_date
-                }
-                encoded_filters = urllib.parse.quote(json.dumps(filter_state))
+                # Add edit links for admin users
+                columns = base_columns.copy()
+                if current_user.is_authenticated and current_user.role == 'Admin':
+                    filter_options = {
+                        'property_id': property_id,
+                        'transaction_type': transaction_type,
+                        'reimbursement_status': reimbursement_status,
+                        'start_date': start_date,
+                        'end_date': end_date
+                    }
+                    encoded_filter_options = urllib.parse.quote(json.dumps(filter_options))
+                    
+                    df['edit'] = df.apply(
+                        lambda row: f'<a href="/transactions/edit/{str(row["id"])}?filters={encoded_filter_options}" target="_parent" class="btn btn-sm btn-primary">Edit</a>', 
+                        axis=1
+                    )
+                    columns.append({'name': 'Edit', 'id': 'edit', 'presentation': 'markdown'})
 
-                df['edit'] = df.apply(
-                    lambda row: f'<a href="/transactions/edit/{str(row["id"])}?filters={encoded_filters}" target="_parent" class="btn btn-sm btn-primary">Edit</a>', 
-                    axis=1
+                # Create header
+                header = create_header(
+                    'Income' if transaction_type == 'income' else 'Expense' if transaction_type == 'expense' else 'All',
+                    property_id if property_id and property_id != 'all' else 'All Properties',
+                    start_date or 'Earliest',
+                    end_date or 'Latest'
                 )
-                columns.append({'name': 'Edit', 'id': 'edit', 'presentation': 'markdown'})
 
-            # Create header
-            type_str = ('Income' if transaction_type == 'income' 
-                    else 'Expense' if transaction_type == 'expense' 
-                    else 'All')
-            property_str = (property_id[:40] + '...' if property_id and property_id != 'all' and len(property_id) > 40
-                        else property_id if property_id and property_id != 'all'
-                        else 'All Properties')
-            start_str = start_date if start_date else 'Earliest'
-            end_str = end_date if end_date else 'Latest'
-            header = f"{type_str} Transactions for {property_str} from {start_str} to {end_str}"
+                logger.debug(f"Returning {len(df)} processed transactions")
+                return df.to_dict('records'), header, property_options, columns
 
-            # Log the final data being returned
-            current_app.logger.debug(f"Returning {len(df)} transactions")
-            
-            return df.to_dict('records'), header, property_options, columns
-                
+            except Exception as e:
+                logger.error(f"Error processing transactions: {str(e)}")
+                return [], "Error processing data", property_options, base_columns
+
         except Exception as e:
-            current_app.logger.error(f"Error in update_table: {str(e)}")
-            current_app.logger.error(traceback.format_exc())
-            return [], "Error loading data", [{'label': 'All Properties', 'value': 'all'}], base_columns
+            logger.error(f"Unexpected error in update_table: {str(e)}\n{traceback.format_exc()}")
+            return [], "An unexpected error occurred", [], base_columns
         
     # Filter options update callback
     @dash_app.callback(
@@ -491,14 +591,37 @@ def create_transactions_dash(flask_app):
 
     return dash_app
 
-def process_summary_data(data):
-    """Process transaction data for summary report"""
-    df = pd.DataFrame(data)
-    summary = {
-        'income': df[df['type'] == 'income'].groupby('category')['amount'].agg(['count', 'sum']),
-        'expense': df[df['type'] == 'expense'].groupby('category')['amount'].agg(['count', 'sum'])
-    }
-    return summary
+# Helper functions with added validation
+def process_summary_data(data: List[Dict]) -> Dict:
+    """
+    Process transaction data for summary report with validation.
+    
+    Args:
+        data: List of transaction dictionaries
+        
+    Returns:
+        Dict: Processed summary data
+    """
+    try:
+        df = pd.DataFrame(data)
+        if df.empty:
+            logger.warning("No data provided for summary processing")
+            return {'income': pd.DataFrame(), 'expense': pd.DataFrame()}
+
+        # Validate amount column
+        df['amount'] = pd.to_numeric(df['amount'], errors='coerce')
+        invalid_amounts = df['amount'].isna().sum()
+        if invalid_amounts > 0:
+            logger.warning(f"Found {invalid_amounts} invalid amount values")
+
+        summary = {
+            'income': df[df['type'] == 'income'].groupby('category')['amount'].agg(['count', 'sum']),
+            'expense': df[df['type'] == 'expense'].groupby('category')['amount'].agg(['count', 'sum'])
+        }
+        return summary
+    except Exception as e:
+        logger.error(f"Error processing summary data: {str(e)}")
+        return {'income': pd.DataFrame(), 'expense': pd.DataFrame()}
 
 def create_summary_report(summary_data, styles):
     """Create summary report elements"""

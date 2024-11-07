@@ -1,65 +1,52 @@
 const editTransactionsModule = {
+    form: null,
+    elements: {},
+    initialValues: {},
+
     init: async function() {
-        try {
-            console.log('Initializing edit transactions module');
-            this.form = document.getElementById('edit-transaction-form');
-            this.isSubmitting = false;
-            
-            if (this.form) {
-                console.log('Form found, initializing components');
-                await this.initializeModule();
-                this.initEventListeners();
-            } else {
-                console.error('Edit Transaction form not found');
-                toastr.error('Error loading form');
-            }
-        } catch (error) {
-            console.error('Error initializing Edit Transactions module:', error);
-            toastr.error('Error loading Edit Transactions module: ' + error.message);
+        console.log('Form found, initializing components');
+        this.form = document.getElementById('edit-transaction-form');
+        
+        if (this.form) {
+            console.log('Starting module initialization');
+            await this.initializeModule();
+        } else {
+            console.error('Edit transaction form not found');
         }
     },
 
     initializeModule: async function() {
-        try {
-            console.log('Starting module initialization');
-            
-            // Debug initial elements
-            const elements = {
-                form: document.getElementById('edit-transaction-form'),
-                property: document.getElementById('property_id'),
-                category: document.getElementById('category'),
-                collectorPayer: document.getElementById('collector_payer'),
-                type: document.querySelector('input[name="type"]:checked')
-            };
-            
-            console.log('Initial elements:', elements);
-            
-            // Debug initial values
-            const initialValues = {
-                propertyValue: elements.property?.value,
-                categoryValue: elements.category?.value,
-                categoryDataset: elements.category?.dataset.currentValue,
-                collectorPayerValue: elements.collectorPayer?.value,
-                collectorPayerDataset: elements.collectorPayer?.dataset.currentValue,
-                typeValue: elements.type?.value
-            };
-            
-            console.log('Initial values:', initialValues);
-    
-            await this.populateCategories();
-            console.log('Categories populated');
-            
-            await this.populatePartners();
-            console.log('Partners populated');
-            
-            this.updateReimbursementDetails();
-            this.updateCollectorPayerLabel();
-            
-            console.log('Module initialization complete');
-        } catch (error) {
-            console.error('Initialization error:', error);
-            throw error;
-        }
+        // Get form elements
+        this.elements = {
+            form: this.form,
+            property: document.getElementById('property_id'),
+            category: document.getElementById('category'),
+            collectorPayer: document.getElementById('collector_payer'),
+            type: document.querySelector('input[name="type"]:checked'),
+            collectorPayerLabel: document.querySelector('label[for="collector_payer"]')
+        };
+
+        console.log('Initial elements:', this.elements);
+
+        // Store initial values
+        this.initialValues = {
+            propertyValue: this.elements.property?.value || '',
+            categoryValue: this.elements.category?.value || '',
+            categoryDataset: this.elements.category?.dataset?.initialValue || '',
+            collectorPayerValue: this.elements.collectorPayer?.value || '',
+            collectorPayerDataset: this.elements.collectorPayer?.dataset?.initialValue || '',
+            typeValue: this.elements.type?.value || ''
+        };
+
+        console.log('Initial values:', this.initialValues);
+
+        // Populate initial data
+        const initialType = this.initialValues.typeValue || 'expense';
+        await this.populateCategories(initialType);
+        this.updateCollectorPayerLabel(initialType);
+        console.log('Categories populated');
+
+        this.updateCollectorPayerOptions();
     },
 
     initEventListeners: function() {
@@ -122,133 +109,227 @@ const editTransactionsModule = {
         }
     },
 
-    populateCategories: async function() {
+    populateCategories: async function(type) {
+        console.log('Fetching categories for type:', type);
         try {
-            const typeElement = document.querySelector('input[name="type"]:checked');
-            if (!typeElement) {
-                console.log('No transaction type selected, skipping category population');
-                return;
-            }
-    
-            console.log('Fetching categories for type:', typeElement.value);
-            const response = await fetch(`/transactions/api/categories?type=${typeElement.value}`);
-            
+            const response = await fetch(`/api/categories?type=${type}`);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-    
+            
             const categories = await response.json();
-            console.log('Received categories:', categories);
-    
-            const categorySelect = document.getElementById('category');
-            if (!categorySelect) {
-                throw new Error('Category select element not found');
-            }
-    
-            // Store current value and dataset value
-            const currentValue = categorySelect.value || categorySelect.dataset.currentValue;
+            const categorySelect = this.elements.category;
             
-            console.log('Category values:', {
-                currentValue: currentValue,
-                datasetValue: categorySelect.dataset.currentValue,
-                selectValue: categorySelect.value
-            });
-    
-            // Clear and rebuild select
-            categorySelect.innerHTML = '';
-            
-            // Add placeholder option
-            const placeholderOption = document.createElement('option');
-            placeholderOption.value = '';
-            placeholderOption.textContent = 'Select a category';
-            categorySelect.appendChild(placeholderOption);
-    
-            // Add category options
-            categories.forEach(category => {
-                const option = document.createElement('option');
-                option.value = category;
-                option.textContent = category;
-                if (currentValue && category === currentValue) {
-                    option.selected = true;
-                    console.log('Selected category:', category);
+            if (categorySelect) {
+                // Clear existing options
+                categorySelect.innerHTML = '<option value="">Select a category</option>';
+                
+                // Add new options
+                if (Array.isArray(categories)) {
+                    categories.forEach(category => {
+                        const option = document.createElement('option');
+                        option.value = category;
+                        option.textContent = category;
+                        
+                        // Select the option if it matches the initial value
+                        if (category === this.initialValues.categoryDataset) {
+                            option.selected = true;
+                        }
+                        
+                        categorySelect.appendChild(option);
+                    });
                 }
-                categorySelect.appendChild(option);
-            });
-    
-            categorySelect.disabled = false;
-            console.log('Category population complete. Final value:', categorySelect.value);
+            }
         } catch (error) {
             console.error('Error in populateCategories:', error);
-            toastr.error('Error loading categories: ' + error.message);
         }
     },
 
-    updateCollectorPayerLabel: function() {
-        const type = document.querySelector('input[name="type"]:checked')?.value;
-        const label = document.getElementById('collector_payer_label');
-        if (label && type) {
-            label.textContent = type === 'income' ? 'Received by:' : 'Paid by:';
+    updateCollectorPayerLabel: function(type) {
+        console.log('Updating collector/payer label for type:', type);
+        if (this.elements.collectorPayerLabel) {
+            this.elements.collectorPayerLabel.textContent = type === 'income' ? 'Received by:' : 'Paid by:';
+        } else {
+            console.error('Collector/Payer label element not found');
         }
     },
 
-    populatePartners: async function() {
+    toggleReimbursementSection: function(propertyData) {
+        console.log('Toggling reimbursement section with property data:', JSON.stringify(propertyData, null, 2));
+        
+        const reimbursementSection = document.getElementById('reimbursement-section');
+        if (!reimbursementSection) {
+            console.error('Reimbursement section not found');
+            return;
+        }
+    
+        let hasOnlyOwner = false;
+        if (propertyData?.partners) {
+            // Check if there's only one partner with 100% equity
+            hasOnlyOwner = propertyData.partners.length === 1 && 
+                           propertyData.partners[0].equity_share === 100;
+            console.log('Property has only one owner:', hasOnlyOwner);
+        }
+    
+        if (hasOnlyOwner) {
+            console.log('Single owner property - hiding reimbursement section');
+            reimbursementSection.style.display = 'none';
+            
+            // Set hidden input values for submission
+            const dateInput = document.getElementById('date');
+            const dateSharedInput = document.getElementById('date_shared');
+            const reimbursementStatusInput = document.getElementById('reimbursement_status');
+            const shareDescriptionInput = document.getElementById('share_description');
+            
+            if (dateSharedInput && dateInput) {
+                dateSharedInput.value = dateInput.value;
+                console.log('Set date_shared to:', dateInput.value);
+            }
+            if (reimbursementStatusInput) {
+                reimbursementStatusInput.value = 'completed';
+                console.log('Set reimbursement_status to: completed');
+            }
+            if (shareDescriptionInput) {
+                shareDescriptionInput.value = 'Auto-completed - Single owner property';
+                console.log('Set share_description');
+            }
+        } else {
+            console.log('Multiple owners or no owner data - showing reimbursement section');
+            reimbursementSection.style.display = '';
+        }
+    },
+
+    updateCollectorPayerOptions: function() {
+        console.log('Updating collector/payer options');
+        const propertySelect = document.getElementById('property_id');
+        const collectorPayerSelect = document.getElementById('collector_payer');
+        
+        if (!propertySelect || !collectorPayerSelect) {
+            console.error('Property select or collector_payer select not found');
+            return;
+        }
+    
+        // Clear existing options
+        collectorPayerSelect.innerHTML = '';
+    
+        const selectedProperty = propertySelect.options[propertySelect.selectedIndex];
+        if (propertySelect.selectedIndex <= 0 || !propertySelect.value) {
+            console.log('No property selected');
+            return;
+        }
+    
         try {
-            const propertySelect = document.getElementById('property_id');
-            if (!propertySelect || !propertySelect.value) {
-                console.log('No property selected, skipping partner population');
+            const propertyData = JSON.parse(selectedProperty.dataset.property);
+            console.log('Parsed property data:', propertyData);
+            
+            // Toggle reimbursement section first
+            this.toggleReimbursementSection(propertyData);
+            
+            const partners = propertyData.partners || [];
+            if (partners.length === 0) {
+                console.log('No partners found for selected property');
+                collectorPayerSelect.innerHTML = '<option value="">No partners available</option>';
                 return;
             }
     
-            console.log('Fetching partners for property:', propertySelect.value);
-            const response = await fetch(`/transactions/api/partners?property_id=${encodeURIComponent(propertySelect.value)}`);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-    
-            const partners = await response.json();
-            console.log('Received partners:', partners);
-    
-            const collectorPayerSelect = document.getElementById('collector_payer');
-            if (!collectorPayerSelect) {
-                throw new Error('Collector/Payer select element not found');
-            }
-    
-            // Store current value and dataset value
-            const currentValue = collectorPayerSelect.value || collectorPayerSelect.dataset.currentValue;
-    
-            console.log('Collector/Payer values:', {
-                currentValue: currentValue,
-                datasetValue: collectorPayerSelect.dataset.currentValue,
-                selectValue: collectorPayerSelect.value
-            });
-    
-            // Clear and rebuild select
-            collectorPayerSelect.innerHTML = '';
-            
-            // Add placeholder option
-            const placeholderOption = document.createElement('option');
-            placeholderOption.value = '';
-            placeholderOption.textContent = 'Select a partner';
-            collectorPayerSelect.appendChild(placeholderOption);
-    
-            // Add partner options
+            // Add partners as options
             partners.forEach(partner => {
                 const option = document.createElement('option');
                 option.value = partner.name;
                 option.textContent = partner.name;
-                if (currentValue && partner.name === currentValue) {
-                    option.selected = true;
-                    console.log('Selected partner:', partner.name);
-                }
                 collectorPayerSelect.appendChild(option);
+                console.log('Added partner option:', partner.name);
             });
-    
-            collectorPayerSelect.disabled = false;
-            console.log('Partner population complete. Final value:', collectorPayerSelect.value);
+        } catch (error) {
+            console.error('Error parsing property data:', error);
+            console.log('Error details:', error.message);
+            collectorPayerSelect.innerHTML = '<option value="">Error loading partners</option>';
+        }
+    },
+
+    populatePartners: async function(propertyId) {
+        if (!propertyId) return;
+        
+        console.log('Fetching partners for property:', propertyId);
+        
+        try {
+            const response = await fetch(`/api/partners?property_id=${encodeURIComponent(propertyId)}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const partners = await response.json();
+            const partnerSelect = this.elements.collectorPayer;
+            
+            if (partnerSelect) {
+                // Clear existing options
+                partnerSelect.innerHTML = '<option value="">Select a partner</option>';
+                
+                // Add new options
+                partners.forEach(partner => {
+                    const option = document.createElement('option');
+                    option.value = partner;
+                    option.textContent = partner;
+                    
+                    // Select the option if it matches the initial value
+                    if (partner === this.initialValues.collectorPayerDataset) {
+                        option.selected = true;
+                    }
+                    
+                    partnerSelect.appendChild(option);
+                });
+            }
         } catch (error) {
             console.error('Error in populatePartners:', error);
-            toastr.error('Error loading partners: ' + error.message);
+        }
+    },
+
+    setupEventListeners: function() {
+        // Type radio buttons change event
+        const typeRadios = document.querySelectorAll('input[name="type"]');
+        typeRadios.forEach(radio => {
+            radio.addEventListener('change', (event) => {
+                this.populateCategories(event.target.value);
+                this.updateCollectorPayerLabel(event.target.value);
+            });
+        });
+
+        // Add date input change listener to update hidden date_shared
+        const dateInput = document.getElementById('date');
+        if (dateInput) {
+            dateInput.addEventListener('change', (event) => {
+                const dateSharedInput = document.getElementById('date_shared');
+                if (dateSharedInput && !this.hasPartners()) {
+                    dateSharedInput.value = event.target.value;
+                }
+            });
+        }
+
+        // Property select change event
+        if (this.elements.property) {
+            this.elements.property.addEventListener('change', (event) => {
+                console.log('Property selection changed');
+                this.updateCollectorPayerOptions();
+            });
+        }
+
+        // Form submission handling
+        if (this.form) {
+            this.form.addEventListener('submit', this.handleSubmit.bind(this));
+        }
+    },
+
+    hasPartners: function() {
+        const propertySelect = document.getElementById('property_id');
+        if (!propertySelect || propertySelect.selectedIndex <= 0) return false;
+
+        try {
+            const selectedProperty = propertySelect.options[propertySelect.selectedIndex];
+            const propertyData = JSON.parse(selectedProperty.dataset.property);
+            return (propertyData.partners || []).length > 1;
+        } catch (error) {
+            console.error('Error checking for partners:', error);
+            return false;
         }
     },
 

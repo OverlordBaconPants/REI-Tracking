@@ -59,44 +59,61 @@ const analysisModule = {
     },
 
     init: function() {
-        this.initToastr(); // Initialize toastr settings
+        this.initToastr();
         console.log('AnalysisModule initialized');
+        
         const analysisForm = document.querySelector('#analysisForm');
         if (analysisForm) {
             console.log('Analysis form found');
             
-            // Check if we're in edit mode
+            // Check if we're in edit mode by looking for an analysis_id in the URL
             const urlParams = new URLSearchParams(window.location.search);
             const analysisId = urlParams.get('analysis_id');
             
+            // Remove any existing event listeners
+            analysisForm.removeEventListener('submit', this.handleSubmit);
+            analysisForm.removeEventListener('submit', this.handleEditSubmit);
+            
             if (analysisId) {
-                // Edit mode - use handleEditSubmit
-                console.log('Edit mode detected, using handleEditSubmit');
-                analysisForm.addEventListener('submit', (event) => this.handleEditSubmit(event, analysisId));
+                // Edit mode
+                console.log('Edit mode detected for analysis ID:', analysisId);
+                analysisForm.addEventListener('submit', (event) => {
+                    event.preventDefault();
+                    this.handleEditSubmit(event, analysisId);
+                });
                 this.loadAnalysisData(analysisId);
+                
+                // Update button text
+                const submitBtn = document.getElementById('submitAnalysisBtn');
+                if (submitBtn) {
+                    submitBtn.textContent = 'Update Analysis';
+                }
             } else {
-                // Create mode - use handleSubmit
-                console.log('Create mode detected, using handleSubmit');
-                analysisForm.addEventListener('submit', (event) => this.handleSubmit(event));
+                // Create mode
+                console.log('Create mode detected');
+                analysisForm.addEventListener('submit', (event) => {
+                    event.preventDefault();
+                    this.handleSubmit(event);
+                });
             }
             
             this.initAddressAutocomplete();
             this.initLoanHandlers();
             this.initAnalysisTypeHandler();
         } else {
-            console.log('Analysis form not found');
+            console.error('Analysis form not found');
         }
-
-        // Set up event listeners for the new buttons
+    
+        // Set up event listeners for the buttons
         const editBtn = document.getElementById('editAnalysisBtn');
         const createNewBtn = document.getElementById('createNewAnalysisBtn');
         
         if (editBtn) {
-            editBtn.addEventListener('click', this.editAnalysis.bind(this));
+            editBtn.addEventListener('click', () => this.editAnalysis());
         }
         
         if (createNewBtn) {
-            createNewBtn.addEventListener('click', this.createNewAnalysis.bind(this));
+            createNewBtn.addEventListener('click', () => this.createNewAnalysis());
         }
     },
 
@@ -109,13 +126,11 @@ const analysisModule = {
         if (addressInput && resultsList) {
             console.log('Address input and results list found');
             addressInput.addEventListener('input', function() {
-                console.log('Input event triggered');
                 clearTimeout(timeoutId);
                 timeoutId = setTimeout(() => {
                     const query = this.value;
-                    console.log('Query:', query);
                     if (query.length > 2) {
-                        console.log('Making API call');
+                        console.log('Making API call for:', query);
                         fetch(`/api/autocomplete?query=${encodeURIComponent(query)}`)
                             .then(response => {
                                 console.log('Response status:', response.status);
@@ -126,11 +141,12 @@ const analysisModule = {
                                 }
                                 return response.json();
                             })
-                            .then(data => {
-                                console.log('API response:', data);
+                            .then(response => {
+                                console.log('API response:', response);
                                 resultsList.innerHTML = '';
-                                if (Array.isArray(data) && data.length > 0) {
-                                    data.forEach(result => {
+                                
+                                if (response.status === 'success' && response.data && Array.isArray(response.data)) {
+                                    response.data.forEach(result => {
                                         const li = document.createElement('li');
                                         li.textContent = result.formatted;
                                         li.addEventListener('click', function() {
@@ -139,13 +155,17 @@ const analysisModule = {
                                         });
                                         resultsList.appendChild(li);
                                     });
+                                    
+                                    if (response.data.length === 0) {
+                                        resultsList.innerHTML = '<li class="no-results">No matches found</li>';
+                                    }
                                 } else {
-                                    resultsList.innerHTML = '<li>No results found</li>';
+                                    throw new Error('Invalid response format');
                                 }
                             })
                             .catch(error => {
                                 console.error('Error:', error);
-                                resultsList.innerHTML = `<li>Error fetching results: ${error.message}</li>`;
+                                resultsList.innerHTML = `<li class="error">Error fetching results: ${error.message}</li>`;
                             });
                     } else {
                         resultsList.innerHTML = '';
@@ -153,13 +173,23 @@ const analysisModule = {
                 }, 300);
             });
 
+            // Close suggestions when clicking outside
             document.addEventListener('click', function(e) {
                 if (e.target !== addressInput && e.target !== resultsList) {
                     resultsList.innerHTML = '';
                 }
             });
+
+            // Prevent form submission when selecting from dropdown
+            resultsList.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            });
         } else {
-            console.error('Address input or results list not found');
+            console.error('Address input or results list not found', {
+                addressInput: !!addressInput,
+                resultsList: !!resultsList
+            });
         }
     },
 
@@ -762,6 +792,15 @@ const analysisModule = {
                                    placeholder="Monthly association costs, if any" required>
                         </div>
                     </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="entry_fee_cap_percentage" class="form-label">Entry Fee Cap (% of ARV)</label>
+                            <input type="number" class="form-control" id="entry_fee_cap_percentage" 
+                                name="entry_fee_cap_percentage" value="15" min="0" max="100" 
+                                step="1" required>
+                            <div class="form-text">Maximum entry fee as percentage of ARV</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -869,6 +908,22 @@ const analysisModule = {
                             <label for="refinance_closing_costs" class="form-label">Refinance Closing Costs</label>
                             <input type="number" class="form-control" id="refinance_closing_costs" name="refinance_closing_costs" 
                                    placeholder="All costs associated with refinance closing" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="refinance_ltv_percentage" class="form-label">Expected Refinance LTV (%)</label>
+                            <input type="number" class="form-control" id="refinance_ltv_percentage" 
+                                name="refinance_ltv_percentage" value="75" min="0" max="100" 
+                                step="1" required>
+                            <div class="form-text">Expected Loan-to-Value ratio for refinance</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="max_cash_left" class="form-label">Maximum Cash Left in Deal</label>
+                            <input type="number" class="form-control" id="max_cash_left" 
+                                name="max_cash_left" value="10000" min="0" 
+                                step="100" required>
+                            <div class="form-text">Maximum cash to leave in deal after refinance</div>
                         </div>
                     </div>
                 </div>
@@ -1053,20 +1108,21 @@ const analysisModule = {
         }
     },
 
-    handleSubmit: function(event, analysisId = null) {
+    handleSubmit: function(event) {
         event.preventDefault();
         console.log('Create form submission started');
-        
+    
         const form = event.target;
-        const formData = new FormData(form);
-        
         if (!this.validateForm(form)) {
             console.log('Form validation failed');
             return;
         }
-
-        const analysisData = Object.fromEntries(formData.entries());
-        
+    
+        const formData = new FormData(form);
+        const analysisData = {
+            ...Object.fromEntries(formData.entries())
+        };
+    
         // Get analysis type
         analysisData.analysis_type = document.getElementById('analysis_type').value;
     
@@ -1076,15 +1132,15 @@ const analysisModule = {
             if (formData.get(`loans[${i}][name]`)) {
                 analysisData.loans.push({
                     name: formData.get(`loans[${i}][name]`),
-                    amount: parseFloat(formData.get(`loans[${i}][amount]`)),
-                    down_payment: parseFloat(formData.get(`loans[${i}][down_payment]`)),
-                    interest_rate: parseFloat(formData.get(`loans[${i}][interest_rate]`)),
-                    term: parseInt(formData.get(`loans[${i}][term]`)),
-                    closing_costs: parseFloat(formData.get(`loans[${i}][closing_costs]`))
+                    amount: parseFloat(this.cleanNumericValue(formData.get(`loans[${i}][amount]`))),
+                    down_payment: parseFloat(this.cleanNumericValue(formData.get(`loans[${i}][down_payment]`))),
+                    interest_rate: parseFloat(this.cleanNumericValue(formData.get(`loans[${i}][interest_rate]`))),
+                    term: parseInt(this.cleanNumericValue(formData.get(`loans[${i}][term]`))),
+                    closing_costs: parseFloat(this.cleanNumericValue(formData.get(`loans[${i}][closing_costs]`)))
                 });
             }
         }
-   
+    
         // Base fields to convert to numbers
         const numericFields = [
             'purchase_price', 'after_repair_value', 'cash_to_seller', 'closing_costs',
@@ -1105,16 +1161,11 @@ const analysisModule = {
         // Convert numeric fields
         numericFields.forEach(field => {
             if (analysisData[field]) {
-                analysisData[field] = parseFloat(analysisData[field]);
+                analysisData[field] = parseFloat(this.cleanNumericValue(analysisData[field]));
                 console.log(`Converted ${field} to number: ${analysisData[field]}`);
             }
         });
     
-        // If we're editing an existing analysis, include the ID
-        if (analysisId) {
-            analysisData.id = analysisId;
-        }
-           
         console.log('Sending analysis data:', JSON.stringify(analysisData, null, 2));
     
         fetch('/analyses/create_analysis', {
@@ -1133,9 +1184,11 @@ const analysisModule = {
         .then(data => {
             console.log('Server response:', data);
             if (data.success) {
+                this.currentAnalysisId = data.analysis.id;
                 this.populateReportsTab(data.analysis);
                 this.switchToReportsTab();
                 this.showReportActions();
+                toastr.success('Analysis created successfully');
             } else {
                 throw new Error(data.message || 'Unknown error occurred');
             }
@@ -1143,6 +1196,110 @@ const analysisModule = {
         .catch(error => {
             console.error('Error:', error);
             toastr.error('An error occurred while creating the analysis. Please try again.');
+        });
+    },
+
+    handleEditSubmit: function(event, analysisId) {
+        event.preventDefault();
+        console.log('Edit form submission started');
+        console.log('Analysis ID:', analysisId);
+        
+        if (!analysisId) {
+            console.error('No analysis ID provided for update');
+            toastr.error('No analysis ID found. Cannot update.');
+            return;
+        }
+    
+        const form = event.target;
+        const formData = new FormData(form);
+        
+        if (!this.validateForm(form)) {
+            console.log('Form validation failed');
+            return;
+        }
+    
+        // Create analysis data object and explicitly set the ID
+        const analysisData = {
+            id: analysisId,  // Explicitly set the ID
+            ...Object.fromEntries(formData.entries())
+        };
+    
+        // Get analysis type
+        analysisData.analysis_type = document.getElementById('analysis_type').value;
+    
+        // Process loan data
+        analysisData.loans = [];
+        for (let i = 1; i <= 3; i++) {
+            if (formData.get(`loans[${i}][name]`)) {
+                analysisData.loans.push({
+                    name: formData.get(`loans[${i}][name]`),
+                    amount: parseFloat(this.cleanNumericValue(formData.get(`loans[${i}][amount]`))),
+                    down_payment: parseFloat(this.cleanNumericValue(formData.get(`loans[${i}][down_payment]`))),
+                    interest_rate: parseFloat(this.cleanNumericValue(formData.get(`loans[${i}][interest_rate]`))),
+                    term: parseInt(this.cleanNumericValue(formData.get(`loans[${i}][term]`))),
+                    closing_costs: parseFloat(this.cleanNumericValue(formData.get(`loans[${i}][closing_costs]`)))
+                });
+            }
+        }
+    
+        // Convert numeric fields
+        const numericFields = [
+            'purchase_price', 'after_repair_value', 'cash_to_seller', 'closing_costs',
+            'assignment_fee', 'marketing_costs', 'renovation_costs', 'renovation_duration',
+            'monthly_rent', 'management_percentage', 'capex_percentage',
+            'repairs_percentage', 'vacancy_percentage', 'property_taxes', 'insurance',
+            'hoa_coa_coop', 'home_square_footage', 'lot_square_footage', 'year_built'
+        ];
+    
+        // Add PadSplit-specific fields if applicable
+        if (analysisData.analysis_type.includes('PadSplit')) {
+            numericFields.push(
+                'padsplit_platform_percentage', 'utilities', 'internet',
+                'cleaning_costs', 'pest_control', 'landscaping'
+            );
+        }
+    
+        // Convert numeric fields
+        numericFields.forEach(field => {
+            if (analysisData[field]) {
+                analysisData[field] = parseFloat(this.cleanNumericValue(analysisData[field]));
+            }
+        });
+    
+        console.log('Sending updated analysis data:', JSON.stringify(analysisData, null, 2));
+    
+        // Make sure we're using the update endpoint
+        fetch('/analyses/update_analysis', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(analysisData)
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => { throw err; });
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Server response:', data);
+            if (data.success) {
+                const analysisWithId = {
+                    ...data.analysis,
+                    id: analysisId  // Ensure ID is preserved
+                };
+                this.populateReportsTab(analysisWithId);
+                this.switchToReportsTab();
+                this.showReportActions();
+                toastr.success('Analysis updated successfully');
+            } else {
+                throw new Error(data.message || 'Unknown error occurred');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            toastr.error('An error occurred while updating the analysis. Please try again.');
         });
     },
     
@@ -1153,8 +1310,8 @@ const analysisModule = {
         console.log('Raw annual cash flow:', analysis.annual_cash_flow);
         console.log('Raw operating expenses:', analysis.operating_expenses);
 
-        // Explicitly store the ID from the analysis object
-        this.currentAnalysisId = analysis.id || null;  // Add this line
+        // Store ID and get reports container
+        this.currentAnalysisId = analysis.id || null;
         const reportsContent = document.querySelector('#reports');
         
         if (!reportsContent) {
@@ -1162,93 +1319,64 @@ const analysisModule = {
             return;
         }
     
-        // Helper function to format currency
+        // Helper functions with robust error handling
         const formatCurrency = (value) => {
-            if (!value) return '$0.00';
-            // Remove existing formatting
-            const numericValue = typeof value === 'string' ? 
-                parseFloat(value.replace(/[$,]/g, '')) : 
-                value;
-            
-            return new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency: 'USD',
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            }).format(numericValue);
+            if (!value && value !== 0) return '$0.00';
+            try {
+                // Handle when value is already a number
+                if (typeof value === 'number') {
+                    return new Intl.NumberFormat('en-US', {
+                        style: 'currency',
+                        currency: 'USD',
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    }).format(value);
+                }
+                // Handle string values
+                if (typeof value === 'string') {
+                    // Remove currency symbols, commas, and spaces
+                    const numericValue = parseFloat(value.replace(/[$,\s]/g, ''));
+                    if (isNaN(numericValue)) return '$0.00';
+                    return new Intl.NumberFormat('en-US', {
+                        style: 'currency',
+                        currency: 'USD',
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    }).format(numericValue);
+                }
+                return '$0.00';
+            } catch (e) {
+                console.error('Error formatting currency:', e, 'Value:', value);
+                return '$0.00';
+            }
         };
-    
-        // Helper function to format percentages
+
         const formatPercentage = (value) => {
-            if (!value) return '0.00%';
-            // Remove existing % symbol and convert to number
-            const numericValue = typeof value === 'string' ? 
-                parseFloat(value.replace(/%/g, '')) : 
-                value;
-            
-            return `${numericValue.toFixed(2)}%`;
+            if (!value && value !== 0) return '0.00%';
+            try {
+                // Handle when value is already a number
+                if (typeof value === 'number') {
+                    return `${value.toFixed(2)}%`;
+                }
+                // Handle string values
+                if (typeof value === 'string') {
+                    // Remove % symbol and convert to number
+                    const numericValue = parseFloat(value.replace(/%/g, ''));
+                    if (isNaN(numericValue)) return '0.00%';
+                    return `${numericValue.toFixed(2)}%`;
+                }
+                return '0.00%';
+            } catch (e) {
+                console.error('Error formatting percentage:', e, 'Value:', value);
+                return '0.00%';
+            }
         };
-    
-        // Define common metrics
-        let commonMetrics = `
-            <div class="col-md-6">
-                <h5>Income and Returns</h5>
-                <p>Monthly Rent: ${formatCurrency(analysis.monthly_rent)}</p>
-                <p>Monthly Cash Flow: ${formatCurrency(analysis.net_monthly_cash_flow || analysis.monthly_cash_flow)}</p>
-                <p>Annual Cash Flow: ${formatCurrency(analysis.annual_cash_flow)}</p>
-                <p>Cash-on-Cash Return: ${formatPercentage(analysis.cash_on_cash_return)}</p>
-            </div>
-        `;
-    
-        // Define analysis-specific content
-        let specificContent = '';
-        if (analysis.analysis_type === 'BRRRR' || analysis.analysis_type === 'PadSplit BRRRR') {
-            specificContent = `
-                <div class="row mt-4">
-                    <div class="col-md-6">
-                        <h5>Investment Summary</h5>
-                        <p>Total Cash Invested: ${formatCurrency(analysis.total_cash_invested)}</p>
-                        <p>Equity Captured: ${formatCurrency(analysis.equity_captured)}</p>
-                        <p>Cash Recouped: ${formatCurrency(analysis.cash_recouped)}</p>
-                        <p>Return on Investment (ROI): ${formatPercentage(analysis.roi)}</p>
-                    </div>
-                    <div class="col-md-6">
-                        <h5>Financing Details</h5>
-                        <p>Initial Monthly Payment: ${formatCurrency(analysis.initial_monthly_payment)}</p>
-                        <p>Refinance Monthly Payment: ${formatCurrency(analysis.refinance_monthly_payment)}</p>
-                        <p>Total Monthly Expenses: ${formatCurrency(analysis.total_expenses)}</p>
-                    </div>
-                </div>
-            `;
-        } else {
-            // Long Term Rental or PadSplit LTR specific content
-            specificContent = `
-                <div class="row mt-4">
-                    <div class="col-md-6">
-                        <h5>Operating Expenses</h5>
-                        ${Object.entries(analysis.operating_expenses || {})
-                            .map(([name, value]) => `<p>${name}: ${formatCurrency(value)}</p>`)
-                            .join('')}
-                    </div>
-                    <div class="col-md-6">
-                        <h5>Investment Summary</h5>
-                        <p>Total Cash Invested: ${formatCurrency(analysis.total_cash_invested)}</p>
-                        <p>Total Monthly Operating Expenses: ${
-                            formatCurrency(
-                                Object.values(analysis.operating_expenses || {})
-                                    .reduce((sum, val) => sum + parseFloat(val.replace(/[$,]/g, '')), 0)
-                            )
-                        }</p>
-                    </div>
-                </div>
-            `;
-        }
-    
-        // Build the complete HTML
+
+        // Build the HTML with safe MAO section handling
         let html = `
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <span>${analysis.analysis_type} Analysis: ${analysis.analysis_name || 'Untitled'}</span>
+                    <span>${analysis.analysis_type || 'Analysis'}: ${analysis.analysis_name || 'Untitled'}</span>
                     <button id="downloadPdfBtn" class="btn btn-primary">Download PDF</button>
                 </div>
                 
@@ -1262,15 +1390,178 @@ const analysisModule = {
                             ${analysis.loans && analysis.loans.length > 0 ? 
                                 `<p>Loan Amount: ${formatCurrency(analysis.loans[0].amount)}</p>` : ''}
                         </div>
-                        ${commonMetrics}
+                        <div class="col-md-6">
+                            <h5>Income and Returns</h5>
+                            <p>Monthly Rent: ${formatCurrency(analysis.monthly_rent)}</p>
+                            <p>Monthly Cash Flow: ${formatCurrency(analysis.monthly_cash_flow)}</p>
+                            <p>Annual Cash Flow: ${formatCurrency(analysis.annual_cash_flow)}</p>
+                            <p>Cash-on-Cash Return: ${formatPercentage(analysis.cash_on_cash_return)}</p>
+                        </div>
                     </div>
-                    ${specificContent}
+                    ${analysis.maximum_allowable_offer ? `
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <h5>Maximum Allowable Offer</h5>
+                                <p class="d-flex align-items-center">
+                                    MAO: ${formatCurrency(analysis.maximum_allowable_offer)}
+                                    ${analysis.mao_breakdown ? `
+                                        <i class="ms-2 bi bi-info-circle" 
+                                        data-bs-toggle="tooltip" 
+                                        data-bs-html="true" 
+                                        title="${analysis.mao_breakdown.replace(/\n/g, '<br>')}"
+                                        style="cursor: pointer"></i>
+                                    ` : ''}
+                                </p>
+                            </div>
+                        </div>
+                    ` : ''}`;
+
+        // Add analysis-specific content
+        if (analysis.analysis_type === 'BRRRR' || analysis.analysis_type === 'PadSplit BRRRR') {
+            html += `
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <h5>Investment Summary</h5>
+                        <div class="card bg-light mb-3">
+                            <div class="card-body">
+                                <p class="mb-2">
+                                    <strong>Total Project Costs:</strong> ${formatCurrency(analysis.total_costs)}
+                                    <i class="ms-2 bi bi-info-circle" 
+                                       data-bs-toggle="tooltip" 
+                                       data-bs-html="true" 
+                                       title="Purchase Price + Renovation Costs + All Closing Costs"></i>
+                                </p>
+                                <p class="mb-2">
+                                    <strong>After Repair Value:</strong> ${formatCurrency(analysis.after_repair_value)}
+                                </p>
+                                <p class="mb-2">
+                                    <strong>Refinance Loan Amount:</strong> ${formatCurrency(analysis.refinance_loan_amount)}
+                                    <i class="ms-2 bi bi-info-circle" 
+                                       data-bs-toggle="tooltip" 
+                                       data-bs-html="true" 
+                                       title="New loan based on ARV × LTV%"></i>
+                                </p>
+                                <p class="mb-2">
+                                    <strong>Actual Cash Left in Deal:</strong> ${formatCurrency(analysis.actual_cash_invested)}
+                                    <i class="ms-2 bi bi-info-circle" 
+                                       data-bs-toggle="tooltip" 
+                                       data-bs-html="true" 
+                                       title="Total Project Costs - Refinance Loan Amount = Cash you can't get back through refinance"></i>
+                                </p>
+                                <p class="mb-2">
+                                    <strong>Equity Captured:</strong> ${formatCurrency(analysis.equity_captured)}
+                                    <i class="ms-2 bi bi-info-circle" 
+                                       data-bs-toggle="tooltip" 
+                                       data-bs-html="true" 
+                                       title="After Repair Value - Total Project Costs = Built-in equity after completion"></i>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>Returns Analysis</h5>
+                        <div class="card bg-light mb-3">
+                            <div class="card-body">
+                                <p class="mb-2">
+                                    <strong>Monthly Cash Flow:</strong> ${formatCurrency(analysis.monthly_cash_flow)}
+                                    <i class="ms-2 bi bi-info-circle" 
+                                       data-bs-toggle="tooltip" 
+                                       data-bs-html="true" 
+                                       title="Monthly Rent - Operating Expenses - Refinance Payment"></i>
+                                </p>
+                                <p class="mb-2">
+                                    <strong>Annual Cash Flow:</strong> ${formatCurrency(analysis.annual_cash_flow)}
+                                </p>
+                                <p class="mb-2">
+                                    <strong>Cash-on-Cash Return:</strong> ${formatPercentage(analysis.cash_on_cash_return)}
+                                    <i class="ms-2 bi bi-info-circle" 
+                                       data-bs-toggle="tooltip" 
+                                       data-bs-html="true" 
+                                       title="Annual Cash Flow ÷ Actual Cash Left in Deal"></i>
+                                </p>
+                                <p class="mb-2">
+                                    <strong>Total ROI:</strong> ${formatPercentage(analysis.roi)}
+                                    <i class="ms-2 bi bi-info-circle" 
+                                       data-bs-toggle="tooltip" 
+                                       data-bs-html="true" 
+                                       title="(Equity Captured + Annual Cash Flow) ÷ Actual Cash Left in Deal"></i>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        `;
-    
+        
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <h5>Monthly Income & Expenses</h5>
+                        <div class="card bg-light mb-3">
+                            <div class="card-body">
+                                <p class="mb-2">
+                                    <strong>Monthly Rent:</strong> ${formatCurrency(analysis.monthly_rent)}
+                                </p>
+                                <p class="mb-2">
+                                    <strong>Operating Expenses:</strong>
+                                </p>
+                                <ul class="list-unstyled ms-3">
+                                    ${Object.entries(analysis.operating_expenses || {})
+                                        .map(([name, value]) => `
+                                            <li class="mb-1">
+                                                ${name}: ${formatCurrency(value)}
+                                            </li>`)
+                                        .join('')}
+                                </ul>
+                                <p class="mb-2">
+                                    <strong>Refinance Payment:</strong> ${formatCurrency(analysis.refinance_monthly_payment)}
+                                </p>
+                                <hr>
+                                <p class="mb-2">
+                                    <strong>Total Monthly Expenses:</strong> ${formatCurrency(analysis.total_monthly_expenses)}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>Financing Details</h5>
+                        <div class="card bg-light mb-3">
+                            <div class="card-body">
+                                <p class="fw-bold mb-2">Initial Purchase Loan:</p>
+                                <ul class="list-unstyled ms-3 mb-3">
+                                    <li>Amount: ${formatCurrency(analysis.initial_loan_amount)}</li>
+                                    <li>Interest Rate: ${analysis.initial_interest_rate}%</li>
+                                    <li>Term: ${analysis.initial_loan_term} months</li>
+                                    <li>Payment: ${formatCurrency(analysis.initial_monthly_payment)}</li>
+                                </ul>
+                                <p class="fw-bold mb-2">Refinance Loan:</p>
+                                <ul class="list-unstyled ms-3">
+                                    <li>Amount: ${formatCurrency(analysis.refinance_loan_amount)}</li>
+                                    <li>Interest Rate: ${analysis.refinance_interest_rate}%</li>
+                                    <li>Term: ${analysis.refinance_loan_term} months</li>
+                                    <li>Payment: ${formatCurrency(analysis.refinance_monthly_payment)}</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        html += `</div></div>`;  // Close card-body and card
+
+        // Set the HTML content
         reportsContent.innerHTML = html;
-    
+
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+
+        // Add event handlers
+        this.initReportEventHandlers();
+    },
+
+    // Helper method to initialize report event handlers
+    initReportEventHandlers: function() {
         // Add event listener for PDF download
         const downloadPdfBtn = document.getElementById('downloadPdfBtn');
         if (downloadPdfBtn) {
@@ -1278,22 +1569,20 @@ const analysisModule = {
                 this.downloadPdf(this.currentAnalysisId);
             });
         }
-    
+
         // Show the Edit and Create New buttons
-        // Add data attributes to the Edit button
         const editBtn = document.getElementById('editAnalysisBtn');
+        const createNewBtn = document.getElementById('createNewAnalysisBtn');
+        
         if (editBtn) {
             editBtn.setAttribute('data-analysis-id', this.currentAnalysisId);
             editBtn.style.display = 'inline-block';
         }
-        const createNewBtn = document.getElementById('createNewAnalysisBtn');
         
         if (editBtn && createNewBtn) {
             editBtn.style.display = 'inline-block';
             createNewBtn.style.display = 'inline-block';
         }
-    
-        // this.currentAnalysisId = analysis.id;
     },
 
     switchToReportsTab: function() {

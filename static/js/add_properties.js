@@ -1,73 +1,85 @@
+
 // add_properties.js
 
 const addPropertiesModule = {
     init: async function() {
         try {
-            console.log('AddPropertiesModule initialized');
-            const addPropertyForm = document.querySelector('#add-property-form');
-            if (addPropertyForm) {
-                console.log('Add Property form found');
-                addPropertyForm.addEventListener('submit', this.handleSubmit.bind(this));
+            console.log('Initializing add properties module');
+            const form = document.getElementById('add-property-form');
+            
+            if (form) {
                 this.initAddressAutocomplete();
                 this.initPartnersSection();
-                this.initCalculations();  // Add this line
-                window.showNotification('Add Properties module loaded', 'success');
+                this.initCalculations();
+                form.addEventListener('submit', this.handleSubmit.bind(this));
+                console.log('Add Properties form initialized');
             } else {
-                console.log('Add Property form not found');
-                window.showNotification('Form not found', 'error');
+                console.error('Add Properties form not found');
             }
         } catch (error) {
             console.error('Error initializing Add Properties module:', error);
-            window.showNotification('Error loading Add Properties module: ' + error.message, 'error');
         }
     },
-   
+
     initAddressAutocomplete: function() {
         console.log('Initializing address autocomplete');
         const addressInput = document.getElementById('property_address');
-        const resultsList = document.getElementById('autocomplete-results');
+        const resultsList = document.createElement('ul');
+        resultsList.className = 'autocomplete-results list-group position-absolute w-100 shadow-sm';
+        resultsList.style.zIndex = '1000';
         let timeoutId;
 
-        if (addressInput && resultsList) {
-            console.log('Address input and results list found');
+        if (addressInput) {
+            // Insert the results list after the input
+            addressInput.parentNode.appendChild(resultsList);
+            
             addressInput.addEventListener('input', function() {
-                console.log('Input event triggered');
                 clearTimeout(timeoutId);
                 timeoutId = setTimeout(() => {
                     const query = this.value;
-                    console.log('Query:', query);
                     if (query.length > 2) {
-                        console.log('Making API call');
+                        console.log('Making API call for:', query);
                         fetch(`/api/autocomplete?query=${encodeURIComponent(query)}`)
                             .then(response => {
-                                console.log('Response status:', response.status);
                                 if (!response.ok) {
-                                    return response.text().then(text => {
-                                        throw new Error(`HTTP error! status: ${response.status}, message: ${text}`);
-                                    });
+                                    throw new Error(`HTTP error! status: ${response.status}`);
                                 }
                                 return response.json();
                             })
                             .then(data => {
                                 console.log('API response:', data);
                                 resultsList.innerHTML = '';
-                                if (Array.isArray(data) && data.length > 0) {
-                                    data.forEach(result => {
+                                
+                                if (data.status === 'success' && data.data && Array.isArray(data.data)) {
+                                    data.data.forEach(result => {
                                         const li = document.createElement('li');
+                                        li.className = 'list-group-item list-group-item-action';
                                         li.textContent = result.formatted;
+                                        li.style.cursor = 'pointer';
+                                        
                                         li.addEventListener('click', function() {
                                             addressInput.value = this.textContent;
                                             resultsList.innerHTML = '';
                                         });
+                                        
                                         resultsList.appendChild(li);
                                     });
-                                } else {
-                                    resultsList.innerHTML = '<li>No results found</li>';
+                                    
+                                    if (data.data.length === 0) {
+                                        const li = document.createElement('li');
+                                        li.className = 'list-group-item disabled';
+                                        li.textContent = 'No matches found';
+                                        resultsList.appendChild(li);
+                                    }
                                 }
                             })
                             .catch(error => {
                                 console.error('Error:', error);
-                                resultsList.innerHTML = `<li>Error fetching results: ${error.message}</li>`;
+                                resultsList.innerHTML = `
+                                    <li class="list-group-item text-danger">
+                                        Error fetching results: ${error.message}
+                                    </li>
+                                `;
                             });
                     } else {
                         resultsList.innerHTML = '';
@@ -75,14 +87,20 @@ const addPropertiesModule = {
                 }, 300);
             });
 
+            // Close suggestions when clicking outside
             document.addEventListener('click', function(e) {
                 if (e.target !== addressInput && e.target !== resultsList) {
                     resultsList.innerHTML = '';
                 }
             });
-        }
-        else {
-            console.error('Address input or results list not found');
+
+            // Prevent form submission when selecting from dropdown
+            resultsList.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+        } else {
+            console.error('Property address input not found');
         }
     },
 
@@ -91,13 +109,26 @@ const addPropertiesModule = {
         const addPartnerButton = document.getElementById('add-partner-button');
         
         if (partnersContainer && addPartnerButton) {
+            // Clear any existing event listeners
+            addPartnerButton.removeEventListener('click', this.addPartner.bind(this));
+            partnersContainer.removeEventListener('change', this.handlePartnerChange.bind(this));
+            partnersContainer.removeEventListener('input', this.updateTotalEquity.bind(this));
+            partnersContainer.removeEventListener('click', this.removePartner.bind(this));
+    
+            // Add fresh event listeners
             addPartnerButton.addEventListener('click', this.addPartner.bind(this));
             partnersContainer.addEventListener('change', this.handlePartnerChange.bind(this));
             partnersContainer.addEventListener('input', this.updateTotalEquity.bind(this));
             partnersContainer.addEventListener('click', this.removePartner.bind(this));
+    
+            // Add initial partner if container is empty
+            if (!partnersContainer.querySelector('.partner-entry')) {
+                this.addPartner();
+            }
+    
             console.log('Partners section initialized');
         } else {
-            console.log('Partners container or add partner button not found');
+            console.error('Partners container or add partner button not found');
         }
     },
 
@@ -200,8 +231,21 @@ const addPropertiesModule = {
     },
 
     addPartner: function() {
+        console.log('Adding new partner');
         const partnersContainer = document.getElementById('partners-container');
-        const partnerCount = partnersContainer.querySelectorAll('.partner-entry').length;
+        if (!partnersContainer) {
+            console.error('Partners container not found');
+            return;
+        }
+
+        const existingPartners = partnersContainer.querySelectorAll('.partner-entry');
+        const partnerCount = existingPartners.length;
+
+        // Check if we've reached the maximum number of partners (optional)
+        if (partnerCount >= 10) {
+            window.showNotification('Maximum number of partners reached', 'warning');
+            return;
+        }
         const newPartnerHtml = `
             <div class="partner-entry mb-3">
                 <div class="row align-items-end">

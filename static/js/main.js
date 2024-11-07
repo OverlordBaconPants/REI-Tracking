@@ -1,16 +1,54 @@
-// main.js
-
 (function(window) {
     const baseModule = {
         init: function() {
             console.log('Initializing base module');
-            this.initializeToastr();
-            this.initializeFlashMessages();
+            this.initializeLibraries();
+        },
+
+        initializeLibraries: function() {
+            // Check for jQuery
+            if (typeof jQuery === 'undefined') {
+                console.error('jQuery not loaded');
+                return;
+            }
+
+            // Wait for toastr to be available
+            this.waitForToastr()
+                .then(() => {
+                    this.initializeToastr();
+                    this.initializeFlashMessages();
+                })
+                .catch(error => {
+                    console.error('Error initializing toastr:', error);
+                });
+
             this.initializeBootstrapComponents();
         },
 
+        waitForToastr: function(timeout = 2000) {
+            return new Promise((resolve, reject) => {
+                const startTime = Date.now();
+                
+                const checkToastr = () => {
+                    if (typeof toastr !== 'undefined') {
+                        resolve();
+                    } else if (Date.now() - startTime >= timeout) {
+                        reject(new Error('Toastr failed to load'));
+                    } else {
+                        setTimeout(checkToastr, 100);
+                    }
+                };
+                
+                checkToastr();
+            });
+        },
+
         initializeToastr: function() {
-            // Configure toastr options
+            if (typeof toastr === 'undefined') {
+                console.error('Toastr not available');
+                return;
+            }
+
             toastr.options = {
                 "closeButton": true,
                 "debug": false,
@@ -25,8 +63,7 @@
                 "showEasing": "swing",
                 "hideEasing": "linear",
                 "showMethod": "fadeIn",
-                "hideMethod": "fadeOut",
-                "onclick": null
+                "hideMethod": "fadeOut"
             };
         },
 
@@ -35,7 +72,7 @@
             if (messagesContainer) {
                 try {
                     const messagesData = messagesContainer.dataset.messages;
-                    console.log('Raw messages data:', messagesData); // Debug log
+                    console.log('Raw messages data:', messagesData);
                     
                     if (!messagesData || messagesData.trim() === '') {
                         console.log('No flash messages found');
@@ -43,29 +80,11 @@
                     }
     
                     const messages = JSON.parse(messagesData);
-                    console.log('Parsed messages:', messages); // Debug log
+                    console.log('Parsed messages:', messages);
     
                     if (Array.isArray(messages)) {
                         messages.forEach(([category, message]) => {
-                            // Map Flask categories to toastr types
-                            let toastrType = 'info';
-                            switch(category) {
-                                case 'success':
-                                    toastrType = 'success';
-                                    break;
-                                case 'error':
-                                case 'danger':
-                                    toastrType = 'error';
-                                    break;
-                                case 'warning':
-                                    toastrType = 'warning';
-                                    break;
-                                default:
-                                    toastrType = 'info';
-                            }
-                            
-                            console.log(`Showing toastr: ${toastrType} - ${message}`); // Debug log
-                            toastr[toastrType](message);
+                            this.showNotification(message, category);
                         });
                     }
                 } catch (error) {
@@ -76,7 +95,12 @@
         },
 
         showNotification: function(message, category = 'info') {
-            // Map Flask message categories to toastr methods
+            if (typeof toastr === 'undefined') {
+                console.warn('Toastr not available, falling back to alert');
+                alert(message);
+                return;
+            }
+
             const categoryMap = {
                 'success': 'success',
                 'info': 'info',
@@ -102,26 +126,6 @@
             const popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
             popoverTriggerList.map(function (popoverTriggerEl) {
                 return new bootstrap.Popover(popoverTriggerEl);
-            });
-
-            // Initialize Bootstrap accordions
-            const accordionButtons = document.querySelectorAll('.accordion-button');
-            accordionButtons.forEach(button => {
-                button.addEventListener('click', function() {
-                    const target = document.querySelector(this.getAttribute('data-bs-target'));
-                    if (target) {
-                        // Check if we're using Bootstrap's collapse component
-                        if (bootstrap && bootstrap.Collapse) {
-                            const bsCollapse = new bootstrap.Collapse(target, {
-                                toggle: true
-                            });
-                        } else {
-                            // Fallback to manual toggle
-                            this.classList.toggle('collapsed');
-                            target.classList.toggle('show');
-                        }
-                    }
-                });
             });
         }
     };
@@ -183,12 +187,8 @@
 
     async function init() {
         console.log('Main init function called');
-        
         try {
-            // Initialize base functionality
             baseModule.init();
-
-            // Initialize page-specific module
             await moduleManager.initPage();
         } catch (error) {
             console.error('Error during initialization:', error);

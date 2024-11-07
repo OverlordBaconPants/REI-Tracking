@@ -1,107 +1,87 @@
-2024-11-02 17:53:55,088 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
-2024-11-02 17:54:55,186 INFO: Starting PDF generation for analysis 1eca6f0e-821c-4d38-afa7-d228f0cb4106 [in /home/bj/python/REI-Tracker/routes/analyses.py:1066]
-2024-11-02 17:54:55,191 INFO: Starting PDF generation [in /home/bj/python/REI-Tracker/services/report_generator.py:303]
-2024-11-02 17:54:55,201 INFO: PDF generation completed successfully [in /home/bj/python/REI-Tracker/services/report_generator.py:389]
-2024-11-02 18:02:36,032 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
-2024-11-02 18:02:37,574 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
-2024-11-02 18:03:20,316 INFO: Starting PDF generation for analysis 1eca6f0e-821c-4d38-afa7-d228f0cb4106 [in /home/bj/python/REI-Tracker/routes/analyses.py:1066]
-2024-11-02 18:03:20,317 INFO: Starting PDF generation [in /home/bj/python/REI-Tracker/services/report_generator.py:303]
-2024-11-02 18:03:20,318 ERROR: Error generating PDF: cannot access local variable 'create_table' where it is not associated with a value [in /home/bj/python/REI-Tracker/services/report_generator.py:352]
-2024-11-02 18:03:20,318 ERROR: Full traceback: [in /home/bj/python/REI-Tracker/services/report_generator.py:353]
+2024-11-07 13:07:11,019 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
+2024-11-07 13:07:11,047 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
+2024-11-07 13:07:11,972 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
+2024-11-07 13:07:11,999 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
+2024-11-07 13:07:18,752 INFO: Starting PDF generation for analysis ed99071a-9767-448d-b860-020ecb28ae09 [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1066]
+2024-11-07 13:08:44,073 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
+2024-11-07 13:08:44,114 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
+2024-11-07 13:08:49,095 INFO: Starting PDF generation for analysis ed99071a-9767-448d-b860-020ecb28ae09 [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1066]
+2024-11-07 13:09:07,132 INFO: Starting PDF generation for analysis 989c309b-2e2a-45c2-aa89-18e10f7b20de [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1066]
+2024-11-07 13:23:21,859 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
+2024-11-07 13:23:21,917 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
+2024-11-07 13:23:27,078 INFO: Starting PDF generation for analysis 85bc71e1-4be4-4761-b78b-9731803c5b0c [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1066]
+2024-11-07 13:23:42,825 INFO: Starting PDF generation for analysis ed99071a-9767-448d-b860-020ecb28ae09 [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1066]
+2024-11-07 13:28:27,675 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
+2024-11-07 13:28:27,725 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
+2024-11-07 13:28:33,231 INFO: Starting PDF generation for analysis 85bc71e1-4be4-4761-b78b-9731803c5b0c [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1066]
+2024-11-07 13:28:33,236 ERROR: Error in report generation: isinstance() arg 2 must be a type, a tuple of types, or a union [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1108]
+2024-11-07 13:28:33,236 ERROR: Full traceback: [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1109]
 Traceback (most recent call last):
-  File "/home/bj/python/REI-Tracker/services/report_generator.py", line 336, in generate_lender_report
-    story.append(create_table(property_info))
-                 ^^^^^^^^^^^^
-UnboundLocalError: cannot access local variable 'create_table' where it is not associated with a value
-2024-11-02 18:03:20,319 ERROR: Error generating PDF: cannot access local variable 'create_table' where it is not associated with a value [in /home/bj/python/REI-Tracker/routes/analyses.py:1108]
-2024-11-02 18:03:20,321 ERROR: Full traceback: [in /home/bj/python/REI-Tracker/routes/analyses.py:1109]
-Traceback (most recent call last):
-  File "/home/bj/python/REI-Tracker/routes/analyses.py", line 1094, in generate_pdf
+  File "c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py", line 1106, in generate_pdf
     generate_lender_report(analysis_data, calculator, buffer)
-  File "/home/bj/python/REI-Tracker/services/report_generator.py", line 336, in generate_lender_report
-    story.append(create_table(property_info))
-                 ^^^^^^^^^^^^
-UnboundLocalError: cannot access local variable 'create_table' where it is not associated with a value
-2024-11-02 18:03:26,946 INFO: Starting PDF generation for analysis 1eca6f0e-821c-4d38-afa7-d228f0cb4106 [in /home/bj/python/REI-Tracker/routes/analyses.py:1066]
-2024-11-02 18:03:26,952 ERROR: Error generating PDF: Expecting value: line 1 column 1 (char 0) [in /home/bj/python/REI-Tracker/routes/analyses.py:1108]
-2024-11-02 18:03:26,955 ERROR: Full traceback: [in /home/bj/python/REI-Tracker/routes/analyses.py:1109]
+  File "c:\Users\BJ.Marshall\Documents\python\REI-Tracker\services\report_generator.py", line 536, in generate_lender_report
+    report.generate()
+  File "c:\Users\BJ.Marshall\Documents\python\REI-Tracker\services\report_generator.py", line 277, in generate
+    if isinstance(flowable, FrameBreak):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: isinstance() arg 2 must be a type, a tuple of types, or a union
+2024-11-07 13:28:37,031 INFO: Starting PDF generation for analysis ed99071a-9767-448d-b860-020ecb28ae09 [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1066]
+2024-11-07 13:28:37,044 ERROR: Error in report generation: isinstance() arg 2 must be a type, a tuple of types, or a union [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1108]
+2024-11-07 13:28:37,045 ERROR: Full traceback: [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1109]
 Traceback (most recent call last):
-  File "/home/bj/python/REI-Tracker/routes/analyses.py", line 1085, in generate_pdf
-    analysis_data = json.load(f)
-                    ^^^^^^^^^^^^
-  File "/usr/lib/python3.12/json/__init__.py", line 293, in load
-    return loads(fp.read(),
-           ^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.12/json/__init__.py", line 346, in loads
-    return _default_decoder.decode(s)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.12/json/decoder.py", line 337, in decode
-    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.12/json/decoder.py", line 355, in raw_decode
-    raise JSONDecodeError("Expecting value", s, err.value) from None
-json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
-2024-11-02 18:04:32,295 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
-2024-11-02 18:05:25,258 INFO: Starting PDF generation for analysis 1eca6f0e-821c-4d38-afa7-d228f0cb4106 [in /home/bj/python/REI-Tracker/routes/analyses.py:1066]
-2024-11-02 18:05:25,259 INFO: Starting PDF generation [in /home/bj/python/REI-Tracker/services/report_generator.py:303]
-2024-11-02 18:05:25,261 ERROR: Error generating PDF: cannot access local variable 'create_table' where it is not associated with a value [in /home/bj/python/REI-Tracker/services/report_generator.py:352]
-2024-11-02 18:05:25,268 ERROR: Full traceback: [in /home/bj/python/REI-Tracker/services/report_generator.py:353]
-Traceback (most recent call last):
-  File "/home/bj/python/REI-Tracker/services/report_generator.py", line 336, in generate_lender_report
-    story.append(create_table(property_info))
-                 ^^^^^^^^^^^^
-UnboundLocalError: cannot access local variable 'create_table' where it is not associated with a value
-2024-11-02 18:05:25,270 ERROR: Error in report generation: cannot access local variable 'create_table' where it is not associated with a value [in /home/bj/python/REI-Tracker/routes/analyses.py:1108]
-2024-11-02 18:05:25,270 ERROR: Full traceback: [in /home/bj/python/REI-Tracker/routes/analyses.py:1109]
-Traceback (most recent call last):
-  File "/home/bj/python/REI-Tracker/routes/analyses.py", line 1106, in generate_pdf
+  File "c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py", line 1106, in generate_pdf
     generate_lender_report(analysis_data, calculator, buffer)
-  File "/home/bj/python/REI-Tracker/services/report_generator.py", line 336, in generate_lender_report
-    story.append(create_table(property_info))
-                 ^^^^^^^^^^^^
-UnboundLocalError: cannot access local variable 'create_table' where it is not associated with a value
-2024-11-02 18:06:30,262 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
-2024-11-02 18:07:26,305 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
-2024-11-02 18:07:33,528 INFO: Starting PDF generation for analysis 1eca6f0e-821c-4d38-afa7-d228f0cb4106 [in /home/bj/python/REI-Tracker/routes/analyses.py:1066]
-2024-11-02 18:07:33,533 INFO: Starting PDF generation [in /home/bj/python/REI-Tracker/services/report_generator.py:303]
-2024-11-02 18:07:33,533 ERROR: Error generating PDF: cannot access local variable 'create_table' where it is not associated with a value [in /home/bj/python/REI-Tracker/services/report_generator.py:352]
-2024-11-02 18:07:33,534 ERROR: Full traceback: [in /home/bj/python/REI-Tracker/services/report_generator.py:353]
+  File "c:\Users\BJ.Marshall\Documents\python\REI-Tracker\services\report_generator.py", line 536, in generate_lender_report
+    report.generate()
+  File "c:\Users\BJ.Marshall\Documents\python\REI-Tracker\services\report_generator.py", line 277, in generate
+    if isinstance(flowable, FrameBreak):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: isinstance() arg 2 must be a type, a tuple of types, or a union
+2024-11-07 13:30:16,350 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
+2024-11-07 13:30:16,397 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
+2024-11-07 13:31:56,813 INFO: Starting PDF generation for analysis 85bc71e1-4be4-4761-b78b-9731803c5b0c [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1066]
+2024-11-07 13:31:56,818 ERROR: Error in report generation: name 'PageBreak' is not defined [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1108]
+2024-11-07 13:31:56,818 ERROR: Full traceback: [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1109]
 Traceback (most recent call last):
-  File "/home/bj/python/REI-Tracker/services/report_generator.py", line 336, in generate_lender_report
-    story.append(create_table(property_info))
-                 ^^^^^^^^^^^^
-UnboundLocalError: cannot access local variable 'create_table' where it is not associated with a value
-2024-11-02 18:07:33,535 ERROR: Error in report generation: cannot access local variable 'create_table' where it is not associated with a value [in /home/bj/python/REI-Tracker/routes/analyses.py:1108]
-2024-11-02 18:07:33,535 ERROR: Full traceback: [in /home/bj/python/REI-Tracker/routes/analyses.py:1109]
-Traceback (most recent call last):
-  File "/home/bj/python/REI-Tracker/routes/analyses.py", line 1106, in generate_pdf
+  File "c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py", line 1106, in generate_pdf
     generate_lender_report(analysis_data, calculator, buffer)
-  File "/home/bj/python/REI-Tracker/services/report_generator.py", line 336, in generate_lender_report
-    story.append(create_table(property_info))
-                 ^^^^^^^^^^^^
-UnboundLocalError: cannot access local variable 'create_table' where it is not associated with a value
-2024-11-02 18:09:39,178 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
-2024-11-02 18:09:44,391 INFO: Starting PDF generation for analysis 1eca6f0e-821c-4d38-afa7-d228f0cb4106 [in /home/bj/python/REI-Tracker/routes/analyses.py:1066]
-2024-11-02 18:09:44,392 INFO: Starting PDF generation [in /home/bj/python/REI-Tracker/services/report_generator.py:320]
-2024-11-02 18:09:44,397 INFO: PDF generation completed successfully [in /home/bj/python/REI-Tracker/services/report_generator.py:381]
-2024-11-02 18:15:34,260 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
-2024-11-02 18:15:41,786 INFO: Starting PDF generation for analysis 1eca6f0e-821c-4d38-afa7-d228f0cb4106 [in /home/bj/python/REI-Tracker/routes/analyses.py:1066]
-2024-11-02 18:15:41,791 INFO: Starting PDF generation [in /home/bj/python/REI-Tracker/services/report_generator.py:320]
-2024-11-02 18:15:41,802 INFO: PDF generation completed successfully [in /home/bj/python/REI-Tracker/services/report_generator.py:381]
-2024-11-02 18:25:12,803 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
-2024-11-02 18:29:27,977 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
-2024-11-02 18:33:49,475 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
-2024-11-02 18:34:22,353 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
-2024-11-02 18:36:11,023 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
-2024-11-02 18:38:12,835 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
-2024-11-02 18:38:33,640 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
-2024-11-02 18:39:35,383 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
-2024-11-02 18:39:57,101 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
-2024-11-02 18:40:55,735 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
-2024-11-02 18:40:56,159 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
-2024-11-02 18:42:13,477 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
-2024-11-02 18:42:52,029 ERROR: Error rendering portfolio view: 'Flask' object has no attribute 'portfolio_dash' [in /home/bj/python/REI-Tracker/routes/dashboards.py:25]
-2024-11-02 18:43:23,995 ERROR: Error rendering portfolio view: 'Flask' object has no attribute 'portfolio_dash' [in /home/bj/python/REI-Tracker/routes/dashboards.py:25]
-2024-11-02 18:46:58,219 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:42]
-2024-11-02 18:48:19,576 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:43]
-2024-11-02 18:48:19,643 INFO: All Dash apps initialized successfully [in /home/bj/python/REI-Tracker/__init__.py:118]
+  File "c:\Users\BJ.Marshall\Documents\python\REI-Tracker\services\report_generator.py", line 531, in generate_lender_report
+    report.generate()
+  File "c:\Users\BJ.Marshall\Documents\python\REI-Tracker\services\report_generator.py", line 272, in generate
+    if isinstance(flowable, (FrameBreak, PageBreak)):  # Check for specific flowable types
+                                         ^^^^^^^^^
+NameError: name 'PageBreak' is not defined
+2024-11-07 13:32:32,228 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
+2024-11-07 13:32:32,273 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
+2024-11-07 13:32:34,500 INFO: Starting PDF generation for analysis 85bc71e1-4be4-4761-b78b-9731803c5b0c [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1066]
+2024-11-07 13:32:34,506 ERROR: Error in report generation: isinstance() arg 2 must be a type, a tuple of types, or a union [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1108]
+2024-11-07 13:32:34,507 ERROR: Full traceback: [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1109]
+Traceback (most recent call last):
+  File "c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py", line 1106, in generate_pdf
+    generate_lender_report(analysis_data, calculator, buffer)
+  File "c:\Users\BJ.Marshall\Documents\python\REI-Tracker\services\report_generator.py", line 531, in generate_lender_report
+    report.generate()
+  File "c:\Users\BJ.Marshall\Documents\python\REI-Tracker\services\report_generator.py", line 272, in generate
+    if isinstance(flowable, (FrameBreak, PageBreak)):  # Check for specific flowable types
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: isinstance() arg 2 must be a type, a tuple of types, or a union
+2024-11-07 13:35:38,216 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
+2024-11-07 13:35:38,263 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
+2024-11-07 13:35:43,112 INFO: Starting PDF generation for analysis 85bc71e1-4be4-4761-b78b-9731803c5b0c [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1066]
+2024-11-07 13:44:35,059 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
+2024-11-07 13:44:35,109 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
+2024-11-07 13:44:42,367 INFO: Starting PDF generation for analysis 85bc71e1-4be4-4761-b78b-9731803c5b0c [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1066]
+2024-11-07 13:46:31,678 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
+2024-11-07 13:46:31,726 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
+2024-11-07 13:46:39,867 INFO: Starting PDF generation for analysis 85bc71e1-4be4-4761-b78b-9731803c5b0c [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1066]
+2024-11-07 13:47:19,985 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
+2024-11-07 13:47:20,053 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
+2024-11-07 13:47:25,548 INFO: Starting PDF generation for analysis 85bc71e1-4be4-4761-b78b-9731803c5b0c [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1066]
+2024-11-07 13:48:03,903 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
+2024-11-07 13:48:03,948 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
+2024-11-07 13:48:14,874 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
+2024-11-07 13:48:14,927 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
+2024-11-07 13:48:20,073 INFO: Starting PDF generation for analysis 85bc71e1-4be4-4761-b78b-9731803c5b0c [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1066]
+2024-11-07 13:50:23,338 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
+2024-11-07 13:50:23,386 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
+2024-11-07 16:01:43,387 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:44]

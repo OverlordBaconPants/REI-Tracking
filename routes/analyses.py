@@ -2,10 +2,13 @@ from utils.flash import flash_message
 import logging
 from flask import Blueprint, render_template, request, current_app, jsonify, redirect, url_for, send_file
 from flask_login import login_required, current_user
-from services.report_generator import generate_lender_report, LenderMetricsCalculator
+from services.report_generator import generate_lender_report, LenderMetricsCalculator, MAOCalculator
 import uuid
 from datetime import datetime, timezone
 import locale
+from typing import Dict, Any, List, Tuple, Optional
+from decimal import Decimal
+import re
 from io import BytesIO
 from reportlab.platypus.frames import Frame
 from reportlab.platypus.doctemplate import BaseDocTemplate
@@ -204,10 +207,29 @@ def create_analysis():
     return render_template('analyses/create_analysis.html', **template_data)
 
 def calculate_analysis_results(data):
+    """
+    Calculate analysis results while preserving the analysis ID.
+    
+    Args:
+        data: Dictionary containing analysis data including ID
+        
+    Returns:
+        Dictionary containing calculated results with preserved ID
+    """
     try:
+        # Store original ID
+        original_id = data.get('id')
+        logging.debug(f"Preserving analysis ID: {original_id}")
+        
         analysis_type = data.get('analysis_type')
         logging.info(f"Calculating results for analysis type: {analysis_type}")
+
+        # Calculate MAO
+        mao_calculator = MAOCalculator(data)
+        mao = mao_calculator.calculate_mao()
+        mao_breakdown = mao_calculator.get_calculation_breakdown()
         
+        # Calculate results based on analysis type
         if analysis_type == 'BRRRR':
             result = calculate_brrrr_analysis(data)
         elif analysis_type == 'PadSplit BRRRR':
@@ -217,9 +239,20 @@ def calculate_analysis_results(data):
         else:  # Long-Term Rental
             result = calculate_long_term_rental_analysis(data)
         
+        # Add MAO to results
+        result['maximum_allowable_offer'] = mao
+        result['mao_breakdown'] = mao_breakdown
+        
+        # Ensure ID is preserved
+        if original_id:
+            result['id'] = original_id
+            logging.debug(f"Restored analysis ID {original_id} to results")
+        
         return result
+        
     except Exception as e:
         logging.error(f"Error in calculate_analysis_results: {str(e)}")
+        logging.error(traceback.format_exc())
         raise
 
 def calculate_long_term_rental_analysis(data):
@@ -315,26 +348,26 @@ def calculate_brrrr_analysis(data):
         initial_down_payment = safe_float(data.get('initial_down_payment'))
         initial_closing_costs = safe_float(data.get('initial_closing_costs'))
         
-        # Total initial investment before refinance
-        total_initial_investment = (initial_down_payment + 
-                                  renovation_costs + 
-                                  initial_closing_costs)
-
         # Refinance details
         refinance_loan_amount = safe_float(data.get('refinance_loan_amount'))
         refinance_down_payment = safe_float(data.get('refinance_down_payment'))
         refinance_closing_costs = safe_float(data.get('refinance_closing_costs'))
         
-        # Calculate actual cash left in deal after refinance
+        # Calculate total costs
         total_costs = (purchase_price + renovation_costs + 
                       initial_closing_costs + refinance_closing_costs)
-        cash_recouped = refinance_loan_amount - initial_loan_amount
-        actual_cash_invested = total_initial_investment - cash_recouped + refinance_closing_costs
+
+        # Calculate how much cash is actually left in the deal
+        # This is the amount you can't recoup through refinance
+        actual_cash_invested = max(0, total_costs - refinance_loan_amount)
+        
+        # Calculate equity captured (difference between ARV and total costs)
+        equity_captured = after_repair_value - total_costs
 
         # Income calculations
         monthly_rent = safe_float(data.get('monthly_rent'))
 
-        # Operating expense calculations
+        # Calculate operating expenses
         property_taxes = safe_float(data.get('property_taxes'))
         insurance = safe_float(data.get('insurance'))
         
@@ -349,7 +382,7 @@ def calculate_brrrr_analysis(data):
         capex = monthly_rent * capex_percentage / 100
         management = monthly_rent * management_percentage / 100
 
-        # Organize operating expenses
+        # Operating expenses
         operating_expenses = {
             'Property Taxes': property_taxes,
             'Insurance': insurance,
@@ -378,13 +411,17 @@ def calculate_brrrr_analysis(data):
         monthly_cash_flow = monthly_rent - total_monthly_expenses
         annual_cash_flow = monthly_cash_flow * 12
 
-        # Calculate returns
-        cash_on_cash_return = ((annual_cash_flow / actual_cash_invested) * 100 
-                             if actual_cash_invested > 0 else 0)
-        equity_captured = after_repair_value - total_costs
-        total_profit = equity_captured + annual_cash_flow
-        roi = ((total_profit / actual_cash_invested) * 100 
-               if actual_cash_invested > 0 else 0)
+        # Calculate returns based on actual cash invested
+        if actual_cash_invested > 0:
+            cash_on_cash_return = (annual_cash_flow / actual_cash_invested) * 100
+            total_profit = equity_captured + annual_cash_flow
+            roi = (total_profit / actual_cash_invested) * 100
+        else:
+            cash_on_cash_return = 0
+            roi = 0
+
+        # Cash recouped calculation remains unchanged
+        cash_recouped = refinance_loan_amount - initial_loan_amount
 
         # Format the results
         results = {
@@ -402,7 +439,6 @@ def calculate_brrrr_analysis(data):
             'renovation_costs': format_currency(renovation_costs),
             'renovation_duration': renovation_duration,
             'after_repair_value': format_currency(after_repair_value),
-            'total_initial_investment': format_currency(total_initial_investment),
             
             # Initial Financing
             'initial_loan_amount': format_currency(initial_loan_amount),
@@ -1023,42 +1059,6 @@ class DynamicFrameDocument(BaseDocTemplate):
             PageTemplate(id='TwoColumn', frames=[left_frame, right_frame])
         ])
 
-@analyses_bp.route('/update_analysis', methods=['POST'])
-@login_required
-def update_analysis():
-    try:
-        analysis_data = request.json
-        logging.info(f"Received update analysis data: {json.dumps(analysis_data, indent=2)}")
-
-        analysis_id = analysis_data.get('id')
-        if not analysis_id:
-            return jsonify({"success": False, "message": "Analysis ID is required"}), 400
-
-        analyses_dir = os.path.join(Config.DATA_DIR, 'analyses')
-        analysis_file = None
-        for filename in os.listdir(analyses_dir):
-            if filename.startswith(f"{analysis_id}_") and filename.endswith(f"_{current_user.id}.json"):
-                analysis_file = filename
-                break
-
-        if not analysis_file:
-            return jsonify({"success": False, "message": "Analysis not found"}), 404
-
-        filepath = os.path.join(analyses_dir, analysis_file)
-
-        # Update the analysis data
-        updated_data = calculate_analysis_results(analysis_data)
-
-        with open(filepath, 'w') as f:
-            json.dump(updated_data, f)
-
-        logging.info(f"Analysis updated successfully: {analysis_id}")
-        return jsonify({"success": True, "message": "Analysis updated successfully", "analysis": updated_data})
-    except Exception as e:
-        logging.error(f"Error updating analysis: {str(e)}")
-        logging.error(traceback.format_exc())
-        return jsonify({"success": False, "message": f"An error occurred: {str(e)}"}), 500
-
 @analyses_bp.route('/generate_pdf/<analysis_id>', methods=['GET'])
 @login_required
 def generate_pdf(analysis_id):
@@ -1439,3 +1439,647 @@ def create_table(data):
         ('GRID', (0, 0), (-1, -1), 1, colors.black)
     ]))
     return table
+
+# Insert Data Validation Section Here
+
+class ValidationError(Exception):
+    """Custom exception for validation errors"""
+    def __init__(self, message: str, field: Optional[str] = None):
+        self.message = message
+        self.field = field
+        super().__init__(self.message)
+
+class AnalysisValidator:
+    """Base validator class for analysis data"""
+    
+    def __init__(self):
+        self.errors: List[Tuple[str, str]] = []
+    
+    def validate_currency(self, value: Any, field: str, min_value: float = 0.0, 
+                         max_value: float = 1e9, required: bool = True) -> float:
+        """Validate currency values"""
+        if value is None or value == "":
+            if required:
+                self.errors.append((field, f"{field} is required"))
+            return 0.0
+            
+        try:
+            # Remove currency symbols and commas
+            if isinstance(value, str):
+                value = value.replace('$', '').replace(',', '').strip()
+            
+            # Convert to float
+            amount = float(value)
+            
+            # Validate range
+            if amount < min_value:
+                self.errors.append((field, f"{field} must be at least ${min_value:,.2f}"))
+            elif amount > max_value:
+                self.errors.append((field, f"{field} must be less than ${max_value:,.2f}"))
+                
+            return amount
+        except ValueError:
+            self.errors.append((field, f"{field} must be a valid currency amount"))
+            return 0.0
+
+    def validate_percentage(self, value: Any, field: str, 
+                          min_value: float = 0.0, max_value: float = 100.0,
+                          required: bool = True) -> float:
+        """Validate percentage values"""
+        if value is None or value == "":
+            if required:
+                self.errors.append((field, f"{field} is required"))
+            return 0.0
+            
+        try:
+            # Convert to float
+            percentage = float(str(value).replace('%', ''))
+            
+            # Validate range
+            if percentage < min_value:
+                self.errors.append((field, f"{field} must be at least {min_value}%"))
+            elif percentage > max_value:
+                self.errors.append((field, f"{field} must be less than {max_value}%"))
+                
+            return percentage
+        except ValueError:
+            self.errors.append((field, f"{field} must be a valid percentage"))
+            return 0.0
+
+    def validate_integer(self, value: Any, field: str, min_value: int = 0,
+                        max_value: int = 1000, required: bool = True) -> int:
+        """Validate integer values"""
+        if value is None or value == "":
+            if required:
+                self.errors.append((field, f"{field} is required"))
+            return 0
+            
+        try:
+            number = int(float(str(value)))
+            
+            if number < min_value:
+                self.errors.append((field, f"{field} must be at least {min_value}"))
+            elif number > max_value:
+                self.errors.append((field, f"{field} must be less than {max_value}"))
+                
+            return number
+        except ValueError:
+            self.errors.append((field, f"{field} must be a valid integer"))
+            return 0
+
+    def validate_string(self, value: Any, field: str, max_length: int = 255,
+                       required: bool = True) -> str:
+        """Validate string values"""
+        if not value:
+            if required:
+                self.errors.append((field, f"{field} is required"))
+            return ""
+            
+        string_value = str(value).strip()
+        if len(string_value) > max_length:
+            self.errors.append((field, f"{field} must be less than {max_length} characters"))
+            
+        return string_value
+
+    def validate_common_fields(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate fields common to all analysis types"""
+        validated = {}
+        
+        # Basic Information
+        validated['analysis_name'] = self.validate_string(
+            data.get('analysis_name'), 'Analysis Name', required=True
+        )
+        validated['property_address'] = self.validate_string(
+            data.get('property_address'), 'Property Address', required=False
+        )
+        validated['property_type'] = self.validate_string(
+            data.get('property_type'), 'Property Type', required=False
+        )
+        validated['home_square_footage'] = self.validate_integer(
+            data.get('home_square_footage'), 'Home Square Footage', 
+            min_value=0, max_value=100000, required=False
+        )
+        validated['lot_square_footage'] = self.validate_integer(
+            data.get('lot_square_footage'), 'Lot Square Footage',
+            min_value=0, max_value=1000000, required=False
+        )
+        validated['year_built'] = self.validate_integer(
+            data.get('year_built'), 'Year Built',
+            min_value=1800, max_value=2100, required=False
+        )
+        
+        return validated
+
+    def validate_loan_data(self, loan: Dict[str, Any], index: int) -> Dict[str, Any]:
+        """Validate individual loan data"""
+        validated_loan = {}
+        prefix = f"Loan {index + 1}"
+        
+        validated_loan['name'] = self.validate_string(
+            loan.get('name'), f"{prefix} Name", required=False
+        )
+        validated_loan['amount'] = self.validate_currency(
+            loan.get('amount'), f"{prefix} Amount"
+        )
+        validated_loan['down_payment'] = self.validate_currency(
+            loan.get('down_payment'), f"{prefix} Down Payment"
+        )
+        validated_loan['interest_rate'] = self.validate_percentage(
+            loan.get('interest_rate'), f"{prefix} Interest Rate",
+            min_value=0, max_value=30
+        )
+        validated_loan['term'] = self.validate_integer(
+            loan.get('term'), f"{prefix} Term",
+            min_value=1, max_value=360
+        )
+        validated_loan['closing_costs'] = self.validate_currency(
+            loan.get('closing_costs'), f"{prefix} Closing Costs"
+        )
+        
+        # Validate loan amount against down payment
+        if validated_loan['down_payment'] >= validated_loan['amount']:
+            self.errors.append(
+                (f"{prefix} Down Payment",
+                 "Down payment cannot be greater than or equal to loan amount")
+            )
+            
+        return validated_loan
+
+class BRRRRValidator(AnalysisValidator):
+    """Validator for BRRRR analysis type"""
+    
+    def validate(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate BRRRR analysis data"""
+        validated = self.validate_common_fields(data)
+        
+        # Purchase and Renovation
+        validated['purchase_price'] = self.validate_currency(
+            data.get('purchase_price'), 'Purchase Price'
+        )
+        validated['renovation_costs'] = self.validate_currency(
+            data.get('renovation_costs'), 'Renovation Costs'
+        )
+        validated['renovation_duration'] = self.validate_integer(
+            data.get('renovation_duration'), 'Renovation Duration',
+            min_value=0, max_value=36
+        )
+        validated['after_repair_value'] = self.validate_currency(
+            data.get('after_repair_value'), 'After Repair Value'
+        )
+        
+        # Initial Financing
+        validated['initial_loan_amount'] = self.validate_currency(
+            data.get('initial_loan_amount'), 'Initial Loan Amount'
+        )
+        validated['initial_down_payment'] = self.validate_currency(
+            data.get('initial_down_payment'), 'Initial Down Payment'
+        )
+        validated['initial_interest_rate'] = self.validate_percentage(
+            data.get('initial_interest_rate'), 'Initial Interest Rate',
+            max_value=30
+        )
+        validated['initial_loan_term'] = self.validate_integer(
+            data.get('initial_loan_term'), 'Initial Loan Term',
+            min_value=1, max_value=360
+        )
+        validated['initial_closing_costs'] = self.validate_currency(
+            data.get('initial_closing_costs'), 'Initial Closing Costs'
+        )
+        
+        # Refinance
+        validated['refinance_loan_amount'] = self.validate_currency(
+            data.get('refinance_loan_amount'), 'Refinance Loan Amount'
+        )
+        validated['refinance_down_payment'] = self.validate_currency(
+            data.get('refinance_down_payment'), 'Refinance Down Payment'
+        )
+        validated['refinance_interest_rate'] = self.validate_percentage(
+            data.get('refinance_interest_rate'), 'Refinance Interest Rate',
+            max_value=30
+        )
+        validated['refinance_loan_term'] = self.validate_integer(
+            data.get('refinance_loan_term'), 'Refinance Loan Term',
+            min_value=1, max_value=360
+        )
+        validated['refinance_closing_costs'] = self.validate_currency(
+            data.get('refinance_closing_costs'), 'Refinance Closing Costs'
+        )
+        
+        # Income and Expenses
+        validated['monthly_rent'] = self.validate_currency(
+            data.get('monthly_rent'), 'Monthly Rent'
+        )
+        validated['property_taxes'] = self.validate_currency(
+            data.get('property_taxes'), 'Property Taxes'
+        )
+        validated['insurance'] = self.validate_currency(
+            data.get('insurance'), 'Insurance'
+        )
+        
+        # Percentages
+        validated['maintenance_percentage'] = self.validate_percentage(
+            data.get('maintenance_percentage'), 'Maintenance Percentage'
+        )
+        validated['vacancy_percentage'] = self.validate_percentage(
+            data.get('vacancy_percentage'), 'Vacancy Percentage'
+        )
+        validated['capex_percentage'] = self.validate_percentage(
+            data.get('capex_percentage'), 'CapEx Percentage'
+        )
+        validated['management_percentage'] = self.validate_percentage(
+            data.get('management_percentage'), 'Management Percentage'
+        )
+        
+        # Cross-field validations
+        if validated['after_repair_value'] <= validated['purchase_price']:
+            self.errors.append(
+                ('after_repair_value',
+                 'After Repair Value must be greater than Purchase Price')
+            )
+            
+        if validated['refinance_loan_amount'] > validated['after_repair_value']:
+            self.errors.append(
+                ('refinance_loan_amount',
+                 'Refinance Loan Amount cannot exceed After Repair Value')
+            )
+            
+        return validated
+
+class LongTermRentalValidator(AnalysisValidator):
+    """Validator for Long Term Rental analysis type"""
+    
+    def validate(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate Long Term Rental analysis data"""
+        validated = self.validate_common_fields(data)
+        
+        # Purchase Details
+        validated['purchase_price'] = self.validate_currency(
+            data.get('purchase_price'), 'Purchase Price'
+        )
+        validated['after_repair_value'] = self.validate_currency(
+            data.get('after_repair_value'), 'After Repair Value'
+        )
+        validated['cash_to_seller'] = self.validate_currency(
+            data.get('cash_to_seller'), 'Cash to Seller'
+        )
+        validated['closing_costs'] = self.validate_currency(
+            data.get('closing_costs'), 'Closing Costs'
+        )
+        validated['assignment_fee'] = self.validate_currency(
+            data.get('assignment_fee'), 'Assignment Fee'
+        )
+        validated['marketing_costs'] = self.validate_currency(
+            data.get('marketing_costs'), 'Marketing Costs'
+        )
+        validated['renovation_costs'] = self.validate_currency(
+            data.get('renovation_costs'), 'Renovation Costs'
+        )
+        validated['renovation_duration'] = self.validate_integer(
+            data.get('renovation_duration'), 'Renovation Duration',
+            min_value=0, max_value=36
+        )
+        
+        # Income
+        validated['monthly_rent'] = self.validate_currency(
+            data.get('monthly_rent'), 'Monthly Rent'
+        )
+        
+        # Expenses
+        validated['property_taxes'] = self.validate_currency(
+            data.get('property_taxes'), 'Property Taxes'
+        )
+        validated['insurance'] = self.validate_currency(
+            data.get('insurance'), 'Insurance'
+        )
+        validated['hoa_coa_coop'] = self.validate_currency(
+            data.get('hoa_coa_coop'), 'HOA/COA/COOP'
+        )
+        
+        # Percentages
+        validated['management_percentage'] = self.validate_percentage(
+            data.get('management_percentage'), 'Management Percentage'
+        )
+        validated['capex_percentage'] = self.validate_percentage(
+            data.get('capex_percentage'), 'CapEx Percentage'
+        )
+        validated['repairs_percentage'] = self.validate_percentage(
+            data.get('repairs_percentage'), 'Repairs Percentage'
+        )
+        validated['vacancy_percentage'] = self.validate_percentage(
+            data.get('vacancy_percentage'), 'Vacancy Percentage'
+        )
+        
+        # Validate loans
+        validated['loans'] = []
+        for i, loan in enumerate(data.get('loans', [])):
+            validated_loan = self.validate_loan_data(loan, i)
+            validated['loans'].append(validated_loan)
+            
+        # Cross-field validations
+        if validated['after_repair_value'] <= validated['purchase_price']:
+            self.errors.append(
+                ('after_repair_value',
+                 'After Repair Value must be greater than Purchase Price')
+            )
+            
+        total_loan_amount = sum(loan['amount'] for loan in validated['loans'])
+        if total_loan_amount > validated['after_repair_value']:
+            self.errors.append(
+                ('loans',
+                 'Total loan amount cannot exceed After Repair Value')
+            )
+            
+        return validated
+
+def get_validator(analysis_type: str) -> AnalysisValidator:
+    """Factory function to get the appropriate validator"""
+    validators = {
+        'BRRRR': BRRRRValidator,
+        'Long-Term Rental': LongTermRentalValidator
+    }
+    
+    validator_class = validators.get(analysis_type)
+    if not validator_class:
+        raise ValueError(f"Unknown analysis type: {analysis_type}")
+        
+    return validator_class()
+
+def validate_analysis_data(data: Dict[str, Any]) -> Tuple[Dict[str, Any], List[Tuple[str, str]]]:
+    """Main validation function for analysis data"""
+    try:
+        analysis_type = data.get('analysis_type')
+        if not analysis_type:
+            return {}, [('analysis_type', 'Analysis type is required')]
+            
+        validator = get_validator(analysis_type)
+        validated_data = validator.validate(data)
+        
+        return validated_data, validator.errors
+        
+    except ValueError as e:
+        # Handle specific case of invalid analysis type
+        return {}, [('analysis_type', str(e))]
+    except ValidationError as e:
+        # Handle custom validation errors
+        return {}, [(e.field, e.message)] if e.field else [('system', e.message)]
+    except Exception as e:
+        # Handle unexpected errors
+        logging.error(f"Unexpected validation error: {str(e)}")
+        logging.error(traceback.format_exc())
+        return {}, [('system', f"Validation error: An unexpected error occurred while validating the analysis data. Details: {str(e)}")]
+
+class PadSplitBRRRRValidator(BRRRRValidator):
+    """Validator for PadSplit BRRRR analysis type"""
+    
+    def validate(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate PadSplit BRRRR analysis data"""
+        # First validate all BRRRR fields
+        validated = super().validate(data)
+        
+        # Add PadSplit-specific validations
+        validated['padsplit_platform_percentage'] = self.validate_percentage(
+            data.get('padsplit_platform_percentage'), 'Platform Percentage',
+            min_value=0, max_value=30
+        )
+        
+        # PadSplit-specific expenses
+        validated['utilities'] = self.validate_currency(
+            data.get('utilities'), 'Utilities'
+        )
+        validated['internet'] = self.validate_currency(
+            data.get('internet'), 'Internet'
+        )
+        validated['cleaning_costs'] = self.validate_currency(
+            data.get('cleaning_costs'), 'Cleaning Costs'
+        )
+        validated['pest_control'] = self.validate_currency(
+            data.get('pest_control'), 'Pest Control'
+        )
+        validated['landscaping'] = self.validate_currency(
+            data.get('landscaping'), 'Landscaping'
+        )
+        
+        # Cross-field validations specific to PadSplit
+        monthly_padsplit_expenses = (
+            validated['utilities'] + 
+            validated['internet'] + 
+            validated['cleaning_costs'] + 
+            validated['pest_control'] + 
+            validated['landscaping']
+        )
+        
+        if monthly_padsplit_expenses > validated['monthly_rent'] * 0.5:
+            self.errors.append(
+                ('padsplit_expenses',
+                 'Total monthly PadSplit expenses should not exceed 50% of monthly rent')
+            )
+            
+        return validated
+
+class PadSplitLTRValidator(LongTermRentalValidator):
+    """Validator for PadSplit Long Term Rental analysis type"""
+    
+    def validate(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate PadSplit LTR analysis data"""
+        # First validate all LTR fields
+        validated = super().validate(data)
+        
+        # Add PadSplit-specific validations
+        validated['padsplit_platform_percentage'] = self.validate_percentage(
+            data.get('padsplit_platform_percentage'), 'Platform Percentage',
+            min_value=0, max_value=30
+        )
+        
+        # PadSplit-specific expenses
+        validated['utilities'] = self.validate_currency(
+            data.get('utilities'), 'Utilities'
+        )
+        validated['internet'] = self.validate_currency(
+            data.get('internet'), 'Internet'
+        )
+        validated['cleaning_costs'] = self.validate_currency(
+            data.get('cleaning_costs'), 'Cleaning Costs'
+        )
+        validated['pest_control'] = self.validate_currency(
+            data.get('pest_control'), 'Pest Control'
+        )
+        validated['landscaping'] = self.validate_currency(
+            data.get('landscaping'), 'Landscaping'
+        )
+        
+        # Additional PadSplit-specific validations can be added here
+        
+        return validated
+
+# Update the validator factory to include PadSplit types
+def get_validator(analysis_type: str) -> AnalysisValidator:
+    """Factory function to get the appropriate validator"""
+    validators = {
+        'BRRRR': BRRRRValidator,
+        'Long-Term Rental': LongTermRentalValidator,
+        'PadSplit BRRRR': PadSplitBRRRRValidator,
+        'PadSplit LTR': PadSplitLTRValidator
+    }
+    
+    validator_class = validators.get(analysis_type)
+    if not validator_class:
+        raise ValueError(f"Unknown analysis type: {analysis_type}")
+        
+    return validator_class()
+
+# Integration with Flask routes
+def integrate_validation(analyses_bp):
+    """Integrate validation into the Flask blueprint"""
+    
+    @analyses_bp.route('/create_analysis', methods=['POST'])
+    @login_required
+    def create_analysis():
+        try:
+            analysis_data = request.json
+            
+            # Validate the analysis data
+            validated_data, validation_errors = validate_analysis_data(analysis_data)
+            
+            if validation_errors:
+                return jsonify({
+                    "success": False,
+                    "message": "Validation errors",
+                    "errors": validation_errors
+                }), 400
+            
+            # Continue with existing logic using validated_data
+            analysis_type = validated_data['analysis_type']
+            
+            # Add user ID and creation timestamp
+            validated_data['user_id'] = current_user.id
+            validated_data['created_at'] = datetime.now(tz=timezone.utc).isoformat()
+            
+            # Calculate analysis results with validated data
+            analysis_results = calculate_analysis_results(validated_data)
+            
+            # Generate new analysis ID
+            new_analysis_id = str(uuid.uuid4())
+            analysis_results['id'] = new_analysis_id
+            
+            # Save the analysis data
+            filename = f"{new_analysis_id}_{current_user.id}.json"
+            filepath = os.path.join(Config.DATA_DIR, 'analyses', filename)
+            os.makedirs(os.path.dirname(filepath), exist_ok=True)
+            
+            with open(filepath, 'w') as f:
+                json.dump(analysis_results, f, indent=2)
+            
+            return jsonify({
+                "success": True,
+                "message": "Analysis created successfully!",
+                "analysis": analysis_results
+            })
+            
+        except ValidationError as e:
+            return jsonify({
+                "success": False,
+                "message": str(e),
+                "field": e.field
+            }), 400
+        except Exception as e:
+            logging.error(f"Error processing analysis: {str(e)}")
+            logging.error(traceback.format_exc())
+            return jsonify({
+                "success": False,
+                "message": f"An error occurred: {str(e)}"
+            }), 500
+
+@analyses_bp.route('/update_analysis', methods=['POST'])
+@login_required
+def update_analysis():
+    try:
+        analysis_data = request.json
+        logging.info(f"Received update analysis data: {json.dumps(analysis_data, indent=2)}")
+
+        # Get and validate analysis ID
+        analysis_id = analysis_data.get('id')
+        if not analysis_id:
+            return jsonify({"success": False, "message": "Analysis ID is required"}), 400
+
+        # Find existing analysis file
+        analyses_dir = os.path.join(Config.DATA_DIR, 'analyses')
+        filepath = os.path.join(analyses_dir, f"{analysis_id}_{current_user.id}.json")
+
+        if not os.path.exists(filepath):
+            return jsonify({"success": False, "message": "Analysis not found"}), 404
+
+        # Calculate updated results while preserving ID
+        updated_data = calculate_analysis_results(analysis_data)
+        updated_data['id'] = analysis_id  # Ensure ID is preserved
+        
+        # Write the updated data to the existing file
+        with open(filepath, 'w') as f:
+            json.dump(updated_data, f, indent=2)
+
+        logging.info(f"Successfully updated analysis {analysis_id}")
+
+        return jsonify({
+            "success": True, 
+            "message": "Analysis updated successfully", 
+            "analysis": updated_data
+        })
+        
+    except Exception as e:
+        logging.error(f"Error updating analysis: {str(e)}")
+        logging.error(traceback.format_exc())
+        return jsonify({"success": False, "message": f"An error occurred: {str(e)}"}), 500
+
+def calculate_analysis_results(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Calculate analysis results using validated data"""
+    try:
+        analysis_type = data.get('analysis_type')
+        logging.info(f"Calculating results for analysis type: {analysis_type}")
+        
+        # Calculate MAO
+        mao_calculator = MAOCalculator(data)
+        mao = mao_calculator.calculate_mao()
+        mao_breakdown = mao_calculator.get_calculation_breakdown()
+        
+        # Add MAO to results
+        data['maximum_allowable_offer'] = mao
+        data['mao_breakdown'] = mao_breakdown
+        
+        # Use the appropriate calculation function based on analysis type
+        calculators = {
+            'BRRRR': calculate_brrrr_analysis,
+            'Long-Term Rental': calculate_long_term_rental_analysis,
+            'PadSplit BRRRR': calculate_padsplit_brrrr_analysis,
+            'PadSplit LTR': calculate_padsplit_ltr_analysis
+        }
+        
+        calculator = calculators.get(analysis_type)
+        if not calculator:
+            raise ValueError(f"Unknown analysis type: {analysis_type}")
+            
+        result = calculator(data)
+        return result
+        
+    except Exception as e:
+        logging.error(f"Error in calculate_analysis_results: {str(e)}")
+        raise
+
+def calculate_monthly_payment(loan_amount: float, annual_interest_rate: float, 
+                           loan_term_months: int) -> float:
+    """Calculate monthly loan payment using validated inputs"""
+    try:
+        if loan_amount <= 0 or annual_interest_rate <= 0 or loan_term_months <= 0:
+            return 0.0
+            
+        monthly_interest_rate = annual_interest_rate / 12 / 100
+        monthly_payment = loan_amount * (
+            monthly_interest_rate * 
+            (1 + monthly_interest_rate) ** loan_term_months
+        ) / ((1 + monthly_interest_rate) ** loan_term_months - 1)
+        
+        return monthly_payment
+        
+    except ZeroDivisionError:
+        return 0.0
+    except Exception as e:
+        logging.error(f"Error calculating monthly payment: {str(e)}")
+        return 0.0

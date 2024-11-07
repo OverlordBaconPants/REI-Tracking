@@ -12,8 +12,20 @@ const addTransactionsModule = {
                 console.log('Add Transaction form found');
                 await this.fetchCategories();
                 this.initEventListeners();
-                this.updateCategories('income'); // Default to income
-                this.updateCollectorPayerLabel('income'); // Default to income
+                
+                // Check if we're editing a transaction by looking for a hidden input
+                const transactionType = document.querySelector('input[name="type"]:checked');
+                if (transactionType) {
+                    // If editing, use the selected type to populate categories
+                    console.log('Initial transaction type:', transactionType.value);
+                    this.updateCategories(transactionType.value);
+                    this.updateCollectorPayerLabel(transactionType.value);
+                } else {
+                    // Default to income for new transactions
+                    this.updateCategories('income');
+                    this.updateCollectorPayerLabel('income');
+                }
+                
                 window.showNotification('Add Transactions module loaded', 'success');
             } else {
                 console.error('Add Transaction form not found');
@@ -25,15 +37,64 @@ const addTransactionsModule = {
         }
     },
 
-    fetchCategories: function() {
+    fetchCategories: async function() {
         console.log('Fetching categories');
-        return fetch('/api/categories')
-            .then(response => response.json())
-            .then(data => {
-                this.categories = data;
-                console.log('Categories received:', this.categories);
-            })
-            .catch(error => console.error('Error fetching categories:', error));
+        try {
+            const response = await fetch('/api/categories');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            if (data.status === 'success' && data.data) {
+                this.categories = data.data;
+            } else {
+                this.categories = data; // Fallback for direct categories response
+            }
+            console.log('Categories received:', this.categories);
+        } catch (error) {
+            console.error('Error fetching categories:', error);
+            throw error;
+        }
+    },
+
+    updateCategories: function(type) {
+        console.log('Updating categories for type:', type);
+        const categorySelect = document.getElementById('category');
+        if (categorySelect) {
+            // Store the current value before clearing
+            const currentValue = categorySelect.value;
+            
+            // Clear existing options
+            categorySelect.innerHTML = '<option value="">Select a category</option>';
+            
+            if (this.categories && this.categories[type]) {
+                this.categories[type].forEach(category => {
+                    const option = document.createElement('option');
+                    option.value = category;
+                    option.textContent = category;
+                    // If this was the previously selected category, mark it as selected
+                    if (category === currentValue) {
+                        option.selected = true;
+                    }
+                    categorySelect.appendChild(option);
+                });
+                
+                // If editing and we have a preselected category in a hidden input
+                const preselectedCategory = document.querySelector('input[name="preselected_category"]');
+                if (preselectedCategory && preselectedCategory.value) {
+                    // Find and select the matching option
+                    const matchingOption = Array.from(categorySelect.options)
+                        .find(option => option.value === preselectedCategory.value);
+                    if (matchingOption) {
+                        matchingOption.selected = true;
+                    }
+                }
+            } else {
+                console.error('Categories not found for type:', type);
+            }
+        } else {
+            console.error('Category select element not found');
+        }
     },
 
     initEventListeners: function() {
@@ -85,6 +146,17 @@ const addTransactionsModule = {
             console.error('Amount input element not found');
         }
 
+        // Add date input change listener to update hidden date_shared
+        const dateInput = document.getElementById('date');
+        if (dateInput) {
+            dateInput.addEventListener('change', (event) => {
+                const dateSharedInput = document.getElementById('date_shared');
+                if (dateSharedInput && !this.hasPartners()) {
+                    dateSharedInput.value = event.target.value;
+                }
+            });
+        }
+
         if (this.form) {
             this.form.addEventListener('submit', this.handleSubmit.bind(this));
             this.updateCollectorPayerOptions();
@@ -100,6 +172,20 @@ const addTransactionsModule = {
                     this.validateReimbursementStatus(formData);
                 }
             });
+        }
+    },
+
+    hasPartners: function() {
+        const propertySelect = document.getElementById('property_id');
+        if (!propertySelect || propertySelect.selectedIndex <= 0) return false;
+
+        try {
+            const selectedProperty = propertySelect.options[propertySelect.selectedIndex];
+            const propertyData = JSON.parse(selectedProperty.dataset.property);
+            return (propertyData.partners || []).length > 1;
+        } catch (error) {
+            console.error('Error checking for partners:', error);
+            return false;
         }
     },
 
@@ -120,6 +206,51 @@ const addTransactionsModule = {
             }
         } else {
             console.error('Category select element not found');
+        }
+    },
+
+    toggleReimbursementSection: function(propertyData) {
+        console.log('Toggling reimbursement section with property data:', JSON.stringify(propertyData, null, 2));
+        
+        const reimbursementSection = document.getElementById('reimbursement-section');
+        if (!reimbursementSection) {
+            console.error('Reimbursement section not found');
+            return;
+        }
+    
+        let hasOnlyOwner = false;
+        if (propertyData?.partners) {
+            // Check if there's only one partner with 100% equity
+            hasOnlyOwner = propertyData.partners.length === 1 && 
+                           propertyData.partners[0].equity_share === 100;
+            console.log('Property has only one owner:', hasOnlyOwner);
+        }
+    
+        if (hasOnlyOwner) {
+            console.log('Single owner property - hiding reimbursement section');
+            reimbursementSection.style.display = 'none';
+            
+            // Set hidden input values for submission
+            const dateInput = document.getElementById('date');
+            const dateSharedInput = document.getElementById('date_shared');
+            const reimbursementStatusInput = document.getElementById('reimbursement_status');
+            const shareDescriptionInput = document.getElementById('share_description');
+            
+            if (dateSharedInput && dateInput) {
+                dateSharedInput.value = dateInput.value;
+                console.log('Set date_shared to:', dateInput.value);
+            }
+            if (reimbursementStatusInput) {
+                reimbursementStatusInput.value = 'completed';
+                console.log('Set reimbursement_status to: completed');
+            }
+            if (shareDescriptionInput) {
+                shareDescriptionInput.value = 'Auto-completed - Single owner property';
+                console.log('Set share_description');
+            }
+        } else {
+            console.log('Multiple owners or no owner data - showing reimbursement section');
+            reimbursementSection.style.display = '';
         }
     },
 
@@ -146,28 +277,19 @@ const addTransactionsModule = {
         collectorPayerSelect.innerHTML = '';
     
         const selectedProperty = propertySelect.options[propertySelect.selectedIndex];
-        console.log('Selected property index:', propertySelect.selectedIndex);
-        console.log('Selected property value:', propertySelect.value);
-    
         if (propertySelect.selectedIndex <= 0 || !propertySelect.value) {
             console.log('No property selected');
             return;
         }
     
-        console.log('Selected property text:', selectedProperty.text);
-        console.log('Property dataset:', selectedProperty.dataset);
-        
         try {
-            // Log the raw data-property value
-            console.log('Raw data-property value:', selectedProperty.dataset.property);
-            
-            // Attempt to parse the JSON
             const propertyData = JSON.parse(selectedProperty.dataset.property);
             console.log('Parsed property data:', propertyData);
             
+            // Toggle reimbursement section first
+            this.toggleReimbursementSection(propertyData);
+            
             const partners = propertyData.partners || [];
-            console.log('Parsed partners:', partners);
-    
             if (partners.length === 0) {
                 console.log('No partners found for selected property');
                 collectorPayerSelect.innerHTML = '<option value="">No partners available</option>';
@@ -182,13 +304,9 @@ const addTransactionsModule = {
                 collectorPayerSelect.appendChild(option);
                 console.log('Added partner option:', partner.name);
             });
-    
-            console.log('Final collector/payer options:', collectorPayerSelect.innerHTML);
         } catch (error) {
             console.error('Error parsing property data:', error);
             console.log('Error details:', error.message);
-            console.log('Raw property data:', selectedProperty.dataset.property);
-            // Add a visible error message for the user
             collectorPayerSelect.innerHTML = '<option value="">Error loading partners</option>';
         }
     },

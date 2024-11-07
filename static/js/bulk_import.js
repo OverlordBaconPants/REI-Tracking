@@ -1,74 +1,177 @@
+/**
+ * BulkImportModule - Handles bulk import of transaction data
+ * Includes comprehensive validation, error handling, and logging
+ */
+
 const BulkImportModule = {
+    // Module configuration
+    config: {
+        maxFileSize: 5 * 1024 * 1024, // 5MB
+        allowedFileTypes: ['text/csv', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+        maxRowsToProcess: 1000,
+        validDateFormats: ['YYYY-MM-DD', 'MM/DD/YYYY', 'DD/MM/YYYY'],
+        amountRegex: /^-?\d*\.?\d+$/
+    },
+
+    // Store for validation errors
+    validationErrors: [],
+
+    /**
+     * Initialize the module
+     * Sets up event listeners and fetches required data
+     */
+
     init: async function() {
+        console.log('Initializing BulkImportModule');
         try {
             this.setupEventListeners();
-            // Fetch categories for validation
-            const response = await fetch('/transactions/api/categories');
-            this.categories = await response.json();
+            await this.fetchCategories();
+            this.logEvent('init', 'Module initialized successfully');
             toastr.success('Bulk import module loaded successfully');
         } catch (error) {
-            console.error('Error initializing module:', error);
-            toastr.error('Error initializing bulk import module');
+            this.logError('init', error);
+            toastr.error('Error initializing bulk import module. Check console for details.');
         }
     },
+
+    /**
+     * Fetch categories from the API
+     * @throws {Error} If categories cannot be fetched
+     */
+
+    async fetchCategories() {
+        try {
+            const response = await fetch('/api/categories');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const categories = await response.json();
+            
+            // Validate categories structure
+            if (!this.validateCategoriesStructure(categories)) {
+                throw new Error('Invalid categories structure received from server');
+            }
+            
+            this.categories = categories;
+            this.logEvent('fetchCategories', `Fetched ${Object.keys(categories).length} category types`);
+        } catch (error) {
+            this.logError('fetchCategories', error);
+            throw new Error('Failed to fetch categories: ' + error.message);
+        }
+    },
+
+    /**
+     * Validate the structure of received categories
+     * @param {Object} categories - Categories object to validate
+     * @returns {boolean} - Whether the structure is valid
+     */
+
+    validateCategoriesStructure(categories) {
+        return categories 
+            && typeof categories === 'object'
+            && Array.isArray(categories.income)
+            && Array.isArray(categories.expense);
+    },
+
+    /**
+     * Set up event listeners for the module
+     */
 
     setupEventListeners: function() {
         const fileInput = document.getElementById('file');
         const form = document.getElementById('bulk-import-form');
-        const mappingDiv = document.getElementById('column-mapping');
 
         if (fileInput) {
             fileInput.addEventListener('change', this.handleFileSelect.bind(this));
+        } else {
+            this.logError('setupEventListeners', 'File input element not found');
         }
+
         if (form) {
             form.addEventListener('submit', this.handleFormSubmit.bind(this));
+        } else {
+            this.logError('setupEventListeners', 'Form element not found');
         }
     },
 
-    // Fields are now optional
+    // Field definitions with enhanced validation
     fields: [
         {
             name: 'Property',
             required: false,
-            description: 'Property identifier'
+            description: 'Property identifier',
+            validate: function(value) {
+                if (!value) return true; // Optional field
+                return typeof value === 'string' && value.length <= 255;
+            }
         },
         {
             name: 'Transaction Type',
             required: false,
             description: 'Income or Expense',
-            transform: value => value?.toLowerCase() === 'income' ? 'Income' : 
-                              value?.toLowerCase() === 'expense' ? 'Expense' : value
+            validate: function(value) {
+                if (!value) return true;
+                const normalized = value.toLowerCase();
+                return ['income', 'expense'].includes(normalized);
+            },
+            transform: value => {
+                const normalized = value?.toLowerCase();
+                return normalized === 'income' ? 'Income' : 
+                       normalized === 'expense' ? 'Expense' : value;
+            }
         },
         {
             name: 'Category',
             required: false,
             description: 'Transaction category',
             validate: function(value, row) {
-                if (!value) return true; // Allow empty values
+                if (!value) return true;
                 const type = row['Transaction Type']?.toLowerCase();
                 const validCategories = type === 'income' ? 
                     this.categories?.income || [] : 
                     type === 'expense' ? 
                     this.categories?.expense || [] : 
                     [];
-                return validCategories.includes(value);
+                const isValid = validCategories.includes(value);
+                if (!isValid) {
+                    this.validationErrors.push(`Invalid category '${value}' for type '${type}'`);
+                }
+                return isValid;
             }
         },
         {
             name: 'Item Description',
             required: false,
-            description: 'Transaction description'
+            description: 'Transaction description',
+            validate: function(value) {
+                if (!value) return true;
+                return typeof value === 'string' && value.length <= 500;
+            },
+            transform: value => value?.trim()
         },
         {
             name: 'Amount',
             required: false,
             description: 'Transaction amount',
-            transform: value => parseFloat(value?.replace(/[^0-9.-]+/g, '')) || 0
+            validate: function(value) {
+                if (!value) return true;
+                const numValue = parseFloat(value.replace(/[^0-9.-]+/g, ''));
+                return !isNaN(numValue) && numValue !== 0;
+            },
+            transform: value => {
+                const numValue = parseFloat(value?.replace(/[^0-9.-]+/g, '')) || 0;
+                return Number.isFinite(numValue) ? numValue : 0;
+            }
         },
         {
             name: 'Date Received or Paid',
             required: false,
             description: 'Transaction date',
+            validate: function(value) {
+                if (!value) return true;
+                const date = new Date(value);
+                return date instanceof Date && !isNaN(date);
+            },
             transform: value => {
                 if (!value) return '';
                 const date = new Date(value);
@@ -79,18 +182,38 @@ const BulkImportModule = {
         {
             name: 'Paid By',
             required: false,
-            description: 'Transaction party'
+            description: 'Transaction party',
+            validate: function(value) {
+                if (!value) return true;
+                return typeof value === 'string' && value.length <= 255;
+            },
+            transform: value => value?.trim()
         }
     ],
 
+    /**
+     * Handle file selection
+     * Validates file type and size before processing
+     * @param {Event} e - File input change event
+     */
+
     handleFileSelect: async function(e) {
         const file = e.target.files[0];
-        if (!file) return;
+        if (!file) {
+            this.logEvent('handleFileSelect', 'No file selected');
+            return;
+        }
+
+        // Validate file type and size
+        if (!this.validateFile(file)) {
+            return;
+        }
 
         const formData = new FormData();
         formData.append('file', file);
 
         try {
+            this.logEvent('handleFileSelect', `Processing file: ${file.name}`);
             const response = await fetch('/transactions/get_columns', {
                 method: 'POST',
                 body: formData
@@ -103,15 +226,18 @@ const BulkImportModule = {
             const data = await response.json();
             
             if (data.error) {
+                this.logError('handleFileSelect', `Server reported error: ${data.error}`);
                 toastr.error(data.error);
             } else if (Array.isArray(data.columns)) {
+                this.logEvent('handleFileSelect', `Received ${data.columns.length} columns`);
                 this.createColumnMapping(data.columns);
                 toastr.success('File processed successfully. Please map the columns.');
             } else {
+                this.logError('handleFileSelect', 'Unexpected response format');
                 toastr.error('Unexpected response format from server');
             }
         } catch (error) {
-            console.error('Error:', error);
+            this.logError('handleFileSelect', error);
             toastr.error(
                 'An error occurred while processing the file. Please try again.',
                 'File Processing Error',
@@ -120,11 +246,70 @@ const BulkImportModule = {
         }
     },
 
+    /**
+     * Validate uploaded file
+     * @param {File} file - File to validate
+     * @returns {boolean} - Whether the file is valid
+     */
+
+    validateFile: function(file) {
+        if (!this.config.allowedFileTypes.includes(file.type)) {
+            this.logError('validateFile', `Invalid file type: ${file.type}`);
+            toastr.error('Please upload a CSV or Excel file');
+            return false;
+        }
+
+        if (file.size > this.config.maxFileSize) {
+            this.logError('validateFile', `File too large: ${file.size} bytes`);
+            toastr.error('File size must be less than 5MB');
+            return false;
+        }
+
+        return true;
+    },
+
+    /**
+     * Create column mapping interface
+     * @param {string[]} columns - Array of column names from uploaded file
+     */
+
     createColumnMapping: function(columns) {
         const mappingDiv = document.getElementById('column-mapping');
-        if (!mappingDiv) return;
+        if (!mappingDiv) {
+            this.logError('createColumnMapping', 'Mapping div not found');
+            return;
+        }
 
-        mappingDiv.innerHTML = `
+        this.logEvent('createColumnMapping', `Creating mapping for ${columns.length} columns`);
+
+        // Create mapping interface HTML
+        mappingDiv.innerHTML = this.createMappingHTML();
+        
+        // Create field mapping elements
+        this.fields.forEach(field => {
+            const containerDiv = this.createFieldMappingElement(field, columns);
+            mappingDiv.appendChild(containerDiv);
+        });
+
+        // Add hidden input for mapping
+        const mappingInput = document.createElement('input');
+        mappingInput.type = 'hidden';
+        mappingInput.name = 'column_mapping';
+        mappingDiv.appendChild(mappingInput);
+
+        // Setup change event listener
+        mappingDiv.addEventListener('change', this.updateColumnMapping.bind(this));
+        
+        this.logEvent('createColumnMapping', 'Mapping interface created successfully');
+    },
+
+    /**
+     * Create HTML for mapping interface
+     * @returns {string} HTML for mapping interface
+     */
+
+    createMappingHTML: function() {
+        return `
             <div class="alert alert-info">
                 <h5>Column Mapping Instructions:</h5>
                 <ul>
@@ -135,43 +320,46 @@ const BulkImportModule = {
                 </ul>
             </div>
         `;
+    },
+
+    /**
+     * Create field mapping element
+     * @param {Object} field - Field definition
+     * @param {string[]} columns - Available columns
+     * @returns {HTMLElement} Field mapping container
+     */
+
+    createFieldMappingElement: function(field, columns) {
+        const containerDiv = document.createElement('div');
+        containerDiv.className = 'mb-3';
+
+        const label = document.createElement('label');
+        label.innerHTML = `Map ${field.name} to: ${field.required ? '<span class="text-danger">*</span>' : ''}`;
+        label.className = 'form-label';
+
+        const select = document.createElement('select');
+        select.name = `mapping_${field.name}`;
+        select.className = 'form-select';
+        select.innerHTML = `<option value="">Select column for ${field.name}</option>`;
         
-        this.fields.forEach(field => {
-            const containerDiv = document.createElement('div');
-            containerDiv.className = 'mb-3';
-
-            const label = document.createElement('label');
-            label.innerHTML = `Map ${field.name} to: ${field.required ? '<span class="text-danger">*</span>' : ''}`;
-            label.className = 'form-label';
-
-            const select = document.createElement('select');
-            select.name = `mapping_${field.name}`;
-            select.className = 'form-select';
-            select.innerHTML = `<option value="">Select column for ${field.name}</option>`;
-            
-            columns.forEach(col => {
-                select.innerHTML += `<option value="${col}">${col}</option>`;
-            });
-
-            const description = document.createElement('small');
-            description.className = 'form-text text-muted';
-            description.textContent = field.description;
-
-            containerDiv.appendChild(label);
-            containerDiv.appendChild(select);
-            containerDiv.appendChild(description);
-            mappingDiv.appendChild(containerDiv);
+        columns.forEach(col => {
+            select.innerHTML += `<option value="${col}">${col}</option>`;
         });
 
-        // Add hidden input for complete mapping
-        const mappingInput = document.createElement('input');
-        mappingInput.type = 'hidden';
-        mappingInput.name = 'column_mapping';
-        mappingDiv.appendChild(mappingInput);
+        const description = document.createElement('small');
+        description.className = 'form-text text-muted';
+        description.textContent = field.description;
 
-        // Setup change event listener
-        mappingDiv.addEventListener('change', this.updateColumnMapping.bind(this));
+        containerDiv.appendChild(label);
+        containerDiv.appendChild(select);
+        containerDiv.appendChild(description);
+        
+        return containerDiv;
     },
+
+    /**
+     * Update column mapping when selections change
+     */
 
     updateColumnMapping: function() {
         const mapping = {};
@@ -185,133 +373,275 @@ const BulkImportModule = {
         const mappingInput = document.querySelector('input[name="column_mapping"]');
         if (mappingInput) {
             mappingInput.value = JSON.stringify(mapping);
+            this.logEvent('updateColumnMapping', 'Mapping updated');
+        } else {
+            this.logError('updateColumnMapping', 'Mapping input not found');
         }
     },
+
+    /**
+     * Handle form submission
+     * Validates data and sends to server
+     * @param {Event} e - Form submit event
+     */
 
     handleFormSubmit: async function(e) {
         e.preventDefault();
         
-        // Show loading indicator
         const submitButton = e.target.querySelector('button[type="submit"]');
         const originalButtonText = submitButton.innerHTML;
-        submitButton.disabled = true;
-        submitButton.innerHTML = 'Importing...';
         
         try {
-            const mappingInput = document.querySelector('input[name="column_mapping"]');
-            if (!mappingInput || !mappingInput.value) {
-                toastr.error('Please select a file and map at least one column');
+            // Validate mapping
+            if (!this.validateMapping()) {
                 return;
             }
 
-            const mapping = JSON.parse(mappingInput.value);
-            const mappedFields = Object.values(mapping).filter(Boolean);
+            // Update UI
+            submitButton.disabled = true;
+            submitButton.innerHTML = 'Importing...';
             
-            if (mappedFields.length === 0) {
-                toastr.error('Please map at least one column');
-                return;
-            }
-
+            // Prepare and validate form data
             const formData = new FormData(e.target);
-            
-            console.log('Sending request with form data:', {
-                file: formData.get('file'),
-                mapping: formData.get('column_mapping')
-            });
+            this.logEvent('handleFormSubmit', 'Sending import request');
 
-            const response = await fetch('/transactions/bulk_import', {
-                method: 'POST',
-                body: formData
-            });
+            // Send request
+            const response = await this.sendImportRequest(formData);
             
-            // Log the response details for debugging
-            console.log('Response status:', response.status);
-            console.log('Response headers:', Object.fromEntries([...response.headers]));
+            // Handle response
+            await this.handleImportResponse(response);
             
-            // Check content type
-            const contentType = response.headers.get('content-type');
-            console.log('Content-Type:', contentType);
-            
-            if (!contentType || !contentType.includes('application/json')) {
-                console.error('Invalid content type:', contentType);
-                throw new Error(`Unexpected response type: ${contentType}. Expected JSON.`);
-            }
-
-            let result;
-            try {
-                const text = await response.text();
-                console.log('Response text:', text);
-                result = JSON.parse(text);
-            } catch (error) {
-                console.error('Error parsing response:', error);
-                throw new Error(`Failed to parse server response: ${error.message}`);
-            }
-            
-            if (!response.ok) {
-                throw new Error(result.error || `Server error: ${response.status}`);
-            }
-            
-            if (result.success) {
-                // Show success message with statistics
-                toastr.success(
-                    `Successfully processed ${result.stats.total_processed} rows, saved ${result.stats.total_saved} transactions`,
-                    'Import Completed'
-                );
-                
-                // Show modifications as warnings
-                if (result.modifications && result.modifications.length > 0) {
-                    // Group modifications by row
-                    const groupedMods = result.modifications.reduce((acc, mod) => {
-                        if (!acc[mod.row]) {
-                            acc[mod.row] = [];
-                        }
-                        acc[mod.row].push(mod);
-                        return acc;
-                    }, {});
-                    
-                    // Show notifications for each row's modifications
-                    Object.entries(groupedMods).forEach(([row, mods]) => {
-                        const messages = mods.map(mod => mod.message);
-                        toastr.warning(
-                            `Row ${row}:<br>${messages.join('<br>')}`,
-                            'Data Modifications',
-                            { 
-                                timeOut: 10000, 
-                                extendedTimeOut: 5000,
-                                closeButton: true,
-                                progressBar: true,
-                                newestOnTop: false,
-                                preventDuplicates: true
-                            }
-                        );
-                    });
-                }
-                
-                // Redirect after showing notifications
-                setTimeout(() => {
-                    window.location.href = result.redirect;
-                }, Math.min(2000, result.modifications?.length * 500 || 2000));
-            } else {
-                throw new Error(result.error || 'Import failed');
-            }
         } catch (error) {
-            console.error('Import error:', error);
+            this.logError('handleFormSubmit', error);
             toastr.error(
                 error.message || 'An error occurred during import',
                 'Import Error',
-                { 
-                    timeOut: 0,
-                    closeButton: true,
-                    progressBar: false
-                }
+                { timeOut: 0, closeButton: true }
             );
         } finally {
-            // Restore button state
             submitButton.disabled = false;
             submitButton.innerHTML = originalButtonText;
         }
+    },
+
+    /**
+     * Validate column mapping
+     * @returns {boolean} Whether mapping is valid
+     */
+
+    validateMapping: function() {
+        const mappingInput = document.querySelector('input[name="column_mapping"]');
+        if (!mappingInput || !mappingInput.value) {
+            toastr.error('Please select a file and map at least one column');
+            return false;
+        }
+
+        const mapping = JSON.parse(mappingInput.value);
+        const mappedFields = Object.values(mapping).filter(Boolean);
+        
+        if (mappedFields.length === 0) {
+            toastr.error('Please map at least one column');
+            return false;
+        }
+
+        return true;
+    },
+
+    /**
+     * Send import request to server
+     * @param {FormData} formData - Form data to send
+     * @returns {Response} Server response
+     */
+
+    async sendImportRequest(formData) {
+        const response = await fetch('/transactions/bulk_import', {
+            method: 'POST',
+            body: formData
+        });
+        
+        this.logEvent('sendImportRequest', `Response status: ${response.status}`);
+        
+        // Validate response
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error(`Unexpected response type: ${contentType}. Expected JSON.`);
+        }
+
+        return response;
+    },
+
+    /**
+     * Handle the server's response to the import request
+     * @param {Response} response - Server response object
+     * @throws {Error} If response processing fails
+     */
+
+    async handleImportResponse(response) {
+        let result;
+        try {
+            const text = await response.text();
+            this.logEvent('handleImportResponse', `Raw response: ${text}`);
+            result = JSON.parse(text);
+        } catch (error) {
+            this.logError('handleImportResponse', `Parse error: ${error.message}`);
+            throw new Error(`Failed to parse server response: ${error.message}`);
+        }
+        
+        if (!response.ok) {
+            throw new Error(result.error || `Server error: ${response.status}`);
+        }
+        
+        if (result.success) {
+            await this.handleSuccessfulImport(result);
+        } else {
+            throw new Error(result.error || 'Import failed');
+        }
+    },
+
+    /**
+     * Handle successful import result
+     * @param {Object} result - Successful import result data
+     */
+
+    async handleSuccessfulImport(result) {
+        this.logEvent('handleSuccessfulImport', 
+            `Processed: ${result.stats.total_processed}, Saved: ${result.stats.total_saved}`
+        );
+
+        // Show success message
+        toastr.success(
+            `Successfully processed ${result.stats.total_processed} rows, saved ${result.stats.total_saved} transactions`,
+            'Import Completed'
+        );
+        
+        // Handle modifications if any
+        if (result.modifications?.length > 0) {
+            this.handleModifications(result.modifications);
+        }
+        
+        // Calculate redirect delay based on number of modifications
+        const redirectDelay = Math.min(2000, (result.modifications?.length || 0) * 500 || 2000);
+        
+        // Schedule redirect
+        this.logEvent('handleSuccessfulImport', `Scheduling redirect in ${redirectDelay}ms`);
+        setTimeout(() => {
+            window.location.href = result.redirect;
+        }, redirectDelay);
+    },
+
+    /**
+     * Handle data modifications from import
+     * @param {Array} modifications - Array of modification objects
+     */
+
+    handleModifications(modifications) {
+        this.logEvent('handleModifications', `Processing ${modifications.length} modifications`);
+        
+        // Group modifications by row
+        const groupedMods = modifications.reduce((acc, mod) => {
+            if (!acc[mod.row]) {
+                acc[mod.row] = [];
+            }
+            acc[mod.row].push(mod);
+            return acc;
+        }, {});
+        
+        // Show notifications for each row's modifications
+        Object.entries(groupedMods).forEach(([row, mods]) => {
+            const messages = mods.map(mod => mod.message);
+            this.logEvent('handleModifications', `Row ${row} modifications: ${messages.join(', ')}`);
+            
+            toastr.warning(
+                `Row ${row}:<br>${messages.join('<br>')}`,
+                'Data Modifications',
+                { 
+                    timeOut: 10000, 
+                    extendedTimeOut: 5000,
+                    closeButton: true,
+                    progressBar: true,
+                    newestOnTop: false,
+                    preventDuplicates: true
+                }
+            );
+        });
+    },
+
+    /**
+     * Log an event for debugging purposes
+     * @param {string} method - Method where event occurred
+     * @param {string} message - Event message
+     */
+    logEvent: function(method, message) {
+        const timestamp = new Date().toISOString();
+        console.log(`[${timestamp}] [${method}] ${message}`);
+        
+        // Could be extended to send logs to server or analytics service
+        if (window.debugMode) {
+            const logElement = document.getElementById('debug-log');
+            if (logElement) {
+                logElement.innerHTML += `<div>[${timestamp}] [${method}] ${message}</div>`;
+            }
+        }
+    },
+
+    /**
+     * Log an error for debugging purposes
+     * @param {string} method - Method where error occurred
+     * @param {Error|string} error - Error object or message
+     */
+    logError: function(method, error) {
+        const timestamp = new Date().toISOString();
+        const errorMessage = error instanceof Error ? error.message : error;
+        const stackTrace = error instanceof Error ? error.stack : new Error().stack;
+        
+        console.error(`[${timestamp}] [${method}] Error: ${errorMessage}`);
+        console.error('Stack trace:', stackTrace);
+        
+        // Could be extended to send errors to error tracking service
+        if (window.debugMode) {
+            const logElement = document.getElementById('debug-log');
+            if (logElement) {
+                logElement.innerHTML += `<div class="error">[${timestamp}] [${method}] Error: ${errorMessage}</div>`;
+            }
+        }
+    },
+
+    /**
+     * Validate a transaction row
+     * @param {Object} row - Transaction data row
+     * @returns {Object} Validation result with errors array
+     */
+    validateRow: function(row) {
+        const errors = [];
+        
+        this.fields.forEach(field => {
+            const value = row[field.name];
+            if (field.required && !value) {
+                errors.push(`${field.name} is required`);
+            } else if (value && field.validate) {
+                try {
+                    const isValid = field.validate.call(this, value, row);
+                    if (!isValid) {
+                        errors.push(`Invalid ${field.name}: ${value}`);
+                    }
+                } catch (error) {
+                    this.logError('validateRow', `Validation error for ${field.name}: ${error.message}`);
+                    errors.push(`Error validating ${field.name}`);
+                }
+            }
+        });
+
+        return {
+            valid: errors.length === 0,
+            errors: errors
+        };
     }
 };
+
+// Debug mode configuration - simplified and browser-safe
+window.debugMode = window.location.hostname === 'localhost' || 
+                   window.location.hostname === '127.0.0.1' ||
+                   window.location.hostname.includes('dev-');
 
 // Export the module for use in the main application
 window.BulkImportModule = BulkImportModule;

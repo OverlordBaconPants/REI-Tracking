@@ -108,36 +108,63 @@ main {
     margin: 10px 0;
 }
 
+.form-group.position-relative {
+    position: relative !important;
+    z-index: 100;
+}
+
+/* Add styles for the input focus state */
+.form-control:focus + .autocomplete-results {
+    display: block;
+}
+
 .autocomplete-container {
     position: relative;
+    width: 100%;
 }
 
 .autocomplete-results {
     position: absolute;
+    top: calc(100% + 5px); /* Position below input with small gap */
+    left: 0;
+    right: 0;
     z-index: 1000;
     width: 100%;
     max-height: 200px;
     overflow-y: auto;
-    list-style-type: none;  /* This removes the bullets */
-    padding: 0;
-    margin: 0;
-    border: 1px solid #ced4da;
-    border-top: none;
     background-color: white;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
 }
 
 .autocomplete-results li {
-    padding: 10px;
+    padding: 8px 12px;
     cursor: pointer;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    transition: background-color 0.2s ease;  /* Smooth transition for hover effect */
+    border-bottom: 1px solid #f0f0f0;
+    transition: background-color 0.2s ease;
+}
+
+.autocomplete-results li:last-child {
+    border-bottom: none;
 }
 
 .autocomplete-results li:hover {
-    background-color: #f0f0f0;  /* Light grey background on hover */
-    color: #333;  /* Darker text color for better contrast */
+    background-color: #f8f9fa;
+}
+
+.autocomplete-results .no-results,
+.autocomplete-results .error {
+    padding: 8px 12px;
+    color: #6c757d;
+    font-style: italic;
+}
+
+.autocomplete-results .error {
+    color: #dc3545;
 }
 
 .remove-properties-select {
@@ -273,4 +300,42 @@ main {
 
 #loan-info p {
     margin-bottom: 0;
+}
+
+/* Password validation styles */
+.password-requirements {
+    font-size: 0.875rem;
+}
+
+.requirement-item {
+    padding: 0.5rem 1rem;
+    border: none;
+    background: transparent;
+}
+
+.requirement-item.requirement-met {
+    color: #198754;
+}
+
+#password-strength {
+    margin-bottom: 1rem;
+}
+
+#password-strength .progress {
+    height: 8px;
+    margin: 0.5rem 0;
+}
+
+#password-strength .strength-text {
+    font-size: 0.875rem;
+}
+
+#password-match-message {
+    font-size: 0.875rem;
+}
+
+.property-table thead{
+    background-color: #000080 !important;  /* Navy blue */
+    color: white !important;
+    font-weight: bold !important;
 }
