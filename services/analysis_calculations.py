@@ -3,7 +3,9 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional
 from decimal import Decimal
 from utils.money import Money, Percentage, MonthlyPayment
+from utils.calculators import AmortizationCalculator
 import logging
+import traceback
 
 @dataclass
 class Loan:
@@ -13,6 +15,7 @@ class Loan:
     term_months: int
     down_payment: Money
     closing_costs: Money
+    is_interest_only: bool = False
     name: Optional[str] = None
 
     def __post_init__(self):
@@ -27,10 +30,21 @@ class Loan:
             self.closing_costs = Money(self.closing_costs)
 
     def calculate_payment(self) -> MonthlyPayment:
-        """Calculate monthly payment with amortization details"""
-        return AmortizationCalculator.calculate_monthly_payment(
-            self.amount, self.interest_rate, self.term_months
-        )
+        """Calculate monthly payment based on loan type"""
+        if self.is_interest_only:
+            # For interest-only loans, calculate just the monthly interest
+            monthly_interest_rate = self.interest_rate.as_decimal() / Decimal('12')
+            monthly_interest = self.amount.dollars * monthly_interest_rate
+            return MonthlyPayment(
+                total=Money(monthly_interest),
+                principal=Money(0),
+                interest=Money(monthly_interest)
+            )
+        else:
+            # For conventional loans, use standard amortization
+            return AmortizationCalculator.calculate_monthly_payment(
+                self.amount, self.interest_rate, self.term_months
+            )
 
     def total_initial_costs(self) -> Money:
         """Calculate total initial costs (down payment + closing costs)"""
@@ -211,112 +225,184 @@ class LongTermRentalAnalysis(BaseAnalysis):
         ], Money(0))
 
 class BRRRRAnalysis(BaseAnalysis):
+    """BRRRR strategy analysis implementation"""
+    
     def __init__(self, data: Dict):
-        super().__init__(data)
+        self.data = data  # Store data before super().__init__
+        super().__init__(data)  # Create base properties first
         self.initial_loan = self._create_initial_loan()
         self.refinance_loan = self._create_refinance_loan()
         self.holding_costs = self._calculate_holding_costs()
-        
+
     def _init_operating_expenses(self) -> OperatingExpenses:
-        return OperatingExpenses(
-            property_taxes=self.data['property_taxes'],
-            insurance=self.data['insurance'],
-            monthly_rent=self.data['monthly_rent'],
-            management_percentage=self.data['management_percentage'],
-            capex_percentage=self.data['capex_percentage'],
-            vacancy_percentage=self.data['vacancy_percentage']
-        )
+        """Initialize operating expenses"""
+        try:
+            return OperatingExpenses(
+                property_taxes=Money(self.data.get('property_taxes', 0)),
+                insurance=Money(self.data.get('insurance', 0)),
+                monthly_rent=Money(self.data.get('monthly_rent', 0)),
+                management_percentage=Percentage(self.data.get('management_percentage', 0)),
+                capex_percentage=Percentage(self.data.get('capex_percentage', 0)),
+                vacancy_percentage=Percentage(self.data.get('vacancy_percentage', 0))
+            )
+        except (ValueError, TypeError) as e:
+            logger.error(f"Error initializing operating expenses: {str(e)}")
+            raise ValueError(f"Invalid operating expense data: {str(e)}")
+
+    def calculate_monthly_cash_flow(self) -> Money:
+        """Calculate monthly cash flow"""
+        try:
+            total_expenses = (
+                self.operating_expenses.calculate_total() + 
+                self.refinance_loan.calculate_payment().total
+            )
+            return Money(self.monthly_rent.dollars - total_expenses.dollars)
+        except (ValueError, TypeError) as e:
+            logger.error(f"Error calculating monthly cash flow: {str(e)}")
+            raise ValueError(f"Error in cash flow calculation: {str(e)}")
         
     def _create_initial_loan(self) -> Loan:
-        return Loan(
-            amount=self.data['initial_loan_amount'],
-            interest_rate=self.data['initial_interest_rate'],
-            term_months=int(self.data['initial_loan_term']),
-            down_payment=self.data['initial_down_payment'],
-            closing_costs=self.data['initial_closing_costs'],
-            name="Initial Purchase Loan"
-        )
+        """Create the initial purchase loan"""
+        try:
+            return Loan(
+                amount=Money(self.data['initial_loan_amount']),
+                interest_rate=Percentage(self.data['initial_interest_rate']),
+                term_months=int(self.data['initial_loan_term']),
+                down_payment=Money(self.data['initial_down_payment']),
+                closing_costs=Money(self.data['initial_closing_costs']),
+                is_interest_only=bool(self.data.get('initial_interest_only', False)),
+                name="Initial Purchase Loan"
+            )
+        except (ValueError, TypeError) as e:
+            logger.error(f"Error creating initial loan: {str(e)}")
+            raise ValueError(f"Invalid initial loan data: {str(e)}")
         
     def _create_refinance_loan(self) -> Loan:
-        return Loan(
-            amount=self.data['refinance_loan_amount'],
-            interest_rate=self.data['refinance_interest_rate'],
-            term_months=int(self.data['refinance_loan_term']),
-            down_payment=self.data['refinance_down_payment'],
-            closing_costs=self.data['refinance_closing_costs'],
-            name="Refinance Loan"
-        )
+        """Create the refinance loan"""
+        try:
+            return Loan(
+                amount=Money(self.data.get('refinance_loan_amount', 0)),
+                interest_rate=Percentage(self.data.get('refinance_interest_rate', 0)),
+                term_months=int(self.data.get('refinance_loan_term', 0)),
+                down_payment=Money(self.data.get('refinance_down_payment', 0)),
+                closing_costs=Money(self.data.get('refinance_closing_costs', 0)),
+                name="Refinance Loan"
+            )
+        except (ValueError, TypeError) as e:
+            logger.error(f"Error creating refinance loan: {str(e)}")
+            raise ValueError(f"Invalid refinance loan data: {str(e)}")
         
     def _calculate_holding_costs(self) -> Money:
         """Calculate holding costs during renovation period"""
-        renovation_months = int(self.data['renovation_duration'])
-        monthly_costs = sum([
-            Money(self.data['property_taxes']),
-            Money(self.data['insurance']),
-            self.initial_loan.calculate_payment().total
-        ], Money(0))
-        return monthly_costs * renovation_months
-        
-    def calculate_monthly_cash_flow(self) -> Money:
-        """Calculate monthly cash flow using refinance loan payment"""
-        return self.monthly_rent - (
-            self.operating_expenses.calculate_total() + 
-            self.refinance_loan.calculate_payment().total
-        )
-        
+        try:
+            renovation_months = int(self.data.get('renovation_duration', 0))
+            monthly_costs = sum([
+                Money(self.data.get('property_taxes', 0)),
+                Money(self.data.get('insurance', 0)),
+                self.initial_loan.calculate_payment().total
+            ], Money(0))
+            return Money(monthly_costs.dollars * renovation_months)
+        except (ValueError, TypeError) as e:
+            logger.error(f"Error calculating holding costs: {str(e)}")
+            raise ValueError(f"Error in holding costs calculation: {str(e)}")
+
+    def calculate_total_project_costs(self) -> Money:
+        """
+        Calculate total project costs including all costs and subtracting refinance amount
+        Total = Purchase Price + Renovation + Initial Closing + Refinance Closing + 
+               Holding Costs - Refinance Loan Amount
+        """
+        try:
+            # First sum up all costs
+            total_costs = Money(sum([
+                self.purchase_price.dollars,
+                self.renovation_costs.dollars,
+                self.holding_costs.dollars,
+                self.initial_loan.closing_costs.dollars,
+                self.refinance_loan.closing_costs.dollars
+            ]))
+            
+            # Subtract refinance loan amount (cash we get back)
+            final_costs = Money(total_costs.dollars - self.refinance_loan.amount.dollars)
+            
+            return final_costs
+            
+        except (ValueError, TypeError) as e:
+            logger.error(f"Error calculating total project costs: {str(e)}")
+            raise ValueError(f"Error in project costs calculation: {str(e)}")
+
     def calculate_cash_recouped(self) -> Money:
         """Calculate cash recouped through refinance"""
-        return self.refinance_loan.amount - self.initial_loan.amount
-        
-    def calculate_total_project_costs(self) -> Money:
-        """Calculate total project costs including all expenses"""
-        return sum([
-            self.purchase_price,
-            self.renovation_costs,
-            self.holding_costs,
-            self.initial_loan.closing_costs,
-            self.refinance_loan.closing_costs
-        ], Money(0))
-        
+        return self.refinance_loan.amount
+
     def calculate_total_cash_invested(self) -> Money:
-        """
-        Calculate actual cash left in deal after refinance
-        This is the total project costs minus the cash recouped through refinance
-        """
-        total_costs = self.calculate_total_project_costs()
-        cash_recouped = self.calculate_cash_recouped()
-        return total_costs - cash_recouped
-        
+        """Calculate actual cash left in deal after refinance"""
+        try:
+            total_costs = self.calculate_total_project_costs()
+            cash_recouped = self.calculate_cash_recouped()
+            return Money(total_costs.dollars - cash_recouped.dollars)
+        except (ValueError, TypeError) as e:
+            logger.error(f"Error calculating total cash invested: {str(e)}")
+            raise ValueError(f"Error in cash invested calculation: {str(e)}")
+
     def calculate_equity_captured(self) -> Money:
-        """Calculate equity captured (ARV minus total project costs)"""
-        return self.after_repair_value - self.calculate_total_project_costs()
-        
-    def calculate_max_allowable_offer(self) -> Money:
-        """Calculate maximum allowable offer based on refinance strategy"""
-        refinance_ltv = Percentage(self.data.get('refinance_ltv_percentage', 75))
-        max_cash_left = Money(self.data.get('max_cash_left', 10000))
-        
-        # Maximum loan based on ARV and LTV
-        max_loan = self.after_repair_value * refinance_ltv
-        
-        # Working backwards from the maximum cash left in deal:
-        # max_cash_left = total_costs - refinance_loan
-        # total_costs = purchase + renovation + holding + closing costs
-        estimated_holding_months = int(self.data['renovation_duration'])
-        estimated_monthly_holding = Money(self.data['property_taxes']) + Money(self.data['insurance'])
-        estimated_holding_costs = estimated_monthly_holding * estimated_monthly_holding
-        
-        # Solve for purchase price:
-        # max_cash_left = (purchase + renovation + holding + closing) - max_loan
-        # purchase = max_loan + max_cash_left - (renovation + holding + closing)
-        mao = max_loan + max_cash_left - (
-            self.renovation_costs +
-            estimated_holding_costs +
-            self.initial_loan.closing_costs +
-            self.refinance_loan.closing_costs
-        )
-        
-        return max(mao, Money(0))
+        """Calculate equity captured"""
+        try:
+            equity = self.after_repair_value.dollars - self.calculate_total_project_costs().dollars
+            return Money(abs(equity))
+        except (ValueError, TypeError) as e:
+            logger.error(f"Error calculating equity captured: {str(e)}")
+            raise ValueError(f"Error in equity calculation: {str(e)}")
+
+    def calculate_total_monthly_expenses(self) -> Money:
+        """Calculate total monthly expenses"""
+        try:
+            return Money(sum([
+                self.operating_expenses.calculate_total().dollars,
+                self.refinance_loan.calculate_payment().total.dollars
+            ]))
+        except (ValueError, TypeError) as e:
+            logger.error(f"Error calculating total monthly expenses: {str(e)}")
+            raise ValueError(f"Error in monthly expenses calculation: {str(e)}")
+
+    def calculate_cash_on_cash_return(self) -> str:
+        """
+        Calculate cash-on-cash return
+        Returns "Infinite" if no cash left in deal, percentage otherwise
+        """
+        try:
+            total_cash_invested = self.calculate_total_cash_invested()
+            
+            # If no cash left in deal (or negative cash, meaning we pulled out more than we put in)
+            if total_cash_invested.dollars <= 0:
+                return "Infinite"
+                
+            annual_cash_flow = self.calculate_annual_cash_flow()
+            return str(Percentage((annual_cash_flow.dollars / total_cash_invested.dollars * 100)))
+        except (ValueError, TypeError, ZeroDivisionError) as e:
+            logger.error(f"Error calculating cash on cash return: {str(e)}")
+            return "Infinite"  # Return infinite if there's any calculation error
+    
+    def calculate_roi(self) -> str:
+        """
+        Calculate total ROI including both cash flow and equity
+        Returns "Infinite" if no cash left in deal, percentage otherwise
+        """
+        try:
+            total_cash_invested = self.calculate_total_cash_invested()
+            
+            # If no cash left in deal (or negative cash, meaning we pulled out more than we put in)
+            if total_cash_invested.dollars <= 0:
+                return "Infinite"
+            
+            annual_cash_flow = self.calculate_annual_cash_flow()
+            equity_captured = self.calculate_equity_captured()
+            total_return = annual_cash_flow.dollars + equity_captured.dollars
+            
+            return str(Percentage((total_return / total_cash_invested.dollars * 100)))
+        except (ValueError, TypeError, ZeroDivisionError) as e:
+            logger.error(f"Error calculating ROI: {str(e)}")
+            return "Infinite"  # Return infinite if there's any calculation error
 
 class PadSplitAnalysisMixin:
     """Mixin class for PadSplit-specific calculations"""
@@ -348,33 +434,76 @@ class PadSplitBRRRRAnalysis(BRRRRAnalysis, PadSplitAnalysisMixin):
 # Factory function to create the appropriate analysis object
 def create_analysis(data: Dict) -> BaseAnalysis:
     """Create the appropriate analysis object based on analysis type"""
-    analysis_type = data.get('analysis_type')
-    
-    if analysis_type == 'BRRRR':
-        return BRRRRAnalysis(data)
-    elif analysis_type == 'PadSplit BRRRR':
-        return PadSplitBRRRRAnalysis(data)
-    elif analysis_type == 'PadSplit LTR':
-        loans = _create_loans_from_data(data)
-        return PadSplitLTRAnalysis(data, loans)
-    elif analysis_type == 'Long-Term Rental':
-        loans = _create_loans_from_data(data)
-        return LongTermRentalAnalysis(data, loans)
-    else:
-        raise ValueError(f"Unknown analysis type: {analysis_type}")
+    try:
+        analysis_type = data.get('analysis_type')
+        if not analysis_type:
+            raise ValueError("Analysis type is required")
+            
+        logger = logging.getLogger(__name__)
+        logger.debug(f"Creating analysis of type: {analysis_type}")
+        
+        # Normalize analysis type to match class names
+        analysis_type = analysis_type.replace(' ', '')  # Remove spaces
+        
+        # Map frontend analysis types to classes
+        analysis_map = {
+            'BRRRR': BRRRRAnalysis,
+            'PadSplitBRRRR': PadSplitBRRRRAnalysis,
+            'PadSplitLTR': PadSplitLTRAnalysis,
+            'Long-TermRental': LongTermRentalAnalysis
+        }
+        
+        analysis_class = analysis_map.get(analysis_type)
+        if not analysis_class:
+            raise ValueError(f"Unknown analysis type: {analysis_type}")
+            
+        logger.debug(f"Using analysis class: {analysis_class.__name__}")
+        
+        # Handle different constructor requirements
+        if analysis_class in (LongTermRentalAnalysis, PadSplitLTRAnalysis):
+            loans = _create_loans_from_data(data)
+            return analysis_class(data, loans)
+        else:
+            return analysis_class(data)
+            
+    except Exception as e:
+        logger.error(f"Error creating analysis: {str(e)}")
+        logger.error(traceback.format_exc())
+        raise
 
 def _create_loans_from_data(data: Dict) -> List[Loan]:
     """Create loan objects from raw data"""
-    loans = []
-    for i in range(1, 4):  # Support up to 3 loans
-        loan_data = data.get('loans', {}).get(str(i))
-        if loan_data:
-            loans.append(Loan(
-                amount=loan_data['amount'],
-                interest_rate=loan_data['interest_rate'],
-                term_months=int(loan_data['term']),
-                down_payment=loan_data['down_payment'],
-                closing_costs=loan_data['closing_costs'],
-                name=loan_data.get('name', f'Loan {i}')
-            ))
-    return loans
+    try:
+        loans = []
+        raw_loans = data.get('loans', [])
+        
+        # Handle loans whether they come as a list or dict
+        if isinstance(raw_loans, dict):
+            raw_loans = [loan for _, loan in raw_loans.items() if loan]
+        
+        for i, loan_data in enumerate(raw_loans, 1):
+            if not loan_data:
+                continue
+                
+            try:
+                loans.append(Loan(
+                    amount=Money(loan_data['amount']),
+                    interest_rate=Percentage(loan_data['interest_rate']),
+                    term_months=int(loan_data['term']),
+                    down_payment=Money(loan_data['down_payment']),
+                    closing_costs=Money(loan_data['closing_costs']),
+                    name=loan_data.get('name', f'Loan {i}')
+                ))
+            except KeyError as ke:
+                logger.error(f"Missing required loan field: {ke}")
+                raise ValueError(f"Loan {i} is missing required field: {ke}")
+            except ValueError as ve:
+                logger.error(f"Invalid loan data: {ve}")
+                raise ValueError(f"Invalid data for loan {i}: {ve}")
+                
+        return loans
+        
+    except Exception as e:
+        logger.error(f"Error creating loans: {str(e)}")
+        logger.error(traceback.format_exc())
+        raise

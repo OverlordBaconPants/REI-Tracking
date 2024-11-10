@@ -198,34 +198,37 @@ const analysisModule = {
         const financialTab = document.getElementById('financial');
         
         if (analysisType && financialTab) {
+            // Store 'this' context
+            const self = this;
+            
             // Handle both change events and initial load
             const handleTypeChange = (value) => {
                 console.log('Loading fields for analysis type:', value);
                 switch(value) {
                     case 'Long-Term Rental':
-                        financialTab.innerHTML = this.getLongTermRentalHTML();
+                        financialTab.innerHTML = self.getLongTermRentalHTML();
                         break;
                     case 'PadSplit LTR':
-                        this.loadPadSplitLTRFields(financialTab);
+                        self.loadPadSplitLTRFields(financialTab);
                         break;
                     case 'BRRRR':
-                        financialTab.innerHTML = this.getBRRRRHTML();
+                        financialTab.innerHTML = self.getBRRRRHTML();
                         break;
                     case 'PadSplit BRRRR':
-                        this.loadPadSplitBRRRRFields(financialTab);
+                        self.loadPadSplitBRRRRFields(financialTab);
                         break;
                     default:
                         financialTab.innerHTML = '<p>Financial details for this analysis type are not yet implemented.</p>';
                 }
                 // Initialize loan handlers after loading new content
-                this.initLoanHandlers(financialTab);
+                self.initLoanHandlers();
             };
-
+    
             // Set up event listener for changes
             analysisType.addEventListener('change', (e) => {
                 handleTypeChange(e.target.value);
             });
-
+    
             // If there's an initial value, load the appropriate fields
             if (analysisType.value) {
                 handleTypeChange(analysisType.value);
@@ -255,6 +258,9 @@ const analysisModule = {
     },
 
     loadAnalysisData: function(analysisId) {
+        const self = this;
+        console.log('Loading analysis data for ID:', analysisId);
+        
         fetch(`/analyses/get_analysis/${analysisId}`)
             .then(response => {
                 if (!response.ok) {
@@ -264,9 +270,11 @@ const analysisModule = {
                 return response.json();
             })
             .then(data => {
-                if (data.success) {
+                if (data?.success) {
+                    console.log('Received analysis data:', data.analysis);
+                    
                     // Store the current analysis ID
-                    this.currentAnalysisId = analysisId;
+                    self.currentAnalysisId = analysisId;
                     
                     // Set the analysis type first
                     const analysisType = document.getElementById('analysis_type');
@@ -274,25 +282,12 @@ const analysisModule = {
                         analysisType.value = data.analysis.analysis_type;
                         // This will trigger loading the correct fields
                         analysisType.dispatchEvent(new Event('change'));
+                        
+                        // Wait for fields to be loaded before populating
+                        setTimeout(() => {
+                            self.populateFormFields(data.analysis);
+                        }, 100);
                     }
-                    
-                    // Add a small delay to ensure fields are loaded before populating
-                    setTimeout(() => {
-                        // Populate the form fields
-                        this.populateForm(data.analysis);
-                        
-                        // Update the form submission handling
-                        const form = document.querySelector('#analysisForm');
-                        if (form) {
-                            form.onsubmit = (event) => this.handleEditSubmit(event, analysisId);
-                        }
-                        
-                        // Update button text
-                        const submitBtn = document.getElementById('submitAnalysisBtn');
-                        if (submitBtn) {
-                            submitBtn.textContent = 'Update Analysis';
-                        }
-                    }, 100);
                 } else {
                     console.error('Failed to fetch analysis data');
                     toastr.error('Error loading analysis data');
@@ -303,7 +298,7 @@ const analysisModule = {
                 toastr.error('Error loading analysis data');
             });
     },
-
+    
     loadLongTermRentalFields: function(container) {
         container.innerHTML = `
             <div class="card mb-4">
@@ -716,6 +711,15 @@ const analysisModule = {
                                    placeholder="How much you intend to spend on marketing" required>
                         </div>
                     </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="entry_fee_cap_percentage" class="form-label">Entry Fee Cap (% of ARV)</label>
+                            <input type="number" class="form-control" id="entry_fee_cap_percentage" 
+                                name="entry_fee_cap_percentage" value="15" min="0" max="100" 
+                                step="1" required>
+                            <div class="form-text">Maximum entry fee as percentage of ARV</div>
+                        </div>
+                    </div>
                 </div>
             </div>
     
@@ -792,15 +796,6 @@ const analysisModule = {
                                    placeholder="Monthly association costs, if any" required>
                         </div>
                     </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="entry_fee_cap_percentage" class="form-label">Entry Fee Cap (% of ARV)</label>
-                            <input type="number" class="form-control" id="entry_fee_cap_percentage" 
-                                name="entry_fee_cap_percentage" value="15" min="0" max="100" 
-                                step="1" required>
-                            <div class="form-text">Maximum entry fee as percentage of ARV</div>
-                        </div>
-                    </div>
                 </div>
             </div>
         `;
@@ -811,70 +806,82 @@ const analysisModule = {
         return `
             <div class="card mb-4">
                 <div class="card-header">Purchase Details</div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="purchase_price" class="form-label">Purchase Price</label>
-                            <input type="number" class="form-control" id="purchase_price" name="purchase_price" 
-                                   placeholder="The sales price as recorded on the ALTA or HUD" required>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="purchase_price" class="form-label">Purchase Price</label>
+                                <input type="number" class="form-control" id="purchase_price" name="purchase_price" 
+                                    placeholder="The sales price as recorded on the ALTA or HUD" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="after_repair_value" class="form-label">After Repair Value (ARV)</label>
+                                <input type="number" class="form-control" id="after_repair_value" name="after_repair_value" 
+                                    placeholder="How much the property will be worth after renovation" required>
+                            </div>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="after_repair_value" class="form-label">After Repair Value (ARV)</label>
-                            <input type="number" class="form-control" id="after_repair_value" name="after_repair_value" 
-                                   placeholder="How much the property will be worth after renovation" required>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="renovation_costs" class="form-label">Renovation Costs</label>
-                            <input type="number" class="form-control" id="renovation_costs" name="renovation_costs" 
-                                   placeholder="How much you anticipate spending to renovate the property" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="renovation_duration" class="form-label">Renovation Duration (months)</label>
-                            <input type="number" class="form-control" id="renovation_duration" name="renovation_duration" 
-                                   placeholder="How long before the property is ready for refinance" required>
-                        </div>
-                    </div>
-                </div>
-            </div>
-    
-            <div class="card mb-4">
-                <div class="card-header">Initial Financing</div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="initial_loan_amount" class="form-label">Initial Loan Amount</label>
-                            <input type="number" class="form-control" id="initial_loan_amount" name="initial_loan_amount" 
-                                   placeholder="Amount of your initial purchase loan" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="initial_down_payment" class="form-label">Initial Down Payment</label>
-                            <input type="number" class="form-control" id="initial_down_payment" name="initial_down_payment" 
-                                   placeholder="Down payment required for initial purchase" required>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="initial_interest_rate" class="form-label">Initial Interest Rate (%)</label>
-                            <input type="number" class="form-control" id="initial_interest_rate" name="initial_interest_rate" 
-                                   placeholder="Interest rate for initial loan" step="0.01" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="initial_loan_term" class="form-label">Initial Loan Term (months)</label>
-                            <input type="number" class="form-control" id="initial_loan_term" name="initial_loan_term" 
-                                   placeholder="Duration of initial loan in months" required>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="initial_closing_costs" class="form-label">Initial Closing Costs</label>
-                            <input type="number" class="form-control" id="initial_closing_costs" name="initial_closing_costs" 
-                                   placeholder="All costs associated with initial purchase closing" required>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="renovation_costs" class="form-label">Renovation Costs</label>
+                                <input type="number" class="form-control" id="renovation_costs" name="renovation_costs" 
+                                    placeholder="How much you anticipate spending to renovate the property" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="renovation_duration" class="form-label">Renovation Duration (months)</label>
+                                <input type="number" class="form-control" id="renovation_duration" name="renovation_duration" 
+                                    placeholder="How long before the property is ready for refinance" required>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
+
+                <div class="card mb-4">
+                    <div class="card-header">Initial Financing</div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="initial_loan_amount" class="form-label">Initial Loan Amount</label>
+                                <input type="number" class="form-control" id="initial_loan_amount" name="initial_loan_amount" 
+                                    placeholder="Amount of your initial purchase loan" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="initial_down_payment" class="form-label">Initial Down Payment</label>
+                                <input type="number" class="form-control" id="initial_down_payment" name="initial_down_payment" 
+                                    placeholder="Down payment required for initial purchase" required>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="d-flex align-items-end gap-2">
+                                    <div style="flex: 1;">
+                                        <label for="initial_interest_rate" class="form-label">Initial Interest Rate (%)</label>
+                                        <input type="number" class="form-control" id="initial_interest_rate" name="initial_interest_rate" 
+                                            placeholder="Interest rate" step="0.01" required>
+                                    </div>
+                                    <div class="mb-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="initial_interest_only" name="initial_interest_only">
+                                            <label class="form-check-label" for="initial_interest_only">
+                                                Interest Only
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="initial_loan_term" class="form-label">Initial Loan Term (months)</label>
+                                <input type="number" class="form-control" id="initial_loan_term" name="initial_loan_term" 
+                                    placeholder="Duration of initial loan in months" required>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="initial_closing_costs" class="form-label">Initial Closing Costs</label>
+                                <input type="number" class="form-control" id="initial_closing_costs" name="initial_closing_costs" 
+                                    placeholder="All costs associated with initial purchase closing" required>
+                            </div>
+                        </div>
+                    </div>
+                </div>
     
             <div class="card mb-4">
                 <div class="card-header">Refinance Details</div>
@@ -1141,30 +1148,70 @@ const analysisModule = {
             }
         }
     
-        // Base fields to convert to numbers
+        // Complete list of all numeric fields
         const numericFields = [
-            'purchase_price', 'after_repair_value', 'cash_to_seller', 'closing_costs',
-            'assignment_fee', 'marketing_costs', 'renovation_costs', 'renovation_duration',
-            'monthly_rent', 'management_percentage', 'capex_percentage',
-            'repairs_percentage', 'vacancy_percentage', 'property_taxes', 'insurance',
-            'hoa_coa_coop', 'home_square_footage', 'lot_square_footage', 'year_built'
+            // Property Details
+            'purchase_price', 
+            'after_repair_value', 
+            'home_square_footage',
+            'lot_square_footage',
+            'year_built',
+            
+            // Purchase Details
+            'cash_to_seller', 
+            'closing_costs',
+            'assignment_fee', 
+            'marketing_costs', 
+            'renovation_costs', 
+            'renovation_duration',
+            
+            // Initial Loan Details
+            'initial_loan_amount',
+            'initial_down_payment',
+            'initial_interest_rate',
+            'initial_loan_term',
+            'initial_closing_costs',
+            
+            // Refinance Details
+            'refinance_loan_amount',
+            'refinance_down_payment',
+            'refinance_interest_rate',
+            'refinance_loan_term',
+            'refinance_closing_costs',
+            'refinance_ltv_percentage',
+            'max_cash_left',
+            
+            // Income and Operating Expenses
+            'monthly_rent',
+            'management_percentage',
+            'capex_percentage',
+            'repairs_percentage',
+            'vacancy_percentage',
+            'property_taxes',
+            'insurance',
+            'hoa_coa_coop',
+            
+            // PadSplit specific fields
+            'padsplit_platform_percentage',
+            'utilities',
+            'internet',
+            'cleaning_costs',
+            'pest_control',
+            'landscaping'
         ];
-    
-        // Add PadSplit-specific fields if applicable
-        if (analysisData.analysis_type.includes('PadSplit')) {
-            numericFields.push(
-                'padsplit_platform_percentage', 'utilities', 'internet',
-                'cleaning_costs', 'pest_control', 'landscaping'
-            );
-        }
     
         // Convert numeric fields
         numericFields.forEach(field => {
-            if (analysisData[field]) {
+            if (analysisData[field] !== undefined && analysisData[field] !== '') {
                 analysisData[field] = parseFloat(this.cleanNumericValue(analysisData[field]));
                 console.log(`Converted ${field} to number: ${analysisData[field]}`);
             }
         });
+    
+        // Handle boolean fields
+        if (analysisData.initial_interest_only) {
+            analysisData.initial_interest_only = analysisData.initial_interest_only === 'on';
+        }
     
         console.log('Sending analysis data:', JSON.stringify(analysisData, null, 2));
     
@@ -1182,15 +1229,14 @@ const analysisModule = {
             return response.json();
         })
         .then(data => {
-            console.log('Server response:', data);
+            console.log('Create handler - Server response:', data);
+            console.log('Create handler - Analysis data:', data.analysis);
             if (data.success) {
                 this.currentAnalysisId = data.analysis.id;
                 this.populateReportsTab(data.analysis);
                 this.switchToReportsTab();
                 this.showReportActions();
                 toastr.success('Analysis created successfully');
-            } else {
-                throw new Error(data.message || 'Unknown error occurred');
             }
         })
         .catch(error => {
@@ -1211,16 +1257,15 @@ const analysisModule = {
         }
     
         const form = event.target;
-        const formData = new FormData(form);
-        
         if (!this.validateForm(form)) {
             console.log('Form validation failed');
             return;
         }
     
-        // Create analysis data object and explicitly set the ID
+        // Create analysis data object with explicit ID
+        const formData = new FormData(form);
         const analysisData = {
-            id: analysisId,  // Explicitly set the ID
+            id: analysisId,
             ...Object.fromEntries(formData.entries())
         };
     
@@ -1242,74 +1287,152 @@ const analysisModule = {
             }
         }
     
-        // Convert numeric fields
+        // Complete list of numeric fields
         const numericFields = [
-            'purchase_price', 'after_repair_value', 'cash_to_seller', 'closing_costs',
-            'assignment_fee', 'marketing_costs', 'renovation_costs', 'renovation_duration',
-            'monthly_rent', 'management_percentage', 'capex_percentage',
-            'repairs_percentage', 'vacancy_percentage', 'property_taxes', 'insurance',
-            'hoa_coa_coop', 'home_square_footage', 'lot_square_footage', 'year_built'
+            // Property Details
+            'purchase_price', 
+            'after_repair_value', 
+            'home_square_footage',
+            'lot_square_footage',
+            'year_built',
+            
+            // Purchase Details
+            'cash_to_seller', 
+            'closing_costs',
+            'assignment_fee', 
+            'marketing_costs', 
+            'renovation_costs', 
+            'renovation_duration',
+            
+            // Initial Loan Details
+            'initial_loan_amount',
+            'initial_down_payment',
+            'initial_interest_rate',
+            'initial_loan_term',
+            'initial_closing_costs',
+            
+            // Refinance Details
+            'refinance_loan_amount',
+            'refinance_down_payment',
+            'refinance_interest_rate',
+            'refinance_loan_term',
+            'refinance_closing_costs',
+            'refinance_ltv_percentage',
+            'max_cash_left',
+            
+            // Income and Operating Expenses
+            'monthly_rent',
+            'management_percentage',
+            'capex_percentage',
+            'repairs_percentage',
+            'vacancy_percentage',
+            'property_taxes',
+            'insurance',
+            'hoa_coa_coop'
         ];
     
-        // Add PadSplit-specific fields if applicable
-        if (analysisData.analysis_type.includes('PadSplit')) {
-            numericFields.push(
-                'padsplit_platform_percentage', 'utilities', 'internet',
-                'cleaning_costs', 'pest_control', 'landscaping'
-            );
-        }
-    
-        // Convert numeric fields
+        // Convert numeric fields and add validation
         numericFields.forEach(field => {
-            if (analysisData[field]) {
-                analysisData[field] = parseFloat(this.cleanNumericValue(analysisData[field]));
-            }
-        });
-    
-        console.log('Sending updated analysis data:', JSON.stringify(analysisData, null, 2));
-    
-        // Make sure we're using the update endpoint
-        fetch('/analyses/update_analysis', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(analysisData)
-        })
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(err => { throw err; });
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log('Server response:', data);
-            if (data.success) {
-                const analysisWithId = {
-                    ...data.analysis,
-                    id: analysisId  // Ensure ID is preserved
-                };
-                this.populateReportsTab(analysisWithId);
-                this.switchToReportsTab();
-                this.showReportActions();
-                toastr.success('Analysis updated successfully');
+            if (analysisData[field] !== undefined && analysisData[field] !== '') {
+                const cleanValue = this.cleanNumericValue(analysisData[field]);
+                if (!isNaN(cleanValue)) {
+                    analysisData[field] = parseFloat(cleanValue);
+                    console.log(`Converted ${field} to number: ${analysisData[field]}`);
+                } else {
+                    console.warn(`Invalid numeric value for ${field}: ${analysisData[field]}`);
+                    analysisData[field] = 0; // Default to 0 for invalid numbers
+                }
             } else {
-                throw new Error(data.message || 'Unknown error occurred');
+                console.debug(`Field ${field} is undefined or empty`);
             }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            toastr.error('An error occurred while updating the analysis. Please try again.');
         });
+    
+        // Handle boolean fields
+        analysisData.initial_interest_only = 
+            document.getElementById('initial_interest_only')?.checked || false;
+    
+        // Add retry mechanism
+        const maxRetries = 3;
+        let currentTry = 0;
+    
+        const attemptUpdate = () => {
+            currentTry++;
+            console.log(`Attempt ${currentTry} to update analysis`);
+            console.log('Sending analysis data:', JSON.stringify(analysisData, null, 2));
+    
+            return fetch('/analyses/update_analysis', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(analysisData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => { throw err; });
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Edit handler - Server response:', data);
+                console.log('Edit handler - Analysis data:', data.analysis);
+                if (data.success) {
+                    const analysisWithId = {
+                        ...data.analysis,
+                        id: analysisId
+                    };
+                    console.log('Edit handler - Reconstructed analysis:', analysisWithId);
+                    this.populateReportsTab(analysisWithId);
+                    this.switchToReportsTab();
+                    this.showReportActions();
+                    toastr.success('Analysis updated successfully');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                if (currentTry < maxRetries) {
+                    console.log(`Retrying update (attempt ${currentTry + 1} of ${maxRetries})...`);
+                    return new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1 second
+                        .then(() => attemptUpdate());
+                } else {
+                    toastr.error('An error occurred while updating the analysis. Please try again.');
+                    throw error;
+                }
+            });
+        };
+    
+        // Start the update process
+        attemptUpdate().catch(error => {
+            console.error('All retry attempts failed:', error);
+        });
+    },
+
+    calculateMAO: function(analysis) {
+        try {
+            // Extract numeric values from currency strings
+            const purchasePrice = parseFloat(analysis.purchase_price?.replace(/[$,]/g, '')) || 0;
+            const maxCashLeft = 10000; // Default $10k if not specified
+            const totalProjectCosts = parseFloat(analysis.total_project_costs?.replace(/[$,]/g, '')) || 0;
+            
+            // Calculate MAO
+            const mao = purchasePrice + (maxCashLeft - totalProjectCosts);
+            
+            // Format as currency
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(mao);
+        } catch (error) {
+            console.error('Error calculating MAO:', error);
+            return '$0.00';
+        }
     },
     
     populateReportsTab: function(analysis) {
-        console.log('Populating reports tab with analysis:', analysis);
-        console.log('Raw monthly rent:', analysis.monthly_rent);
-        console.log('Raw net monthly cash flow:', analysis.net_monthly_cash_flow);
-        console.log('Raw annual cash flow:', analysis.annual_cash_flow);
-        console.log('Raw operating expenses:', analysis.operating_expenses);
-
+        console.log('Starting populateReportsTab with analysis:', analysis);
+        
         // Store ID and get reports container
         this.currentAnalysisId = analysis.id || null;
         const reportsContent = document.querySelector('#reports');
@@ -1319,60 +1442,12 @@ const analysisModule = {
             return;
         }
     
-        // Helper functions with robust error handling
-        const formatCurrency = (value) => {
-            if (!value && value !== 0) return '$0.00';
-            try {
-                // Handle when value is already a number
-                if (typeof value === 'number') {
-                    return new Intl.NumberFormat('en-US', {
-                        style: 'currency',
-                        currency: 'USD',
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2
-                    }).format(value);
-                }
-                // Handle string values
-                if (typeof value === 'string') {
-                    // Remove currency symbols, commas, and spaces
-                    const numericValue = parseFloat(value.replace(/[$,\s]/g, ''));
-                    if (isNaN(numericValue)) return '$0.00';
-                    return new Intl.NumberFormat('en-US', {
-                        style: 'currency',
-                        currency: 'USD',
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2
-                    }).format(numericValue);
-                }
-                return '$0.00';
-            } catch (e) {
-                console.error('Error formatting currency:', e, 'Value:', value);
-                return '$0.00';
-            }
-        };
-
-        const formatPercentage = (value) => {
-            if (!value && value !== 0) return '0.00%';
-            try {
-                // Handle when value is already a number
-                if (typeof value === 'number') {
-                    return `${value.toFixed(2)}%`;
-                }
-                // Handle string values
-                if (typeof value === 'string') {
-                    // Remove % symbol and convert to number
-                    const numericValue = parseFloat(value.replace(/%/g, ''));
-                    if (isNaN(numericValue)) return '0.00%';
-                    return `${numericValue.toFixed(2)}%`;
-                }
-                return '0.00%';
-            } catch (e) {
-                console.error('Error formatting percentage:', e, 'Value:', value);
-                return '0.00%';
-            }
-        };
-
-        // Build the HTML with safe MAO section handling
+        const maoValue = this.calculateMAO(analysis);
+        console.log('Calculated MAO:', maoValue);
+    
+        // Verify content exists and structure
+        console.log('Found reports container:', reportsContent);
+    
         let html = `
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
@@ -1382,173 +1457,113 @@ const analysisModule = {
                 
                 <div class="card-body">
                     <div class="row">
-                        <div class="col-md-6">
-                            <h5>Purchase Details</h5>
-                            <p>Purchase Price: ${formatCurrency(analysis.purchase_price)}</p>
-                            <p>Renovation Costs: ${formatCurrency(analysis.renovation_costs)}</p>
-                            <p>After Repair Value: ${formatCurrency(analysis.after_repair_value)}</p>
-                            ${analysis.loans && analysis.loans.length > 0 ? 
-                                `<p>Loan Amount: ${formatCurrency(analysis.loans[0].amount)}</p>` : ''}
-                        </div>
-                        <div class="col-md-6">
-                            <h5>Income and Returns</h5>
-                            <p>Monthly Rent: ${formatCurrency(analysis.monthly_rent)}</p>
-                            <p>Monthly Cash Flow: ${formatCurrency(analysis.monthly_cash_flow)}</p>
-                            <p>Annual Cash Flow: ${formatCurrency(analysis.annual_cash_flow)}</p>
-                            <p>Cash-on-Cash Return: ${formatPercentage(analysis.cash_on_cash_return)}</p>
-                        </div>
-                    </div>
-                    ${analysis.maximum_allowable_offer ? `
-                        <div class="row mt-3">
-                            <div class="col-md-6">
-                                <h5>Maximum Allowable Offer</h5>
-                                <p class="d-flex align-items-center">
-                                    MAO: ${formatCurrency(analysis.maximum_allowable_offer)}
-                                    ${analysis.mao_breakdown ? `
+                        <div class="col-md-6 mb-4">
+                            <h5 class="mb-3">Purchase Details</h5>
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <p class="mb-2"><strong>Purchase Price:</strong> ${analysis.purchase_price || '$0.00'}</p>
+                                    <p class="mb-2"><strong>Renovation Costs:</strong> ${analysis.renovation_costs || '$0.00'}</p>
+                                    <p class="mb-2"><strong>After Repair Value:</strong> ${analysis.after_repair_value || '$0.00'}</p>
+                                    <p class="mb-2">
+                                        <strong>Maximum Allowable Offer:</strong> ${maoValue}
                                         <i class="ms-2 bi bi-info-circle" 
-                                        data-bs-toggle="tooltip" 
-                                        data-bs-html="true" 
-                                        title="${analysis.mao_breakdown.replace(/\n/g, '<br>')}"
-                                        style="cursor: pointer"></i>
-                                    ` : ''}
-                                </p>
+                                           data-bs-toggle="tooltip" 
+                                           data-bs-html="true" 
+                                           title="This value represents the highest possible value of Purchase Price given your LTV Cash-Out Refi and the maximum amount you're willing to be stuck in a deal"></i>
+                                    </p>
+                                </div>
                             </div>
                         </div>
-                    ` : ''}`;
+    
+                        <div class="col-md-6 mb-4">
+                            <h5 class="mb-3">Income & Returns</h5>
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <p class="mb-2"><strong>Monthly Rent:</strong> ${analysis.monthly_rent || '$0.00'}</p>
+                                    <p class="mb-2"><strong>Monthly Cash Flow:</strong> ${analysis.monthly_cash_flow || '$0.00'}</p>
+                                    <p class="mb-2"><strong>Annual Cash Flow:</strong> ${analysis.annual_cash_flow || '$0.00'}</p>
+                                    <p class="mb-2"><strong>Cash-on-Cash Return:</strong> ${analysis.cash_on_cash_return || '0%'}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>;
 
-        // Add analysis-specific content
-        if (analysis.analysis_type === 'BRRRR' || analysis.analysis_type === 'PadSplit BRRRR') {
-            html += `
-                <div class="row mt-4">
+                ${(analysis.analysis_type === 'BRRRR' || analysis.analysis_type === 'PadSplit BRRRR') ? `
+                <!-- Second row with Investment Summary and Financing Details -->
+                <div class="row">
                     <div class="col-md-6">
                         <h5>Investment Summary</h5>
                         <div class="card bg-light mb-3">
                             <div class="card-body">
                                 <p class="mb-2">
-                                    <strong>Total Project Costs:</strong> ${formatCurrency(analysis.total_costs)}
-                                    <i class="ms-2 bi bi-info-circle" 
-                                       data-bs-toggle="tooltip" 
-                                       data-bs-html="true" 
-                                       title="Purchase Price + Renovation Costs + All Closing Costs"></i>
+                                    <strong>Total Project Costs:</strong> ${analysis.total_project_costs || '$0.00'}
+                                    <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" data-bs-html="true" 
+                                    title="Purchase Price + Renovation Costs + All Closing Costs"></i>
                                 </p>
                                 <p class="mb-2">
-                                    <strong>After Repair Value:</strong> ${formatCurrency(analysis.after_repair_value)}
+                                    <strong>After Repair Value:</strong> ${analysis.after_repair_value || '$0.00'}
                                 </p>
                                 <p class="mb-2">
-                                    <strong>Refinance Loan Amount:</strong> ${formatCurrency(analysis.refinance_loan_amount)}
-                                    <i class="ms-2 bi bi-info-circle" 
-                                       data-bs-toggle="tooltip" 
-                                       data-bs-html="true" 
-                                       title="New loan based on ARV × LTV%"></i>
+                                    <strong>Refinance Loan Amount:</strong> ${analysis.refinance_loan_amount || '$0.00'}
+                                    <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" data-bs-html="true" 
+                                    title="New loan based on ARV × LTV%"></i>
                                 </p>
                                 <p class="mb-2">
-                                    <strong>Actual Cash Left in Deal:</strong> ${formatCurrency(analysis.actual_cash_invested)}
-                                    <i class="ms-2 bi bi-info-circle" 
-                                       data-bs-toggle="tooltip" 
-                                       data-bs-html="true" 
-                                       title="Total Project Costs - Refinance Loan Amount = Cash you can't get back through refinance"></i>
+                                    <strong>Total Cash Invested:</strong> ${analysis.total_cash_invested || '$0.00'}
+                                    <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" data-bs-html="true" 
+                                    title="Total Project Costs - Refinance Loan Amount"></i>
                                 </p>
                                 <p class="mb-2">
-                                    <strong>Equity Captured:</strong> ${formatCurrency(analysis.equity_captured)}
-                                    <i class="ms-2 bi bi-info-circle" 
-                                       data-bs-toggle="tooltip" 
-                                       data-bs-html="true" 
-                                       title="After Repair Value - Total Project Costs = Built-in equity after completion"></i>
+                                    <strong>Equity Captured:</strong> ${analysis.equity_captured || '$0.00'}
+                                    <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" data-bs-html="true" 
+                                    title="After Repair Value - Total Project Costs"></i>
                                 </p>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <h5>Returns Analysis</h5>
-                        <div class="card bg-light mb-3">
-                            <div class="card-body">
-                                <p class="mb-2">
-                                    <strong>Monthly Cash Flow:</strong> ${formatCurrency(analysis.monthly_cash_flow)}
-                                    <i class="ms-2 bi bi-info-circle" 
-                                       data-bs-toggle="tooltip" 
-                                       data-bs-html="true" 
-                                       title="Monthly Rent - Operating Expenses - Refinance Payment"></i>
-                                </p>
-                                <p class="mb-2">
-                                    <strong>Annual Cash Flow:</strong> ${formatCurrency(analysis.annual_cash_flow)}
-                                </p>
-                                <p class="mb-2">
-                                    <strong>Cash-on-Cash Return:</strong> ${formatPercentage(analysis.cash_on_cash_return)}
-                                    <i class="ms-2 bi bi-info-circle" 
-                                       data-bs-toggle="tooltip" 
-                                       data-bs-html="true" 
-                                       title="Annual Cash Flow ÷ Actual Cash Left in Deal"></i>
-                                </p>
-                                <p class="mb-2">
-                                    <strong>Total ROI:</strong> ${formatPercentage(analysis.roi)}
-                                    <i class="ms-2 bi bi-info-circle" 
-                                       data-bs-toggle="tooltip" 
-                                       data-bs-html="true" 
-                                       title="(Equity Captured + Annual Cash Flow) ÷ Actual Cash Left in Deal"></i>
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-        
-                <div class="row mt-4">
-                    <div class="col-md-6">
-                        <h5>Monthly Income & Expenses</h5>
-                        <div class="card bg-light mb-3">
-                            <div class="card-body">
-                                <p class="mb-2">
-                                    <strong>Monthly Rent:</strong> ${formatCurrency(analysis.monthly_rent)}
-                                </p>
-                                <p class="mb-2">
-                                    <strong>Operating Expenses:</strong>
-                                </p>
-                                <ul class="list-unstyled ms-3">
-                                    ${Object.entries(analysis.operating_expenses || {})
-                                        .map(([name, value]) => `
-                                            <li class="mb-1">
-                                                ${name}: ${formatCurrency(value)}
-                                            </li>`)
-                                        .join('')}
-                                </ul>
-                                <p class="mb-2">
-                                    <strong>Refinance Payment:</strong> ${formatCurrency(analysis.refinance_monthly_payment)}
-                                </p>
-                                <hr>
-                                <p class="mb-2">
-                                    <strong>Total Monthly Expenses:</strong> ${formatCurrency(analysis.total_monthly_expenses)}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
+
                     <div class="col-md-6">
                         <h5>Financing Details</h5>
                         <div class="card bg-light mb-3">
                             <div class="card-body">
                                 <p class="fw-bold mb-2">Initial Purchase Loan:</p>
                                 <ul class="list-unstyled ms-3 mb-3">
-                                    <li>Amount: ${formatCurrency(analysis.initial_loan_amount)}</li>
-                                    <li>Interest Rate: ${analysis.initial_interest_rate}%</li>
-                                    <li>Term: ${analysis.initial_loan_term} months</li>
-                                    <li>Payment: ${formatCurrency(analysis.initial_monthly_payment)}</li>
+                                    <li>Amount: ${analysis.initial_loan_amount || '$0.00'}</li>
+                                    <li>Interest Rate: ${analysis.initial_interest_rate || '0.00%'}
+                                        <span class="badge ${analysis.initial_interest_only ? 'bg-success' : 'bg-info'} ms-2">
+                                            ${analysis.initial_interest_only ? 'Interest Only' : 'Amortized'}
+                                        </span>
+                                    </li>
+                                    <li>Term: ${analysis.initial_loan_term || '0'} months</li>
+                                    <li>Monthly Payment: ${analysis.initial_monthly_payment || '$0.00'}</li>
+                                    <li>Down Payment: ${analysis.initial_down_payment || '$0.00'}</li>
+                                    <li>Closing Costs: ${analysis.initial_closing_costs || '$0.00'}</li>
                                 </ul>
                                 <p class="fw-bold mb-2">Refinance Loan:</p>
                                 <ul class="list-unstyled ms-3">
-                                    <li>Amount: ${formatCurrency(analysis.refinance_loan_amount)}</li>
-                                    <li>Interest Rate: ${analysis.refinance_interest_rate}%</li>
-                                    <li>Term: ${analysis.refinance_loan_term} months</li>
-                                    <li>Payment: ${formatCurrency(analysis.refinance_monthly_payment)}</li>
+                                    <li>Amount: ${analysis.refinance_loan_amount || '$0.00'}</li>
+                                    <li>Interest Rate: ${analysis.refinance_interest_rate || '0.00%'}
+                                        <span class="badge bg-info ms-2">Amortized</span>
+                                    </li>
+                                    <li>Term: ${analysis.refinance_loan_term || '0'} months</li>
+                                    <li>Monthly Payment: ${analysis.refinance_monthly_payment || '$0.00'}</li>
+                                    <li>Down Payment: ${analysis.refinance_down_payment || '$0.00'}</li>
+                                    <li>Closing Costs: ${analysis.refinance_closing_costs || '$0.00'}</li>
                                 </ul>
                             </div>
                         </div>
                     </div>
                 </div>
-            `;
-        }
+                ` : ''}
+            </div>
+        </div>`;
 
-        html += `</div></div>`;  // Close card-body and card
+        console.log('Generated HTML:', html);
 
         // Set the HTML content
         reportsContent.innerHTML = html;
+        console.log('HTML content set. Current reports content:', reportsContent.innerHTML);
 
         // Initialize tooltips
         var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
@@ -1591,11 +1606,34 @@ const analysisModule = {
         const financialTab = document.querySelector('#financial-tab');
         const financialContent = document.querySelector('#financial');
         
+        console.log('Tab elements:', {
+            reportsTab,
+            reportsContent,
+            financialTab,
+            financialContent
+        });
+        
         if (reportsTab && reportsContent && financialTab && financialContent) {
+            console.log('Switching tabs - Before:', {
+                reportsTabClasses: reportsTab.className,
+                reportsContentClasses: reportsContent.className,
+                financialTabClasses: financialTab.className,
+                financialContentClasses: financialContent.className
+            });
+    
             financialTab.classList.remove('active');
             financialContent.classList.remove('show', 'active');
             reportsTab.classList.add('active');
             reportsContent.classList.add('show', 'active');
+    
+            console.log('Switching tabs - After:', {
+                reportsTabClasses: reportsTab.className,
+                reportsContentClasses: reportsContent.className,
+                financialTabClasses: financialTab.className,
+                financialContentClasses: financialContent.className
+            });
+        } else {
+            console.error('Missing required tab elements');
         }
     },
 
@@ -1658,7 +1696,7 @@ const analysisModule = {
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        this.populateForm(data.analysis);
+                        this.populateFormFields(data.analysis);
                     } else {
                         console.error('Failed to fetch analysis data');
                     }
@@ -1670,17 +1708,37 @@ const analysisModule = {
     },
 
     cleanNumericValue: function(value) {
-        if (typeof value === 'string') {
-            // Remove dollar signs and commas
-            return value.replace(/[$,]/g, '');
+        if (typeof value !== 'string') {
+            value = String(value);
         }
-        return value;
+        
+        // Remove currency symbols, commas, and trim whitespace
+        let cleaned = value.replace(/[$,\s]/g, '');
+        
+        // Remove % symbol for percentage values
+        cleaned = cleaned.replace(/%/g, '');
+        
+        // Return cleaned value or 0 if empty/invalid
+        return cleaned || '0';
     },
 
-    populateForm: function(analysis) {
+    populateFormFields: function(analysis) {
         console.log('Populating form with analysis:', analysis);
+
+        // Handle basic fields as before
+        Object.keys(analysis).forEach(key => {
+            const field = document.getElementById(key);
+            if (field) {
+                if (field.type === 'number') {
+                    field.value = this.cleanNumericValue(analysis[key]);
+                } else {
+                    field.value = analysis[key];
+                }
+                console.log(`Set ${key} to ${field.value}`);
+            }
+        });
         
-        // First populate the basic fields that are always present
+        // First populate the basic fields
         Object.keys(analysis).forEach(key => {
             const field = document.getElementById(key);
             if (field) {
@@ -1693,6 +1751,63 @@ const analysisModule = {
             }
         });
 
+        // Handle BRRRR-specific fields
+        if (analysis.analysis_type === 'BRRRR') {
+            const brrrFields = [
+                'initial_loan_amount',
+                'initial_down_payment',
+                'initial_interest_rate',
+                'initial_loan_term',
+                'initial_closing_costs',
+                'refinance_loan_amount',
+                'refinance_down_payment',
+                'refinance_interest_rate',
+                'refinance_loan_term',
+                'refinance_closing_costs',
+                'refinance_ltv_percentage',
+                'max_cash_left'
+            ];
+
+            brrrFields.forEach(fieldName => {
+                const field = document.getElementById(fieldName);
+                if (field && analysis[fieldName] !== undefined) {
+                    if (field.type === 'number') {
+                        field.value = this.cleanNumericValue(analysis[fieldName]);
+                    } else {
+                        field.value = analysis[fieldName];
+                    }
+                    console.log(`Set BRRRR field ${fieldName} to ${field.value}`);
+                }
+            });
+        }
+
+        // Special handling for operating expenses
+        if (analysis.operating_expenses) {
+            // Map the stored keys to form field IDs
+            const expenseMapping = {
+                'Property Taxes': 'property_taxes',
+                'Insurance': 'insurance',
+                'Management': 'management_percentage'
+            };
+
+            Object.entries(analysis.operating_expenses).forEach(([key, value]) => {
+                const fieldId = expenseMapping[key];
+                if (fieldId) {
+                    const field = document.getElementById(fieldId);
+                    if (field) {
+                        field.value = this.cleanNumericValue(value);
+                        console.log(`Set operating expense ${fieldId} to ${field.value} (from ${key}: ${value})`);
+                    }
+                }
+            });
+        }
+
+        // Handle interest-only checkbox
+        const interestOnlyCheckbox = document.getElementById('initial_interest_only');
+        if (interestOnlyCheckbox && analysis.initial_interest_only !== undefined) {
+            interestOnlyCheckbox.checked = analysis.initial_interest_only;
+        }
+
         // Handle loan data population for Long-Term Rental
         if (analysis.analysis_type === 'Long-Term Rental' && analysis.loans && Array.isArray(analysis.loans)) {
             const loansContainer = document.getElementById('loans-container');
@@ -1704,46 +1819,52 @@ const analysisModule = {
                     const loanNumber = index + 1;
                     const loanHtml = `
                         <div class="loan-section mb-3">
-                            <h5>Loan ${loanNumber}</h5>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="loan_name_${loanNumber}" class="form-label">Loan Name</label>
-                                    <input type="text" class="form-control" id="loan_name_${loanNumber}" 
-                                           name="loans[${loanNumber}][name]" value="${loan.name || ''}" required>
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Loan ${loanNumber}</h5>
                                 </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="loan_amount_${loanNumber}" class="form-label">Loan Amount</label>
-                                    <input type="number" class="form-control" id="loan_amount_${loanNumber}" 
-                                           name="loans[${loanNumber}][amount]" value="${this.cleanNumericValue(loan.amount)}" required>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="loan_name_${loanNumber}" class="form-label">Loan Name</label>
+                                            <input type="text" class="form-control" id="loan_name_${loanNumber}" 
+                                                   name="loans[${loanNumber}][name]" value="${loan.name || ''}" required>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="loan_amount_${loanNumber}" class="form-label">Loan Amount</label>
+                                            <input type="number" class="form-control" id="loan_amount_${loanNumber}" 
+                                                   name="loans[${loanNumber}][amount]" value="${this.cleanNumericValue(loan.amount)}" required>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="loan_down_payment_${loanNumber}" class="form-label">Down Payment</label>
+                                            <input type="number" class="form-control" id="loan_down_payment_${loanNumber}" 
+                                                   name="loans[${loanNumber}][down_payment]" value="${this.cleanNumericValue(loan.down_payment)}" required>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="loan_interest_rate_${loanNumber}" class="form-label">Interest Rate (%)</label>
+                                            <input type="number" class="form-control" id="loan_interest_rate_${loanNumber}" 
+                                                   name="loans[${loanNumber}][interest_rate]" value="${this.cleanNumericValue(loan.interest_rate)}" 
+                                                   step="0.01" required>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="loan_term_${loanNumber}" class="form-label">Loan Term (months)</label>
+                                            <input type="number" class="form-control" id="loan_term_${loanNumber}" 
+                                                   name="loans[${loanNumber}][term]" value="${this.cleanNumericValue(loan.term)}" required>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="loan_closing_costs_${loanNumber}" class="form-label">Closing Costs</label>
+                                            <input type="number" class="form-control" id="loan_closing_costs_${loanNumber}" 
+                                                   name="loans[${loanNumber}][closing_costs]" value="${this.cleanNumericValue(loan.closing_costs)}" required>
+                                        </div>
+                                    </div>
+                                    <div class="text-end">
+                                        <button type="button" class="btn btn-danger remove-loan-btn">Remove Loan</button>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="loan_down_payment_${loanNumber}" class="form-label">Down Payment</label>
-                                    <input type="number" class="form-control" id="loan_down_payment_${loanNumber}" 
-                                           name="loans[${loanNumber}][down_payment]" value="${this.cleanNumericValue(loan.down_payment)}" required>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="loan_interest_rate_${loanNumber}" class="form-label">Interest Rate (%)</label>
-                                    <input type="number" class="form-control" id="loan_interest_rate_${loanNumber}" 
-                                           name="loans[${loanNumber}][interest_rate]" value="${this.cleanNumericValue(loan.interest_rate)}" 
-                                           step="0.01" required>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="loan_term_${loanNumber}" class="form-label">Loan Term (months)</label>
-                                    <input type="number" class="form-control" id="loan_term_${loanNumber}" 
-                                           name="loans[${loanNumber}][term]" value="${this.cleanNumericValue(loan.term)}" required>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="loan_closing_costs_${loanNumber}" class="form-label">Closing Costs</label>
-                                    <input type="number" class="form-control" id="loan_closing_costs_${loanNumber}" 
-                                           name="loans[${loanNumber}][closing_costs]" value="${this.cleanNumericValue(loan.closing_costs)}" required>
-                                </div>
-                            </div>
-                            <div class="col-md-12 mb-3">
-                                <button type="button" class="btn btn-danger remove-loan-btn">Remove Loan</button>
                             </div>
                         </div>
                     `;
@@ -1757,6 +1878,172 @@ const analysisModule = {
                 }
             }
         }
+
+        // Log fields that weren't found
+        Object.keys(analysis).forEach(key => {
+            if (!document.getElementById(key)) {
+                console.debug(`Field not found for ${key}: ${analysis[key]}`);
+            }
+        });
+    },
+    
+    populateReportsTab: function(analysis) {
+        console.log('Starting populateReportsTab with analysis:', analysis);
+        
+        // Get reports container
+        const reportsContent = document.querySelector('#reports');
+        console.log('Reports container found:', reportsContent);
+        
+        if (!reportsContent) {
+            console.error('Reports content element not found');
+            return;
+        }
+    
+        // Clear existing content
+        reportsContent.innerHTML = '';
+    
+        // Build main card structure
+        const mainCard = document.createElement('div');
+        mainCard.className = 'card mb-4';
+        
+        // Add header
+        const header = document.createElement('div');
+        header.className = 'card-header d-flex justify-content-between align-items-center';
+        header.innerHTML = `
+            <span>${analysis.analysis_type || 'Analysis'}: ${analysis.analysis_name || 'Untitled'}</span>
+            <button id="downloadPdfBtn" class="btn btn-primary">Download PDF</button>
+        `;
+        mainCard.appendChild(header);
+        
+        // Build body content
+        const cardBody = document.createElement('div');
+        cardBody.className = 'card-body';
+        
+        // First row with Purchase Details and Income & Returns
+        const firstRow = document.createElement('div');
+        firstRow.className = 'row mb-4';
+        firstRow.innerHTML = `
+            <div class="col-md-6">
+                <h5 class="mb-3">Purchase Details</h5>
+                <div class="card bg-light">
+                    <div class="card-body">
+                        <p class="mb-2"><strong>Purchase Price:</strong> ${analysis.purchase_price || '$0.00'}</p>
+                        <p class="mb-2"><strong>Renovation Costs:</strong> ${analysis.renovation_costs || '$0.00'}</p>
+                        <p class="mb-2"><strong>After Repair Value:</strong> ${analysis.after_repair_value || '$0.00'}</p>
+                        <p class="mb-2">
+                            <strong>Maximum Allowable Offer:</strong> ${this.calculateMAO(analysis)}
+                            <i class="ms-2 bi bi-info-circle" 
+                               data-bs-toggle="tooltip" 
+                               data-bs-html="true" 
+                               title="This value represents the highest possible value of Purchase Price given your LTV Cash-Out Refi and the maximum amount you're willing to be stuck in a deal"></i>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <h5 class="mb-3">Income & Returns</h5>
+                <div class="card bg-light">
+                    <div class="card-body">
+                        <p class="mb-2"><strong>Monthly Rent:</strong> ${analysis.monthly_rent || '$0.00'}</p>
+                        <p class="mb-2"><strong>Monthly Cash Flow:</strong> ${analysis.monthly_cash_flow || '$0.00'}</p>
+                        <p class="mb-2"><strong>Annual Cash Flow:</strong> ${analysis.annual_cash_flow || '$0.00'}</p>
+                        <p class="mb-2"><strong>Cash-on-Cash Return:</strong> ${analysis.cash_on_cash_return || '0%'}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+        cardBody.appendChild(firstRow);
+    
+        // BRRRR-specific content
+        if (analysis.analysis_type === 'BRRRR' || analysis.analysis_type === 'PadSplit BRRRR') {
+            const brrrRow = document.createElement('div');
+            brrrRow.className = 'row mt-4';
+            brrrRow.innerHTML = `
+                <!-- Investment Summary -->
+                <div class="col-md-6">
+                    <h5>Investment Summary</h5>
+                    <div class="card bg-light mb-3">
+                        <div class="card-body">
+                            <p class="mb-2">
+                                <strong>Total Project Costs:</strong> ${analysis.total_project_costs || '$0.00'}
+                                <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" data-bs-html="true" 
+                                title="Purchase Price + Renovation Costs + All Closing Costs"></i>
+                            </p>
+                            <p class="mb-2">
+                                <strong>After Repair Value:</strong> ${analysis.after_repair_value || '$0.00'}
+                            </p>
+                            <p class="mb-2">
+                                <strong>Refinance Loan Amount:</strong> ${analysis.refinance_loan_amount || '$0.00'}
+                                <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" data-bs-html="true" 
+                                title="New loan based on ARV × LTV%"></i>
+                            </p>
+                            <p class="mb-2">
+                                <strong>Total Cash Invested:</strong> ${analysis.total_cash_invested || '$0.00'}
+                                <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" data-bs-html="true" 
+                                title="Total Project Costs - Refinance Loan Amount"></i>
+                            </p>
+                            <p class="mb-2">
+                                <strong>Equity Captured:</strong> ${analysis.equity_captured || '$0.00'}
+                                <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" data-bs-html="true" 
+                                title="After Repair Value - Total Project Costs"></i>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Financing Details -->
+                <div class="col-md-6">
+                    <h5>Financing Details</h5>
+                    <div class="card bg-light mb-3">
+                        <div class="card-body">
+                            <p class="fw-bold mb-2">Initial Purchase Loan:</p>
+                            <ul class="list-unstyled ms-3 mb-3">
+                                <li>Amount: ${analysis.initial_loan_amount || '$0.00'}</li>
+                                <li>Interest Rate: ${analysis.initial_interest_rate || '0.00%'}
+                                    <span class="badge ${analysis.initial_interest_only ? 'bg-success' : 'bg-info'} ms-2">
+                                        ${analysis.initial_interest_only ? 'Interest Only' : 'Amortized'}
+                                    </span>
+                                </li>
+                                <li>Term: ${analysis.initial_loan_term || '0'} months</li>
+                                <li>Monthly Payment: ${analysis.initial_monthly_payment || '$0.00'}</li>
+                                <li>Down Payment: ${analysis.initial_down_payment || '$0.00'}</li>
+                                <li>Closing Costs: ${analysis.initial_closing_costs || '$0.00'}</li>
+                            </ul>
+                            <p class="fw-bold mb-2">Refinance Loan:</p>
+                            <ul class="list-unstyled ms-3">
+                                <li>Amount: ${analysis.refinance_loan_amount || '$0.00'}</li>
+                                <li>Interest Rate: ${analysis.refinance_interest_rate || '0.00%'}
+                                    <span class="badge bg-info ms-2">Amortized</span>
+                                </li>
+                                <li>Term: ${analysis.refinance_loan_term || '0'} months</li>
+                                <li>Monthly Payment: ${analysis.refinance_monthly_payment || '$0.00'}</li>
+                                <li>Down Payment: ${analysis.refinance_down_payment || '$0.00'}</li>
+                                <li>Closing Costs: ${analysis.refinance_closing_costs || '$0.00'}</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            `;
+            cardBody.appendChild(brrrRow);
+        }
+    
+        // Add body to main card
+        mainCard.appendChild(cardBody);
+        
+        // Log the constructed HTML
+        console.log('Constructed HTML:', mainCard.outerHTML);
+        
+        // Clear and append new content
+        reportsContent.innerHTML = '';
+        reportsContent.appendChild(mainCard);
+        
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+
+        console.log('Final reports content:', reportsContent.innerHTML);
     },
 
     handleEditSubmit: function(event, analysisId) {

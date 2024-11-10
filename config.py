@@ -6,6 +6,7 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'you-will-never-guess'
     BASE_DIR = os.path.abspath(os.path.dirname(__file__))
     DATA_DIR = os.path.join(BASE_DIR, 'data')
+    ANALYSES_DIR = os.path.join(DATA_DIR, 'analyses')  # Add this line
     UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
     ALLOWED_EXTENSIONS = {'png', 'svg', 'pdf', 'jpg', 'csv', 'xls', 'xlsx'}
     ALLOWED_DOCUMENTATION_EXTENSIONS = {'png', 'svg', 'pdf', 'jpg'}
@@ -20,3 +21,8 @@ class Config:
     REIMBURSEMENTS_FILE = os.path.join(DATA_DIR, 'reimbursements.json')
 
     GEOAPIFY_API_KEY = 'f9577704874047cd8fc962b020db0d20'
+
+    # Create necessary directories
+    os.makedirs(DATA_DIR, exist_ok=True)
+    os.makedirs(ANALYSES_DIR, exist_ok=True)
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)

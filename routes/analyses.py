@@ -4,7 +4,7 @@ import logging
 from flask import Blueprint, render_template, request, current_app, jsonify, redirect, url_for, send_file
 from flask_login import login_required, current_user
 from services.report_generator import generate_lender_report, LenderMetricsCalculator, MAOCalculator
-from services.analysis_calculations import create_analysis
+from services.analysis_calculations import create_analysis as create_analysis_calc  # Renamed import
 import uuid
 from datetime import datetime, timezone
 import os
@@ -100,36 +100,26 @@ class DynamicFrameDocument(BaseDocTemplate):
             PageTemplate(id='TwoColumn', frames=[left_frame, right_frame])
         ])
 
-@analyses_bp.route('/create_analysis', methods=['GET', 'POST'])
+@analyses_bp.route('/create_analysis', methods=['GET', 'POST']) 
 @login_required
 def create_analysis():
+    """Handle both GET and POST requests for analysis creation."""
     # Handle viewing/editing existing analysis
     analysis_id = request.args.get('analysis_id')
     existing_analysis = None
     
     if analysis_id and request.method == 'GET':
         try:
-            # Attempt to get the existing analysis
+            # Get existing analysis
             response = get_analysis(analysis_id)
-            
-            # Check if response is a tuple (error response)
             if isinstance(response, tuple):
                 return redirect(url_for('analyses.view_edit_analysis'))
             
-            # Extract analysis data from response
             analysis_data = response.get_json()
             if not analysis_data or not analysis_data.get('success'):
                 return redirect(url_for('analyses.view_edit_analysis'))
                 
             existing_analysis = analysis_data['analysis']
-            
-            # Verify the analysis belongs to the current user
-            filename = f"{analysis_id}_{current_user.id}.json"
-            analyses_dir = os.path.join(Config.DATA_DIR, 'analyses')
-            if not os.path.exists(os.path.join(analyses_dir, filename)):
-                return redirect(url_for('analyses.view_edit_analysis'))
-            
-            # Set edit mode flag
             existing_analysis['edit_mode'] = True
             
         except Exception as e:
@@ -139,95 +129,94 @@ def create_analysis():
 
     if request.method == 'POST':
         try:
-            analysis_data = request.json
-            
-            # Create analysis object and calculate results
-            analysis = create_analysis(analysis_data)
-            
-            # Add user ID and creation timestamp
+            analysis_data = request.get_json()
+            if not analysis_data:
+                raise ValueError("No analysis data provided")
+
+            # Add metadata
+            if not analysis_id:
+                analysis_id = str(uuid.uuid4())
+            analysis_data['id'] = analysis_id
             analysis_data['user_id'] = current_user.id
-            if not analysis_id:  # Only set created_at for new analyses
-                analysis_data['created_at'] = datetime.now(tz=timezone.utc).isoformat()
+            analysis_data['created_at'] = datetime.now(tz=timezone.utc).isoformat()
+            analysis_data['updated_at'] = analysis_data['created_at']
+
+            # Create analysis object using the calculator service with renamed import
+            analysis = create_analysis_calc(analysis_data)
             
             # Format results for storage/response
             results = {
-                'id': str(uuid.uuid4()) if not analysis_id else analysis_id,
+                'id': analysis_id,
                 'user_id': current_user.id,
                 'created_at': analysis_data['created_at'],
+                'updated_at': analysis_data['updated_at'],
                 'analysis_type': analysis_data['analysis_type'],
                 'analysis_name': analysis_data['analysis_name'],
                 'property_address': analysis_data['property_address'],
                 
                 # Property details
-                'purchase_price': analysis.purchase_price.format(),
-                'after_repair_value': analysis.after_repair_value.format(),
-                'renovation_costs': analysis.renovation_costs.format(),
+                'purchase_price': str(analysis.purchase_price),
+                'after_repair_value': str(analysis.after_repair_value),
+                'renovation_costs': str(analysis.renovation_costs),
                 'renovation_duration': analysis_data['renovation_duration'],
                 
                 # Cash flows
-                'monthly_rent': analysis.monthly_rent.format(),
-                'monthly_cash_flow': analysis.calculate_monthly_cash_flow().format(),
-                'annual_cash_flow': analysis.calculate_annual_cash_flow().format(),
+                'monthly_rent': str(analysis.monthly_rent),
+                'monthly_cash_flow': str(analysis.calculate_monthly_cash_flow()),
+                'annual_cash_flow': str(analysis.calculate_annual_cash_flow()),
                 
                 # Operating expenses
-                'total_operating_expenses': analysis.operating_expenses.calculate_total().format(),
+                'total_operating_expenses': str(analysis.operating_expenses.calculate_total()),
                 'operating_expenses': {
-                    'Property Taxes': analysis.operating_expenses.property_taxes.format(),
-                    'Insurance': analysis.operating_expenses.insurance.format(),
-                    'Management': analysis.operating_expenses.calculate_management_fee().format(),
-                    'CapEx': analysis.operating_expenses.calculate_capex().format(),
-                    'Vacancy': analysis.operating_expenses.calculate_vacancy().format()
-                },
-                
-                # Investment metrics
-                'total_cash_invested': analysis.calculate_total_cash_invested().format()
-            }
-            
-            # Add type-specific calculations
-            if hasattr(analysis, 'calculate_max_allowable_offer'):
-                results['maximum_allowable_offer'] = analysis.calculate_max_allowable_offer().format()
-            
-            if hasattr(analysis.operating_expenses, 'calculate_repairs'):
-                results['operating_expenses']['Repairs'] = analysis.operating_expenses.calculate_repairs().format()
-                
-            # Add BRRRR-specific metrics
-            if hasattr(analysis, 'initial_loan'):
-                results.update({
-                    'equity_captured': analysis.calculate_equity_captured().format(),
-                    'cash_recouped': analysis.calculate_cash_recouped().format(),
-                    'total_project_costs': analysis.calculate_total_project_costs().format(),
-                    'initial_monthly_payment': analysis.initial_loan.calculate_payment().total.format(),
-                    'refinance_monthly_payment': analysis.refinance_loan.calculate_payment().total.format(),
-                    'roi': analysis.calculate_roi(
-                        analysis.calculate_total_cash_invested(),
-                        analysis.calculate_equity_captured()
-                    ).format()
-                })
-                
-            # Add PadSplit-specific expenses if applicable
-            if hasattr(analysis.operating_expenses, 'calculate_platform_fee'):
-                results['padsplit_expenses'] = {
-                    'Platform Fee': analysis.operating_expenses.calculate_platform_fee().format(),
-                    'Utilities': analysis.operating_expenses.utilities.format(),
-                    'Internet': analysis.operating_expenses.internet.format(),
-                    'Cleaning': analysis.operating_expenses.cleaning_costs.format(),
-                    'Pest Control': analysis.operating_expenses.pest_control.format(),
-                    'Landscaping': analysis.operating_expenses.landscaping.format()
+                    'Property Taxes': str(analysis.operating_expenses.property_taxes),
+                    'Insurance': str(analysis.operating_expenses.insurance),
+                    'Management': str(analysis.operating_expenses.calculate_management_fee()),
+                    'CapEx': str(analysis.operating_expenses.calculate_capex()),
+                    'Vacancy': str(analysis.operating_expenses.calculate_vacancy())
                 }
+            }
 
-            # Save the analysis
+            # Add BRRRR-specific results if applicable
+            if analysis_data['analysis_type'] in ['BRRRR', 'PadSplit BRRRR']:
+                results.update({
+                    'initial_loan_amount': str(analysis.initial_loan.amount),
+                    'initial_interest_rate': str(analysis.initial_loan.interest_rate),
+                    'initial_loan_term': analysis.initial_loan.term_months,
+                    'initial_monthly_payment': str(analysis.initial_loan.calculate_payment().total),
+                    'initial_closing_costs': str(analysis.initial_loan.closing_costs),
+                    
+                    'refinance_loan_amount': str(analysis.refinance_loan.amount),
+                    'refinance_interest_rate': str(analysis.refinance_loan.interest_rate),
+                    'refinance_loan_term': analysis.refinance_loan.term_months,
+                    'refinance_monthly_payment': str(analysis.refinance_loan.calculate_payment().total),
+                    'refinance_closing_costs': str(analysis.refinance_loan.closing_costs),
+                    
+                    'equity_captured': str(analysis.calculate_equity_captured()),
+                    'cash_recouped': str(analysis.calculate_cash_recouped()),
+                    'total_project_costs': str(analysis.calculate_total_project_costs()),
+                    'total_cash_invested': str(analysis.calculate_total_cash_invested()),
+                    'cash_on_cash_return': analysis.calculate_cash_on_cash_return(),
+                    'roi': analysis.calculate_roi(),
+                    'total_monthly_expenses': str(analysis.calculate_total_monthly_expenses()),
+                    
+                    # Add holding costs
+                    'holding_costs': str(analysis.holding_costs)
+                })
+
+            # Make sure analyses directory exists
+            analyses_dir = os.path.join(Config.DATA_DIR, 'analyses')
+            os.makedirs(analyses_dir, exist_ok=True)
+
+            # Save analysis to file
             filename = f"{results['id']}_{current_user.id}.json"
-            filepath = os.path.join(Config.DATA_DIR, 'analyses', filename)
-            os.makedirs(os.path.dirname(filepath), exist_ok=True)
+            filepath = os.path.join(analyses_dir, filename)
             
             with open(filepath, 'w') as f:
                 json.dump(results, f, indent=2)
-            
-            # Send success response
-            message = "Analysis updated successfully!" if analysis_id else "Analysis created successfully!"
+
             return jsonify({
                 "success": True,
-                "message": message,
+                "message": "Analysis created successfully",
                 "analysis": results
             })
 
@@ -238,7 +227,7 @@ def create_analysis():
                 "success": False,
                 "message": f"An error occurred: {str(e)}"
             }), 500
-    
+
     # GET request - render the create/edit form
     template_data = {'analysis': existing_analysis} if existing_analysis else {}
     return render_template('analyses/create_analysis.html', **template_data)
@@ -246,9 +235,11 @@ def create_analysis():
 @analyses_bp.route('/update_analysis', methods=['POST'])
 @login_required
 def update_analysis():
+    """Handle updates to existing analyses."""
     try:
-        analysis_data = request.json
-        logger.info(f"Received update analysis data: {json.dumps(analysis_data, indent=2)}")
+        analysis_data = request.get_json()
+        if not analysis_data:
+            raise ValueError("No analysis data provided")
 
         # Get and validate analysis ID
         analysis_id = analysis_data.get('id')
@@ -267,12 +258,90 @@ def update_analysis():
             original_data = json.load(f)
             analysis_data['created_at'] = original_data.get('created_at')
 
-        # Create new analysis object with updated data
-        analysis = create_analysis(analysis_data)
+        # Add metadata
+        analysis_data['id'] = analysis_id  # Preserve ID
+        analysis_data['user_id'] = current_user.id
+        analysis_data['updated_at'] = datetime.now(tz=timezone.utc).isoformat()
+
+        # Create analysis object and calculate results
+        analysis = create_analysis_calc(analysis_data)
         
-        # Update analysis (reuse create logic but preserve ID)
-        analysis_data['id'] = analysis_id
-        return create_analysis()
+        # Format results for storage/response
+        results = {
+            'id': analysis_id,
+            'user_id': current_user.id,
+            'created_at': analysis_data['created_at'],
+            'updated_at': analysis_data['updated_at'],
+            'analysis_type': analysis_data['analysis_type'],
+            'analysis_name': analysis_data['analysis_name'],
+            'property_address': analysis_data['property_address'],
+            
+            # Property details with all fields
+            'purchase_price': str(analysis.purchase_price),
+            'after_repair_value': str(analysis.after_repair_value),
+            'renovation_costs': str(analysis.renovation_costs),
+            'renovation_duration': analysis_data['renovation_duration'],
+            'home_square_footage': analysis_data.get('home_square_footage'),
+            'lot_square_footage': analysis_data.get('lot_square_footage'),
+            'year_built': analysis_data.get('year_built'),
+            
+            # Cash flows
+            'monthly_rent': str(analysis.monthly_rent),
+            'monthly_cash_flow': str(analysis.calculate_monthly_cash_flow()),
+            'annual_cash_flow': str(analysis.calculate_annual_cash_flow()),
+            
+            # Operating expenses
+            'total_operating_expenses': str(analysis.operating_expenses.calculate_total()),
+            'operating_expenses': {
+                'Property Taxes': str(analysis.operating_expenses.property_taxes),
+                'Insurance': str(analysis.operating_expenses.insurance),
+                'Management': str(analysis.operating_expenses.calculate_management_fee()),
+                'CapEx': str(analysis.operating_expenses.calculate_capex()),
+                'Vacancy': str(analysis.operating_expenses.calculate_vacancy())
+            }
+        }
+
+        # Add BRRRR-specific results if applicable
+        if analysis_data['analysis_type'] in ['BRRRR', 'PadSplit BRRRR']:
+            results.update({
+                # Initial loan details
+                'initial_loan_amount': str(analysis.initial_loan.amount),
+                'initial_interest_rate': str(analysis.initial_loan.interest_rate),
+                'initial_interest_only': analysis.initial_loan.is_interest_only,
+                'initial_loan_term': analysis.initial_loan.term_months,
+                'initial_monthly_payment': str(analysis.initial_loan.calculate_payment().total),
+                'initial_closing_costs': str(analysis.initial_loan.closing_costs),
+                'initial_down_payment': str(analysis.initial_loan.down_payment),
+                
+                # Refinance details
+                'refinance_loan_amount': str(analysis.refinance_loan.amount),
+                'refinance_interest_rate': str(analysis.refinance_loan.interest_rate),
+                'refinance_loan_term': analysis.refinance_loan.term_months,
+                'refinance_monthly_payment': str(analysis.refinance_loan.calculate_payment().total),
+                'refinance_closing_costs': str(analysis.refinance_loan.closing_costs),
+                'refinance_down_payment': str(analysis.refinance_loan.down_payment),
+                
+                # Additional metrics
+                'equity_captured': str(analysis.calculate_equity_captured()),
+                'cash_recouped': str(analysis.calculate_cash_recouped()),
+                'total_project_costs': str(analysis.calculate_total_project_costs()),
+                'total_cash_invested': str(analysis.calculate_total_cash_invested()),
+                'cash_on_cash_return': analysis.calculate_cash_on_cash_return(),
+                'roi': analysis.calculate_roi(),
+                'total_monthly_expenses': str(analysis.calculate_total_monthly_expenses()),
+                'holding_costs': str(analysis.holding_costs)
+            })
+
+        # Save analysis to file
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        with open(filepath, 'w') as f:
+            json.dump(results, f, indent=2)
+
+        return jsonify({
+            "success": True,
+            "message": "Analysis updated successfully",
+            "analysis": results
+        })
 
     except Exception as e:
         logger.error(f"Error updating analysis: {str(e)}")
