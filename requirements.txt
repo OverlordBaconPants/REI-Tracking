@@ -1,5 +1,6 @@
 dash==2.11.1
 dash-bootstrap-components==1.4.1
+dash[testing]>=2.0.0
 flask==2.3.2
 flask-login==0.6.2
 pandas==2.0.3
@@ -23,9 +24,11 @@ ipywidgets==8.0.7
 numba==0.57.1
 pyyaml==6.0
 reportlab==4.0.4
+selenium>=4.0.0
 setuptools==68.0.0
 six==1.16.0
 tenacity==8.2.2
 tornado==6.3.2
+webdriver_manager>=3.0.0
 werkzeug==2.3.6
 zipp==3.16.0
