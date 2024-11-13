@@ -58,6 +58,9 @@
                                     </option>
                                 {% endfor %}
                             </select>
+                            {% if analysis %}
+                                <div class="form-text fw-bold">Changing analysis type will create a new copy of this analysis</div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
