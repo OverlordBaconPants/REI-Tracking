@@ -96,6 +96,39 @@ window.analysisModule = {
         }
     },
 
+    initRefinanceCalculations: function() {
+        // Get relevant elements
+        const arvInput = document.getElementById('after_repair_value');
+        const ltvInput = document.getElementById('refinance_ltv_percentage');
+        const loanAmountInput = document.getElementById('refinance_loan_amount');
+        const downPaymentInput = document.getElementById('refinance_down_payment');
+        const closingCostsInput = document.getElementById('refinance_closing_costs');
+    
+        // Function to update refinance calculations
+        const updateRefinanceCalcs = () => {
+            const arv = parseFloat(arvInput.value) || 0;
+            const ltv = parseFloat(ltvInput.value) || 0;
+    
+            // Calculate loan amount
+            const loanAmount = (arv * ltv) / 100;
+            loanAmountInput.value = loanAmount.toFixed(2);
+    
+            // Calculate down payment
+            const downPayment = (arv * (100 - ltv)) / 100;
+            downPaymentInput.value = downPayment.toFixed(2);
+    
+            // Calculate closing costs (5%)
+            const closingCosts = loanAmount * 0.05;
+            closingCostsInput.value = closingCosts.toFixed(2);
+        };
+    
+        // Add event listeners
+        if (arvInput && ltvInput) {
+            arvInput.addEventListener('input', updateRefinanceCalcs);
+            ltvInput.addEventListener('input', updateRefinanceCalcs);
+        }
+    },
+
     getAnalysisIdFromUrl: function() {
         const urlParams = new URLSearchParams(window.location.search);
         return urlParams.get('analysis_id');
@@ -298,6 +331,11 @@ window.analysisModule = {
             if (data.success) {
                 // Load form fields for new type
                 this.loadTypeFields(newType);
+
+                // Initialize calculations if BRRRR type
+                if (newType.includes('BRRRR')) {
+                    this.initRefinanceCalculations();
+                }
                 
                 // Update form with new analysis data
                 currentForm.setAttribute('data-analysis-id', data.analysis.id);
@@ -485,6 +523,11 @@ window.analysisModule = {
     
         // Initialize handlers
         this.initLoanHandlers();
+
+        // Initialize calculations if BRRRR type
+        if (type.includes('BRRRR')) {
+            this.initRefinanceCalculations();
+        }
     },
 
     loadAnalysisData: function(analysisId) {
@@ -729,33 +772,56 @@ window.analysisModule = {
             <div class="card mb-4">
                 <div class="card-header">Refinance Details</div>
                 <div class="card-body">
+                    <!-- Moved to top, in its own row -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="refinance_ltv_percentage" class="form-label">Expected Refinance LTV (%)</label>
+                            <input type="number" class="form-control" id="refinance_ltv_percentage" 
+                                name="refinance_ltv_percentage" value="75" min="0" max="100" 
+                                step="1" required>
+                            <div class="form-text">Expected Loan-to-Value ratio for refinance</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="max_cash_left" class="form-label">Maximum Cash Left in Deal</label>
+                            <input type="number" class="form-control" id="max_cash_left" 
+                                name="max_cash_left" value="10000" min="0" 
+                                step="100" required>
+                            <div class="form-text">Maximum cash to leave in deal after refinance</div>
+                        </div>
+                    </div>
+
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="refinance_loan_amount" class="form-label">Refinance Loan Amount</label>
-                            <input type="number" class="form-control" id="refinance_loan_amount" name="refinance_loan_amount" 
-                                placeholder="Amount of your refinance loan" required>
+                            <input type="number" class="form-control" id="refinance_loan_amount" 
+                                name="refinance_loan_amount" readonly>
+                            <div class="form-text">Calculated based on ARV × LTV%</div>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="refinance_down_payment" class="form-label">Refinance Down Payment</label>
-                            <input type="number" class="form-control" id="refinance_down_payment" name="refinance_down_payment" 
-                                placeholder="Down payment required for refinance" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="refinance_interest_rate" class="form-label">Refinance Interest Rate (%)</label>
-                            <input type="number" class="form-control" id="refinance_interest_rate" name="refinance_interest_rate" 
-                                placeholder="Interest rate for refinance loan" step="0.01" required>
+                            <input type="number" class="form-control" id="refinance_down_payment" 
+                                name="refinance_down_payment" readonly>
+                            <div class="form-text">Calculated based on ARV × (100% - LTV%)</div>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="refinance_loan_term" class="form-label">Refinance Loan Term (months)</label>
-                            <input type="number" class="form-control" id="refinance_loan_term" name="refinance_loan_term" 
-                                placeholder="Duration of refinance loan in months" required>
+                            <label for="refinance_interest_rate" class="form-label">Refinance Interest Rate (%)</label>
+                            <input type="number" class="form-control" id="refinance_interest_rate" 
+                                name="refinance_interest_rate" step="0.01" required>
                         </div>
                         <div class="col-md-6 mb-3">
+                            <label for="refinance_loan_term" class="form-label">Refinance Loan Term (months)</label>
+                            <input type="number" class="form-control" id="refinance_loan_term" 
+                                name="refinance_loan_term" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
                             <label for="refinance_closing_costs" class="form-label">Refinance Closing Costs</label>
-                            <input type="number" class="form-control" id="refinance_closing_costs" name="refinance_closing_costs" 
-                                placeholder="All costs associated with refinance closing" required>
+                            <input type="number" class="form-control" id="refinance_closing_costs" 
+                                name="refinance_closing_costs" readonly>
+                            <div class="form-text">Automatically calculated as 5% of refinance loan amount</div>
                         </div>
                     </div>
                 </div>
@@ -1114,51 +1180,56 @@ window.analysisModule = {
             <div class="card mb-4">
                 <div class="card-header">Refinance Details</div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="refinance_loan_amount" class="form-label">Refinance Loan Amount</label>
-                            <input type="number" class="form-control" id="refinance_loan_amount" name="refinance_loan_amount" 
-                                   placeholder="Amount of your refinance loan" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="refinance_down_payment" class="form-label">Refinance Down Payment</label>
-                            <input type="number" class="form-control" id="refinance_down_payment" name="refinance_down_payment" 
-                                   placeholder="Down payment required for refinance" required>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="refinance_interest_rate" class="form-label">Refinance Interest Rate (%)</label>
-                            <input type="number" class="form-control" id="refinance_interest_rate" name="refinance_interest_rate" 
-                                   placeholder="Interest rate for refinance loan" step="0.01" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="refinance_loan_term" class="form-label">Refinance Loan Term (months)</label>
-                            <input type="number" class="form-control" id="refinance_loan_term" name="refinance_loan_term" 
-                                   placeholder="Duration of refinance loan in months" required>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="refinance_closing_costs" class="form-label">Refinance Closing Costs</label>
-                            <input type="number" class="form-control" id="refinance_closing_costs" name="refinance_closing_costs" 
-                                   placeholder="All costs associated with refinance closing" required>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
+                    <!-- Moved to top, in its own row -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
                             <label for="refinance_ltv_percentage" class="form-label">Expected Refinance LTV (%)</label>
                             <input type="number" class="form-control" id="refinance_ltv_percentage" 
                                 name="refinance_ltv_percentage" value="75" min="0" max="100" 
                                 step="1" required>
                             <div class="form-text">Expected Loan-to-Value ratio for refinance</div>
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-6">
                             <label for="max_cash_left" class="form-label">Maximum Cash Left in Deal</label>
                             <input type="number" class="form-control" id="max_cash_left" 
                                 name="max_cash_left" value="10000" min="0" 
                                 step="100" required>
                             <div class="form-text">Maximum cash to leave in deal after refinance</div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="refinance_loan_amount" class="form-label">Refinance Loan Amount</label>
+                            <input type="number" class="form-control" id="refinance_loan_amount" 
+                                name="refinance_loan_amount" readonly>
+                            <div class="form-text">Calculated based on ARV × LTV%</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="refinance_down_payment" class="form-label">Refinance Down Payment</label>
+                            <input type="number" class="form-control" id="refinance_down_payment" 
+                                name="refinance_down_payment" readonly>
+                            <div class="form-text">Calculated based on ARV × (100% - LTV%)</div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="refinance_interest_rate" class="form-label">Refinance Interest Rate (%)</label>
+                            <input type="number" class="form-control" id="refinance_interest_rate" 
+                                name="refinance_interest_rate" step="0.01" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="refinance_loan_term" class="form-label">Refinance Loan Term (months)</label>
+                            <input type="number" class="form-control" id="refinance_loan_term" 
+                                name="refinance_loan_term" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="refinance_closing_costs" class="form-label">Refinance Closing Costs</label>
+                            <input type="number" class="form-control" id="refinance_closing_costs" 
+                                name="refinance_closing_costs" readonly>
+                            <div class="form-text">Automatically calculated as 5% of refinance loan amount</div>
                         </div>
                     </div>
                 </div>
