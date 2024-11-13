@@ -1,8 +1,9 @@
+<!-- view_edit_analysis.html -->
 {% extends "base.html" %}
-{% block content %}
 
+{% block content %}
 <div class="container mt-4">
-    <h2 id="viewedit-analyses" class="mb-4">View/Edit Analyses</h2>
+    <h2 class="mb-4">View/Edit Analyses</h2>
 
     {% if analyses %}
         <div class="table-responsive">
@@ -22,15 +23,11 @@
                             <td>{{ analysis.analysis_type }}</td>
                             <td>{{ analysis.created_at }}</td>
                             <td>
-                                <div class="btn-group" role="group">
+                                <div class="d-flex gap-2" role="group">
                                     <a href="{{ url_for('analyses.create_analysis', analysis_id=analysis.id) }}" 
                                        class="btn btn-primary btn-sm">View/Edit</a>
-                                    <button type="button" 
-                                            class="btn btn-secondary btn-sm download-pdf-btn"
-                                            data-analysis-id="{{ analysis.id }}"
-                                            data-analysis-name="{{ analysis.analysis_name }}">
-                                        <i class="bi bi-file-pdf"></i> PDF
-                                    </button>
+                                    <button type="button" class="btn btn-secondary btn-sm download-pdf-btn"
+                                            data-analysis-id="{{ analysis.id }}">PDF</button>
                                 </div>
                             </td>
                         </tr>
@@ -40,7 +37,7 @@
         </div>
 
         {% if total_pages > 1 %}
-            <nav aria-label="Analysis pagination">
+            <nav aria-label="Page navigation">
                 <ul class="pagination justify-content-center">
                     {% if current_page > 1 %}
                         <li class="page-item">
@@ -50,13 +47,13 @@
                             <a class="page-link" href="{{ url_for('analyses.view_edit_analysis', page=current_page-1) }}">Previous</a>
                         </li>
                     {% endif %}
-                    
+
                     {% for page in range(max(1, current_page-2), min(total_pages+1, current_page+3)) %}
                         <li class="page-item {% if page == current_page %}active{% endif %}">
                             <a class="page-link" href="{{ url_for('analyses.view_edit_analysis', page=page) }}">{{ page }}</a>
                         </li>
                     {% endfor %}
-                    
+
                     {% if current_page < total_pages %}
                         <li class="page-item">
                             <a class="page-link" href="{{ url_for('analyses.view_edit_analysis', page=current_page+1) }}">Next</a>
@@ -74,69 +71,4 @@
         </div>
     {% endif %}
 </div>
-
-{% endblock %}
-
-{% block extra_js %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize toastr if you haven't already
-    toastr.options = {
-        closeButton: true,
-        progressBar: true,
-        positionClass: 'toast-top-right',
-        preventDuplicates: true,
-        timeOut: 3000
-    };
-
-    // Add click handlers for all PDF download buttons
-    document.querySelectorAll('.download-pdf-btn').forEach(button => {
-        button.addEventListener('click', function() {
-            const analysisId = this.dataset.analysisId;
-            const analysisName = this.dataset.analysisName;
-            const button = this;
-            
-            // Disable button and show loading state
-            button.disabled = true;
-            const originalContent = button.innerHTML;
-            button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Loading...';
-
-            fetch(`/analyses/generate_pdf/${analysisId}`)
-                .then(response => {
-                    if (!response.ok) {
-                        return response.json().then(data => {
-                            throw new Error(data.error || 'Error generating PDF');
-                        });
-                    }
-                    return response.blob();
-                })
-                .then(blob => {
-                    // Create download link
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.style.display = 'none';
-                    a.href = url;
-                    a.download = `${analysisName}_report.pdf`;
-                    
-                    // Trigger download
-                    document.body.appendChild(a);
-                    a.click();
-                    
-                    // Cleanup
-                    window.URL.revokeObjectURL(url);
-                    toastr.success('Report downloaded successfully');
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    toastr.error(error.message || 'Error downloading PDF. Please try again.');
-                })
-                .finally(() => {
-                    // Re-enable button and restore original content
-                    button.disabled = false;
-                    button.innerHTML = originalContent;
-                });
-        });
-    });
-});
-</script>
 {% endblock %}

@@ -23,7 +23,8 @@ const editTransactionsModule = {
             category: document.getElementById('category'),
             collectorPayer: document.getElementById('collector_payer'),
             type: document.querySelector('input[name="type"]:checked'),
-            collectorPayerLabel: document.querySelector('label[for="collector_payer"]')
+            collectorPayerLabel: document.querySelector('label[for="collector_payer"]'),
+            typeRadios: document.querySelectorAll('input[name="type"]')  // Add this line
         };
 
         console.log('Initial elements:', this.elements);
@@ -40,6 +41,17 @@ const editTransactionsModule = {
 
         console.log('Initial values:', this.initialValues);
 
+        // Add type change event listeners
+        this.elements.typeRadios.forEach(radio => {
+            radio.addEventListener('change', async (event) => {
+                const selectedType = event.target.value;
+                console.log('Type changed to:', selectedType);
+                await this.populateCategories(selectedType);
+                this.updateCollectorPayerLabel(selectedType);
+                this.updateReimbursementDetails();
+            });
+        });
+
         // Populate initial data
         const initialType = this.initialValues.typeValue || 'expense';
         await this.populateCategories(initialType);
@@ -47,16 +59,19 @@ const editTransactionsModule = {
         console.log('Categories populated');
 
         this.updateCollectorPayerOptions();
+        
+        // Initialize other event listeners
+        this.initEventListeners();
     },
 
     initEventListeners: function() {
         console.log('Initializing event listeners');
         
-         // Update form submission handler
-         const form = document.querySelector('form');
-         if (form) {
-             form.addEventListener('submit', (event) => this.handleSubmit(event));
-         }
+        // Update form submission handler
+        const form = document.querySelector('form');
+        if (form) {
+            form.addEventListener('submit', (event) => this.handleSubmit(event));
+        }
         
         // Type change
         const typeRadios = document.querySelectorAll('input[name="type"]');
@@ -110,6 +125,10 @@ const editTransactionsModule = {
     },
 
     populateCategories: async function(type) {
+        if (!type) {
+            type = document.querySelector('input[name="type"]:checked')?.value || 'expense';
+        }
+        
         console.log('Fetching categories for type:', type);
         try {
             const response = await fetch(`/api/categories?type=${type}`);
@@ -118,37 +137,46 @@ const editTransactionsModule = {
             }
             
             const categories = await response.json();
-            const categorySelect = this.elements.category;
+            const categorySelect = document.getElementById('category');
             
             if (categorySelect) {
                 // Clear existing options
                 categorySelect.innerHTML = '<option value="">Select a category</option>';
                 
                 // Add new options
-                if (Array.isArray(categories)) {
-                    categories.forEach(category => {
-                        const option = document.createElement('option');
-                        option.value = category;
-                        option.textContent = category;
-                        
-                        // Select the option if it matches the initial value
-                        if (category === this.initialValues.categoryDataset) {
-                            option.selected = true;
-                        }
-                        
-                        categorySelect.appendChild(option);
-                    });
+                categories.forEach(category => {
+                    const option = document.createElement('option');
+                    option.value = category;
+                    option.textContent = category;
+                    categorySelect.appendChild(option);
+                });
+                
+                // Restore initial value if exists and matches available options
+                if (this.initialValues.categoryDataset) {
+                    const matchingOption = Array.from(categorySelect.options)
+                        .find(option => option.value === this.initialValues.categoryDataset);
+                    if (matchingOption) {
+                        categorySelect.value = this.initialValues.categoryDataset;
+                    }
                 }
+            } else {
+                console.error('Category select element not found');
             }
         } catch (error) {
             console.error('Error in populateCategories:', error);
+            toastr.error('Error loading categories');
         }
     },
 
     updateCollectorPayerLabel: function(type) {
+        if (!type) {
+            type = document.querySelector('input[name="type"]:checked')?.value || 'expense';
+        }
+        
         console.log('Updating collector/payer label for type:', type);
-        if (this.elements.collectorPayerLabel) {
-            this.elements.collectorPayerLabel.textContent = type === 'income' ? 'Received by:' : 'Paid by:';
+        const label = document.querySelector('label[for="collector_payer"]');
+        if (label) {
+            label.textContent = type === 'income' ? 'Received by:' : 'Paid by:';
         } else {
             console.error('Collector/Payer label element not found');
         }

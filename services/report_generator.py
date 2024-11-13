@@ -3,6 +3,7 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
+from reportlab.lib.pagesizes import letter, landscape
 from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer, Table, 
                                TableStyle, Image, BaseDocTemplate, PageTemplate, 
                                Frame, FrameBreak, PageBreak)
@@ -11,6 +12,7 @@ from typing import Dict, List, Tuple, Union
 from io import BytesIO
 from flask import current_app
 import logging
+from datetime import datetime
 
 # Set up module-level logger
 logger = logging.getLogger(__name__)
@@ -115,31 +117,38 @@ class BasePropertyReport:
             logger.error(f"Error processing address: {str(e)}")
             return "Unknown Address"
 
-    def _create_header(self, story: List) -> None:
-        """Add report header with logo and title"""
+    def _create_header(self, story):
+        """Override the header creation for transaction reports"""
         try:
             # Get the static folder path from Flask app and correct logo path
             static_folder = current_app.static_folder
             logo_path = os.path.join(static_folder, 'images', 'logo-blue.png')
             
-            # Get truncated address and analysis type
-            truncated_address = self._get_truncated_address(self.data.get('property_address', 'Unknown Address'))
-            analysis_type = self.data.get('analysis_type', 'Property Analysis')
+            # Get property information
+            property_ids = list(self.transactions_by_property.keys())
+            if len(property_ids) == 1:
+                # Single property - use truncated address
+                title = f"Transaction Report - {self._truncate_address(property_ids[0])}"
+            else:
+                # Multiple properties
+                title = "Transaction Report - Multiple Properties"
+            
+            # Format date to show only the day
+            generated_date = datetime.strptime(self.data.get('generated_date', ''), '%Y-%m-%d %H:%M:%S')
+            formatted_date = generated_date.strftime('%Y-%m-%d')
             
             if not os.path.exists(logo_path):
                 logger.warning(f"Logo file not found at {logo_path}")
                 header_table = Table([
-                    [Paragraph("Property Analysis Report", self.styles['Header'])],
-                    [Paragraph(truncated_address, self.styles['SubTitle'])],
-                    [Paragraph(analysis_type, self.styles['SubTitle'])]
-                ], colWidths=[7*inch], rowHeights=[18, 13, 13])  # Reduced row heights
+                    [Paragraph(title, self.styles['Header'])],
+                    [Paragraph(f"Generated: {formatted_date}", self.styles['SubTitle'])]
+                ], colWidths=[10*inch], rowHeights=[18, 13])  # Adjusted for landscape
             else:
-                img = Image(logo_path, width=1.0*inch, height=1.0*inch)  # Slightly smaller logo
+                img = Image(logo_path, width=1.0*inch, height=1.0*inch)
                 header_table = Table([
-                    [img, Paragraph("Property Analysis Report", self.styles['Header'])],
-                    [None, Paragraph(truncated_address, self.styles['SubTitle'])],
-                    [None, Paragraph(analysis_type, self.styles['SubTitle'])]
-                ], colWidths=[1.5*inch, 5.5*inch], rowHeights=[18, 13, 13])  # Reduced row heights
+                    [img, Paragraph(title, self.styles['Header'])],
+                    [None, Paragraph(f"Generated: {formatted_date}", self.styles['SubTitle'])]
+                ], colWidths=[1.5*inch, 8.5*inch], rowHeights=[18, 13])  # Adjusted for landscape
             
             header_table.setStyle(TableStyle([
                 ('ALIGN', (0, 0), (0, -1), 'CENTER'),
@@ -151,11 +160,11 @@ class BasePropertyReport:
             ]))
             
             story.append(header_table)
-            story.append(Spacer(1, 0.25*inch))  # Reduced spacing after header
+            story.append(Spacer(1, 0.25*inch))
             
         except Exception as e:
             logger.error(f"Error creating header: {str(e)}")
-            story.append(Paragraph("Property Analysis Report", self.styles['Header']))
+            story.append(Paragraph("Transaction Report", self.styles['Header']))
             story.append(Spacer(1, 0.25*inch))
 
     def _create_section(self, title: str, data: List[Tuple[str, str]], 
@@ -285,10 +294,271 @@ class BasePropertyReport:
         
         # Build the document
         doc.build(story)
-        
+       
     def _add_content(self) -> None:
         """Each analysis type should override this method to add its specific content"""
         raise NotImplementedError("Each analysis type must implement _add_content")
+    
+class TransactionReport(BasePropertyReport):
+    """Report generator for transaction history"""
+    
+    def __init__(self, data, buffer):
+        super().__init__(data, buffer)
+        self.transactions_by_property = self._group_transactions()
+        # Set page width and height for landscape
+        self.page_width, self.page_height = landscape(letter)
+        
+    def _group_transactions(self):
+        """Group transactions by property"""
+        grouped = {}
+        for transaction in self.data['transactions']:
+            property_id = transaction['property_id']
+            if property_id not in grouped:
+                grouped[property_id] = []
+            grouped[property_id].append(transaction)
+            
+        # Sort transactions within each property by date (most recent first)
+        for property_id in grouped:
+            grouped[property_id].sort(
+                key=lambda x: datetime.strptime(x['date'], '%Y-%m-%d'),
+                reverse=True
+            )
+            
+        return grouped
+        
+    def _calculate_property_summary(self, transactions):
+        """Calculate summary totals for a property"""
+        total_income = sum(
+            float(t['amount'].replace('$', '').replace(',', ''))
+            for t in transactions
+            if t['type'] == 'income'
+        )
+        total_expenses = sum(
+            float(t['amount'].replace('$', '').replace(',', ''))
+            for t in transactions
+            if t['type'] == 'expense'
+        )
+        return {
+            'total_income': total_income,
+            'total_expenses': total_expenses,
+            'net_income': total_income - total_expenses
+        }
+        
+    def _calculate_grand_total(self):
+        """Calculate grand totals across all properties"""
+        total_income = 0
+        total_expenses = 0
+        
+        for transactions in self.transactions_by_property.values():
+            summary = self._calculate_property_summary(transactions)
+            total_income += summary['total_income']
+            total_expenses += summary['total_expenses']
+            
+        return {
+            'total_income': total_income,
+            'total_expenses': total_expenses,
+            'net_income': total_income - total_expenses
+        }
+        
+    def _create_summary_table(self, summary_data, is_grand_total=False):
+        """Create a summary table for property or grand totals"""
+        title = "Grand Total Summary" if is_grand_total else "Property Summary"
+        data = [
+            [Paragraph(title, self.styles['TableHeader']), ''],
+            ['Total Income', self.format_currency(summary_data['total_income'])],
+            ['Total Expenses', self.format_currency(summary_data['total_expenses'])],
+            ['Net Income', self.format_currency(summary_data['net_income'])]
+        ]
+        
+        # Adjusted widths for landscape orientation
+        table = Table(data, colWidths=[3*inch, 2*inch])
+        table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+            ('SPAN', (0, 0), (1, 0)),
+            ('BACKGROUND', (0, 0), (1, 0), colors.HexColor('#000080')),
+            ('TEXTCOLOR', (0, 0), (1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+            ('TOPPADDING', (0, 0), (-1, -1), 3),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('TEXTCOLOR', (1, 3), (1, 3),
+             colors.green if summary_data['net_income'] >= 0 else colors.red)
+        ]))
+        return table
+        
+    def _create_transactions_table(self, transactions):
+        """Create a table of transactions"""
+        # Table headers
+        data = [[
+            'Date',
+            'Description',
+            'Income/Expense',
+            'Category',
+            'Amount'
+        ]]
+        
+        # Add transaction rows
+        for t in transactions:
+            amount = float(t['amount'].replace('$', '').replace(',', ''))
+            if t['type'] == 'expense':
+                amount = -amount
+            
+            data.append([
+                t['date'],
+                t['description'],
+                t['type'].title(),
+                t['category'],
+                self.format_currency(amount)
+            ])
+            
+        # Adjusted column widths for landscape orientation
+        table = Table(data, colWidths=[1.5*inch, 4*inch, 1.5*inch, 2*inch, 1.5*inch])
+        
+        style = [
+            # Header style
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#000080')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            
+            # Body style
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('ALIGN', (-1, 0), (-1, -1), 'RIGHT'),  # Right-align amounts
+            ('ALIGN', (0, 1), (0, -1), 'CENTER'),  # Center-align dates
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('WORDWRAP', (1, 1), (1, -1), True),  # Enable word wrap for description
+        ]
+        
+        # Add row colors and amount colors
+        for i in range(1, len(data)):
+            # Alternate row colors
+            if i % 2 == 0:
+                style.append(('BACKGROUND', (0, i), (-1, i), colors.lightgrey))
+            
+            # Color amounts
+            amount = float(data[i][-1].replace('$', '').replace(',', ''))
+            if amount < 0:
+                style.append(('TEXTCOLOR', (-1, i), (-1, i), colors.red))
+            else:
+                style.append(('TEXTCOLOR', (-1, i), (-1, i), colors.green))
+        
+        table.setStyle(TableStyle(style))
+        return table
+    
+    def _truncate_address(self, address):
+        """Truncate address to show only house number, street name, and city"""
+        if not address:
+            return "Unknown Address"
+            
+        parts = address.split(',')
+        if len(parts) >= 2:
+            return f"{parts[0].strip()}, {parts[1].strip()}"
+        return address.strip()
+
+    def _add_content(self, story):
+        """Add all content to the report"""
+        # Get all property IDs
+        property_ids = list(self.transactions_by_property.keys())
+        
+        # Calculate grand total
+        grand_total = self._calculate_grand_total()
+        
+        if len(property_ids) > 1:
+            # If multiple properties, show grand total first
+            story.append(self._create_summary_table(grand_total, is_grand_total=True))
+            story.append(Spacer(1, 0.5*inch))
+        
+        # Process each property
+        for property_id in property_ids:
+            transactions = self.transactions_by_property[property_id]
+            
+            # Add property header with truncated address
+            truncated_address = self._truncate_address(property_id)
+            if len(property_ids) > 1:
+                story.append(Paragraph(f"Property: {truncated_address}", self.styles['SectionHeader']))
+            story.append(Spacer(1, 0.2*inch))
+            
+            # Only add property summary if we have multiple properties
+            if len(property_ids) > 1:
+                summary = self._calculate_property_summary(transactions)
+                story.append(self._create_summary_table(summary))
+                story.append(Spacer(1, 0.3*inch))
+            else:
+                # For single property, just show one summary table
+                story.append(self._create_summary_table(grand_total))
+                story.append(Spacer(1, 0.3*inch))
+            
+            # Add transactions table
+            story.append(self._create_transactions_table(transactions))
+            
+            # Add page break between properties
+            if property_id != property_ids[-1]:  # Don't add page break after last property
+                story.append(PageBreak())
+
+    def generate(self):
+        """Generate the complete report in landscape orientation"""
+        doc = SimpleDocTemplate(
+            self.buffer,
+            pagesize=landscape(letter),
+            rightMargin=0.5*inch,
+            leftMargin=0.5*inch,
+            topMargin=0.5*inch,
+            bottomMargin=0.5*inch
+        )
+        
+        story = []
+        self._create_header(story)
+        self._add_content(story)
+        doc.build(story)
+
+    def _create_header(self, story):
+        """Override the header creation for transaction reports"""
+        try:
+            # Get the static folder path from Flask app and correct logo path
+            static_folder = current_app.static_folder
+            logo_path = os.path.join(static_folder, 'images', 'logo-blue.png')
+            
+            # Get property information
+            property_ids = list(self.transactions_by_property.keys())
+            if len(property_ids) == 1:
+                # Single property - use truncated address
+                title = f"Transaction Report - {self._truncate_address(property_ids[0])}"
+            else:
+                # Multiple properties
+                title = "Transaction Report - Multiple Properties"
+            
+            if not os.path.exists(logo_path):
+                logger.warning(f"Logo file not found at {logo_path}")
+                header_table = Table([
+                    [Paragraph(title, self.styles['Header'])],
+                    [Paragraph(self.data.get('generated_date', ''), self.styles['SubTitle'])]
+                ], colWidths=[10*inch], rowHeights=[18, 13])  # Adjusted for landscape
+            else:
+                img = Image(logo_path, width=1.0*inch, height=1.0*inch)
+                header_table = Table([
+                    [img, Paragraph(title, self.styles['Header'])],
+                    [None, Paragraph(self.data.get('generated_date', ''), self.styles['SubTitle'])]
+                ], colWidths=[1.5*inch, 8.5*inch], rowHeights=[18, 13])  # Adjusted for landscape
+            
+            header_table.setStyle(TableStyle([
+                ('ALIGN', (0, 0), (0, -1), 'CENTER'),
+                ('ALIGN', (1, 0), (1, -1), 'CENTER'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('SPAN', (0, 0), (0, -1)),  # Logo spans all rows
+                ('TOPPADDING', (0, 0), (-1, -1), 0),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+            ]))
+            
+            story.append(header_table)
+            story.append(Spacer(1, 0.25*inch))
+            
+        except Exception as e:
+            logger.error(f"Error creating header: {str(e)}")
+            story.append(Paragraph("Transaction Report", self.styles['Header']))
+            story.append(Spacer(1, 0.25*inch))
     
 class BRRRRReport(BasePropertyReport):
     """Report generator for BRRRR analyses"""

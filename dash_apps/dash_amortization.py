@@ -1,6 +1,6 @@
 import dash
 from dash import dcc, html, dash_table
-from dash.dependencies import Input, Output, State
+from dash.dependencies import Input, Output
 import dash_bootstrap_components as dbc
 import pandas as pd
 import plotly.graph_objs as go
@@ -8,7 +8,6 @@ from flask_login import current_user
 from services.transaction_service import get_properties_for_user
 from datetime import datetime, date
 from dateutil.relativedelta import relativedelta
-from flask import current_app
 import traceback
 import logging
 

@@ -3,11 +3,9 @@ from flask import abort, Blueprint, render_template, request, redirect, url_for,
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from services.transaction_import_service import TransactionImportService
-from services.transaction_service import add_transaction, is_duplicate_transaction, get_properties_for_user, get_transaction_by_id, update_transaction, get_categories, get_partners_for_property, process_bulk_import
+from services.transaction_service import add_transaction, is_duplicate_transaction, get_properties_for_user, get_transaction_by_id, update_transaction, get_categories, get_partners_for_property
 from utils.utils import admin_required
 import os
-import re
-from datetime import datetime, timedelta
 import logging
 import json
 import traceback

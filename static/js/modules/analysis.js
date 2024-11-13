@@ -41,7 +41,66 @@ const padSplitExpensesHTML = `
     </div>
 `;
 
-const analysisModule = {
+window.analysisModule = {
+    initialAnalysisType: null,
+    currentAnalysisId: null,
+    isSubmitting: false,
+    typeChangeInProgress: false,
+
+    init: function() {
+        console.log('Analysis module initializing');
+        this.initToastr();
+        
+        const analysisForm = document.querySelector('#analysisForm');
+        if (analysisForm) {
+            console.log('Analysis form found');
+            
+            // Remove any existing event listeners
+            analysisForm.replaceWith(analysisForm.cloneNode(true));
+            
+            // Get the fresh form reference after replacement
+            const freshForm = document.querySelector('#analysisForm');
+            
+            // Get analysis ID from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const analysisId = urlParams.get('analysis_id');
+            console.log('URL Analysis ID:', analysisId);
+            
+            if (analysisId) {
+                console.log('Edit mode detected - loading analysis:', analysisId);
+                this.currentAnalysisId = analysisId;
+                freshForm.setAttribute('data-analysis-id', analysisId);
+                
+                // Set up form for edit mode
+                freshForm.addEventListener('submit', (event) => {
+                    this.handleEditSubmit(event, analysisId);
+                });
+                
+                // Load existing analysis data
+                this.loadAnalysisData(analysisId);
+            } else {
+                // Create mode
+                freshForm.addEventListener('submit', (event) => {
+                    this.handleSubmit(event);
+                });
+            }
+            
+            // Initialize handlers
+            this.initAddressAutocomplete();
+            this.initLoanHandlers();
+            this.initAnalysisTypeHandler();
+            this.initTabHandling();
+            this.initReportEventHandlers();
+        } else {
+            console.error('Analysis form not found');
+        }
+    },
+
+    getAnalysisIdFromUrl: function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('analysis_id');
+    },
+
     // Configure toastr options
     initToastr: function() {
         toastr.options = {
@@ -66,31 +125,32 @@ const analysisModule = {
         if (analysisForm) {
             console.log('Analysis form found');
             
-            // Check if we're in edit mode by looking for an analysis_id in the URL
-            const urlParams = new URLSearchParams(window.location.search);
-            const analysisId = urlParams.get('analysis_id');
-            
-            // Remove any existing event listeners
-            analysisForm.removeEventListener('submit', this.handleSubmit);
-            analysisForm.removeEventListener('submit', this.handleEditSubmit);
+            // Use this.getAnalysisIdFromUrl() instead
+            const analysisId = this.getAnalysisIdFromUrl();
             
             if (analysisId) {
+                this.currentAnalysisId = analysisId;
+                analysisForm.setAttribute('data-analysis-id', analysisId);
+                console.log('Analysis ID stored on form:', analysisId);
+                
                 // Edit mode
-                console.log('Edit mode detected for analysis ID:', analysisId);
                 analysisForm.addEventListener('submit', (event) => {
                     event.preventDefault();
                     this.handleEditSubmit(event, analysisId);
                 });
-                this.loadAnalysisData(analysisId);
                 
                 // Update button text
                 const submitBtn = document.getElementById('submitAnalysisBtn');
                 if (submitBtn) {
                     submitBtn.textContent = 'Update Analysis';
                 }
+                
+                // Load data after a short delay to ensure form is ready
+                setTimeout(() => {
+                    this.loadAnalysisData(analysisId);
+                }, 100);
             } else {
                 // Create mode
-                console.log('Create mode detected');
                 analysisForm.addEventListener('submit', (event) => {
                     event.preventDefault();
                     this.handleSubmit(event);
@@ -100,20 +160,33 @@ const analysisModule = {
             this.initAddressAutocomplete();
             this.initLoanHandlers();
             this.initAnalysisTypeHandler();
+            this.initTabHandling();
+            this.initReportEventHandlers();
         } else {
             console.error('Analysis form not found');
         }
+    },
+
+    initTabHandling: function() {
+        // Use this.getAnalysisIdFromUrl() instead
+        const analysisId = this.getAnalysisIdFromUrl();
+        if (!analysisId) return;
     
-        // Set up event listeners for the buttons
-        const editBtn = document.getElementById('editAnalysisBtn');
-        const createNewBtn = document.getElementById('createNewAnalysisBtn');
-        
-        if (editBtn) {
-            editBtn.addEventListener('click', () => this.editAnalysis());
+        const reportTab = document.getElementById('reports-tab');
+        const financialTab = document.getElementById('financial-tab');
+    
+        if (reportTab) {
+            reportTab.addEventListener('click', () => {
+                this.currentAnalysisId = analysisId;
+                console.log('Report tab clicked, analysis ID:', this.currentAnalysisId);
+            });
         }
-        
-        if (createNewBtn) {
-            createNewBtn.addEventListener('click', () => this.createNewAnalysis());
+    
+        if (financialTab) {
+            financialTab.addEventListener('click', () => {
+                this.currentAnalysisId = analysisId;
+                console.log('Financial tab clicked, analysis ID:', this.currentAnalysisId);
+            });
         }
     },
 
@@ -193,100 +266,256 @@ const analysisModule = {
         }
     },
 
+    handleTypeChange: async function(newType) {
+        const financialTab = document.getElementById('financial');
+        if (!financialTab) return;
+        
+        try {
+            // Get current analysis data
+            const currentForm = document.getElementById('analysisForm');
+            const analysisId = currentForm.getAttribute('data-analysis-id');
+            
+            if (!analysisId) return;
+    
+            // Create new analysis with the new type
+            const formData = new FormData(currentForm);
+            const analysisData = {
+                ...Object.fromEntries(formData.entries()),
+                id: analysisId,
+                analysis_type: newType
+            };
+            
+            // Make API call to create new analysis
+            const response = await fetch('/analyses/update_analysis', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(analysisData)
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+                // Load form fields for new type
+                this.loadTypeFields(newType);
+                
+                // Update form with new analysis data
+                currentForm.setAttribute('data-analysis-id', data.analysis.id);
+                this.currentAnalysisId = data.analysis.id;
+                
+                // Wait for DOM to be ready before populating fields
+                setTimeout(() => {
+                    this.populateFormFields(data.analysis);
+                }, 100);
+                
+                toastr.success(`Created new ${newType} analysis`);
+            } else {
+                throw new Error(data.message || 'Error creating new analysis');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            toastr.error(error.message);
+            // Reset to original type
+            const analysisType = document.getElementById('analysis_type');
+            if (analysisType) {
+                analysisType.value = this.initialAnalysisType;
+            }
+        }
+    },
+
     initAnalysisTypeHandler: function() {
         const analysisType = document.getElementById('analysis_type');
         const financialTab = document.getElementById('financial');
         
         if (analysisType && financialTab) {
-            // Store 'this' context
-            const self = this;
+            // Remove any existing event listeners by cloning
+            const newAnalysisType = analysisType.cloneNode(true);
+            analysisType.parentNode.replaceChild(newAnalysisType, analysisType);
             
-            // Handle both change events and initial load
-            const handleTypeChange = (value) => {
-                console.log('Loading fields for analysis type:', value);
-                switch(value) {
-                    case 'Long-Term Rental':
-                        financialTab.innerHTML = self.getLongTermRentalHTML();
-                        break;
-                    case 'PadSplit LTR':
-                        self.loadPadSplitLTRFields(financialTab);
-                        break;
-                    case 'BRRRR':
-                        financialTab.innerHTML = self.getBRRRRHTML();
-                        break;
-                    case 'PadSplit BRRRR':
-                        self.loadPadSplitBRRRRFields(financialTab);
-                        break;
-                    default:
-                        financialTab.innerHTML = '<p>Financial details for this analysis type are not yet implemented.</p>';
-                }
-                // Initialize loan handlers after loading new content
-                self.initLoanHandlers();
-            };
-    
+            // Store initial value
+            this.initialAnalysisType = newAnalysisType.value;
+            console.log('Initial analysis type:', this.initialAnalysisType);
+            
+            // Load initial fields
+            this.loadTypeFields(this.initialAnalysisType);
+            
             // Set up event listener for changes
-            analysisType.addEventListener('change', (e) => {
-                handleTypeChange(e.target.value);
+            newAnalysisType.addEventListener('change', async (e) => {
+                // Prevent multiple concurrent changes
+                if (this.typeChangeInProgress) {
+                    console.log('Type change already in progress');
+                    return;
+                }
+                
+                const newType = e.target.value;
+                
+                // Only prompt if actually changing types
+                if (newType === this.initialAnalysisType) {
+                    return;
+                }
+                
+                try {
+                    this.typeChangeInProgress = true;
+                    
+                    const confirmed = await new Promise(resolve => {
+                        const modal = document.createElement('div');
+                        modal.className = 'modal fade';
+                        modal.innerHTML = `
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Change Analysis Type</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        Changing analysis type will create a fresh ${newType} analysis for this property. Do you want to proceed?
+                                    </div>
+                                    <div class="modal-footer gap-2">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                        <button type="button" class="btn btn-primary" id="confirmTypeChange">Yes, Proceed</button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        document.body.appendChild(modal);
+                        
+                        const modalInstance = new bootstrap.Modal(modal);
+                        modalInstance.show();
+                        
+                        modal.querySelector('#confirmTypeChange').addEventListener('click', () => {
+                            modalInstance.hide();
+                            resolve(true);
+                        });
+                        
+                        modal.addEventListener('hidden.bs.modal', () => {
+                            resolve(false);
+                            modal.remove();
+                        });
+                    });
+
+                    if (!confirmed) {
+                        // Reset to original type without triggering change event
+                        e.target.value = this.initialAnalysisType;
+                        return;
+                    }
+
+                    // Create new analysis
+                    const currentForm = document.getElementById('analysisForm');
+                    const analysisId = currentForm.getAttribute('data-analysis-id');
+                    
+                    if (!analysisId) return;
+
+                    const formData = new FormData(currentForm);
+                    const analysisData = {
+                        ...Object.fromEntries(formData.entries()),
+                        id: analysisId,
+                        analysis_type: newType
+                    };
+                    
+                    const response = await fetch('/analyses/update_analysis', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(analysisData)
+                    });
+                    
+                    const data = await response.json();
+                    if (data.success) {
+                        // Update UI first
+                        this.loadTypeFields(newType);
+                        currentForm.setAttribute('data-analysis-id', data.analysis.id);
+                        this.currentAnalysisId = data.analysis.id;
+                        
+                        // Then update the type selector to match
+                        this.initialAnalysisType = newType;
+                        e.target.value = newType;
+                        
+                        // Finally populate fields
+                        setTimeout(() => {
+                            this.populateFormFields(data.analysis);
+                        }, 100);
+                        
+                        toastr.success(`Created new ${newType} analysis`);
+                    } else {
+                        throw new Error(data.message || 'Error creating new analysis');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    toastr.error(error.message);
+                    // Reset to original type
+                    e.target.value = this.initialAnalysisType;
+                } finally {
+                    this.typeChangeInProgress = false;
+                }
             });
-    
-            // If there's an initial value, load the appropriate fields
-            if (analysisType.value) {
-                handleTypeChange(analysisType.value);
-            }
+        } else {
+            console.error('Required elements not found:', {
+                analysisType: !!analysisType,
+                financialTab: !!financialTab
+            });
         }
     },
 
-    // Function to update the form display when switching between analysis types
-    loadAnalysisTypeFields: function(container, analysisType) {
-        switch(analysisType) {
+    loadTypeFields: function(type) {
+        const financialTab = document.getElementById('financial');
+        if (!financialTab) return;
+        
+        // Load HTML content based on type
+        let htmlContent;
+        switch(type) {
             case 'Long-Term Rental':
-                container.innerHTML = this.getLongTermRentalHTML();
-                this.initLoanHandlers();
+                htmlContent = this.getLongTermRentalHTML();
                 break;
             case 'PadSplit LTR':
-                this.loadPadSplitLTRFields(container);
+                htmlContent = this.getPadSplitLTRHTML();
                 break;
             case 'BRRRR':
-                container.innerHTML = this.getBRRRRHTML();
+                htmlContent = this.getBRRRRHTML();
                 break;
             case 'PadSplit BRRRR':
-                this.loadPadSplitBRRRRFields(container);
+                htmlContent = this.getPadSplitBRRRRHTML();
                 break;
             default:
-                container.innerHTML = '<p>Financial details for this analysis type are not yet implemented.</p>';
+                htmlContent = '<p>Financial details for this analysis type are not yet implemented.</p>';
         }
+    
+        // Set the HTML content
+        financialTab.innerHTML = htmlContent;
+    
+        // Initialize handlers
+        this.initLoanHandlers();
     },
 
     loadAnalysisData: function(analysisId) {
-        const self = this;
+        if (!analysisId) {
+            console.error('No analysis ID provided to loadAnalysisData');
+            return;
+        }
+    
         console.log('Loading analysis data for ID:', analysisId);
         
         fetch(`/analyses/get_analysis/${analysisId}`)
-            .then(response => {
-                if (!response.ok) {
-                    toastr.error('Error loading analysis data');
-                    return null;
-                }
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
                 if (data?.success) {
-                    console.log('Received analysis data:', data.analysis);
+                    const form = document.getElementById('analysisForm');
+                    if (form) {
+                        form.setAttribute('data-analysis-id', analysisId);
+                    }
                     
-                    // Store the current analysis ID
-                    self.currentAnalysisId = analysisId;
-                    
-                    // Set the analysis type first
+                    // Set analysis type and trigger change event
                     const analysisType = document.getElementById('analysis_type');
                     if (analysisType) {
                         analysisType.value = data.analysis.analysis_type;
-                        // This will trigger loading the correct fields
                         analysisType.dispatchEvent(new Event('change'));
                         
-                        // Wait for fields to be loaded before populating
+                        // Wait for fields to be created before populating
                         setTimeout(() => {
-                            self.populateFormFields(data.analysis);
-                        }, 100);
+                            this.populateFormFields(data.analysis);
+                        }, 300);
+                    } else {
+                        console.error('Analysis type field not found');
                     }
                 } else {
                     console.error('Failed to fetch analysis data');
@@ -562,8 +791,8 @@ const analysisModule = {
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="maintenance_percentage" class="form-label">Maintenance (% of rent)</label>
-                            <input type="number" class="form-control" id="maintenance_percentage" name="maintenance_percentage" 
+                            <label for="repairs_percentage" class="form-label">Maintenance (% of rent)</label>
+                            <input type="number" class="form-control" id="repairs_percentage" name="repairs_percentage" 
                                 value="2" min="0" max="100" step="0.1" 
                                 placeholder="Percentage of rent for maintenance" required>
                         </div>
@@ -595,7 +824,7 @@ const analysisModule = {
     },
 
     loadPadSplitLTRFields: function(container) {
-        // First load standard LTR fields but update the after_repair_value field name
+        // First load standard LTR fields
         const ltrHtml = this.getLongTermRentalHTML();
         const updatedLtrHtml = ltrHtml.replace(
             /after_repair_value/g,
@@ -603,7 +832,7 @@ const analysisModule = {
         );
         container.innerHTML = updatedLtrHtml;
 
-        // Find the Operating Expenses card
+        // Find the Operating Expenses card and add PadSplit expenses
         const cards = container.querySelectorAll('.card');
         let operatingExpensesBody;
         
@@ -616,7 +845,6 @@ const analysisModule = {
         }
         
         if (operatingExpensesBody) {
-            // Add PadSplit-specific expenses
             operatingExpensesBody.insertAdjacentHTML('beforeend', padSplitExpensesHTML);
         } else {
             console.error('Operating Expenses section not found');
@@ -980,8 +1208,8 @@ const analysisModule = {
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="maintenance_percentage" class="form-label">Maintenance (% of rent)</label>
-                            <input type="number" class="form-control" id="maintenance_percentage" name="maintenance_percentage" 
+                            <label for="repairs_percentage" class="form-label">Maintenance (% of rent)</label>
+                            <input type="number" class="form-control" id="repairs_percentage" name="repairs_percentage" 
                                    value="2" min="0" max="100" step="0.1" 
                                    placeholder="Percentage of rent for maintenance" required>
                         </div>
@@ -1117,36 +1345,37 @@ const analysisModule = {
 
     handleSubmit: function(event) {
         event.preventDefault();
-        console.log('Create form submission started');
-    
+        
+        // Check if already submitting
+        if (this.isSubmitting) {
+            console.log('Form submission already in progress');
+            return;
+        }
+        
+        console.log('Starting form submission');
+        this.isSubmitting = true;
+
         const form = event.target;
         if (!this.validateForm(form)) {
             console.log('Form validation failed');
+            this.isSubmitting = false;
             return;
         }
-    
+
         const formData = new FormData(form);
-        const analysisData = {
-            ...Object.fromEntries(formData.entries())
-        };
-    
-        // Get analysis type
-        analysisData.analysis_type = document.getElementById('analysis_type').value;
-    
-        // Process loan data
-        analysisData.loans = [];
-        for (let i = 1; i <= 3; i++) {
-            if (formData.get(`loans[${i}][name]`)) {
-                analysisData.loans.push({
-                    name: formData.get(`loans[${i}][name]`),
-                    amount: parseFloat(this.cleanNumericValue(formData.get(`loans[${i}][amount]`))),
-                    down_payment: parseFloat(this.cleanNumericValue(formData.get(`loans[${i}][down_payment]`))),
-                    interest_rate: parseFloat(this.cleanNumericValue(formData.get(`loans[${i}][interest_rate]`))),
-                    term: parseInt(this.cleanNumericValue(formData.get(`loans[${i}][term]`))),
-                    closing_costs: parseFloat(this.cleanNumericValue(formData.get(`loans[${i}][closing_costs]`)))
-                });
+        const analysisData = {};
+
+        // Process form data with proper text handling
+        formData.forEach((value, key) => {
+            if (this.isNumericField(key)) {
+                analysisData[key] = this.cleanNumericValue(value);
+            } else {
+                // Preserve spaces for text fields
+                analysisData[key] = value;
             }
-        }
+        });
+
+        console.log('Processed form data:', analysisData);
     
         // Complete list of all numeric fields
         const numericFields = [
@@ -1200,20 +1429,40 @@ const analysisModule = {
             'landscaping'
         ];
     
-        // Convert numeric fields
+        // Single pass for numeric field handling
         numericFields.forEach(field => {
-            if (analysisData[field] !== undefined && analysisData[field] !== '') {
-                analysisData[field] = parseFloat(this.cleanNumericValue(analysisData[field]));
-                console.log(`Converted ${field} to number: ${analysisData[field]}`);
-            }
+            let value = analysisData[field];
+            console.log(`Processing ${field}, original value:`, value);
+            
+            // Clean and validate the value
+            const cleanValue = this.cleanNumericValue(value);
+            console.log(`${field} cleaned value:`, cleanValue);
+    
+            // Always store as string with at least '0'
+            analysisData[field] = cleanValue || '0';
+            console.log(`${field} final value:`, analysisData[field]);
         });
     
-        // Handle boolean fields
-        if (analysisData.initial_interest_only) {
-            analysisData.initial_interest_only = analysisData.initial_interest_only === 'on';
+        // Process loan data
+        analysisData.loans = [];
+        for (let i = 1; i <= 3; i++) {
+            if (formData.get(`loans[${i}][name]`)) {
+                analysisData.loans.push({
+                    name: formData.get(`loans[${i}][name]`),
+                    amount: this.cleanNumericValue(formData.get(`loans[${i}][amount]`)),
+                    down_payment: this.cleanNumericValue(formData.get(`loans[${i}][down_payment]`)),
+                    interest_rate: this.cleanNumericValue(formData.get(`loans[${i}][interest_rate]`)),
+                    term: this.cleanNumericValue(formData.get(`loans[${i}][term]`)),
+                    closing_costs: this.cleanNumericValue(formData.get(`loans[${i}][closing_costs]`))
+                });
+            }
         }
     
-        console.log('Sending analysis data:', JSON.stringify(analysisData, null, 2));
+        // Handle boolean fields
+        analysisData.initial_interest_only = 
+            document.getElementById('initial_interest_only')?.checked || false;
+    
+        console.log('Sending analysis data:', analysisData);
     
         fetch('/analyses/create_analysis', {
             method: 'POST',
@@ -1229,181 +1478,134 @@ const analysisModule = {
             return response.json();
         })
         .then(data => {
-            console.log('Create handler - Server response:', data);
-            console.log('Create handler - Analysis data:', data.analysis);
+            console.log('Server response:', data);
             if (data.success) {
                 this.currentAnalysisId = data.analysis.id;
                 this.populateReportsTab(data.analysis);
                 this.switchToReportsTab();
                 this.showReportActions();
                 toastr.success('Analysis created successfully');
+            } else {
+                throw new Error(data.message || 'Unknown error occurred');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            toastr.error('An error occurred while creating the analysis. Please try again.');
+            toastr.error(error.message || 'Error creating analysis');
+        })
+        .finally(() => {
+            // Reset submission lock
+            this.isSubmitting = false;
+            
+            // Re-enable submit button
+            if (submitButton) {
+                submitButton.disabled = false;
+                submitButton.innerHTML = 'Create Analysis';
+            }
         });
+    },
+
+    // Helper method to identify numeric fields
+    isNumericField: function(fieldName) {
+        const numericFields = [
+            'purchase_price',
+            'after_repair_value',
+            'renovation_costs',
+            'renovation_duration',
+            'monthly_rent',
+            'home_square_footage',
+            'lot_square_footage',
+            'year_built',
+            'refinance_ltv_percentage',
+            'max_cash_left',
+            'property_taxes',
+            'insurance',
+            'management_percentage',
+            'capex_percentage',
+            'vacancy_percentage',
+            'padsplit_platform_percentage',
+            'utilities',
+            'internet',
+            'cleaning_costs',
+            'pest_control',
+            'landscaping'
+        ];
+        return numericFields.includes(fieldName);
     },
 
     handleEditSubmit: function(event, analysisId) {
         event.preventDefault();
-        console.log('Edit form submission started');
-        console.log('Analysis ID:', analysisId);
         
-        if (!analysisId) {
-            console.error('No analysis ID provided for update');
-            toastr.error('No analysis ID found. Cannot update.');
+        if (this.isSubmitting) {
+            console.log('Form submission already in progress');
             return;
         }
-    
+        
+        console.log('Starting edit form submission');
+        this.isSubmitting = true;
+
         const form = event.target;
         if (!this.validateForm(form)) {
             console.log('Form validation failed');
+            this.isSubmitting = false;
             return;
         }
-    
-        // Create analysis data object with explicit ID
+
         const formData = new FormData(form);
         const analysisData = {
             id: analysisId,
             ...Object.fromEntries(formData.entries())
         };
-    
-        // Get analysis type
-        analysisData.analysis_type = document.getElementById('analysis_type').value;
-    
-        // Process loan data
-        analysisData.loans = [];
-        for (let i = 1; i <= 3; i++) {
-            if (formData.get(`loans[${i}][name]`)) {
-                analysisData.loans.push({
-                    name: formData.get(`loans[${i}][name]`),
-                    amount: parseFloat(this.cleanNumericValue(formData.get(`loans[${i}][amount]`))),
-                    down_payment: parseFloat(this.cleanNumericValue(formData.get(`loans[${i}][down_payment]`))),
-                    interest_rate: parseFloat(this.cleanNumericValue(formData.get(`loans[${i}][interest_rate]`))),
-                    term: parseInt(this.cleanNumericValue(formData.get(`loans[${i}][term]`))),
-                    closing_costs: parseFloat(this.cleanNumericValue(formData.get(`loans[${i}][closing_costs]`)))
-                });
+
+        // Process form data and make the API call
+        fetch('/analyses/update_analysis', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(analysisData)
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => { throw err; });
             }
-        }
-    
-        // Complete list of numeric fields
-        const numericFields = [
-            // Property Details
-            'purchase_price', 
-            'after_repair_value', 
-            'home_square_footage',
-            'lot_square_footage',
-            'year_built',
-            
-            // Purchase Details
-            'cash_to_seller', 
-            'closing_costs',
-            'assignment_fee', 
-            'marketing_costs', 
-            'renovation_costs', 
-            'renovation_duration',
-            
-            // Initial Loan Details
-            'initial_loan_amount',
-            'initial_down_payment',
-            'initial_interest_rate',
-            'initial_loan_term',
-            'initial_closing_costs',
-            
-            // Refinance Details
-            'refinance_loan_amount',
-            'refinance_down_payment',
-            'refinance_interest_rate',
-            'refinance_loan_term',
-            'refinance_closing_costs',
-            'refinance_ltv_percentage',
-            'max_cash_left',
-            
-            // Income and Operating Expenses
-            'monthly_rent',
-            'management_percentage',
-            'capex_percentage',
-            'repairs_percentage',
-            'vacancy_percentage',
-            'property_taxes',
-            'insurance',
-            'hoa_coa_coop'
-        ];
-    
-        // Convert numeric fields and add validation
-        numericFields.forEach(field => {
-            if (analysisData[field] !== undefined && analysisData[field] !== '') {
-                const cleanValue = this.cleanNumericValue(analysisData[field]);
-                if (!isNaN(cleanValue)) {
-                    analysisData[field] = parseFloat(cleanValue);
-                    console.log(`Converted ${field} to number: ${analysisData[field]}`);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Server response:', data);
+            if (data.success) {
+                // Check if a new analysis was created
+                if (data.analysis.id !== analysisId) {
+                    toastr.info(`${data.analysis.analysis_name} has a new ${data.analysis.analysis_type} Analysis!!`);
                 } else {
-                    console.warn(`Invalid numeric value for ${field}: ${analysisData[field]}`);
-                    analysisData[field] = 0; // Default to 0 for invalid numbers
-                }
-            } else {
-                console.debug(`Field ${field} is undefined or empty`);
-            }
-        });
-    
-        // Handle boolean fields
-        analysisData.initial_interest_only = 
-            document.getElementById('initial_interest_only')?.checked || false;
-    
-        // Add retry mechanism
-        const maxRetries = 3;
-        let currentTry = 0;
-    
-        const attemptUpdate = () => {
-            currentTry++;
-            console.log(`Attempt ${currentTry} to update analysis`);
-            console.log('Sending analysis data:', JSON.stringify(analysisData, null, 2));
-    
-            return fetch('/analyses/update_analysis', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(analysisData)
-            })
-            .then(response => {
-                if (!response.ok) {
-                    return response.json().then(err => { throw err; });
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log('Edit handler - Server response:', data);
-                console.log('Edit handler - Analysis data:', data.analysis);
-                if (data.success) {
-                    const analysisWithId = {
-                        ...data.analysis,
-                        id: analysisId
-                    };
-                    console.log('Edit handler - Reconstructed analysis:', analysisWithId);
-                    this.populateReportsTab(analysisWithId);
-                    this.switchToReportsTab();
-                    this.showReportActions();
                     toastr.success('Analysis updated successfully');
                 }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                if (currentTry < maxRetries) {
-                    console.log(`Retrying update (attempt ${currentTry + 1} of ${maxRetries})...`);
-                    return new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1 second
-                        .then(() => attemptUpdate());
-                } else {
-                    toastr.error('An error occurred while updating the analysis. Please try again.');
-                    throw error;
-                }
-            });
-        };
-    
-        // Start the update process
-        attemptUpdate().catch(error => {
-            console.error('All retry attempts failed:', error);
+                
+                this.populateReportsTab(data.analysis);
+                this.switchToReportsTab();
+                this.showReportActions();
+            } else {
+                throw new Error(data.message || 'Unknown error occurred');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            // Check if error is about existing analysis
+            if (error.message && error.message.includes('already exists')) {
+                toastr.error(error.message);
+            } else {
+                toastr.error(error.message || 'Error updating analysis');
+            }
+        })
+        .finally(() => {
+            this.isSubmitting = false;
+            
+            // Re-enable submit button
+            const submitButton = form.querySelector('button[type="submit"]');
+            if (submitButton) {
+                submitButton.disabled = false;
+                submitButton.innerHTML = 'Update Analysis';
+            }
         });
     },
 
@@ -1577,6 +1779,8 @@ const analysisModule = {
 
     // Helper method to initialize report event handlers
     initReportEventHandlers: function() {
+        console.log('Initializing report event handlers');
+        
         // Add event listener for PDF download
         const downloadPdfBtn = document.getElementById('downloadPdfBtn');
         if (downloadPdfBtn) {
@@ -1585,18 +1789,24 @@ const analysisModule = {
             });
         }
 
-        // Show the Edit and Create New buttons
+        // Handle Edit Analysis button
         const editBtn = document.getElementById('editAnalysisBtn');
-        const createNewBtn = document.getElementById('createNewAnalysisBtn');
-        
         if (editBtn) {
-            editBtn.setAttribute('data-analysis-id', this.currentAnalysisId);
-            editBtn.style.display = 'inline-block';
+            console.log('Adding event listener to Edit Analysis button');
+            editBtn.addEventListener('click', () => {
+                console.log('Edit button clicked');
+                this.editAnalysis();
+            });
+        } else {
+            console.error('Edit Analysis button not found');
         }
-        
-        if (editBtn && createNewBtn) {
-            editBtn.style.display = 'inline-block';
-            createNewBtn.style.display = 'inline-block';
+
+        // Handle Create New Analysis button
+        const createNewBtn = document.getElementById('createNewAnalysisBtn');
+        if (createNewBtn) {
+            createNewBtn.addEventListener('click', () => {
+                this.createNewAnalysis();
+            });
         }
     },
 
@@ -1648,30 +1858,30 @@ const analysisModule = {
     },
 
     editAnalysis: function() {
-        // Get ID from the button's data attribute
-        const editBtn = document.getElementById('editAnalysisBtn');
-        const analysisId = editBtn ? editBtn.getAttribute('data-analysis-id') : null;
+        console.log('editAnalysis called');
+        
+        // Get analysis ID (try multiple sources)
+        let analysisId = this.currentAnalysisId;
+        if (!analysisId) {
+            analysisId = this.getAnalysisIdFromUrl();
+        }
+        if (!analysisId) {
+            const form = document.getElementById('analysisForm');
+            analysisId = form ? form.getAttribute('data-analysis-id') : null;
+        }
         
         console.log('Editing analysis with ID:', analysisId);
-
+    
         if (!analysisId) {
             console.error('No analysis ID found');
+            toastr.error('No analysis ID found. Cannot edit analysis.');
             return;
         }
     
-        this.currentAnalysisId = analysisId;  // Store it in the instance
-
         // Switch to the Financial tab
-        const financialTab = document.querySelector('#financial-tab');
-        const financialContent = document.querySelector('#financial');
-        const reportsTab = document.querySelector('#reports-tab');
-        const reportsContent = document.querySelector('#reports');
-        
-        if (financialTab && financialContent && reportsTab && reportsContent) {
-            reportsTab.classList.remove('active');
-            reportsContent.classList.remove('show', 'active');
-            financialTab.classList.add('active');
-            financialContent.classList.add('show', 'active');
+        const financialTab = document.getElementById('financial-tab');
+        if (financialTab) {
+            financialTab.click();
         }
     
         // Show the submit button and hide report actions
@@ -1685,206 +1895,255 @@ const analysisModule = {
         }
     
         // Update the form submission handler
-        const form = document.querySelector('#analysisForm');
+        const form = document.getElementById('analysisForm');
         if (form) {
-            form.onsubmit = (event) => this.handleEditSubmit(event, this.currentAnalysisId);
+            form.setAttribute('data-analysis-id', analysisId);
+            form.onsubmit = (event) => this.handleEditSubmit(event, analysisId);
         }
     
-        // Fetch and populate the form with existing data
-        if (this.currentAnalysisId) {
-            fetch(`/analyses/get_analysis/${this.currentAnalysisId}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        this.populateFormFields(data.analysis);
-                    } else {
-                        console.error('Failed to fetch analysis data');
-                    }
-                })
-                .catch(error => console.error('Error:', error));
-        } else {
-            console.error('No current analysis ID found');
-        }
+        // Load and populate the form
+        this.loadAnalysisData(analysisId);
     },
 
+    // Modified cleanNumericValue to only clean numeric fields
     cleanNumericValue: function(value) {
-        if (typeof value !== 'string') {
-            value = String(value);
+        if (value === null || value === undefined || value === '') {
+            return '0';
         }
         
-        // Remove currency symbols, commas, and trim whitespace
+        // Convert to string if not already
+        value = String(value);
+        
+        // Remove currency symbols, commas, spaces ONLY for numeric values
         let cleaned = value.replace(/[$,\s]/g, '');
         
         // Remove % symbol for percentage values
         cleaned = cleaned.replace(/%/g, '');
         
-        // Return cleaned value or 0 if empty/invalid
-        return cleaned || '0';
+        // If result is empty or not a valid number, return '0'
+        if (!cleaned || isNaN(parseFloat(cleaned))) {
+            return '0';
+        }
+        
+        // Return the cleaned string value
+        return cleaned;
+    },
+
+    // Add this helper function to handle empty/null values
+    cleanDisplayValue: function(value, type = 'money') {
+        if (value === null || value === undefined || value === '') {
+            return type === 'money' ? '$0.00' : '0.00%';
+        }
+        
+        if (type === 'money') {
+            // If it's already formatted with $ and commas, return as is
+            if (typeof value === 'string' && value.startsWith('$')) {
+                return value;
+            }
+            // Otherwise format it
+            return `$${parseFloat(value).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
+        } else if (type === 'percentage') {
+            // If it's already formatted with %, return as is
+            if (typeof value === 'string' && value.endsWith('%')) {
+                return value;
+            }
+            // Otherwise format it
+            return `${parseFloat(value).toFixed(2)}%`;
+        }
+        return value;
     },
 
     populateFormFields: function(analysis) {
-        console.log('Populating form with analysis:', analysis);
-
-        // Handle basic fields as before
-        Object.keys(analysis).forEach(key => {
-            const field = document.getElementById(key);
-            if (field) {
-                if (field.type === 'number') {
-                    field.value = this.cleanNumericValue(analysis[key]);
-                } else {
-                    field.value = analysis[key];
-                }
-                console.log(`Set ${key} to ${field.value}`);
-            }
-        });
+        console.log('Starting populateFormFields with:', analysis);
         
-        // First populate the basic fields
-        Object.keys(analysis).forEach(key => {
-            const field = document.getElementById(key);
+        const self = this;
+        
+        // Helper function to set field value and trigger change event
+        const setFieldValue = (fieldId, value, type = 'text') => {
+            const field = document.getElementById(fieldId);
             if (field) {
-                if (field.type === 'number') {
-                    field.value = this.cleanNumericValue(analysis[key]);
-                } else {
-                    field.value = analysis[key];
+                // Clean the value based on field type
+                let cleanedValue = value;
+                if (type === 'money') {
+                    cleanedValue = value ? value.replace(/[$,]/g, '') : '0';
+                } else if (type === 'percentage') {
+                    cleanedValue = value ? value.replace(/%/g, '') : '0';
+                } else if (type === 'number') {
+                    cleanedValue = value || '0';
                 }
-                console.log(`Set ${key} to ${field.value}`);
-            }
-        });
-
-        // Handle BRRRR-specific fields
-        if (analysis.analysis_type === 'BRRRR') {
-            const brrrFields = [
-                'initial_loan_amount',
-                'initial_down_payment',
-                'initial_interest_rate',
-                'initial_loan_term',
-                'initial_closing_costs',
-                'refinance_loan_amount',
-                'refinance_down_payment',
-                'refinance_interest_rate',
-                'refinance_loan_term',
-                'refinance_closing_costs',
-                'refinance_ltv_percentage',
-                'max_cash_left'
-            ];
-
-            brrrFields.forEach(fieldName => {
-                const field = document.getElementById(fieldName);
-                if (field && analysis[fieldName] !== undefined) {
-                    if (field.type === 'number') {
-                        field.value = this.cleanNumericValue(analysis[fieldName]);
-                    } else {
-                        field.value = analysis[fieldName];
-                    }
-                    console.log(`Set BRRRR field ${fieldName} to ${field.value}`);
-                }
-            });
-        }
-
-        // Special handling for operating expenses
-        if (analysis.operating_expenses) {
-            // Map the stored keys to form field IDs
-            const expenseMapping = {
-                'Property Taxes': 'property_taxes',
-                'Insurance': 'insurance',
-                'Management': 'management_percentage'
-            };
-
-            Object.entries(analysis.operating_expenses).forEach(([key, value]) => {
-                const fieldId = expenseMapping[key];
-                if (fieldId) {
-                    const field = document.getElementById(fieldId);
-                    if (field) {
-                        field.value = this.cleanNumericValue(value);
-                        console.log(`Set operating expense ${fieldId} to ${field.value} (from ${key}: ${value})`);
-                    }
-                }
-            });
-        }
-
-        // Handle interest-only checkbox
-        const interestOnlyCheckbox = document.getElementById('initial_interest_only');
-        if (interestOnlyCheckbox && analysis.initial_interest_only !== undefined) {
-            interestOnlyCheckbox.checked = analysis.initial_interest_only;
-        }
-
-        // Handle loan data population for Long-Term Rental
-        if (analysis.analysis_type === 'Long-Term Rental' && analysis.loans && Array.isArray(analysis.loans)) {
-            const loansContainer = document.getElementById('loans-container');
-            if (loansContainer) {
-                loansContainer.innerHTML = ''; // Clear existing loans
                 
-                // Add each loan section
-                analysis.loans.forEach((loan, index) => {
-                    const loanNumber = index + 1;
-                    const loanHtml = `
-                        <div class="loan-section mb-3">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h5 class="mb-0">Loan ${loanNumber}</h5>
-                                </div>
-                                <div class="card-body">
-                                    <div class="row">
-                                        <div class="col-md-6 mb-3">
-                                            <label for="loan_name_${loanNumber}" class="form-label">Loan Name</label>
-                                            <input type="text" class="form-control" id="loan_name_${loanNumber}" 
-                                                   name="loans[${loanNumber}][name]" value="${loan.name || ''}" required>
-                                        </div>
-                                        <div class="col-md-6 mb-3">
-                                            <label for="loan_amount_${loanNumber}" class="form-label">Loan Amount</label>
-                                            <input type="number" class="form-control" id="loan_amount_${loanNumber}" 
-                                                   name="loans[${loanNumber}][amount]" value="${this.cleanNumericValue(loan.amount)}" required>
-                                        </div>
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-md-6 mb-3">
-                                            <label for="loan_down_payment_${loanNumber}" class="form-label">Down Payment</label>
-                                            <input type="number" class="form-control" id="loan_down_payment_${loanNumber}" 
-                                                   name="loans[${loanNumber}][down_payment]" value="${this.cleanNumericValue(loan.down_payment)}" required>
-                                        </div>
-                                        <div class="col-md-6 mb-3">
-                                            <label for="loan_interest_rate_${loanNumber}" class="form-label">Interest Rate (%)</label>
-                                            <input type="number" class="form-control" id="loan_interest_rate_${loanNumber}" 
-                                                   name="loans[${loanNumber}][interest_rate]" value="${this.cleanNumericValue(loan.interest_rate)}" 
-                                                   step="0.01" required>
-                                        </div>
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-md-6 mb-3">
-                                            <label for="loan_term_${loanNumber}" class="form-label">Loan Term (months)</label>
-                                            <input type="number" class="form-control" id="loan_term_${loanNumber}" 
-                                                   name="loans[${loanNumber}][term]" value="${this.cleanNumericValue(loan.term)}" required>
-                                        </div>
-                                        <div class="col-md-6 mb-3">
-                                            <label for="loan_closing_costs_${loanNumber}" class="form-label">Closing Costs</label>
-                                            <input type="number" class="form-control" id="loan_closing_costs_${loanNumber}" 
-                                                   name="loans[${loanNumber}][closing_costs]" value="${this.cleanNumericValue(loan.closing_costs)}" required>
-                                        </div>
-                                    </div>
-                                    <div class="text-end">
-                                        <button type="button" class="btn btn-danger remove-loan-btn">Remove Loan</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    loansContainer.insertAdjacentHTML('beforeend', loanHtml);
-                });
-
-                // Update the Add Loan button visibility
-                const addLoanBtn = document.getElementById('add-loan-btn');
-                if (addLoanBtn) {
-                    addLoanBtn.style.display = analysis.loans.length >= 3 ? 'none' : 'block';
-                }
+                field.value = cleanedValue;
+                console.log(`Set ${fieldId} to "${cleanedValue}" (original: "${value}")`);
+                
+                // Trigger change event
+                const event = new Event('change', { bubbles: true });
+                field.dispatchEvent(event);
+                return true;
             }
+            console.warn(`Field not found: ${fieldId} for value:`, value);
+            return false;
+        };
+    
+        try {
+            // Set basic fields first
+            console.log('Setting basic fields');
+            setFieldValue('analysis_name', analysis.analysis_name);
+            setFieldValue('property_address', analysis.property_address);
+            setFieldValue('home_square_footage', analysis.home_square_footage, 'number');
+            setFieldValue('lot_square_footage', analysis.lot_square_footage, 'number');
+            setFieldValue('year_built', analysis.year_built, 'number');
+    
+            // Set analysis type and trigger change event
+            const analysisType = document.getElementById('analysis_type');
+            if (analysisType) {
+                analysisType.value = analysis.analysis_type;
+                analysisType.dispatchEvent(new Event('change'));
+                console.log('Set analysis type to:', analysis.analysis_type);
+            }
+    
+            // Wait for dynamic fields to be created
+            setTimeout(() => {
+                console.log('Populating dynamic fields for type:', analysis.analysis_type);
+                
+                // Common fields for all analysis types
+                console.log('Setting common fields');
+                setFieldValue('purchase_price', analysis.purchase_price, 'money');
+                setFieldValue('after_repair_value', analysis.after_repair_value, 'money');
+                setFieldValue('renovation_costs', analysis.renovation_costs, 'money');
+                setFieldValue('renovation_duration', analysis.renovation_duration, 'number');
+                setFieldValue('monthly_rent', analysis.monthly_rent, 'money');
+    
+                // Common purchase closing details
+                console.log('Setting purchase closing details');
+                setFieldValue('cash_to_seller', analysis.cash_to_seller, 'money');
+                setFieldValue('closing_costs', analysis.closing_costs, 'money');
+                setFieldValue('assignment_fee', analysis.assignment_fee, 'money');
+                setFieldValue('marketing_costs', analysis.marketing_costs, 'money');
+    
+                // Common operating expenses
+                console.log('Setting operating expenses');
+                setFieldValue('property_taxes', analysis.property_taxes, 'money');
+                setFieldValue('insurance', analysis.insurance, 'money');
+                setFieldValue('hoa_coa_coop', analysis.hoa_coa_coop, 'money');
+                setFieldValue('management_percentage', analysis.management_percentage, 'percentage');
+                setFieldValue('capex_percentage', analysis.capex_percentage, 'percentage');
+                setFieldValue('vacancy_percentage', analysis.vacancy_percentage, 'percentage');
+                setFieldValue('repairs_percentage', analysis.repairs_percentage, 'percentage');
+    
+                // Handle loan data for both LTR and PadSplit LTR
+                if (analysis.analysis_type.includes('LTR') && analysis.loans) {
+                    console.log('Setting up loans for', analysis.analysis_type);
+                    const loansContainer = document.getElementById('loans-container');
+                    
+                    if (loansContainer) {
+                        // Clear existing loans first
+                        loansContainer.innerHTML = '';
+                        
+                        // Add each loan
+                        analysis.loans.forEach((loan, index) => {
+                            const addLoanBtn = document.getElementById('add-loan-btn');
+                            if (addLoanBtn) {
+                                addLoanBtn.click();
+                                
+                                // Set timeout to ensure DOM is updated
+                                setTimeout(() => {
+                                    const loanNumber = index + 1;
+                                    setFieldValue(`loan_name_${loanNumber}`, loan.name);
+                                    setFieldValue(`loan_amount_${loanNumber}`, loan.amount, 'money');
+                                    setFieldValue(`loan_down_payment_${loanNumber}`, loan.down_payment, 'money');
+                                    setFieldValue(`loan_interest_rate_${loanNumber}`, loan.interest_rate, 'percentage');
+                                    setFieldValue(`loan_term_${loanNumber}`, loan.term, 'number');
+                                    setFieldValue(`loan_closing_costs_${loanNumber}`, loan.closing_costs, 'money');
+                                }, 100);
+                            }
+                        });
+                    }
+                }
+    
+                // BRRRR-specific fields
+                if (analysis.analysis_type.includes('BRRRR')) {
+                    console.log('Setting BRRRR-specific fields');
+                    
+                    // Initial loan details
+                    setFieldValue('initial_loan_amount', analysis.initial_loan_amount, 'money');
+                    setFieldValue('initial_down_payment', analysis.initial_down_payment, 'money');
+                    setFieldValue('initial_interest_rate', analysis.initial_interest_rate, 'percentage');
+                    setFieldValue('initial_loan_term', analysis.initial_loan_term, 'number');
+                    setFieldValue('initial_closing_costs', analysis.initial_closing_costs, 'money');
+                    
+                    // Set initial interest only checkbox
+                    const initialInterestOnly = document.getElementById('initial_interest_only');
+                    if (initialInterestOnly) {
+                        initialInterestOnly.checked = analysis.initial_interest_only;
+                    }
+                    
+                    // Refinance details
+                    setFieldValue('refinance_loan_amount', analysis.refinance_loan_amount, 'money');
+                    setFieldValue('refinance_down_payment', analysis.refinance_down_payment, 'money');
+                    setFieldValue('refinance_interest_rate', analysis.refinance_interest_rate, 'percentage');
+                    setFieldValue('refinance_loan_term', analysis.refinance_loan_term, 'number');
+                    setFieldValue('refinance_closing_costs', analysis.refinance_closing_costs, 'money');
+                    setFieldValue('refinance_ltv_percentage', analysis.refinance_ltv_percentage, 'percentage');
+                    setFieldValue('max_cash_left', analysis.max_cash_left, 'money');
+                }
+    
+                // PadSplit-specific fields
+                if (analysis.analysis_type.includes('PadSplit')) {
+                    console.log('Setting PadSplit-specific fields');
+                    setFieldValue('padsplit_platform_percentage', analysis.padsplit_platform_percentage, 'percentage');
+                    setFieldValue('utilities', analysis.utilities, 'money');
+                    setFieldValue('internet', analysis.internet, 'money');
+                    setFieldValue('cleaning_costs', analysis.cleaning_costs, 'money');
+                    setFieldValue('pest_control', analysis.pest_control, 'money');
+                    setFieldValue('landscaping', analysis.landscaping, 'money');
+                }
+                
+            }, 500); // Added delay to ensure fields are loaded
+    
+        } catch (error) {
+            console.error('Error in populateFormFields:', error);
+            toastr.error('Error populating form fields');
         }
+    },
 
-        // Log fields that weren't found
-        Object.keys(analysis).forEach(key => {
-            if (!document.getElementById(key)) {
-                console.debug(`Field not found for ${key}: ${analysis[key]}`);
+    // Define setLoanFields as a method of the module
+    setLoanFields: function(loanNumber, loan) {
+        console.log(`Setting fields for loan ${loanNumber}:`, loan);
+        
+        const fields = {
+            name: `loan_name_${loanNumber}`,
+            amount: `loan_amount_${loanNumber}`,
+            down_payment: `loan_down_payment_${loanNumber}`,
+            interest_rate: `loan_interest_rate_${loanNumber}`,
+            term: `loan_term_${loanNumber}`,
+            closing_costs: `loan_closing_costs_${loanNumber}`
+        };
+
+        Object.entries(fields).forEach(([key, fieldId]) => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                let value = loan[key];
+                if (typeof value === 'string' && (value.includes('$') || value.includes('%'))) {
+                    value = value.replace(/[$,%]/g, '');
+                }
+                field.value = value;
+                console.log(`Set ${fieldId} to ${value}`);
+
+                // Trigger change event
+                const event = new Event('change', { bubbles: true });
+                field.dispatchEvent(event);
+            } else {
+                console.warn(`Field not found: ${fieldId}`);
             }
         });
+    },
+
+    // Add this helper function to clean numeric values
+    cleanFormattedValue: function(value) {
+        if (typeof value !== 'string') {
+            return value;
+        }
+        return value.replace(/[$,\s%]/g, '');
     },
     
     populateReportsTab: function(analysis) {
@@ -1978,11 +2237,6 @@ const analysisModule = {
                                 title="New loan based on ARV × LTV%"></i>
                             </p>
                             <p class="mb-2">
-                                <strong>Total Cash Invested:</strong> ${analysis.total_cash_invested || '$0.00'}
-                                <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" data-bs-html="true" 
-                                title="Total Project Costs - Refinance Loan Amount"></i>
-                            </p>
-                            <p class="mb-2">
                                 <strong>Equity Captured:</strong> ${analysis.equity_captured || '$0.00'}
                                 <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" data-bs-html="true" 
                                 title="After Repair Value - Total Project Costs"></i>
@@ -2048,54 +2302,69 @@ const analysisModule = {
 
     handleEditSubmit: function(event, analysisId) {
         event.preventDefault();
-        console.log('Edit form submission started');
-        console.log('Analysis ID:', analysisId);
         
-        if (!analysisId) {
-            console.error('No analysis ID provided for update');
-            toastr.error('No analysis ID found. Cannot update.');
+        if (this.isSubmitting) {
+            console.log('Form submission already in progress');
             return;
         }
-
-        const form = event.target;
-        const formData = new FormData(form);
         
+        console.log('Starting edit form submission');
+        this.isSubmitting = true;
+    
+        const form = event.target;
         if (!this.validateForm(form)) {
             console.log('Form validation failed');
+            this.isSubmitting = false;
             return;
         }
     
-        // Create analysis data object and explicitly set the ID
+        // Disable submit button and show loading state
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Updating...';
+        }
+    
+        const formData = new FormData(form);
         const analysisData = {
-            id: analysisId,  // Explicitly set the ID
-            ...Object.fromEntries(formData.entries())
+            id: analysisId  // Make sure ID is included
         };
     
-        console.log('Analysis data before processing:', analysisData);
-    
-        // Process loan data
-        analysisData.loans = [];
-        for (let i = 1; i <= 3; i++) {
-            if (formData.get(`loans[${i}][name]`)) {
-                analysisData.loans.push({
-                    name: formData.get(`loans[${i}][name]`),
-                    amount: parseFloat(this.cleanNumericValue(formData.get(`loans[${i}][amount]`))),
-                    down_payment: parseFloat(this.cleanNumericValue(formData.get(`loans[${i}][down_payment]`))),
-                    interest_rate: parseFloat(this.cleanNumericValue(formData.get(`loans[${i}][interest_rate]`))),
-                    term: parseInt(this.cleanNumericValue(formData.get(`loans[${i}][term]`))),
-                    closing_costs: parseFloat(this.cleanNumericValue(formData.get(`loans[${i}][closing_costs]`)))
-                });
+        // Process form data
+        formData.forEach((value, key) => {
+            if (this.isNumericField(key)) {
+                analysisData[key] = this.cleanNumericValue(value);
+            } else {
+                analysisData[key] = value;
             }
-        }
-        
-        // Ensure all numeric fields are parsed as numbers
-        ['monthly_rent', 'management_percentage', 'capex_percentage', 'repairs_percentage', 'vacancy_percentage',
-            'property_taxes', 'insurance', 'hoa_coa_coop', 'renovation_costs', 'renovation_duration'].forEach(field => {
-            analysisData[field] = parseFloat(this.cleanNumericValue(analysisData[field]));
         });
     
-        console.log('Sending updated analysis data:', JSON.stringify(analysisData, null, 2));
-
+        // Handle loan data for LTR analyses
+        if (analysisData.analysis_type.includes('LTR')) {
+            analysisData.loans = [];
+            const loanSections = form.querySelectorAll('.loan-section');
+            loanSections.forEach((section, index) => {
+                const loanNumber = index + 1;
+                if (formData.get(`loans[${loanNumber}][name]`)) {
+                    analysisData.loans.push({
+                        name: formData.get(`loans[${loanNumber}][name]`),
+                        amount: this.cleanNumericValue(formData.get(`loans[${loanNumber}][amount]`)),
+                        interest_rate: this.cleanNumericValue(formData.get(`loans[${loanNumber}][interest_rate]`)),
+                        term: this.cleanNumericValue(formData.get(`loans[${loanNumber}][term]`)),
+                        down_payment: this.cleanNumericValue(formData.get(`loans[${loanNumber}][down_payment]`)),
+                        closing_costs: this.cleanNumericValue(formData.get(`loans[${loanNumber}][closing_costs]`))
+                    });
+                }
+            });
+        }
+    
+        // Handle BRRRR-specific fields
+        if (analysisData.analysis_type.includes('BRRRR')) {
+            analysisData.initial_interest_only = form.querySelector('#initial_interest_only')?.checked || false;
+        }
+    
+        console.log('Sending update data:', analysisData);
+    
         fetch('/analyses/update_analysis', {
             method: 'POST',
             headers: {
@@ -2105,27 +2374,37 @@ const analysisModule = {
         })
         .then(response => {
             if (!response.ok) {
-                return response.json().then(err => { throw err; });
+                return response.json().then(err => { 
+                    console.error('Server error response:', err);
+                    throw err; 
+                });
             }
             return response.json();
         })
         .then(data => {
             console.log('Server response:', data);
             if (data.success) {
-                const analysisWithId = {
-                    ...data.analysis,
-                    id: analysisId  // Ensure ID is preserved
-                };
-                this.populateReportsTab(analysisWithId);
+                this.populateReportsTab(data.analysis);
                 this.switchToReportsTab();
                 this.showReportActions();
+                toastr.success('Analysis updated successfully');
             } else {
                 throw new Error(data.message || 'Unknown error occurred');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            toastr.error('An error occurred while updating the analysis. Please try again.');
+            toastr.error(error.message || 'Error updating analysis');
+        })
+        .finally(() => {
+            // Reset submission state
+            this.isSubmitting = false;
+            
+            // Re-enable submit button
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Update Analysis';
+            }
         });
     },
 
@@ -2287,3 +2566,6 @@ const analysisModule = {
 document.addEventListener('DOMContentLoaded', function() {
     analysisModule.init();
 });
+
+// Export for module usage
+export default window.analysisModule;

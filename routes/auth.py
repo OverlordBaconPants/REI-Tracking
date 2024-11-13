@@ -1,9 +1,9 @@
 # routes/auth.py
 
-from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app
+from flask import Blueprint, render_template, redirect, url_for, request
 from flask_login import login_user, login_required, logout_user, current_user
-from models import User
-from services.user_service import get_user_by_email, create_user, update_user_password, hash_password, verify_password
+from __init__ import User
+from services.user_service import get_user_by_email, create_user, update_user_password, verify_password
 from services.transaction_service import get_properties_for_user  # Add this import
 from utils.flash import flash_message
 from typing import Dict, Any, List, Optional, Tuple

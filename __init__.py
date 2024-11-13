@@ -1,16 +1,56 @@
 from flask import Flask
-from flask_login import LoginManager, login_required
+from flask_login import LoginManager, login_required, UserMixin
 from config import Config
-from models import User
-from routes.api import api_bp
 import os
 import dash
 import logging
 from logging.handlers import RotatingFileHandler
 from dash_apps.dash_transactions import create_transactions_dash
 from dash_apps.dash_amortization import create_amortization_dash
-from dash_apps.dash_portfolio import create_portfolio_dash  # Add this import
+from dash_apps.dash_portfolio import create_portfolio_dash
 from flask.helpers import get_root_path
+
+# Make User available for import from this module
+__all__ = ['User', 'create_app']
+
+# Move User class here
+class User(UserMixin):
+    def __init__(self, id, email, name, password, role):
+        self.id = id
+        self.email = email
+        self.name = name
+        self.password = password
+        self.role = role
+
+    def get_id(self):
+        return self.email
+
+    @staticmethod
+    def get(user_id):
+        from services.user_service import load_users
+        users = load_users()
+        user_data = users.get(user_id)
+        if user_data:
+            return User(
+                id=user_data['email'],
+                email=user_data['email'],
+                name=user_data['name'],
+                password=user_data['password'],
+                role=user_data.get('role', 'User')
+            )
+        return None
+
+    @property
+    def is_authenticated(self):
+        return True
+
+    @property
+    def is_active(self):
+        return True
+
+    @property
+    def is_anonymous(self):
+        return False
 
 login_manager = LoginManager()
 

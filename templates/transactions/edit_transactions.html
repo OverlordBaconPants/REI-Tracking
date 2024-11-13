@@ -1,4 +1,7 @@
 {% extends "base.html" %}
+
+{% block body_class %}edit-transactions-page{% endblock %}
+
 {% block title %}Edit Transaction{% endblock %}
 {% block content %}
 
@@ -36,7 +39,7 @@
 
                 <div class="form-group mb-3">
                     <label for="category">Category:</label>
-                    <select class="form-select" id="category" name="category" required data-current-value="{{ transaction.category }}">
+                    <select id="category" name="category" class="form-control" required>
                         <option value="">Select a category</option>
                     </select>
                     <input type="hidden" name="preselected_category" value="{{ transaction.category }}">

@@ -1,11 +1,16 @@
-import json
+from datetime import datetime
 import logging
 import os
-from datetime import datetime
 import uuid
+from typing import Dict, List, Tuple, Optional
+import traceback
+
 from flask import current_app
 from utils.json_handler import read_json, write_json
-import traceback
+from utils.money import Money, Percentage
+from services.analysis_calculations import create_analysis
+from reportlab.platypus import SimpleDocTemplate
+from io import BytesIO
 
 class AnalysisService:
     """Service for handling property investment analyses."""
@@ -13,11 +18,22 @@ class AnalysisService:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
 
-    # Public Methods
-    def create_analysis(self, analysis_data, user_id):
-        """Create a new analysis."""
+    def create_analysis(self, analysis_data: Dict, user_id: int) -> Dict:
+        """
+        Create a new analysis.
+        
+        Args:
+            analysis_data: Dictionary containing analysis parameters
+            user_id: ID of the user creating the analysis
+            
+        Returns:
+            Dictionary containing the calculated analysis results
+        """
         try:
             self.logger.info(f"Creating new analysis for user {user_id}")
+            
+            # Validate incoming data
+            self.validate_analysis_data(analysis_data)
             
             # Add metadata
             analysis_data['id'] = str(uuid.uuid4())
@@ -25,26 +41,131 @@ class AnalysisService:
             analysis_data['created_at'] = datetime.now().isoformat()
             analysis_data['updated_at'] = analysis_data['created_at']
 
-            # Calculate results based on analysis type
-            calculated_data = self._calculate_analysis(analysis_data)
+            # Calculate results using analysis_calculations module
+            analysis = create_analysis(analysis_data)
+            results = self._format_analysis_results(analysis)
 
-            # Save analysis
-            filename = f"{calculated_data['id']}_{user_id}.json"
-            filepath = os.path.join(current_app.config['ANALYSES_DIR'], filename)
-            
-            os.makedirs(current_app.config['ANALYSES_DIR'], exist_ok=True)
-            write_json(filepath, calculated_data)
+            # Save to file
+            self._save_analysis(results, user_id)
 
-            self.logger.info(f"Successfully created analysis {calculated_data['id']}")
-            return calculated_data
+            self.logger.info(f"Successfully created analysis {results['id']}")
+            return results
 
         except Exception as e:
             self.logger.error(f"Error creating analysis: {str(e)}")
             self.logger.error(traceback.format_exc())
             raise
 
-    def update_analysis(self, analysis_data, user_id):
-        """Update an existing analysis."""
+    def _get_analyses_by_property(self, property_address: str) -> List[Dict]:
+        """Get all analyses for a given property address."""
+        try:
+            analyses_dir = current_app.config['ANALYSES_DIR']
+            property_analyses = []
+            
+            for filename in os.listdir(analyses_dir):
+                if filename.endswith('.json'):
+                    analysis_data = read_json(os.path.join(analyses_dir, filename))
+                    if analysis_data.get('property_address') == property_address:
+                        property_analyses.append(analysis_data)
+            
+            return property_analyses
+        except Exception as e:
+            self.logger.error(f"Error getting analyses by property: {str(e)}")
+            self.logger.error(traceback.format_exc())
+            raise
+
+    def _create_standardized_analysis(self, analysis_data: Dict) -> Dict:
+        """Create a standardized analysis object with all possible fields."""
+        
+        def safe_money(value) -> Money:
+            """Safely convert to Money object, defaulting to zero"""
+            try:
+                return Money(value)
+            except (ValueError, TypeError):
+                return Money(0)
+
+        def safe_percentage(value) -> Percentage:
+            """Safely convert to Percentage object, defaulting to zero"""
+            try:
+                return Percentage(value)
+            except (ValueError, TypeError):
+                return Percentage(0)
+
+        def safe_int(value) -> int:
+            """Safely convert to integer, defaulting to zero"""
+            try:
+                return int(float(str(value))) if value else 0
+            except (ValueError, TypeError):
+                return 0
+
+        standardized = {
+            # Metadata fields (keep as strings)
+            'id': analysis_data.get('id'),
+            'user_id': analysis_data.get('user_id'),
+            'created_at': analysis_data.get('created_at'),
+            'updated_at': analysis_data.get('updated_at'),
+            'analysis_type': analysis_data.get('analysis_type'),
+            'analysis_name': analysis_data.get('analysis_name'),
+            'property_address': analysis_data.get('property_address'),
+            
+            # Money fields
+            'purchase_price': safe_money(analysis_data.get('purchase_price')),
+            'after_repair_value': safe_money(analysis_data.get('after_repair_value')),
+            'renovation_costs': safe_money(analysis_data.get('renovation_costs')),
+            'monthly_rent': safe_money(analysis_data.get('monthly_rent')),
+            'property_taxes': safe_money(analysis_data.get('property_taxes')),
+            'insurance': safe_money(analysis_data.get('insurance')),
+            'hoa_coa_coop': safe_money(analysis_data.get('hoa_coa_coop')),
+            
+            # Integer fields
+            'renovation_duration': safe_int(analysis_data.get('renovation_duration')),
+            'home_square_footage': safe_int(analysis_data.get('home_square_footage')),
+            'lot_square_footage': safe_int(analysis_data.get('lot_square_footage')),
+            'year_built': safe_int(analysis_data.get('year_built')),
+            
+            # Percentage fields
+            'management_percentage': safe_percentage(analysis_data.get('management_percentage')),
+            'capex_percentage': safe_percentage(analysis_data.get('capex_percentage')),
+            'vacancy_percentage': safe_percentage(analysis_data.get('vacancy_percentage')),
+            'refinance_ltv_percentage': safe_percentage(analysis_data.get('refinance_ltv_percentage')),
+            
+            # BRRRR Money fields
+            'initial_loan_amount': safe_money(analysis_data.get('initial_loan_amount')),
+            'initial_down_payment': safe_money(analysis_data.get('initial_down_payment')),
+            'initial_closing_costs': safe_money(analysis_data.get('initial_closing_costs')),
+            'refinance_loan_amount': safe_money(analysis_data.get('refinance_loan_amount')),
+            'refinance_down_payment': safe_money(analysis_data.get('refinance_down_payment')),
+            'refinance_closing_costs': safe_money(analysis_data.get('refinance_closing_costs')),
+            'max_cash_left': safe_money(analysis_data.get('max_cash_left')),
+            
+            # BRRRR Percentage fields
+            'initial_interest_rate': safe_percentage(analysis_data.get('initial_interest_rate')),
+            'refinance_interest_rate': safe_percentage(analysis_data.get('refinance_interest_rate')),
+            
+            # BRRRR Integer fields
+            'initial_loan_term': safe_int(analysis_data.get('initial_loan_term')),
+            'refinance_loan_term': safe_int(analysis_data.get('refinance_loan_term')),
+            
+            # Boolean fields
+            'initial_interest_only': bool(analysis_data.get('initial_interest_only', False)),
+            
+            # PadSplit fields
+            'padsplit_platform_percentage': safe_percentage(analysis_data.get('padsplit_platform_percentage')),
+            'utilities': safe_money(analysis_data.get('utilities')),
+            'internet': safe_money(analysis_data.get('internet')),
+            'cleaning_costs': safe_money(analysis_data.get('cleaning_costs')),
+            'pest_control': safe_money(analysis_data.get('pest_control')),
+            'landscaping': safe_money(analysis_data.get('landscaping')),
+            
+            # Arrays and objects
+            'loans': analysis_data.get('loans', []),
+            'operating_expenses': analysis_data.get('operating_expenses', {})
+        }
+        
+        return standardized
+    
+    def update_analysis(self, analysis_data: Dict, user_id: int) -> Dict:
+        """Update an existing analysis or create a new one if type changes."""
         try:
             analysis_id = analysis_data.get('id')
             if not analysis_id:
@@ -52,39 +173,62 @@ class AnalysisService:
 
             self.logger.info(f"Updating analysis {analysis_id} for user {user_id}")
 
-            # Verify ownership
+            # Get existing analysis
             existing_analysis = self.get_analysis(analysis_id, user_id)
             if not existing_analysis:
                 raise ValueError("Analysis not found or access denied")
 
-            # Preserve creation date and update the updated_at timestamp
-            analysis_data['created_at'] = existing_analysis['created_at']
-            analysis_data['updated_at'] = datetime.now().isoformat()
+            # Check if analysis type is changing
+            if analysis_data['analysis_type'] != existing_analysis['analysis_type']:
+                # Check if analysis of new type already exists for this property
+                property_analyses = self._get_analyses_by_property(analysis_data['property_address'])
+                for analysis in property_analyses:
+                    if analysis['analysis_type'] == analysis_data['analysis_type']:
+                        raise ValueError(f"{analysis_data['analysis_type']} Analysis already exists for this property")
+
+                # Create new analysis with new type
+                analysis_data['id'] = str(uuid.uuid4())  # Generate new ID
+                analysis_data['created_at'] = datetime.now().isoformat()
+                analysis_data['updated_at'] = analysis_data['created_at']
+            else:
+                # Regular update
+                analysis_data['created_at'] = existing_analysis['created_at']
+                analysis_data['updated_at'] = datetime.now().isoformat()
+
+            # Validate and standardize data
+            self.validate_analysis_data(analysis_data)
+            standardized_data = self._create_standardized_analysis(analysis_data)
 
             # Calculate results
-            calculated_data = self._calculate_analysis(analysis_data)
+            analysis = create_analysis(standardized_data)
+            results = self._format_analysis_results(analysis)
 
-            # Save updated analysis
-            filename = f"{analysis_id}_{user_id}.json"
-            filepath = os.path.join(current_app.config['ANALYSES_DIR'], filename)
-            write_json(filepath, calculated_data)
+            # Save analysis
+            self._save_analysis(results, user_id)
 
-            self.logger.info(f"Successfully updated analysis {analysis_id}")
-            return calculated_data
+            self.logger.info(f"Successfully {'created new' if analysis_id != results['id'] else 'updated'} analysis {results['id']}")
+            return results
 
         except Exception as e:
             self.logger.error(f"Error updating analysis: {str(e)}")
             self.logger.error(traceback.format_exc())
             raise
 
-    def get_analysis(self, analysis_id, user_id):
-        """Get a specific analysis."""
+    def get_analysis(self, analysis_id: str, user_id: int) -> Optional[Dict]:
+        """
+        Get a specific analysis.
+        
+        Args:
+            analysis_id: ID of the analysis to retrieve
+            user_id: ID of the user requesting the analysis
+            
+        Returns:
+            Dictionary containing the analysis data or None if not found
+        """
         try:
             self.logger.debug(f"Retrieving analysis {analysis_id} for user {user_id}")
             
-            filename = f"{analysis_id}_{user_id}.json"
-            filepath = os.path.join(current_app.config['ANALYSES_DIR'], filename)
-            
+            filepath = self._get_analysis_filepath(analysis_id, user_id)
             if not os.path.exists(filepath):
                 self.logger.warning(f"Analysis file not found: {filepath}")
                 return None
@@ -98,8 +242,18 @@ class AnalysisService:
             self.logger.error(traceback.format_exc())
             raise
 
-    def get_analyses_for_user(self, user_id, page=1, per_page=10):
-        """Get paginated list of analyses for a user."""
+    def get_analyses_for_user(self, user_id: int, page: int = 1, per_page: int = 10) -> Tuple[List[Dict], int]:
+        """
+        Get paginated list of analyses for a user.
+        
+        Args:
+            user_id: ID of the user
+            page: Page number to retrieve
+            per_page: Number of analyses per page
+            
+        Returns:
+            Tuple of (list of analyses, total number of pages)
+        """
         try:
             self.logger.debug(f"Retrieving analyses for user {user_id} (page {page})")
             
@@ -125,7 +279,6 @@ class AnalysisService:
             start_idx = (page - 1) * per_page
             end_idx = min(start_idx + per_page, total_analyses)
             
-            self.logger.debug(f"Found {total_analyses} analyses, returning page {page} of {total_pages}")
             return analyses[start_idx:end_idx], total_pages
 
         except Exception as e:
@@ -133,428 +286,26 @@ class AnalysisService:
             self.logger.error(traceback.format_exc())
             raise
 
-    # Private Calculation Methods
-    def _calculate_analysis(self, data):
-        """Calculate analysis results based on type."""
-        try:
-            analysis_type = data.get('analysis_type')
-            
-            if not analysis_type:
-                raise ValueError("Analysis type is required")
-
-            self.logger.debug(f"Calculating analysis of type: {analysis_type}")
-
-            # Get calculation functions based on type
-            calculation_func = {
-                'LTR': self._calculate_ltr,
-                'BRRRR': self._calculate_brrrr,
-                'PadSplit-LTR': self._calculate_padsplit_ltr,
-                'PadSplit-BRRRR': self._calculate_padsplit_brrrr
-            }.get(analysis_type)
-
-            if not calculation_func:
-                raise ValueError(f"Invalid analysis type: {analysis_type}")
-
-            return calculation_func(data)
-
-        except Exception as e:
-            self.logger.error(f"Error calculating analysis: {str(e)}")
-            self.logger.error(traceback.format_exc())
-            raise
-
-    def _calculate_base_metrics(self, data):
-        """Calculate metrics common to all analysis types."""
-        try:
-            self.logger.debug("Calculating base metrics")
-            
-            # Calculate income
-            monthly_rent = float(data.get('monthly_rent', 0))
-            other_monthly_income = float(data.get('other_monthly_income', 0))
-            monthly_income = monthly_rent + other_monthly_income
-            
-            # Calculate base expenses
-            property_taxes = float(data.get('property_taxes', 0))
-            insurance = float(data.get('insurance', 0))
-            
-            # Calculate percentage-based expenses
-            management_fee = monthly_rent * float(data.get('management_percentage', 0)) / 100
-            capex = monthly_rent * float(data.get('capex_percentage', 0)) / 100
-            vacancy = monthly_rent * float(data.get('vacancy_percentage', 0)) / 100
-            
-            operating_expenses = {
-                'property_taxes': property_taxes,
-                'insurance': insurance,
-                'management': management_fee,
-                'capex': capex,
-                'vacancy': vacancy
-            }
-            
-            total_operating_expenses = sum(operating_expenses.values())
-            
-            # Fixed the string formatting
-            debug_data = {
-                'monthly_rent': monthly_rent,
-                'operating_expenses': operating_expenses,
-                'total_operating_expenses': total_operating_expenses
-            }
-            self.logger.debug(f"Operating expenses calculation: {json.dumps(debug_data, indent=2)}")
-            
-            return {
-                'monthly_income': monthly_income,
-                'operating_expenses': operating_expenses,
-                'total_operating_expenses': total_operating_expenses
-            }
-                
-        except Exception as e:
-            self.logger.error(f"Error calculating base metrics: {str(e)}")
-            self.logger.error(traceback.format_exc())
-            raise
-
-    def _calculate_ltr(self, data):
-        try:
-            self.logger.info("Starting LTR calculation")  # Changed to info for better visibility
-            
-            # Get base metrics
-            base_metrics = self._calculate_base_metrics(data)
-            loan_metrics = self._calculate_loan_metrics(data.get('loans', []))
-            
-            # Calculate monthly income and expenses
-            monthly_income = base_metrics['monthly_income']
-            monthly_rent = float(data.get('monthly_rent', 0))
-            
-            # Calculate repairs reserve
-            repairs_reserve = monthly_rent * float(data.get('repairs_percentage', 0)) / 100
-
-            # Add repairs and HOA to operating expenses
-            operating_expenses = base_metrics['operating_expenses']
-            operating_expenses['repairs_reserve'] = repairs_reserve
-            operating_expenses['hoa_coa_coop'] = float(data.get('hoa_coa_coop', 0))
-
-            # Calculate total monthly expenses
-            total_monthly_expenses = (
-                sum(operating_expenses.values()) + 
-                loan_metrics['total_monthly_payment']
-            )
-
-            # Calculate cash flows
-            monthly_cash_flow = monthly_income - total_monthly_expenses
-            annual_cash_flow = monthly_cash_flow * 12
-
-            # Log the calculations
-            self.logger.info(f"""
-            LTR Calculation Details:
-            Monthly Income: {monthly_income}
-            Total Monthly Expenses: {total_monthly_expenses}
-            Monthly Cash Flow: {monthly_cash_flow}
-            Annual Cash Flow: {annual_cash_flow}
-            Operating Expenses: {operating_expenses}
-            Loan Metrics: {loan_metrics}
-            """)
-
-            # Calculate total cash invested
-            total_cash_invested = sum([
-                float(data.get('renovation_costs', 0)),
-                loan_metrics['total_down_payment'],
-                loan_metrics['total_closing_costs'],
-                float(data.get('cash_to_seller', 0)),
-                float(data.get('assignment_fee', 0)),
-                float(data.get('marketing_costs', 0))
-            ])
-
-            # Calculate returns
-            cash_on_cash_return = (annual_cash_flow / total_cash_invested * 100) if total_cash_invested > 0 else 0
-
-            # Create return object with all calculations
-            result = {
-                **data,
-                'monthly_income': str(round(monthly_income, 2)),
-                'monthly_cash_flow': str(round(monthly_cash_flow, 2)),  # Explicitly include monthly cash flow
-                'annual_cash_flow': str(round(annual_cash_flow, 2)),
-                'total_monthly_expenses': str(round(total_monthly_expenses, 2)),
-                'operating_expenses': {k: str(round(v, 2)) for k, v in operating_expenses.items()},
-                'total_cash_invested': str(round(total_cash_invested, 2)),
-                'cash_on_cash_return': str(round(cash_on_cash_return, 2)),
-                'loan_metrics': loan_metrics
-            }
-
-            self.logger.info(f"Final LTR result: {json.dumps(result, indent=2)}")
-            return result
-
-        except Exception as e:
-            self.logger.error(f"Error in _calculate_ltr: {str(e)}")
-            self.logger.error(traceback.format_exc())
-            raise
-
-    def _calculate_brrrr(self, data):
-        """Calculate BRRRR analysis."""
-        try:
-            self.logger.debug("Calculating BRRRR analysis")
-            
-            # Get base metrics
-            base_metrics = self._calculate_base_metrics(data)
-            
-            # Purchase and renovation costs
-            purchase_price = float(data.get('purchase_price', 0))
-            renovation_costs = float(data.get('renovation_costs', 0))
-            total_investment = purchase_price + renovation_costs
-            after_repair_value = float(data.get('after_repair_value', 0))
-
-            # Initial financing
-            initial_loan_amount = float(data.get('initial_loan_amount', 0))
-            initial_down_payment = float(data.get('initial_down_payment', 0))
-            initial_interest_rate = float(data.get('initial_interest_rate', 0))
-            initial_loan_term = int(data.get('initial_loan_term', 0))
-            initial_closing_costs = float(data.get('initial_closing_costs', 0))
-            initial_monthly_payment = self._calculate_monthly_payment(
-                initial_loan_amount, initial_interest_rate, initial_loan_term
-            )
-
-            # Refinance
-            refinance_loan_amount = float(data.get('refinance_loan_amount', 0))
-            refinance_down_payment = float(data.get('refinance_down_payment', 0))
-            refinance_interest_rate = float(data.get('refinance_interest_rate', 0))
-            refinance_loan_term = int(data.get('refinance_loan_term', 0))
-            refinance_closing_costs = float(data.get('refinance_closing_costs', 0))
-            refinance_monthly_payment = self._calculate_monthly_payment(
-                refinance_loan_amount, refinance_interest_rate, refinance_loan_term
-            )
-
-            # Calculate maintenance reserve
-            monthly_rent = float(data.get('monthly_rent', 0))
-            maintenance_reserve = monthly_rent * float(data.get('maintenance_percentage', 0)) / 100
-
-            # Update operating expenses
-            operating_expenses = base_metrics['operating_expenses']
-            operating_expenses['maintenance_reserve'] = maintenance_reserve
-
-            # Calculate total monthly expenses
-            total_monthly_expenses = sum(operating_expenses.values()) + refinance_monthly_payment
-
-            # Calculate cash flows
-            monthly_cash_flow = base_metrics['monthly_income'] - total_monthly_expenses
-            annual_cash_flow = monthly_cash_flow * 12
-
-            # Calculate total cash invested
-            total_cash_invested = (
-                initial_down_payment + 
-                renovation_costs + 
-                initial_closing_costs + 
-                refinance_down_payment + 
-                refinance_closing_costs
-            )
-
-            # Calculate returns
-            equity_captured = after_repair_value - total_investment
-            cash_recouped = refinance_loan_amount - initial_loan_amount
-            total_profit = equity_captured + annual_cash_flow
-            roi = (total_profit / total_cash_invested * 100) if total_cash_invested > 0 else 0
-
-            all_in_cost = purchase_price + renovation_costs + initial_closing_costs + refinance_closing_costs
-
-            return {
-                **data,  # Original data
-                'monthly_income': base_metrics['monthly_income'],
-                'operating_expenses': operating_expenses,
-                'total_monthly_expenses': total_monthly_expenses,
-                'monthly_cash_flow': monthly_cash_flow,
-                'annual_cash_flow': annual_cash_flow,
-                'total_cash_invested': total_cash_invested,
-                'equity_captured': equity_captured,
-                'cash_recouped': cash_recouped,
-                'roi': roi,
-                'all_in_cost': all_in_cost,
-                'total_investment': total_investment,
-                'initial_monthly_payment': initial_monthly_payment,
-                'refinance_monthly_payment': refinance_monthly_payment
-            }
-
-        except Exception as e:
-            self.logger.error(f"Error in _calculate_brrrr: {str(e)}")
-            self.logger.error(traceback.format_exc())
-            raise
-
-    def _calculate_padsplit_ltr(self, data):
-        """Calculate PadSplit LTR analysis."""
-        try:
-            self.logger.debug("Calculating PadSplit LTR analysis")
-            
-            # Get base LTR calculations
-            ltr_results = self._calculate_ltr(data)
-            
-            # Get PadSplit specific expenses
-            padsplit_expenses = self._calculate_padsplit_expenses(data)
-            
-            # Update total expenses and cash flows
-            total_monthly_expenses = ltr_results['total_monthly_expenses'] + sum(padsplit_expenses.values())
-            monthly_cash_flow = ltr_results['monthly_income'] - total_monthly_expenses
-            annual_cash_flow = monthly_cash_flow * 12
-            
-            # Calculate updated returns
-            total_cash_invested = ltr_results['total_cash_invested']
-            cash_on_cash_return = (annual_cash_flow / total_cash_invested * 100) if total_cash_invested > 0 else 0
-            
-            return {
-                **ltr_results,  # Base LTR results
-                'padsplit_expenses': padsplit_expenses,
-                'total_monthly_expenses': total_monthly_expenses,
-                'monthly_cash_flow': monthly_cash_flow,
-                'annual_cash_flow': annual_cash_flow,
-                'cash_on_cash_return': cash_on_cash_return
-            }
-            
-        except Exception as e:
-            self.logger.error(f"Error in _calculate_padsplit_ltr: {str(e)}")
-            self.logger.error(traceback.format_exc())
-            raise
-
-    def _calculate_padsplit_brrrr(self, data):
-        """Calculate PadSplit BRRRR analysis."""
-        try:
-            self.logger.debug("Calculating PadSplit BRRRR analysis")
-            
-            # Get base BRRRR calculations
-            brrrr_results = self._calculate_brrrr(data)
-            
-            # Get PadSplit specific expenses
-            padsplit_expenses = self._calculate_padsplit_expenses(data)
-            
-            # Update total expenses and cash flows
-            total_monthly_expenses = brrrr_results['total_monthly_expenses'] + sum(padsplit_expenses.values())
-            monthly_cash_flow = brrrr_results['monthly_income'] - total_monthly_expenses
-            annual_cash_flow = monthly_cash_flow * 12
-            
-            # Calculate updated returns
-            total_cash_invested = brrrr_results['total_cash_invested']
-            total_profit = brrrr_results['equity_captured'] + annual_cash_flow
-            roi = (total_profit / total_cash_invested * 100) if total_cash_invested > 0 else 0
-            
-            return {
-                **brrrr_results,  # Base BRRRR results
-                'padsplit_expenses': padsplit_expenses,
-                'total_monthly_expenses': total_monthly_expenses,
-                'monthly_cash_flow': monthly_cash_flow,
-                'annual_cash_flow': annual_cash_flow,
-                'roi': roi
-            }
-            
-        except Exception as e:
-            self.logger.error(f"Error in _calculate_padsplit_brrrr: {str(e)}")
-            self.logger.error(traceback.format_exc())
-            raise
-
-    def _calculate_padsplit_expenses(self, data):
-        """Calculate PadSplit-specific expenses."""
-        try:
-            self.logger.debug("Calculating PadSplit expenses")
-            
-            monthly_rent = float(data.get('monthly_rent', 0))
-            platform_percentage = float(data.get('padsplit_platform_percentage', 12))  # Default 12%
-            
-            # Calculate each expense
-            platform_fee = monthly_rent * platform_percentage / 100
-            utilities = float(data.get('utilities', 0))
-            internet = float(data.get('internet', 0))
-            cleaning_costs = float(data.get('cleaning_costs', 0))
-            pest_control = float(data.get('pest_control', 0))
-            landscaping = float(data.get('landscaping', 0))
-            
-            padsplit_expenses = {
-                'platform_fee': platform_fee,
-                'utilities': utilities,
-                'internet': internet,
-                'cleaning_costs': cleaning_costs,
-                'pest_control': pest_control,
-                'landscaping': landscaping
-            }
-            
-            return padsplit_expenses
-
-        except Exception as e:
-            self.logger.error(f"Error calculating PadSplit expenses: {str(e)}")
-            self.logger.error(traceback.format_exc())
-            raise
-
-    def _calculate_loan_metrics(self, loans):
-        """Calculate metrics for multiple loans."""
-        try:
-            self.logger.debug("Calculating loan metrics")
-            
-            total_monthly_payment = 0
-            total_down_payment = 0
-            total_closing_costs = 0
-            loan_details = []
-            
-            for loan in loans:
-                loan_amount = float(loan.get('amount', 0))
-                interest_rate = float(loan.get('interest_rate', 0))
-                term = int(loan.get('term', 0))
-                down_payment = float(loan.get('down_payment', 0))
-                closing_costs = float(loan.get('closing_costs', 0))
-                
-                if loan_amount > 0 and term > 0:
-                    monthly_payment = self._calculate_monthly_payment(loan_amount, interest_rate, term)
-                    total_monthly_payment += monthly_payment
-                    loan_details.append({
-                        'name': loan.get('name', 'Unnamed Loan'),
-                        'amount': loan_amount,
-                        'monthly_payment': monthly_payment,
-                        'interest_rate': interest_rate,
-                        'term': term,
-                        'down_payment': down_payment,
-                        'closing_costs': closing_costs
-                    })
-                
-                total_down_payment += down_payment
-                total_closing_costs += closing_costs
+    def delete_analysis(self, analysis_id: str, user_id: int) -> bool:
+        """
+        Delete an analysis.
         
-            return {
-                'total_monthly_payment': total_monthly_payment,
-                'total_down_payment': total_down_payment,
-                'total_closing_costs': total_closing_costs,
-                'loan_details': loan_details
-            }
-
-        except Exception as e:
-            self.logger.error(f"Error calculating loan metrics: {str(e)}")
-            self.logger.error(traceback.format_exc())
-            raise
-
-    def _calculate_monthly_payment(self, loan_amount, annual_rate, term_months):
-        """Calculate monthly loan payment."""
-        try:
-            if loan_amount <= 0 or term_months <= 0:
-                return 0
-                
-            monthly_rate = (annual_rate / 100) / 12  # Convert annual rate to monthly decimal
+        Args:
+            analysis_id: ID of the analysis to delete
+            user_id: ID of the user requesting deletion
             
-            # Use the standard mortgage payment formula
-            monthly_payment = loan_amount * (
-                monthly_rate * (1 + monthly_rate) ** term_months
-            ) / (
-                (1 + monthly_rate) ** term_months - 1
-            )
-            
-            return round(monthly_payment, 2)
-        
-        except Exception as e:
-            self.logger.error(f"Error calculating monthly payment: {str(e)}")
-            self.logger.error(traceback.format_exc())
-            raise
-
-    def delete_analysis(self, analysis_id, user_id):
-        """Delete an analysis."""
+        Returns:
+            True if successful, raises exception otherwise
+        """
         try:
             self.logger.info(f"Attempting to delete analysis {analysis_id} for user {user_id}")
             
-            filename = f"{analysis_id}_{user_id}.json"
-            filepath = os.path.join(current_app.config['ANALYSES_DIR'], filename)
-            
+            filepath = self._get_analysis_filepath(analysis_id, user_id)
             if not os.path.exists(filepath):
                 raise ValueError("Analysis not found")
                 
             os.remove(filepath)
             self.logger.info(f"Successfully deleted analysis {analysis_id}")
-            
             return True
 
         except Exception as e:
@@ -562,47 +313,207 @@ class AnalysisService:
             self.logger.error(traceback.format_exc())
             raise
 
-    def validate_analysis_data(self, data):
-        """Validate analysis input data."""
+    def generate_pdf_report(self, analysis_id: str, user_id: int) -> BytesIO:
+        """
+        Generate a PDF report for an analysis.
+        
+        Args:
+            analysis_id: ID of the analysis
+            user_id: ID of the user requesting the report
+            
+        Returns:
+            BytesIO buffer containing the PDF
+        """
         try:
+            analysis_data = self.get_analysis(analysis_id, user_id)
+            if not analysis_data:
+                raise ValueError("Analysis not found")
+
+            buffer = BytesIO()
+            doc = SimpleDocTemplate(buffer)
+            
+            # Generate report content here
+            # This would need to be implemented based on your reporting requirements
+            
+            return buffer
+
+        except Exception as e:
+            self.logger.error(f"Error generating PDF report: {str(e)}")
+            self.logger.error(traceback.format_exc())
+            raise
+
+    def validate_analysis_data(self, data: Dict) -> bool:
+        """
+        Validate analysis input data.
+        
+        Args:
+            data: Dictionary containing analysis data to validate
+            
+        Returns:
+            True if valid, raises ValueError if invalid
+        """
+        try:
+            # Required fields
             required_fields = ['analysis_type', 'analysis_name', 'property_address']
             missing_fields = [field for field in required_fields if not data.get(field)]
-            
             if missing_fields:
                 raise ValueError(f"Missing required fields: {', '.join(missing_fields)}")
-            
-            # Validate numeric fields
-            numeric_fields = [
+
+            # Monetary fields
+            monetary_fields = [
                 'purchase_price', 'after_repair_value', 'monthly_rent',
-                'property_taxes', 'insurance', 'management_percentage',
-                'capex_percentage', 'vacancy_percentage'
+                'property_taxes', 'insurance'
             ]
-            
-            for field in numeric_fields:
+            for field in monetary_fields:
                 if field in data:
                     try:
-                        value = float(data[field])
-                        if value < 0:
-                            raise ValueError(f"Field {field} cannot be negative")
-                    except (ValueError, TypeError):
-                        raise ValueError(f"Invalid numeric value for field {field}")
-            
-            # Validate percentage fields are between 0 and 100
+                        Money(data[field])
+                    except ValueError:
+                        raise ValueError(f"Invalid monetary value for {field}")
+
+            # Percentage fields
             percentage_fields = [
                 'management_percentage', 'capex_percentage',
                 'vacancy_percentage', 'repairs_percentage',
-                'maintenance_percentage', 'padsplit_platform_percentage'
+                'repairs_percentage', 'padsplit_platform_percentage'
             ]
-            
             for field in percentage_fields:
                 if field in data:
-                    value = float(data[field])
-                    if value < 0 or value > 100:
-                        raise ValueError(f"Percentage field {field} must be between 0 and 100")
-            
+                    try:
+                        percentage = Percentage(data[field])
+                        if percentage.value < 0 or percentage.value > 100:
+                            raise ValueError(f"Percentage {field} must be between 0 and 100")
+                    except ValueError:
+                        raise ValueError(f"Invalid percentage value for {field}")
+
             return True
 
         except Exception as e:
             self.logger.error(f"Error validating analysis data: {str(e)}")
             self.logger.error(traceback.format_exc())
             raise
+
+    def _format_analysis_results(self, analysis) -> Dict:
+        """Format analysis results for storage/response."""
+        try:
+            # Create base dictionary with all possible fields
+            results = {
+                # Metadata
+                'id': analysis.data['id'],
+                'user_id': analysis.data['user_id'],
+                'created_at': analysis.data['created_at'],
+                'updated_at': analysis.data['updated_at'],
+                'analysis_type': analysis.data['analysis_type'],
+                'analysis_name': analysis.data['analysis_name'],
+                'property_address': analysis.data['property_address'],
+                
+                # Property Details
+                'home_square_footage': analysis.data.get('home_square_footage'),
+                'lot_square_footage': analysis.data.get('lot_square_footage'),
+                'year_built': analysis.data.get('year_built'),
+                
+                # Purchase Details
+                'purchase_price': str(analysis.purchase_price) if analysis.purchase_price else None,
+                'after_repair_value': str(analysis.after_repair_value) if analysis.after_repair_value else None,
+                'renovation_costs': str(analysis.renovation_costs) if analysis.renovation_costs else None,
+                'renovation_duration': analysis.data.get('renovation_duration'),
+                'cash_to_seller': str(Money(analysis.data.get('cash_to_seller', 0))),
+                'closing_costs': str(Money(analysis.data.get('closing_costs', 0))),
+                'assignment_fee': str(Money(analysis.data.get('assignment_fee', 0))),
+                'marketing_costs': str(Money(analysis.data.get('marketing_costs', 0))),
+                
+                # Income & Operating Details
+                'monthly_rent': str(analysis.monthly_rent) if analysis.monthly_rent else None,
+                'monthly_cash_flow': str(analysis.calculate_monthly_cash_flow()),
+                'annual_cash_flow': str(analysis.annual_cash_flow),
+                'total_operating_expenses': str(analysis.operating_expenses.total),
+                'property_taxes': str(Money(analysis.data.get('property_taxes', 0))),
+                'insurance': str(Money(analysis.data.get('insurance', 0))),
+                'hoa_coa_coop': str(Money(analysis.data.get('hoa_coa_coop', 0))),
+                
+                # Operating Percentages
+                'management_percentage': str(Percentage(analysis.data.get('management_percentage', 0))),
+                'capex_percentage': str(Percentage(analysis.data.get('capex_percentage', 0))),
+                'vacancy_percentage': str(Percentage(analysis.data.get('vacancy_percentage', 0))),
+                'repairs_percentage': str(Percentage(analysis.data.get('repairs_percentage', 0))),
+                
+                # BRRRR-specific fields
+                'initial_loan_amount': str(Money(analysis.data.get('initial_loan_amount', 0))),
+                'initial_down_payment': str(Money(analysis.data.get('initial_down_payment', 0))),
+                'initial_interest_rate': str(Percentage(analysis.data.get('initial_interest_rate', 0))),
+                'initial_loan_term': analysis.data.get('initial_loan_term', 0),
+                'initial_closing_costs': str(Money(analysis.data.get('initial_closing_costs', 0))),
+                'initial_interest_only': analysis.data.get('initial_interest_only', False),
+                'initial_monthly_payment': str(Money(analysis.data.get('initial_monthly_payment', 0))),
+                
+                'refinance_loan_amount': str(Money(analysis.data.get('refinance_loan_amount', 0))),
+                'refinance_down_payment': str(Money(analysis.data.get('refinance_down_payment', 0))),
+                'refinance_interest_rate': str(Percentage(analysis.data.get('refinance_interest_rate', 0))),
+                'refinance_loan_term': analysis.data.get('refinance_loan_term', 0),
+                'refinance_closing_costs': str(Money(analysis.data.get('refinance_closing_costs', 0))),
+                'refinance_monthly_payment': str(Money(analysis.data.get('refinance_monthly_payment', 0))),
+                'refinance_ltv_percentage': str(Percentage(analysis.data.get('refinance_ltv_percentage', 0))),
+                'max_cash_left': str(Money(analysis.data.get('max_cash_left', 0))),
+                
+                # Performance metrics
+                'equity_captured': str(analysis.equity_captured) if hasattr(analysis, 'equity_captured') else None,
+                'cash_recouped': str(analysis.cash_recouped) if hasattr(analysis, 'cash_recouped') else None,
+                'total_project_costs': str(analysis.total_project_costs) if hasattr(analysis, 'total_project_costs') else None,
+                'total_cash_invested': str(analysis.total_cash_invested) if hasattr(analysis, 'total_cash_invested') else None,
+                'cash_on_cash_return': str(analysis.cash_on_cash_return) if hasattr(analysis, 'cash_on_cash_return') else None,
+                'roi': str(analysis.roi),
+                
+                # PadSplit-specific fields
+                'padsplit_platform_percentage': str(Percentage(analysis.data.get('padsplit_platform_percentage', 0))),
+                'utilities': str(Money(analysis.data.get('utilities', 0))),
+                'internet': str(Money(analysis.data.get('internet', 0))),
+                'cleaning_costs': str(Money(analysis.data.get('cleaning_costs', 0))),
+                'pest_control': str(Money(analysis.data.get('pest_control', 0))),
+                'landscaping': str(Money(analysis.data.get('landscaping', 0))),
+                
+                # Arrays and objects
+                'loans': analysis.data.get('loans', []),
+                'operating_expenses': analysis.data.get('operating_expenses', {})
+            }
+
+            # Remove empty or null values only for arrays and objects
+            for key in ['loans', 'operating_expenses']:
+                if not results[key]:
+                    results[key] = None
+
+            return results
+
+        except Exception as e:
+            self.logger.error(f"Error formatting analysis results: {str(e)}")
+            self.logger.error(traceback.format_exc())
+            raise
+
+    def _save_analysis(self, analysis_data: Dict, user_id: int) -> None:
+        """
+        Save analysis data to file.
+        
+        Args:
+            analysis_data: Dictionary containing analysis data
+            user_id: ID of the user owning the analysis
+        """
+        filename = f"{analysis_data['id']}_{user_id}.json"
+        filepath = os.path.join(current_app.config['ANALYSES_DIR'], filename)
+        
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        write_json(filepath, analysis_data)
+
+    def _get_analysis_filepath(self, analysis_id: str, user_id: int) -> str:
+        """
+        Get the filepath for an analysis.
+        
+        Args:
+            analysis_id: ID of the analysis
+            user_id: ID of the user owning the analysis
+            
+        Returns:
+            Full filepath
+        """
+        return os.path.join(
+            current_app.config['ANALYSES_DIR'],
+            f"{analysis_id}_{user_id}.json"
+        )

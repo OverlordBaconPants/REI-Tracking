@@ -4,9 +4,9 @@ from services.transaction_service import get_properties_for_user, get_transactio
 from datetime import datetime, date
 from dateutil.relativedelta import relativedelta
 import logging
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 import pandas as pd
-from flask import Blueprint, render_template, redirect, url_for, current_app
+from flask import Blueprint, render_template, redirect, url_for
 from utils.flash import flash_success, flash_error, flash_warning, flash_info
 
 main_bp = Blueprint('main', __name__)

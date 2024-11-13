@@ -8,10 +8,16 @@ const editPropertiesModule = {
 
     // Initialization
     init: async function() {
+        if (this.initialized) {
+            console.log('Module already initialized');
+            return;
+        }
+
         try {
             console.log('Initializing edit properties module');
             await this.fetchAvailablePartners();
             this.initializeForm();
+            this.initialized = true;
             window.showNotification('Edit Properties module loaded', 'success');
         } catch (error) {
             console.error('Error initializing Edit Properties module:', error);
@@ -331,20 +337,33 @@ const editPropertiesModule = {
     },
 
     initPartnersSection: function() {
+        // Store reference to 'this' for use in callbacks
+        const self = this;
         const partnersContainer = document.getElementById('partners-container');
         const addPartnerButton = document.getElementById('add-partner-button');
         
         if (partnersContainer && addPartnerButton) {
-            // Partner select change handler
+            // Remove existing event listeners
+            addPartnerButton.replaceWith(addPartnerButton.cloneNode(true));
+            const newAddPartnerButton = document.getElementById('add-partner-button');
+            
+            // Add single event listener for add partner button using arrow function
+            newAddPartnerButton.addEventListener('click', () => {
+                self.addPartnerFields();
+            });
+            
+            // Add delegated event listeners for the container using arrow functions
             partnersContainer.addEventListener('change', (event) => {
-                this.handlePartnerChange(event);
-                this.updateTotalEquity();
+                if (event.target.classList.contains('partner-select')) {
+                    self.handlePartnerChange(event);
+                    self.updateTotalEquity();
+                }
             });
             
             // Partner equity input handler
             partnersContainer.addEventListener('input', (event) => {
                 if (event.target.classList.contains('partner-equity')) {
-                    this.updateTotalEquity();
+                    self.updateTotalEquity();
                 }
             });
             
@@ -352,10 +371,10 @@ const editPropertiesModule = {
             partnersContainer.addEventListener('click', (event) => {
                 if (event.target.classList.contains('remove-partner')) {
                     event.target.closest('.partner-entry').remove();
-                    this.updateTotalEquity();
+                    self.updateTotalEquity();
                 }
             });
-    
+
             console.log('Partners section initialized');
         } else {
             console.warn('Partners container or add partner button not found');
@@ -363,10 +382,15 @@ const editPropertiesModule = {
     },
 
     addPartnerFields: function(partner = {}) {
+        console.log('Adding new partner fields');
         const partnersContainer = document.getElementById('partners-container');
-        if (!partnersContainer) return;
+        if (!partnersContainer) {
+            console.error('Partners container not found');
+            return;
+        }
 
         if (!this.availablePartners.length) {
+            console.warn('Partner list not available');
             window.showNotification('Partner list not available', 'error');
             return;
         }
@@ -431,6 +455,7 @@ const editPropertiesModule = {
         }
         
         this.updateTotalEquity();
+        console.log('New partner fields added');
     },
 
     handlePartnerChange: function(event) {

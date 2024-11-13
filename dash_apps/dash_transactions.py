@@ -1,6 +1,6 @@
 # Dash and UI imports
 import dash
-from dash import dcc, html, dash_table, Input, Output, State, clientside_callback
+from dash import dcc, html, dash_table, Input, Output, State
 import dash_bootstrap_components as dbc
 
 # Data handling imports
@@ -15,20 +15,21 @@ from flask import current_app, url_for
 
 # PDF Report imports
 import io
-import base64
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.enums import TA_CENTER
+import zipfile
+
+# Download file imports
+import os
+import re
+from urllib.parse import unquote
 
 # Utility imports
 import traceback
 import logging
-from typing import Dict, List, Optional, Union, Any
+from typing import Dict, List, Optional
 
 # Local imports
 from services.transaction_service import get_transactions_for_view, get_properties_for_user
+from services.report_generator import TransactionReport  # after adding TransactionReport to report_generator.py
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -192,37 +193,54 @@ def create_transactions_dash(flask_app):
                 )
             ], width=3)
         ], className='mb-4'),
-        
-        # Report controls
+
+        # Add before the transactions table for PDF Report Generation
         dbc.Row([
             dbc.Col([
-                dbc.Label('Report Type'),
-                dcc.Dropdown(
-                    id='report-type',
-                    options=[
-                        {'label': 'Summary Report', 'value': 'summary'},
-                        {'label': 'Detailed Report', 'value': 'detailed'}
-                    ],
-                    value='summary',
-                    placeholder='Select Report Type'
-                ),
                 html.Div([
-                    html.P("Summary Report: Provides an overview of transactions grouped by category and type.", 
-                          className="text-muted mt-2"),
-                    html.P("Detailed Report: Includes all individual transaction details.", 
-                          className="text-muted")
-                ], id="report-description")
-            ], width=9),
-            dbc.Col([
-                dbc.Button(
-                    "Generate PDF Report",
-                    id="generate-report-btn",
+                    html.P(
+                        "Use these buttons to download all your transactions (filtered above) and supporting documentation.",
+                        className="text-muted mb-2"  # mb-2 adds margin bottom for spacing
+                    ),
+                ]),
+                html.Div([
+                    dbc.Button(
+                        [
+                            html.I(className="fas fa-file-pdf me-2"),
+                            "Download PDF Report"
+                        ],
+                        id="download-pdf-btn",
+                        color="primary",
+                        className="me-2"
+                    ),
+                    dcc.Download(id="download-pdf"),
+                    dbc.Button(
+                        [
+                            html.I(className="fas fa-file-archive me-2"),
+                            "Download Documents ZIP"
+                        ],
+                        id="download-zip-btn",
+                        color="secondary",
+                        className="me-2"
+                    ),
+                    dcc.Download(id="download-zip"),
+                ], className="d-flex align-items-center"),
+                dbc.Spinner(
+                    html.Div(id="download-status"),
                     color="primary",
-                    className="mb-2 w-100"
+                    type="border",
+                    size="sm"
                 ),
-                html.Div(id="report-link-container", className="w-100")
-            ], width=3, className="d-flex flex-column justify-content-end")
-        ], className='mb-4'),
+                dbc.Tooltip(
+                    "Download a PDF report of all transactions matching your current filter criteria",
+                    target="download-pdf-btn",
+                ),
+                dbc.Tooltip(
+                    "Download a ZIP file containing all transaction documentation for matching transactions",
+                    target="download-zip-btn",
+                ),
+            ], width=12)
+        ], className="mb-4"),
         
         # Transactions table header and table
         html.H2(id='transactions-header', className='mt-4 mb-3'),
@@ -495,62 +513,102 @@ def create_transactions_dash(flask_app):
             'start_date': start_date,
             'end_date': end_date
         }
-
-    # PDF Report generation callback (keeping existing implementation)
+    
     @dash_app.callback(
-        Output("report-link-container", "children"),
-        Input("generate-report-btn", "n_clicks"),
-        [State("transactions-table", "data"),
-         State("report-type", "value")]
+        Output("download-pdf", "data"),
+        Output("download-status", "children"),
+        Input("download-pdf-btn", "n_clicks"),
+        State("transactions-table", "data"),
+        prevent_initial_call=True
     )
-    def generate_report(n_clicks, data, report_type):
-        if n_clicks is None or not data:
-            return None
-
+    def generate_pdf_report(n_clicks, transactions_data):
+        """Generate and return PDF report of transactions"""
+        if not n_clicks or not transactions_data:
+            return None, ""
+        
         try:
+            # Create buffer for PDF
             buffer = io.BytesIO()
-            doc = SimpleDocTemplate(buffer, pagesize=letter)
-            styles = getSampleStyleSheet()
-            elements = []
-
-            # Add title
-            title_style = ParagraphStyle(
-                'CustomTitle',
-                parent=styles['Heading1'],
-                fontSize=24,
-                spaceAfter=30,
-                alignment=TA_CENTER
-            )
-            elements.append(Paragraph("Transaction Report", title_style))
-            elements.append(Spacer(1, 12))
-
-            if report_type == 'summary':
-                # Create summary report
-                summary_data = process_summary_data(data)
-                elements.extend(create_summary_report(summary_data, styles))
-            else:
-                # Create detailed report
-                elements.extend(create_detailed_report(data, styles))
-
-            # Build PDF
-            doc.build(elements)
-            pdf_data = buffer.getvalue()
-            buffer.close()
-
-            # Encode PDF
-            encoded_pdf = base64.b64encode(pdf_data).decode('utf-8')
             
-            # Return download link
-            return html.A(
-                "Download Report",
-                href=f"data:application/pdf;base64,{encoded_pdf}",
-                download=f"transactions_report_{report_type}.pdf",
-                className="btn btn-success w-100"
-            )
-
+            # Prepare data for report - note the changed date format here
+            report_data = {
+                'transactions': transactions_data,
+                'generated_date': datetime.now().strftime('%Y-%m-%d'),  # Changed format to exclude time
+                'user': current_user.name
+            }
+            
+            # Generate report
+            report = TransactionReport(report_data, buffer)
+            report.generate()
+            
+            # Prepare buffer for download
+            buffer.seek(0)
+            
+            # Modified filename format to be consistent
+            return dcc.send_bytes(
+                buffer.getvalue(),
+                f"transactions_report_{datetime.now().strftime('%Y%m%d')}.pdf"
+            ), ""
+            
         except Exception as e:
-            current_app.logger.error(f"Error generating report: {str(e)}")
-            return html.Div("Error generating report", className="text-danger")
+            current_app.logger.error(f"Error generating PDF: {str(e)}")
+            return None, html.Div("Error generating PDF report", className="text-danger")
+
+    @dash_app.callback(
+        Output("download-zip", "data"),
+        Output("download-status", "children", allow_duplicate=True),
+        Input("download-zip-btn", "n_clicks"),
+        State("transactions-table", "data"),
+        prevent_initial_call=True
+    )
+    def generate_zip_archive(n_clicks, transactions_data):
+        """Generate ZIP file containing all transaction documentation"""
+        if not n_clicks or not transactions_data:
+            return None, ""
+        
+        try:
+            # Create buffer for ZIP
+            buffer = io.BytesIO()
+            
+            # Create ZIP file
+            with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                # Track which files we've added to avoid duplicates
+                added_files = set()
+                
+                for transaction in transactions_data:
+                    # Add transaction documentation if it exists
+                    doc_file = transaction.get('documentation_file')
+                    if doc_file:
+                        try:
+                            # Extract filename from markdown link format
+                            match = re.search(r'/artifact/([^)]+)', doc_file)
+                            if match:
+                                filename = unquote(match.group(1))  # Get the actual filename and decode URL encoding
+                                if filename not in added_files:
+                                    file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                                    if os.path.exists(file_path):
+                                        zip_file.write(file_path, filename)
+                                        added_files.add(filename)
+                                    else:
+                                        current_app.logger.warning(f"File not found: {file_path}")
+                        except Exception as e:
+                            current_app.logger.error(f"Error adding file {doc_file} to ZIP: {str(e)}")
+            
+            # Prepare buffer for download
+            buffer.seek(0)
+            
+            if not added_files:
+                return None, html.Div("No documentation files found to add to ZIP", className="text-warning")
+            
+            return dcc.send_bytes(
+                buffer.getvalue(),
+                f"transaction_documents_{datetime.now().strftime('%Y%m%d')}.zip"
+            ), html.Div(f"Successfully added {len(added_files)} files to ZIP", className="text-success")
+            
+        except Exception as e:
+            current_app.logger.error(f"Error generating ZIP: {str(e)}")
+            return None, html.Div("Error generating ZIP archive", className="text-danger")
+
 
     # Initial data load clientside callback
     dash_app.clientside_callback(
@@ -590,109 +648,3 @@ def create_transactions_dash(flask_app):
             return [None, None, 'all', None, None]
 
     return dash_app
-
-# Helper functions with added validation
-def process_summary_data(data: List[Dict]) -> Dict:
-    """
-    Process transaction data for summary report with validation.
-    
-    Args:
-        data: List of transaction dictionaries
-        
-    Returns:
-        Dict: Processed summary data
-    """
-    try:
-        df = pd.DataFrame(data)
-        if df.empty:
-            logger.warning("No data provided for summary processing")
-            return {'income': pd.DataFrame(), 'expense': pd.DataFrame()}
-
-        # Validate amount column
-        df['amount'] = pd.to_numeric(df['amount'], errors='coerce')
-        invalid_amounts = df['amount'].isna().sum()
-        if invalid_amounts > 0:
-            logger.warning(f"Found {invalid_amounts} invalid amount values")
-
-        summary = {
-            'income': df[df['type'] == 'income'].groupby('category')['amount'].agg(['count', 'sum']),
-            'expense': df[df['type'] == 'expense'].groupby('category')['amount'].agg(['count', 'sum'])
-        }
-        return summary
-    except Exception as e:
-        logger.error(f"Error processing summary data: {str(e)}")
-        return {'income': pd.DataFrame(), 'expense': pd.DataFrame()}
-
-def create_summary_report(summary_data, styles):
-    """Create summary report elements"""
-    elements = []
-    
-    for trans_type, data in summary_data.items():
-        # Add section title
-        elements.append(Paragraph(f"{trans_type.title()} Summary", styles['Heading2']))
-        elements.append(Spacer(1, 12))
-        
-        # Create table data
-        table_data = [['Category', 'Count', 'Total Amount']]
-        for category, row in data.iterrows():
-            table_data.append([
-                category,
-                str(int(row['count'])),
-                f"${row['sum']:.2f}"
-            ])
-        
-        # Create table
-        table = Table(table_data, colWidths=[250, 100, 150])
-        table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 14),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-            ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
-            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 1), (-1, -1), 12),
-            ('ALIGN', (-1, 0), (-1, -1), 'RIGHT'),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black)
-        ]))
-        elements.append(table)
-        elements.append(Spacer(1, 20))
-    
-    return elements
-
-def create_detailed_report(data, styles):
-    """Create detailed report elements"""
-    elements = []
-    
-    # Create table data
-    table_data = [['Date', 'Type', 'Category', 'Description', 'Amount']]
-    for row in data:
-        table_data.append([
-            row['date'],
-            row['type'].title(),
-            row['category'],
-            row['description'],
-            row['amount']
-        ])
-    
-    # Create table
-    table = Table(table_data, colWidths=[80, 70, 100, 200, 70])
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 12),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-        ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
-        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-        ('FONTSIZE', (0, 1), (-1, -1), 10),
-        ('ALIGN', (-1, 0), (-1, -1), 'RIGHT'),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black)
-    ]))
-    elements.append(table)
-
-    return elements   

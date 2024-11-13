@@ -4,17 +4,18 @@
  */
 
 const BulkImportModule = {
-    // Module configuration
+    // Keep existing configuration
     config: {
-        maxFileSize: 5 * 1024 * 1024, // 5MB
+        maxFileSize: 5 * 1024 * 1024,
         allowedFileTypes: ['text/csv', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
         maxRowsToProcess: 1000,
         validDateFormats: ['YYYY-MM-DD', 'MM/DD/YYYY', 'DD/MM/YYYY'],
         amountRegex: /^-?\d*\.?\d+$/
     },
 
-    // Store for validation errors
+    // Keep existing properties
     validationErrors: [],
+    categories: {},
 
     /**
      * Initialize the module
@@ -638,10 +639,4 @@ const BulkImportModule = {
     }
 };
 
-// Debug mode configuration - simplified and browser-safe
-window.debugMode = window.location.hostname === 'localhost' || 
-                   window.location.hostname === '127.0.0.1' ||
-                   window.location.hostname.includes('dev-');
-
-// Export the module for use in the main application
-window.BulkImportModule = BulkImportModule;
+export default bulkImportModule;

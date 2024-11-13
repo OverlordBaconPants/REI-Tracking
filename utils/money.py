@@ -1,22 +1,17 @@
 from decimal import Decimal, ROUND_HALF_UP
 from dataclasses import dataclass
 from typing import Union, Optional
-import re
 import logging
 
 class Money:
     """
     Handles monetary values and formatting.
-    
-    Usage:
-        price = Money(100)
-        tax = Money('12.50')
-        total = price + tax
-        print(total.format())  # '$112.50'
     """
     
-    def __init__(self, amount: Union[Decimal, str, float, int, 'Money']) -> None:
-        if isinstance(amount, Money):
+    def __init__(self, amount: Union[Decimal, str, float, int, 'Money', None]) -> None:
+        if amount is None:
+            self.amount = Decimal('0')
+        elif isinstance(amount, Money):
             self.amount = amount.amount
         elif isinstance(amount, Decimal):
             self.amount = amount

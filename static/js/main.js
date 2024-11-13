@@ -1,135 +1,5 @@
+// main.js - Contains the module management system
 (function(window) {
-    const baseModule = {
-        init: function() {
-            console.log('Initializing base module');
-            this.initializeLibraries();
-        },
-
-        initializeLibraries: function() {
-            // Check for jQuery
-            if (typeof jQuery === 'undefined') {
-                console.error('jQuery not loaded');
-                return;
-            }
-
-            // Wait for toastr to be available
-            this.waitForToastr()
-                .then(() => {
-                    this.initializeToastr();
-                    this.initializeFlashMessages();
-                })
-                .catch(error => {
-                    console.error('Error initializing toastr:', error);
-                });
-
-            this.initializeBootstrapComponents();
-        },
-
-        waitForToastr: function(timeout = 2000) {
-            return new Promise((resolve, reject) => {
-                const startTime = Date.now();
-                
-                const checkToastr = () => {
-                    if (typeof toastr !== 'undefined') {
-                        resolve();
-                    } else if (Date.now() - startTime >= timeout) {
-                        reject(new Error('Toastr failed to load'));
-                    } else {
-                        setTimeout(checkToastr, 100);
-                    }
-                };
-                
-                checkToastr();
-            });
-        },
-
-        initializeToastr: function() {
-            if (typeof toastr === 'undefined') {
-                console.error('Toastr not available');
-                return;
-            }
-
-            toastr.options = {
-                "closeButton": true,
-                "debug": false,
-                "newestOnTop": true,
-                "progressBar": true,
-                "positionClass": "toast-bottom-right",
-                "preventDuplicates": false,
-                "showDuration": "300",
-                "hideDuration": "1000",
-                "timeOut": "5000",
-                "extendedTimeOut": "1000",
-                "showEasing": "swing",
-                "hideEasing": "linear",
-                "showMethod": "fadeIn",
-                "hideMethod": "fadeOut"
-            };
-        },
-
-        initializeFlashMessages: function() {
-            const messagesContainer = document.getElementById('flask-messages');
-            if (messagesContainer) {
-                try {
-                    const messagesData = messagesContainer.dataset.messages;
-                    console.log('Raw messages data:', messagesData);
-                    
-                    if (!messagesData || messagesData.trim() === '') {
-                        console.log('No flash messages found');
-                        return;
-                    }
-    
-                    const messages = JSON.parse(messagesData);
-                    console.log('Parsed messages:', messages);
-    
-                    if (Array.isArray(messages)) {
-                        messages.forEach(([category, message]) => {
-                            this.showNotification(message, category);
-                        });
-                    }
-                } catch (error) {
-                    console.error('Error processing flash messages:', error);
-                    console.error('Messages container data:', messagesContainer.dataset.messages);
-                }
-            }
-        },
-
-        showNotification: function(message, category = 'info') {
-            if (typeof toastr === 'undefined') {
-                console.warn('Toastr not available, falling back to alert');
-                alert(message);
-                return;
-            }
-
-            const categoryMap = {
-                'success': 'success',
-                'info': 'info',
-                'warning': 'warning',
-                'error': 'error',
-                'danger': 'error',
-                'message': 'info',
-                'default': 'info'
-            };
-
-            const toastrMethod = categoryMap[category] || categoryMap['default'];
-            toastr[toastrMethod](message);
-        },
-
-        initializeBootstrapComponents: function() {
-            // Initialize Bootstrap tooltips
-            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-            tooltipTriggerList.map(function (tooltipTriggerEl) {
-                return new bootstrap.Tooltip(tooltipTriggerEl);
-            });
-
-            // Initialize Bootstrap popovers
-            const popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
-            popoverTriggerList.map(function (popoverTriggerEl) {
-                return new bootstrap.Popover(popoverTriggerEl);
-            });
-        }
-    };
-
     const moduleManager = {
         moduleMap: {
             'main-page': 'main',
@@ -141,18 +11,38 @@
             'edit-properties-page': 'edit_properties',
             'bulk-import-page': 'bulk_import',
             'dashboards-page': 'dashboards',
-            'analysis-page': 'analysis'
+            'analysis-page': 'analysis',
+            'portfolio-page': 'portfolio',
+            'auth-page': 'auth',           
+            'index-page': 'index',        
+            'landing-page': 'landing', 
+            'error-page': 'error',
+            'welcome-page': 'welcome' 
         },
 
         async loadModule(moduleName) {
             try {
                 console.log(`Attempting to load module: ${moduleName}`);
-                const module = await import(`/static/js/${moduleName}.js`);
-                console.log(`Successfully loaded module: ${moduleName}`);
-                return module.default;
+                
+                // First try loading as a module
+                try {
+                    const module = await import(`/static/js/modules/${moduleName}.js`);
+                    console.log(`Successfully loaded ${moduleName} as a module`);
+                    return module.default;
+                } catch (moduleError) {
+                    console.log(`Module import failed, trying global object: ${moduleError}`);
+                    
+                    // If module import fails, check for global object
+                    if (window[`${moduleName}Module`]) {
+                        console.log(`Found ${moduleName} as global object`);
+                        return window[`${moduleName}Module`];
+                    }
+                    
+                    throw new Error(`Module ${moduleName} not found as import or global object`);
+                }
             } catch (error) {
                 console.error(`Error loading module ${moduleName}:`, error);
-                baseModule.showNotification(`Failed to load module: ${moduleName}`, 'error');
+                window.showNotification(`Failed to load module: ${moduleName}`, 'error');
                 return null;
             }
         },
@@ -161,14 +51,17 @@
             const body = document.body;
             const bodyClasses = Array.from(body.classList);
             console.log('Body classes:', bodyClasses);
-
+    
             // Find the first matching module from body classes
             const moduleClass = bodyClasses.find(className => this.moduleMap[className]);
             const moduleToLoad = moduleClass ? this.moduleMap[moduleClass] : null;
-
+    
             if (moduleToLoad) {
                 console.log(`Found matching module: ${moduleToLoad}`);
+                
+                // Try loading the module
                 const module = await this.loadModule(moduleToLoad);
+                
                 if (module && typeof module.init === 'function') {
                     console.log(`Initializing module: ${moduleToLoad}`);
                     try {
@@ -176,8 +69,10 @@
                         console.log(`Module ${moduleToLoad} initialized successfully`);
                     } catch (error) {
                         console.error(`Error initializing module ${moduleToLoad}:`, error);
-                        baseModule.showNotification(`Error initializing page module: ${error.message}`, 'error');
+                        window.showNotification(`Error initializing page module: ${error.message}`, 'error');
                     }
+                } else {
+                    console.error(`Module ${moduleToLoad} not found or has no init function`);
                 }
             } else {
                 console.log('No specific module detected for this page');
@@ -192,14 +87,13 @@
             await moduleManager.initPage();
         } catch (error) {
             console.error('Error during initialization:', error);
-            baseModule.showNotification('Error initializing page', 'error');
+            window.showNotification('Error initializing page', 'error');
         }
     }
 
-    // Expose necessary functions and modules to the global scope
+    // Expose necessary functions and modules
     window.mainInit = init;
-    window.baseModule = baseModule;
-    window.showNotification = baseModule.showNotification.bind(baseModule);
+    window.moduleManager = moduleManager;
 
 })(window);
 

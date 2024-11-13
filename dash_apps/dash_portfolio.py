@@ -1,18 +1,16 @@
 import dash
 from dash import dcc, html
 import dash_bootstrap_components as dbc
-from dash.dependencies import Input, Output, State
+from dash.dependencies import Input, Output
 from flask_login import current_user
 from services.transaction_service import get_properties_for_user
 from datetime import datetime, date
 from dateutil.relativedelta import relativedelta
 import plotly.graph_objs as go
 import plotly.express as px
-from decimal import Decimal
 import logging
 import traceback
 from typing import Dict, List, Optional, Tuple, Union
-import numpy as np
 
 # Set up module-level logger
 logger = logging.getLogger(__name__)

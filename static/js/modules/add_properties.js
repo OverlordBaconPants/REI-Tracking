@@ -3,6 +3,12 @@
 
 const addPropertiesModule = {
     init: async function() {
+        if (this.initialized) {
+            console.log('Module already initialized');
+            return;
+        }
+        this.initialized = true;
+        
         try {
             console.log('Initializing add properties module');
             const form = document.getElementById('add-property-form');
@@ -109,14 +115,14 @@ const addPropertiesModule = {
         const addPartnerButton = document.getElementById('add-partner-button');
         
         if (partnersContainer && addPartnerButton) {
-            // Clear any existing event listeners
-            addPartnerButton.removeEventListener('click', this.addPartner.bind(this));
-            partnersContainer.removeEventListener('change', this.handlePartnerChange.bind(this));
-            partnersContainer.removeEventListener('input', this.updateTotalEquity.bind(this));
-            partnersContainer.removeEventListener('click', this.removePartner.bind(this));
-    
-            // Add fresh event listeners
-            addPartnerButton.addEventListener('click', this.addPartner.bind(this));
+            // Remove existing event listeners for better cleanup
+            addPartnerButton.replaceWith(addPartnerButton.cloneNode(true));
+            const newAddPartnerButton = document.getElementById('add-partner-button');
+            
+            // Add single event listener for add partner button
+            newAddPartnerButton.addEventListener('click', this.addPartner.bind(this));
+            
+            // Add delegated event listeners for the container
             partnersContainer.addEventListener('change', this.handlePartnerChange.bind(this));
             partnersContainer.addEventListener('input', this.updateTotalEquity.bind(this));
             partnersContainer.addEventListener('click', this.removePartner.bind(this));

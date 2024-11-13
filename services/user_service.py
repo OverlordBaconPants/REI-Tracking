@@ -1,6 +1,5 @@
 # /services/user_services.py
 
-
 import json
 import logging
 from flask import current_app

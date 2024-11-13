@@ -1,13 +1,10 @@
 from flask import Blueprint, request, jsonify, current_app
-from services.transaction_service import get_categories
 import requests
 import json
 from typing import Dict, Any, List, Optional, Tuple
 from urllib.parse import quote_plus
 import re
-import logging
 from dataclasses import dataclass
-from enum import Enum
 
 api_bp = Blueprint('api', __name__)
    

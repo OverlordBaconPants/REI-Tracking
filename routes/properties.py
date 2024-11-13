@@ -5,7 +5,7 @@ from flask import Blueprint, render_template, request, current_app, jsonify
 from flask_login import login_required, current_user
 from utils.utils import admin_required
 from services.transaction_service import get_partners_for_property
-from typing import Dict, List, Any, Optional, Tuple, Union, Set
+from typing import Dict, List, Any, Optional, Tuple, Set
 from datetime import datetime
 from decimal import Decimal
 
