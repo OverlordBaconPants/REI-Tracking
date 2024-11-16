@@ -18,3 +18,4 @@ import_statement.txt
 venv/*
 .env
 generate_secret.py
+test_structure.txt
