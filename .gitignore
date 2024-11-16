@@ -16,3 +16,4 @@ lib64
 pyvenv.config
 import_statement.txt
 venv/*
+.env
