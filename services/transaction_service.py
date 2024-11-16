@@ -155,6 +155,11 @@ def get_transactions_for_view(user_id, user_name, property_id=None, reimbursemen
         flat_t['documentation_file'] = t.get('documentation_file', '')
         flat_t['reimbursement_documentation'] = t.get('reimbursement', {}).get('documentation', '')
         flattened_transactions.append(flat_t)
+
+    # Add filter dates to each transaction if they exist
+    for t in flattened_transactions:
+        t['date_filter_start'] = start_date
+        t['date_filter_end'] = end_date
     
     return flattened_transactions
 

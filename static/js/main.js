@@ -12,7 +12,8 @@
             'bulk-import-page': 'bulk_import',
             'dashboards-page': 'dashboards',
             'analysis-page': 'analysis',
-            'portfolio-page': 'portfolio',
+            'view-edit-analysis-page': 'view_edit_analysis',
+            'portfolio-page': null,
             'auth-page': 'auth',           
             'index-page': 'index',        
             'landing-page': 'landing', 
@@ -21,6 +22,11 @@
         },
 
         async loadModule(moduleName) {
+            if (moduleName === null) {
+                // Skip loading for pages that don't need a module
+                return null;
+            }
+
             try {
                 console.log(`Attempting to load module: ${moduleName}`);
                 
@@ -42,7 +48,10 @@
                 }
             } catch (error) {
                 console.error(`Error loading module ${moduleName}:`, error);
-                window.showNotification(`Failed to load module: ${moduleName}`, 'error');
+                // Only show notification if it's not a null module
+                if (moduleName !== null) {
+                    window.showNotification(`Failed to load module: ${moduleName}`, 'error','both');
+                }
                 return null;
             }
         },
@@ -53,26 +62,29 @@
             console.log('Body classes:', bodyClasses);
     
             // Find the first matching module from body classes
-            const moduleClass = bodyClasses.find(className => this.moduleMap[className]);
+            const moduleClass = bodyClasses.find(className => this.moduleMap.hasOwnProperty(className));
             const moduleToLoad = moduleClass ? this.moduleMap[moduleClass] : null;
     
-            if (moduleToLoad) {
+            if (moduleToLoad !== undefined) {
                 console.log(`Found matching module: ${moduleToLoad}`);
                 
-                // Try loading the module
-                const module = await this.loadModule(moduleToLoad);
-                
-                if (module && typeof module.init === 'function') {
-                    console.log(`Initializing module: ${moduleToLoad}`);
-                    try {
-                        await module.init();
-                        console.log(`Module ${moduleToLoad} initialized successfully`);
-                    } catch (error) {
-                        console.error(`Error initializing module ${moduleToLoad}:`, error);
-                        window.showNotification(`Error initializing page module: ${error.message}`, 'error');
+                // Only try loading if moduleToLoad is not null
+                if (moduleToLoad !== null) {
+                    // Try loading the module
+                    const module = await this.loadModule(moduleToLoad);
+                    
+                    if (module && typeof module.init === 'function') {
+                        console.log(`Initializing module: ${moduleToLoad}`);
+                        try {
+                            await module.init();
+                            console.log(`Module ${moduleToLoad} initialized successfully`);
+                        } catch (error) {
+                            console.error(`Error initializing module ${moduleToLoad}:`, error);
+                            window.showNotification(`Error initializing page module: ${error.message}`, 'error', 'both');
+                        }
+                    } else if (moduleToLoad !== null) {
+                        console.error(`Module ${moduleToLoad} not found or has no init function`);
                     }
-                } else {
-                    console.error(`Module ${moduleToLoad} not found or has no init function`);
                 }
             } else {
                 console.log('No specific module detected for this page');
@@ -80,14 +92,21 @@
         }
     };
 
+    let initialized = false;
+
     async function init() {
+        if (initialized) {
+            return;
+        }
+        initialized = true;
+
         console.log('Main init function called');
         try {
             baseModule.init();
             await moduleManager.initPage();
         } catch (error) {
             console.error('Error during initialization:', error);
-            window.showNotification('Error initializing page', 'error');
+            window.showNotification('Error initializing page', 'error', 'both');
         }
     }
 

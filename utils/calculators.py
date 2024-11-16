@@ -1,11 +1,11 @@
 from decimal import Decimal
-from utils.money import Money, Percentage, MonthlyPayment
+from utils.money import Money, Percentage, MonthlyPayment, Union
 
 class AmortizationCalculator:
     """Calculator for loan amortization and payments"""
     
     @staticmethod
-    def calculate_monthly_payment(loan_amount: Money, annual_rate: Percentage, term_months: int) -> MonthlyPayment:
+    def calculate_monthly_payment(loan_amount: Money, annual_rate: Percentage, term_months: Union[int, str]) -> MonthlyPayment:
         """
         Calculate monthly payment for a loan.
         
@@ -17,6 +17,12 @@ class AmortizationCalculator:
         Returns:
             MonthlyPayment object containing payment details
         """
+        # Convert term_months to integer
+        try:
+            term_months = int(float(str(term_months)))
+        except (ValueError, TypeError):
+            raise ValueError(f"Invalid loan term: {term_months}")
+
         if term_months <= 0 or loan_amount.dollars <= 0:
             return MonthlyPayment(
                 total=Money(0),

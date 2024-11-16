@@ -11,23 +11,41 @@ logger = logging.getLogger(__name__)
 @dataclass
 class Loan:
     """Represents a loan with its terms and payments"""
-    amount: Money
-    interest_rate: Percentage
-    term_months: int
-    down_payment: Money
-    closing_costs: Money
-    is_interest_only: bool = False
-    name: Optional[str] = None
-
-    def __post_init__(self):
+    def __init__(self, amount, interest_rate, term_months, down_payment, closing_costs, is_interest_only: bool = False, name: Optional[str] = None):
+        """
+        Initialize loan with given terms.
+        
+        Args:
+            amount: Loan amount
+            interest_rate: Annual interest rate (percentage)
+            term_months: Loan term in months
+            down_payment: Down payment amount
+            closing_costs: Closing costs amount
+            is_interest_only: Whether this is an interest-only loan
+            name: Optional name/description for the loan
+        """
+        # Set raw values first
+        self.amount = amount
+        self.interest_rate = interest_rate
+        self.term_months = term_months
+        self.down_payment = down_payment
+        self.closing_costs = closing_costs
+        self.is_interest_only = bool(is_interest_only)
+        self.name = name
+        
+        # Then convert types
         self._validate_and_convert_types()
 
     def _validate_and_convert_types(self):
         """Convert all monetary values to proper types"""
-        self.amount = Money(self.amount)
-        self.interest_rate = Percentage(self.interest_rate)
-        self.down_payment = Money(self.down_payment)
-        self.closing_costs = Money(self.closing_costs)
+        try:
+            self.amount = Money(self.amount)
+            self.interest_rate = Percentage(self.interest_rate)
+            self.term_months = int(float(str(self.term_months)))
+            self.down_payment = Money(self.down_payment)
+            self.closing_costs = Money(self.closing_costs)
+        except (ValueError, TypeError) as e:
+            raise ValueError(f"Invalid loan parameters: {str(e)}")
 
     def calculate_payment(self) -> MonthlyPayment:
         """Calculate monthly payment based on loan type"""
@@ -182,6 +200,35 @@ class LTRAnalysis(Analysis):
     @property
     def total_loan_payment(self) -> Money:
         return sum((loan.calculate_payment().total for loan in self.loans), Money(0))
+    
+    @property
+    def cash_on_cash_return(self) -> Union[str, Percentage]:
+        try:
+            cash_invested = self.calculate_total_cash_invested()
+            if cash_invested.dollars <= 0:
+                return "Infinite"
+            # Get raw decimal values and perform calculation
+            annual_flow = self.annual_cash_flow.dollars  
+            total_invested = cash_invested.dollars
+            return_percentage = (annual_flow / total_invested * 100)
+            return Percentage(return_percentage)
+        except Exception as e:
+            logger.error(f"Error calculating cash on cash return: {str(e)}")
+            return "Error"
+        
+    @property
+    def roi(self) -> Union[Percentage, str]:
+        try:
+            cash_invested = self.calculate_total_cash_invested()
+            if cash_invested.dollars <= 0:
+                return "Infinite"
+            annual_flow = self.annual_cash_flow.dollars
+            total_invested = cash_invested.dollars
+            return_percentage = (annual_flow / total_invested * 100)
+            return Percentage(return_percentage)
+        except Exception as e:
+            logger.error(f"Error calculating ROI: {str(e)}")
+            return "Error"
 
     def calculate_monthly_cash_flow(self) -> Money:
         return self.monthly_rent - (
@@ -190,13 +237,25 @@ class LTRAnalysis(Analysis):
         )
 
     def calculate_total_cash_invested(self) -> Money:
-        return sum([
-            self.renovation_costs,
-            sum((loan.total_initial_costs for loan in self.loans), Money(0)),
-            Money(self.data.get('cash_to_seller', 0)),
-            Money(self.data.get('assignment_fee', 0)),
-            Money(self.data.get('marketing_costs', 0))
-        ], Money(0))
+        renovation = self.renovation_costs
+        loan_costs = sum((loan.total_initial_costs for loan in self.loans), Money(0))
+        cash_to_seller = Money(self.data.get('cash_to_seller', 0))
+        assignment = Money(self.data.get('assignment_fee', 0))
+        marketing = Money(self.data.get('marketing_costs', 0))
+        
+        total = sum([renovation, loan_costs, cash_to_seller, assignment, marketing], Money(0))
+        
+        logger.debug(f"""
+            Cash invested calculation:
+            Renovation: {renovation}
+            Loan costs: {loan_costs}
+            Cash to seller: {cash_to_seller}
+            Assignment: {assignment}
+            Marketing: {marketing}
+            Total: {total}
+        """)
+        
+        return total
 
 class BRRRRAnalysis(Analysis):
     """BRRRR strategy analysis implementation"""
@@ -252,7 +311,8 @@ class BRRRRAnalysis(Analysis):
             self.renovation_costs,
             self.holding_costs,
             self.initial_loan.closing_costs,
-            self.refinance_loan.closing_costs
+            self.refinance_loan.closing_costs,
+            (self.refinance_loan.amount * -1)
         ], Money(0))
 
     @property
@@ -279,9 +339,11 @@ class BRRRRAnalysis(Analysis):
             cash_invested = self.calculate_total_cash_invested()
             if cash_invested.dollars <= 0:
                 return "Infinite"
-            return Percentage(
-                (self.annual_cash_flow / cash_invested * 100).dollars
-            )
+            # Get raw decimal values and perform calculation
+            annual_flow = self.annual_cash_flow.dollars  
+            total_invested = cash_invested.dollars
+            return_percentage = (annual_flow / total_invested * 100)
+            return Percentage(return_percentage)
         except Exception as e:
             logger.error(f"Error calculating cash on cash return: {str(e)}")
             return "Error"

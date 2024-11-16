@@ -50,7 +50,14 @@
                 return;
             }
 
-            toastr.options = {
+            // Create a second toastr container for top notifications
+            const topContainer = document.createElement('div');
+            topContainer.id = 'toastr-top';
+            document.body.appendChild(topContainer);
+
+            // Configure bottom notifications (default)
+            window.toastrBottom = toastr;
+            toastrBottom.options = {
                 "closeButton": true,
                 "debug": false,
                 "newestOnTop": true,
@@ -64,7 +71,16 @@
                 "showEasing": "swing",
                 "hideEasing": "linear",
                 "showMethod": "fadeIn",
-                "hideMethod": "fadeOut"
+                "hideMethod": "fadeOut",
+                "target": "body"
+            };
+
+            // Create and configure top notifications
+            window.toastrTop = Object.create(toastr);
+            window.toastrTop.options = {
+                ...toastrBottom.options,
+                "positionClass": "toast-top-right",
+                "target": "#toastr-top"
             };
         },
 
@@ -85,7 +101,8 @@
     
                     if (Array.isArray(messages)) {
                         messages.forEach(([category, message]) => {
-                            this.showNotification(message, category);
+                            // Show messages only at the top
+                            this.showNotification(message, category, 'top');
                         });
                     }
                 } catch (error) {
@@ -94,7 +111,7 @@
             }
         },
 
-        showNotification: function(message, category = 'info') {
+        showNotification: function(message, category = 'info', position = 'top') { // Changed default to 'top'
             if (typeof toastr === 'undefined') {
                 console.warn('Toastr not available, falling back to alert');
                 alert(message);
@@ -112,7 +129,14 @@
             };
 
             const toastrMethod = categoryMap[category] || categoryMap['default'];
-            toastr[toastrMethod](message);
+
+            // Show notification based on position preference
+            if (position === 'top' || position === 'both') {
+                window.toastrTop[toastrMethod](message);
+            }
+            if (position === 'bottom' || position === 'both') {
+                window.toastrBottom[toastrMethod](message);
+            }
         },
 
         initializeBootstrapComponents: function() {
@@ -130,7 +154,10 @@
         }
     };
 
+    // Expose the module and notification function
     window.baseModule = baseModule;
-    window.showNotification = baseModule.showNotification.bind(baseModule);
+    window.showNotification = function(message, category, position = 'both') {
+        baseModule.showNotification(message, category, position);
+    };
 
 })(window);

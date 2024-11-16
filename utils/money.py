@@ -22,7 +22,7 @@ class Money:
             cleaned = amount.replace('$', '').replace(',', '').replace(' ', '').strip()
             try:
                 self.amount = Decimal(cleaned if cleaned else '0')
-            except (ValueError, decimal.InvalidOperation) as e:
+            except (ValueError, Decimal.InvalidOperation) as e:
                 logging.error(f"Error converting string to Money: {amount}")
                 raise ValueError(f"Invalid monetary value: {amount}")
         else:
@@ -113,7 +113,7 @@ class Percentage:
             cleaned = value.replace('%', '').strip()
             try:
                 self.value = Decimal(cleaned if cleaned else '0')
-            except (ValueError, decimal.InvalidOperation) as e:
+            except (ValueError, Decimal.InvalidOperation) as e:
                 logging.error(f"Error converting string to Percentage: {value}")
                 raise ValueError(f"Invalid percentage value: {value}")
         else:
@@ -197,7 +197,7 @@ def validate_money(value: Union[str, float, int, Money, Decimal],
         if amount.dollars < Decimal(str(min_value)) or amount.dollars > Decimal(str(max_value)):
             return f"Amount must be between {Money(min_value).format()} and {Money(max_value).format()}"
         return None
-    except (ValueError, decimal.InvalidOperation):
+    except (ValueError, Decimal.InvalidOperation):
         return "Invalid monetary value"
 
 def validate_percentage(value: Union[str, float, int, Percentage, Decimal],
@@ -219,5 +219,5 @@ def validate_percentage(value: Union[str, float, int, Percentage, Decimal],
         if percentage.value < Decimal(str(min_value)) or percentage.value > Decimal(str(max_value)):
             return f"Percentage must be between {min_value}% and {max_value}%"
         return None
-    except (ValueError, decimal.InvalidOperation):
+    except (ValueError, Decimal.InvalidOperation):
         return "Invalid percentage value"

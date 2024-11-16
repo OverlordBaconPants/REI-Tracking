@@ -109,6 +109,7 @@ def create_app(config_class=Config):
     from routes.api import api_bp
     from routes.dashboards import dashboards_bp
     from routes.analyses import analyses_bp
+    from routes.monitor import monitor_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
@@ -117,6 +118,7 @@ def create_app(config_class=Config):
     app.register_blueprint(api_bp, url_prefix='/api')
     app.register_blueprint(dashboards_bp)
     app.register_blueprint(analyses_bp, url_prefix='/analyses')
+    app.register_blueprint(monitor_bp) 
 
     # Set up login loader
     @login_manager.user_loader

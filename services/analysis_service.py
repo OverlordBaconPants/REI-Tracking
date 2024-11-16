@@ -4,13 +4,21 @@ import os
 import uuid
 from typing import Dict, List, Tuple, Optional
 import traceback
-
+from services.report_generator import generate_report
 from flask import current_app
+from io import BytesIO
 from utils.json_handler import read_json, write_json
 from utils.money import Money, Percentage
-from services.analysis_calculations import create_analysis
-from reportlab.platypus import SimpleDocTemplate
-from io import BytesIO
+from services.analysis_calculations import (
+    BRRRRAnalysis,
+    LTRAnalysis, 
+    PadSplitBRRRRAnalysis,
+    PadSplitLTRAnalysis,
+    Loan,
+    create_analysis
+)
+
+logger = logging.getLogger(__name__)
 
 class AnalysisService:
     """Service for handling property investment analyses."""
@@ -116,6 +124,9 @@ class AnalysisService:
             'property_taxes': safe_money(analysis_data.get('property_taxes')),
             'insurance': safe_money(analysis_data.get('insurance')),
             'hoa_coa_coop': safe_money(analysis_data.get('hoa_coa_coop')),
+            'cash_to_seller': safe_money(analysis_data.get('cash_to_seller')),
+            'assignment_fee': safe_money(analysis_data.get('assignment_fee')),
+            'marketing_costs': safe_money(analysis_data.get('marketing_costs')),
             
             # Integer fields
             'renovation_duration': safe_int(analysis_data.get('renovation_duration')),
@@ -128,6 +139,7 @@ class AnalysisService:
             'capex_percentage': safe_percentage(analysis_data.get('capex_percentage')),
             'vacancy_percentage': safe_percentage(analysis_data.get('vacancy_percentage')),
             'refinance_ltv_percentage': safe_percentage(analysis_data.get('refinance_ltv_percentage')),
+            'repairs_percentage': safe_percentage(analysis_data.get('repairs_percentage')),
             
             # BRRRR Money fields
             'initial_loan_amount': safe_money(analysis_data.get('initial_loan_amount')),
@@ -167,6 +179,13 @@ class AnalysisService:
     def update_analysis(self, analysis_data: Dict, user_id: int) -> Dict:
         """Update an existing analysis or create a new one if type changes."""
         try:
+            # Log incoming data
+            logger.debug(f"Incoming analysis data: {analysis_data}")
+            
+            # Log after standardization
+            standardized_data = self._create_standardized_analysis(analysis_data)
+            logger.debug(f"Standardized data: {standardized_data}")
+
             analysis_id = analysis_data.get('id')
             if not analysis_id:
                 raise ValueError("Analysis ID is required for updates")
@@ -178,8 +197,9 @@ class AnalysisService:
             if not existing_analysis:
                 raise ValueError("Analysis not found or access denied")
 
-            # Check if analysis type is changing
-            if analysis_data['analysis_type'] != existing_analysis['analysis_type']:
+            # Check if we should create a new analysis
+            create_new = analysis_data.get('create_new', False)
+            if create_new:
                 # Check if analysis of new type already exists for this property
                 property_analyses = self._get_analyses_by_property(analysis_data['property_address'])
                 for analysis in property_analyses:
@@ -187,7 +207,7 @@ class AnalysisService:
                         raise ValueError(f"{analysis_data['analysis_type']} Analysis already exists for this property")
 
                 # Create new analysis with new type
-                analysis_data['id'] = str(uuid.uuid4())  # Generate new ID
+                analysis_data['id'] = str(uuid.uuid4())
                 analysis_data['created_at'] = datetime.now().isoformat()
                 analysis_data['updated_at'] = analysis_data['created_at']
             else:
@@ -206,7 +226,7 @@ class AnalysisService:
             # Save analysis
             self._save_analysis(results, user_id)
 
-            self.logger.info(f"Successfully {'created new' if analysis_id != results['id'] else 'updated'} analysis {results['id']}")
+            self.logger.info(f"Successfully {'created new' if create_new else 'updated'} analysis {results['id']}")
             return results
 
         except Exception as e:
@@ -329,11 +349,11 @@ class AnalysisService:
             if not analysis_data:
                 raise ValueError("Analysis not found")
 
-            buffer = BytesIO()
-            doc = SimpleDocTemplate(buffer)
+            # Add current date to the analysis data
+            analysis_data['generated_date'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             
-            # Generate report content here
-            # This would need to be implemented based on your reporting requirements
+            # Generate report using our new report generator
+            buffer = generate_report(analysis_data, report_type='analysis')
             
             return buffer
 
@@ -396,6 +416,32 @@ class AnalysisService:
     def _format_analysis_results(self, analysis) -> Dict:
         """Format analysis results for storage/response."""
         try:
+            # Calculate monthly payments based on analysis type
+            if isinstance(analysis, BRRRRAnalysis):
+                # Create loan objects for payment calculations
+                initial_loan = Loan(
+                    amount=analysis.initial_loan.amount,
+                    interest_rate=analysis.initial_loan.interest_rate,
+                    term_months=analysis.initial_loan.term_months,
+                    down_payment=analysis.initial_loan.down_payment,
+                    closing_costs=analysis.initial_loan.closing_costs,
+                    is_interest_only=analysis.initial_loan.is_interest_only
+                )
+                refinance_loan = Loan(
+                    amount=analysis.refinance_loan.amount,
+                    interest_rate=analysis.refinance_loan.interest_rate,
+                    term_months=analysis.refinance_loan.term_months,
+                    down_payment=analysis.refinance_loan.down_payment,
+                    closing_costs=analysis.refinance_loan.closing_costs,
+                    is_interest_only=False  # Refinance loans are always amortizing
+                )
+
+                initial_monthly_payment = initial_loan.calculate_payment().total
+                refinance_monthly_payment = refinance_loan.calculate_payment().total
+            else:
+                initial_monthly_payment = Money(0)
+                refinance_monthly_payment = Money(0)
+
             # Create base dictionary with all possible fields
             results = {
                 # Metadata
@@ -437,21 +483,21 @@ class AnalysisService:
                 'vacancy_percentage': str(Percentage(analysis.data.get('vacancy_percentage', 0))),
                 'repairs_percentage': str(Percentage(analysis.data.get('repairs_percentage', 0))),
                 
-                # BRRRR-specific fields
+                # BRRRR-specific fields with corrected monthly payments
                 'initial_loan_amount': str(Money(analysis.data.get('initial_loan_amount', 0))),
                 'initial_down_payment': str(Money(analysis.data.get('initial_down_payment', 0))),
                 'initial_interest_rate': str(Percentage(analysis.data.get('initial_interest_rate', 0))),
                 'initial_loan_term': analysis.data.get('initial_loan_term', 0),
                 'initial_closing_costs': str(Money(analysis.data.get('initial_closing_costs', 0))),
                 'initial_interest_only': analysis.data.get('initial_interest_only', False),
-                'initial_monthly_payment': str(Money(analysis.data.get('initial_monthly_payment', 0))),
+                'initial_monthly_payment': str(initial_monthly_payment),
                 
                 'refinance_loan_amount': str(Money(analysis.data.get('refinance_loan_amount', 0))),
                 'refinance_down_payment': str(Money(analysis.data.get('refinance_down_payment', 0))),
                 'refinance_interest_rate': str(Percentage(analysis.data.get('refinance_interest_rate', 0))),
                 'refinance_loan_term': analysis.data.get('refinance_loan_term', 0),
                 'refinance_closing_costs': str(Money(analysis.data.get('refinance_closing_costs', 0))),
-                'refinance_monthly_payment': str(Money(analysis.data.get('refinance_monthly_payment', 0))),
+                'refinance_monthly_payment': str(refinance_monthly_payment),
                 'refinance_ltv_percentage': str(Percentage(analysis.data.get('refinance_ltv_percentage', 0))),
                 'max_cash_left': str(Money(analysis.data.get('max_cash_left', 0))),
                 

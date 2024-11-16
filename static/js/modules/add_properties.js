@@ -249,7 +249,7 @@ const addPropertiesModule = {
 
         // Check if we've reached the maximum number of partners (optional)
         if (partnerCount >= 10) {
-            window.showNotification('Maximum number of partners reached', 'warning');
+            window.showNotification('Maximum number of partners reached', 'warning', 'both');
             return;
         }
         const newPartnerHtml = `
@@ -454,17 +454,17 @@ const addPropertiesModule = {
                 if (data.success) {
                     window.location.reload();
                 } else {
-                    window.showNotification('Error: ' + data.message, 'error');
+                    window.showNotification('Error: ' + data.message, 'error', 'both');
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                window.showNotification('An error occurred while adding the property. Please check the console for more details.', 'error');
+                window.showNotification('An error occurred while adding the property. Please check the console for more details.', 'error', 'both');
             });
     
         } catch (error) {
             console.error('Error preparing property data:', error);
-            window.showNotification('Error preparing property data: ' + error.message, 'error');
+            window.showNotification('Error preparing property data: ' + error.message, 'error', 'both');
         }
     },
 
@@ -472,27 +472,27 @@ const addPropertiesModule = {
         let isValid = true;
 
         if (!form.property_address.value.trim()) {
-            window.showNotification('Please enter a property address.', 'error');
+            window.showNotification('Please enter a property address.', 'error', 'both');
             isValid = false;
         }
 
         if (!form.purchase_price.value || isNaN(form.purchase_price.value)) {
-            window.showNotification('Please enter a valid purchase price.', 'error');
+            window.showNotification('Please enter a valid purchase price.', 'error', 'both');
             isValid = false;
         }
 
         if (!form.down_payment.value || isNaN(form.down_payment.value)) {
-            window.showNotification('Please enter a valid down payment amount.', 'error');
+            window.showNotification('Please enter a valid down payment amount.', 'error', 'both');
             isValid = false;
         }
 
         if (!form.primary_loan_rate.value || isNaN(form.primary_loan_rate.value)) {
-            window.showNotification('Please enter a valid primary loan rate.', 'error');
+            window.showNotification('Please enter a valid primary loan rate.', 'error', 'both');
             isValid = false;
         }
 
         if (!form.primary_loan_term.value || isNaN(form.primary_loan_term.value)) {
-            window.showNotification('Please enter a valid primary loan term.', 'error');
+            window.showNotification('Please enter a valid primary loan term.', 'error', 'both');
             isValid = false;
         }
 
@@ -503,12 +503,12 @@ const addPropertiesModule = {
             const equityInput = partner.querySelector(`[name="partners[${index}][equity_share]"]`);
             
             if (!nameInput.value.trim()) {
-                window.showNotification(`Please enter a name for partner ${index + 1}.`, 'error');
+                window.showNotification(`Please enter a name for partner ${index + 1}.`, 'error', 'both');
                 isValid = false;
             }
 
             if (!equityInput.value || isNaN(equityInput.value)) {
-                window.showNotification(`Please enter a valid equity share for partner ${index + 1}.`, 'error');
+                window.showNotification(`Please enter a valid equity share for partner ${index + 1}.`, 'error', 'both');
                 isValid = false;
             } else {
                 totalEquity += parseFloat(equityInput.value);
@@ -516,7 +516,7 @@ const addPropertiesModule = {
         });
 
         if (Math.abs(totalEquity - 100) > 0.01) {
-            window.showNotification(`Total equity must equal 100%. Current total: ${totalEquity.toFixed(2)}%`, 'error');
+            window.showNotification(`Total equity must equal 100%. Current total: ${totalEquity.toFixed(2)}%`, 'error', 'both');
             isValid = false;
         }
 

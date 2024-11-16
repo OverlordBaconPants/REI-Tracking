@@ -18,10 +18,10 @@ const editPropertiesModule = {
             await this.fetchAvailablePartners();
             this.initializeForm();
             this.initialized = true;
-            window.showNotification('Edit Properties module loaded', 'success');
+            window.showNotification('Edit Properties module loaded', 'success', 'both');
         } catch (error) {
             console.error('Error initializing Edit Properties module:', error);
-            window.showNotification('Error loading Edit Properties module: ' + error.message, 'error');
+            window.showNotification('Error loading Edit Properties module: ' + error.message, 'error', 'both');
         }
     },
 
@@ -202,14 +202,14 @@ const editPropertiesModule = {
                     if (propertyDetails) {
                         propertyDetails.classList.remove('hidden');
                     }
-                    window.showNotification('Property details loaded successfully', 'success');
+                    window.showNotification('Property details loaded successfully', 'success', 'both');
                 } else {
                     throw new Error(data.message || 'Unknown error occurred');
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                window.showNotification(error.message || 'Error loading property details', 'error');
+                window.showNotification(error.message || 'Error loading property details', 'error', 'both');
                 if (propertyDetails) {
                     propertyDetails.classList.add('hidden');
                 }
@@ -288,7 +288,7 @@ const editPropertiesModule = {
             console.log('Form populated successfully');
         } catch (error) {
             console.error('Error populating form:', error);
-            window.showNotification('Error populating form fields', 'error');
+            window.showNotification('Error populating form fields', 'error', 'both');
             throw error;
         }
     },
@@ -325,7 +325,7 @@ const editPropertiesModule = {
             }
         } catch (error) {
             console.error('Error fetching partners:', error);
-            window.showNotification('Error loading available partners', 'error');
+            window.showNotification('Error loading available partners', 'error', 'both');
             throw error;
         }
     },
@@ -391,7 +391,7 @@ const editPropertiesModule = {
 
         if (!this.availablePartners.length) {
             console.warn('Partner list not available');
-            window.showNotification('Partner list not available', 'error');
+            window.showNotification('Partner list not available', 'error', 'both');
             return;
         }
 
@@ -509,14 +509,14 @@ const editPropertiesModule = {
         const totalEquity = this.calculateTotalEquity();
         console.log('Total equity:', totalEquity);
         if (Math.abs(totalEquity - 100) > 0.01) {
-            window.showNotification('Total equity must equal 100%', 'error');
+            window.showNotification('Total equity must equal 100%', 'error', 'both');
             return;
         }
 
         // Get property select value
         const propertySelect = document.getElementById('property_select');
         if (!propertySelect || !propertySelect.value) {
-            window.showNotification('No property selected', 'error');
+            window.showNotification('No property selected', 'error', 'both');
             return;
         }
 
@@ -619,7 +619,7 @@ const editPropertiesModule = {
         })
         .catch(error => {
             console.error('Error updating property:', error);
-            window.showNotification('Error updating property: ' + error.message, 'error');
+            window.showNotification('Error updating property: ' + error.message, 'error', 'both');
         });
     },
 

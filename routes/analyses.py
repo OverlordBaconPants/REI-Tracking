@@ -103,24 +103,44 @@ def get_analysis(analysis_id: str):
 def view_edit_analysis():
     """View/edit analysis list page"""
     try:
-        page = request.args.get('page', 1, type=int)
+        # Get page parameter with error handling
+        try:
+            page = max(1, int(request.args.get('page', 1)))
+        except (TypeError, ValueError) as e:
+            logger.warning(f"Invalid page parameter: {str(e)}")
+            page = 1
+
         analyses_per_page = 10
         
-        analyses, total_pages = analysis_service.get_analyses_for_user(
-            current_user.id, 
-            page, 
-            analyses_per_page
-        )
+        logger.info(f"Fetching analyses for user {current_user.id}, page {page}")
         
-        return render_template(
-            'analyses/view_edit_analysis.html', 
-            analyses=analyses, 
-            current_page=page, 
-            total_pages=total_pages
-        )
+        # Get analyses with explicit error handling
+        try:
+            analyses, total_pages = analysis_service.get_analyses_for_user(
+                current_user.id, 
+                page, 
+                analyses_per_page
+            )
+            
+            logger.debug(f"Retrieved {len(analyses) if analyses else 0} analyses")
+            
+            return render_template(
+                'analyses/view_edit_analysis.html', 
+                analyses=analyses, 
+                current_page=page, 
+                total_pages=total_pages,
+                body_class='view-edit-analysis-page'  # Add this line
+            )
+            
+        except Exception as e:
+            logger.error(f"Error retrieving analyses from service: {str(e)}")
+            logger.error(traceback.format_exc())
+            raise  # Re-raise to be caught by outer try block
+        
     except Exception as e:
         logger.error(f"Error in view_edit_analysis: {str(e)}")
-        flash_message('Error loading analyses', 'error')
+        logger.error(traceback.format_exc())
+        flash_message('Error loading analyses: ' + str(e), 'error')
         return redirect(url_for('dashboards.dashboards'))
 
 @analyses_bp.route('/view_analysis/<analysis_id>', methods=['GET'])
@@ -150,9 +170,9 @@ def generate_pdf(analysis_id: str):
 
         return send_file(
             pdf_buffer,
+            mimetype='application/pdf',
             as_attachment=True,
-            download_name=f"analysis_{analysis_id}_report.pdf",
-            mimetype='application/pdf'
+            download_name=f"analysis_{analysis_id}_report.pdf"
         )
     except Exception as e:
         logger.error(f"Error generating PDF: {str(e)}")
