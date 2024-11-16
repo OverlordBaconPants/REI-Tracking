@@ -1,12 +1,16 @@
 // /static/js/modules/auth.js
 
 const authModule = {
+    initialized: false,  // Add this flag
+
     init: async function() {
+        if (this.initialized) return;  // Prevent multiple initialization
         console.log('Initializing auth module');
         try {
             await this.initializePasswordValidation();
             this.setupFormValidation();
             this.setupPasswordStrengthMeter();
+            this.initialized = true;  // Set flag after successful initialization
             console.log('Auth module initialized successfully');
         } catch (error) {
             console.error('Error initializing auth module:', error);
@@ -41,11 +45,14 @@ const authModule = {
         const form = document.querySelector('form');
         if (!form) return;
 
-        form.addEventListener('submit', async (e) => {
+        // Remove any existing event listeners
+        const newForm = form.cloneNode(true);
+        form.parentNode.replaceChild(newForm, form);
+        
+        newForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            if (this.validateForm(form)) {
-                // Store the submit button reference
-                const submitButton = form.querySelector('button[type="submit"]');
+            if (this.validateForm(newForm)) {
+                const submitButton = newForm.querySelector('button[type="submit"]');
                 const originalText = submitButton?.innerHTML || 'Submit';
                 
                 try {
@@ -55,32 +62,51 @@ const authModule = {
                         submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
                     }
 
-                    // Submit the form
-                    const response = await fetch(form.action, {
-                        method: form.method,
-                        body: new FormData(form),
+                    const response = await fetch(newForm.action, {
+                        method: newForm.method,
+                        body: new FormData(newForm),
                         headers: {
                             'X-Requested-With': 'XMLHttpRequest'
                         }
                     });
 
-                    const data = await response.json();
-
-                    if (data.success) {
-                        window.showNotification(data.message || 'Success!', 'success');
-                        if (data.redirect) {
-                            setTimeout(() => {
-                                window.location.href = data.redirect;
-                            }, 1500);
-                        }
+                    const text = await response.text();
+                    const isPasswordReset = text.includes('Password has been reset successfully');
+                    
+                    if (isPasswordReset) {
+                        // Show single success notification
+                        window.showNotification(
+                            newForm.dataset.successMessage || 'Password reset successful!', 
+                            'success'
+                        );
+                        
+                        // Wait 2 seconds then redirect
+                        setTimeout(() => {
+                            const redirectUrl = newForm.dataset.redirect || '/login';
+                            window.location.replace(redirectUrl);  // Use replace instead of href
+                        }, 2000);
                     } else {
-                        throw new Error(data.message || 'An error occurred');
+                        // Extract error message
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(text, 'text/html');
+                        const errorMessages = Array.from(doc.querySelectorAll('.alert-danger, .error-message'))
+                            .map(el => el.textContent.trim())
+                            .filter(msg => msg);
+
+                        if (errorMessages.length > 0) {
+                            window.showNotification(errorMessages[0], 'error');
+                        } else {
+                            window.showNotification('An error occurred during password reset.', 'error');
+                        }
+                        
+                        // Update the page content without reinitializing
+                        document.body.innerHTML = text;
                     }
                 } catch (error) {
                     console.error('Form submission error:', error);
-                    window.showNotification(error.message || 'An error occurred. Please try again.', 'error');
-                    
-                    // Re-enable the submit button
+                    window.showNotification('An error occurred. Please try again.', 'error');
+                } finally {
+                    // Reset button state
                     if (submitButton) {
                         submitButton.disabled = false;
                         submitButton.innerHTML = originalText;
