@@ -17,3 +17,4 @@ pyvenv.config
 import_statement.txt
 venv/*
 .env
+generate_secret.py
