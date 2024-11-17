@@ -289,6 +289,7 @@ const addPropertiesModule = {
     getPartnerOptions: function() {
         // Use partners from template
         const partnerSelects = document.querySelectorAll('.partner-select');
+        
         if (partnerSelects.length > 0) {
             // If we have existing selects, use their options
             return Array.from(partnerSelects[0].options)
@@ -357,61 +358,53 @@ const addPropertiesModule = {
             return;
         }
     
-        // Helper function to safely get and parse numeric values
-        const getNumericValue = (fieldName, defaultValue = 0) => {
-            const value = formData.get(fieldName);
-            if (value === null || value === '') {
-                console.warn(`Field ${fieldName} is missing or empty, using default value: ${defaultValue}`);
-                return defaultValue;
-            }
-            return isNaN(parseFloat(value)) ? defaultValue : parseFloat(value);
-        };
-    
-        // Helper function to safely get string values
-        const getStringValue = (fieldName, defaultValue = '') => {
-            const value = formData.get(fieldName);
-            return value === null ? defaultValue : value;
+        // Helper function to convert to numeric value
+        const toNumber = (value) => {
+            if (!value || value === '') return 0;
+            // Remove any formatting characters and convert to number
+            const cleaned = value.toString().replace(/[$,%\s]/g, '');
+            return Number(cleaned);
         };
     
         try {
             const propertyData = {
-                address: getStringValue('property_address'),
-                purchase_price: getNumericValue('purchase_price'),
-                down_payment: getNumericValue('down_payment'),
-                primary_loan_rate: getNumericValue('primary_loan_rate'),
-                primary_loan_term: getNumericValue('primary_loan_term'),
-                purchase_date: getStringValue('purchase_date'),
-                loan_amount: getStringValue('loan_amount'),
-                loan_start_date: getStringValue('loan_start_date'),
-                seller_financing_amount: getNumericValue('seller_financing_amount'),
-                seller_financing_rate: getNumericValue('seller_financing_rate'),
-                seller_financing_term: getNumericValue('seller_financing_term'),
-                closing_costs: getNumericValue('closing_costs'),
-                renovation_costs: getNumericValue('renovation_costs'),
-                marketing_costs: getNumericValue('marketing_costs'),
-                holding_costs: getNumericValue('holding_costs'),
+                address: (formData.get('property_address') || '').trim(),
+                purchase_price: toNumber(formData.get('purchase_price')),
+                down_payment: toNumber(formData.get('down_payment')),
+                primary_loan_rate: toNumber(formData.get('primary_loan_rate')),
+                primary_loan_term: toNumber(formData.get('primary_loan_term')),
+                purchase_date: formData.get('purchase_date') || '',
+                loan_amount: toNumber(formData.get('loan_amount')),
+                loan_start_date: formData.get('loan_start_date') || '',
+                seller_financing_amount: toNumber(formData.get('seller_financing_amount')),
+                seller_financing_rate: toNumber(formData.get('seller_financing_rate')),
+                seller_financing_term: toNumber(formData.get('seller_financing_term')),
+                closing_costs: toNumber(formData.get('closing_costs')),
+                renovation_costs: toNumber(formData.get('renovation_costs')),
+                marketing_costs: toNumber(formData.get('marketing_costs')),
+                holding_costs: toNumber(formData.get('holding_costs')),
                 monthly_income: {
-                    rental_income: getNumericValue('monthly_income[rental_income]'),
-                    parking_income: getNumericValue('monthly_income[parking_income]'),
-                    laundry_income: getNumericValue('monthly_income[laundry_income]'),
-                    other_income: getNumericValue('monthly_income[other_income]'),
-                    income_notes: getStringValue('monthly_income[income_notes]')
+                    rental_income: toNumber(formData.get('monthly_income[rental_income]')),
+                    parking_income: toNumber(formData.get('monthly_income[parking_income]')),
+                    laundry_income: toNumber(formData.get('monthly_income[laundry_income]')),
+                    other_income: toNumber(formData.get('monthly_income[other_income]')),
+                    income_notes: (formData.get('monthly_income[income_notes]') || '').trim()
                 },
                 monthly_expenses: {
-                    property_tax: getNumericValue('monthly_expenses[property_tax]'),
-                    insurance: getNumericValue('monthly_expenses[insurance]'),
-                    repairs: getNumericValue('monthly_expenses[repairs]'),
-                    capex: getNumericValue('monthly_expenses[capex]'),
-                    property_management: getNumericValue('monthly_expenses[property_management]'),
-                    hoa_fees: getNumericValue('monthly_expenses[hoa_fees]'),
+                    property_tax: toNumber(formData.get('monthly_expenses[property_tax]')),
+                    insurance: toNumber(formData.get('monthly_expenses[insurance]')),
+                    repairs: toNumber(formData.get('monthly_expenses[repairs]')),
+                    capex: toNumber(formData.get('monthly_expenses[capex]')),
+                    property_management: toNumber(formData.get('monthly_expenses[property_management]')),
+                    hoa_fees: toNumber(formData.get('monthly_expenses[hoa_fees]')),
                     utilities: {
-                        water: getNumericValue('monthly_expenses[utilities][water]'),
-                        electricity: getNumericValue('monthly_expenses[utilities][electricity]'),
-                        gas: getNumericValue('monthly_expenses[utilities][gas]'),
-                        trash: getNumericValue('monthly_expenses[utilities][trash]')
+                        water: toNumber(formData.get('monthly_expenses[utilities][water]')),
+                        electricity: toNumber(formData.get('monthly_expenses[utilities][electricity]')),
+                        gas: toNumber(formData.get('monthly_expenses[utilities][gas]')),
+                        trash: toNumber(formData.get('monthly_expenses[utilities][trash]'))
                     },
-                    other_expenses: getNumericValue('monthly_expenses[other_expenses]'),
-                    expense_notes: getStringValue('monthly_expenses[expense_notes]')
+                    other_expenses: toNumber(formData.get('monthly_expenses[other_expenses]')),
+                    expense_notes: (formData.get('monthly_expenses[expense_notes]') || '').trim()
                 },
                 partners: []
             };
@@ -424,7 +417,7 @@ const addPropertiesModule = {
                 
                 if (nameInput && equityInput) {
                     let name = nameInput.value.trim();
-                    const equityShare = parseFloat(equityInput.value);
+                    const equityShare = toNumber(equityInput.value);
                     
                     if (name === 'new') {
                         const newPartnerNameInput = entry.querySelector(`[name="partners[${index}][new_name]"]`);
@@ -434,7 +427,10 @@ const addPropertiesModule = {
                     }
                     
                     if (name && !isNaN(equityShare)) {
-                        propertyData.partners.push({ name, equity_share: equityShare });
+                        propertyData.partners.push({ 
+                            name, 
+                            equity_share: equityShare
+                        });
                     }
                 }
             });
@@ -445,21 +441,45 @@ const addPropertiesModule = {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
                 },
                 body: JSON.stringify(propertyData)
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                        return response.json().then(data => {
+                            throw new Error(data.message || 'Server error');
+                        });
+                    } else {
+                        return response.text().then(text => {
+                            console.error('Server error response:', text);
+                            throw new Error('Server error occurred. Check console for details.');
+                        });
+                    }
+                }
+                return response.json();
+            })
             .then(data => {
                 console.log('Server response:', data);
                 if (data.success) {
-                    window.location.reload();
+                    window.showNotification('Property added successfully!', 'success', 'both');
+                    // Wait 2 seconds before redirecting
+                    setTimeout(() => {
+                        window.location.href = '/properties/add_properties';
+                    }, 2000);
                 } else {
-                    window.showNotification('Error: ' + data.message, 'error', 'both');
+                    if (data.errors && data.errors.length > 0) {
+                        window.showNotification('Validation errors: ' + data.errors.join(', '), 'error', 'both');
+                    } else {
+                        window.showNotification('Error: ' + data.message, 'error', 'both');
+                    }
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                window.showNotification('An error occurred while adding the property. Please check the console for more details.', 'error', 'both');
+                window.showNotification(error.message || 'An error occurred while adding the property. Check console for details.', 'error', 'both');
             });
     
         } catch (error) {

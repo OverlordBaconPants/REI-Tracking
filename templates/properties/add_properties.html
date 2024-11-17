@@ -10,21 +10,19 @@
     <h2 class="mb-4">Add Properties</h2>
     <p>To view all properties you are associated with, please select the Dashboard menu.</p>
 
-    <!-- Debug information 
-    <div class="alert alert-info">
-        <h4>Debug Info:</h4>
-        <p>Partners passed to template:</p>
-        <ul>
-        {% for partner in partners %}
-            <li>{{ partner }}</li>
-        {% else %}
-            <li>No partners found</li>
-        {% endfor %}
-        </ul>
-    </div>
--->
-
 <form id="add-property-form" method="POST">
+    <!-- Hidden input for current user -->
+    <input type="hidden" id="current-user-name" value="{{ current_user.name }}">
+        
+    <!-- Hidden select for partners list -->
+    <select id="partners-list" style="display: none;">
+        <option value="{{ current_user.name }}">{{ current_user.name }}</option>
+        {% for partner in partners %}
+            {% if partner != current_user.name %}
+                <option value="{{ partner }}">{{ partner }}</option>
+            {% endif %}
+        {% endfor %}
+    </select>
     <!-- Property Information -->
     <div class="card mb-4">
         <div class="card-header bg-navy">
@@ -288,54 +286,40 @@
         </div>
     </div>
 
-    <!-- Partners Section -->
+    <!-- Partners Card -->
     <div class="card mb-4">
         <div class="card-header bg-royal-purple">
-            <h4 class="mb-0">Partners</h4>
+            <h4 id="partners" class="mb-0">Partners</h4>
         </div>
         <div class="card-body">
-            <!-- Add the hidden select here -->
-            <select id="partners-list" style="display: none;">
-                {% for partner in partners %}
-                    <option value="{{ partner }}">{{ partner }}</option>
-                {% endfor %}
-            </select>
-    
             <div id="partners-container">
+                <!-- Partner entries will be added here dynamically -->
             </div>
-            
-            <button type="button" id="add-partner-button" class="btn btn-secondary mb-3">Add Partner</button>
-            
+            <button type="button" id="add-partner-button" class="btn btn-primary mt-3">Add Partner</button>
             <div id="total-equity" class="mt-3 font-weight-bold" style="font-size: 1.2rem;">
                 Total Equity: 0%
             </div>
         </div>
     </div>
-    
 
-    <!-- Form Actions -->
     <div class="row mt-3">
         <div class="col-12">
-            <button type="submit" class="btn btn-primary">Add Property</button>
-            <button type="reset" class="btn btn-secondary ms-2">Reset Form</button>
+            <button type="submit" class="btn btn-success">Add Property</button>
+            <button type="reset" class="btn btn-secondary ml-2">Reset Form</button>
         </div>
     </div>
 </form>
 </div>
-</body>
+
 {% endblock %}
 
 {% block scripts %}
-    {{ super() }}
-    <script type="module">
-        import { init } from '/static/js/main.js';
-        init();
-        import addPropertiesModule from '/static/js/add_properties.js';
-
-        document.addEventListener('DOMContentLoaded', function() {
-            if (window.mainInit) {
-                window.mainInit();
-            }
-        });
-    </script>
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof addPropertiesModule !== 'undefined') {
+        addPropertiesModule.init();
+    }
+});
+</script>
 {% endblock %}
