@@ -111,9 +111,16 @@ const addPropertiesModule = {
     },
 
     initPartnersSection: function() {
+       
         const partnersContainer = document.getElementById('partners-container');
         const addPartnerButton = document.getElementById('add-partner-button');
-        
+
+        // Initialize tooltips
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+
         if (partnersContainer && addPartnerButton) {
             // Remove existing event listeners for better cleanup
             addPartnerButton.replaceWith(addPartnerButton.cloneNode(true));
@@ -126,6 +133,10 @@ const addPropertiesModule = {
             partnersContainer.addEventListener('change', this.handlePartnerChange.bind(this));
             partnersContainer.addEventListener('input', this.updateTotalEquity.bind(this));
             partnersContainer.addEventListener('click', this.removePartner.bind(this));
+            partnersContainer.addEventListener('change', (e) => {
+                this.handlePartnerChange(e);
+                this.handlePropertyManagerSelect(e);
+            });
     
             // Add initial partner if container is empty
             if (!partnersContainer.querySelector('.partner-entry')) {
@@ -255,7 +266,7 @@ const addPropertiesModule = {
         const newPartnerHtml = `
             <div class="partner-entry mb-3">
                 <div class="row align-items-end">
-                    <div class="col-md-5">
+                    <div class="col-md-4">
                         <div class="form-group">
                             <label for="partner-select-${partnerCount}">Partner:</label>
                             <select id="partner-select-${partnerCount}" name="partners[${partnerCount}][name]" class="form-control partner-select">
@@ -269,10 +280,26 @@ const addPropertiesModule = {
                             <input type="text" id="new-partner-name-${partnerCount}" name="partners[${partnerCount}][new_name]" class="form-control">
                         </div>
                     </div>
-                    <div class="col-md-5">
+                    <div class="col-md-4">
                         <div class="form-group">
                             <label for="partner-equity-${partnerCount}">Equity Share (%):</label>
                             <input type="number" id="partner-equity-${partnerCount}" name="partners[${partnerCount}][equity_share]" class="form-control partner-equity" step="0.01" min="0" max="100">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <div class="form-check d-flex align-items-center">
+                                <input type="checkbox" id="property-manager-${partnerCount}" name="partners[${partnerCount}][is_property_manager]" class="form-check-input property-manager-checkbox">
+                                <label class="form-check-label mx-2" for="property-manager-${partnerCount}">Property Manager</label>
+                                <i class="bi bi-info-circle" 
+                                data-bs-toggle="tooltip" 
+                                data-bs-placement="top" 
+                                title="Property Managers have additional privileges including:
+                                • Ability to edit property details
+                                • Ability to delete properties
+                                • Full transaction management rights">
+                                </i>
+                            </div>
                         </div>
                     </div>
                     <div class="col-md-2">
@@ -284,6 +311,18 @@ const addPropertiesModule = {
         partnersContainer.insertAdjacentHTML('beforeend', newPartnerHtml);
         this.updateTotalEquity();
         console.log('New partner entry added');
+    },
+
+    // Add event handler for property manager checkboxes
+    handlePropertyManagerSelect: function(event) {
+        if (event.target.classList.contains('property-manager-checkbox')) {
+            const checkboxes = document.querySelectorAll('.property-manager-checkbox');
+            checkboxes.forEach(checkbox => {
+                if (checkbox !== event.target) {
+                    checkbox.checked = false;
+                }
+            });
+        }
     },
 
     getPartnerOptions: function() {
@@ -429,7 +468,8 @@ const addPropertiesModule = {
                     if (name && !isNaN(equityShare)) {
                         propertyData.partners.push({ 
                             name, 
-                            equity_share: equityShare
+                            equity_share: equityShare,
+                            is_property_manager: entry.querySelector(`[name="partners[${index}][is_property_manager]"]`).checked
                         });
                     }
                 }
@@ -534,6 +574,15 @@ const addPropertiesModule = {
                 totalEquity += parseFloat(equityInput.value);
             }
         });
+
+        // Validate property manager selection
+        const propertyManagerSelected = Array.from(form.querySelectorAll('.property-manager-checkbox'))
+        .some(checkbox => checkbox.checked);
+
+        if (!propertyManagerSelected) {
+            window.showNotification('Please designate one partner as Property Manager.', 'error', 'both');
+            isValid = false;
+        }
 
         if (Math.abs(totalEquity - 100) > 0.01) {
             window.showNotification(`Total equity must equal 100%. Current total: ${totalEquity.toFixed(2)}%`, 'error', 'both');

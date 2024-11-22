@@ -5,6 +5,7 @@ from decimal import Decimal
 from utils.money import Money, Percentage, MonthlyPayment
 from utils.calculators import AmortizationCalculator
 import logging
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -364,7 +365,7 @@ def create_analysis(data: Dict) -> Analysis:
         'BRRRR': BRRRRAnalysis,
         'PadSplit BRRRR': PadSplitBRRRRAnalysis,
         'PadSplit LTR': PadSplitLTRAnalysis,
-        'Long-Term Rental': LTRAnalysis
+        'LTR': LTRAnalysis
     }
     
     analysis_type = data.get('analysis_type')
@@ -374,3 +375,117 @@ def create_analysis(data: Dict) -> Analysis:
         raise ValueError(f"Unknown analysis type: {analysis_type}")
         
     return analysis_class(data)
+
+class ActualPerformanceMetrics:
+    """Calculate actual performance metrics from transaction data"""
+    
+    def __init__(self, property_address: str, transactions: List[Dict]):
+        self.property_address = self._normalize_address(property_address)
+        self.transactions = self._filter_transactions(transactions)
+        self._categorized_expenses = self._categorize_expenses()
+
+    def _normalize_address(self, address: str) -> str:
+        """Normalize address format for comparison"""
+        # Remove duplicate city/state/zip if present after USA
+        base_address = address.split(', United States of America')[0]
+        # Split into components
+        components = base_address.split(',')
+        # Keep street, city, state, zip
+        normalized = ','.join(c.strip() for c in components[:4])
+        return normalized
+
+    def _filter_transactions(self, transactions: List[Dict]) -> List[Dict]:
+        """Filter transactions for this property"""
+        target = self._normalize_address(self.property_address)
+        return [t for t in transactions 
+                if self._normalize_address(t['property_id']) == target]
+
+    def _is_same_address(self, addr1: str, addr2: str) -> bool:
+        """Compare addresses more flexibly"""
+        # Split into components
+        components1 = addr1.lower().split(',')
+        components2 = addr2.lower().split(',')
+        
+        # Must match street number and name
+        street1 = components1[0].strip()
+        street2 = components2[0].strip()
+        if street1 != street2:
+            return False
+            
+        # City should be similar (contained)
+        city1 = components1[1].strip()
+        city2 = components2[1].strip()
+        if city1 not in city2 and city2 not in city1:
+            return False
+            
+        # State abbreviation should match
+        state1 = components1[2].strip()[:2]
+        state2 = components2[2].strip()[:2]
+        if state1 != state2:
+            return False
+            
+        return True
+
+    def _categorize_expenses(self) -> Dict[str, List[Dict]]:
+        """Group expenses by category"""
+        categories = {}
+        for t in self.transactions:
+            if t['type'] == 'expense':
+                cat = t['category']
+                if cat not in categories:
+                    categories[cat] = []
+                categories[cat].append(t)
+        return categories
+
+    def calculate_actual_monthly_income(self) -> Money:
+        """Calculate average monthly rental income"""
+        rent_transactions = [t for t in self.transactions if t['type'] == 'income']
+        
+        if not rent_transactions:
+            return Money(0)
+        
+        dates = [datetime.strptime(t['date'], '%Y-%m-%d') for t in rent_transactions]
+        min_date = min(dates)
+        max_date = max(dates)
+        
+        # Calculate actual months between first and last transaction
+        months = (max_date.year - min_date.year) * 12 + max_date.month - min_date.month + 1
+        
+        total_rent = sum(float(t['amount']) for t in rent_transactions)
+        return Money(total_rent / max(months, 1))
+
+    def calculate_actual_monthly_expenses(self) -> Dict[str, Money]:
+        """Calculate average monthly expenses by category"""
+        if not self.transactions:
+            return {'total': Money(0)}
+
+        # Get date range for all transactions
+        dates = [datetime.strptime(t['date'], '%Y-%m-%d') 
+                for t in self.transactions]
+        min_date = min(dates)
+        max_date = max(dates)
+        months = (max_date.year - min_date.year) * 12 + max_date.month - min_date.month + 1
+        
+        monthly_expenses = {}
+        for category, transactions in self._categorized_expenses.items():
+            # Skip one-time expenses like Asset Acquisition
+            if category in ['Asset Acquisition', 'Capital Expenditures']:
+                continue
+            total = sum(float(t['amount']) for t in transactions)
+            monthly_expenses[category] = Money(total / max(months, 1))
+            
+        monthly_expenses['total'] = Money(sum(e.dollars for e in monthly_expenses.values()))
+        return monthly_expenses
+
+    def get_metrics(self) -> Dict:
+        """Get all actual performance metrics"""
+        monthly_income = self.calculate_actual_monthly_income()
+        monthly_expenses = self.calculate_actual_monthly_expenses()
+        monthly_cash_flow = monthly_income - monthly_expenses['total']
+        
+        return {
+            'actual_monthly_income': str(monthly_income),
+            'actual_monthly_expenses': {k: str(v) for k, v in monthly_expenses.items()},
+            'actual_monthly_cash_flow': str(monthly_cash_flow),
+            'actual_annual_cash_flow': str(monthly_cash_flow * 12)
+        }

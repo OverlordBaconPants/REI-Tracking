@@ -38,3 +38,7 @@ class User(UserMixin):
     @property
     def is_anonymous(self):
         return False
+    
+    @property
+    def is_admin(self):
+        return self.role.lower() == 'admin'

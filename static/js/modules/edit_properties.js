@@ -337,37 +337,33 @@ const editPropertiesModule = {
     },
 
     initPartnersSection: function() {
-        // Store reference to 'this' for use in callbacks
         const self = this;
         const partnersContainer = document.getElementById('partners-container');
         const addPartnerButton = document.getElementById('add-partner-button');
         
         if (partnersContainer && addPartnerButton) {
-            // Remove existing event listeners
             addPartnerButton.replaceWith(addPartnerButton.cloneNode(true));
             const newAddPartnerButton = document.getElementById('add-partner-button');
             
-            // Add single event listener for add partner button using arrow function
             newAddPartnerButton.addEventListener('click', () => {
                 self.addPartnerFields();
             });
             
-            // Add delegated event listeners for the container using arrow functions
             partnersContainer.addEventListener('change', (event) => {
                 if (event.target.classList.contains('partner-select')) {
                     self.handlePartnerChange(event);
                     self.updateTotalEquity();
+                } else if (event.target.classList.contains('property-manager-checkbox')) {
+                    self.handlePropertyManagerSelect(event);
                 }
             });
             
-            // Partner equity input handler
             partnersContainer.addEventListener('input', (event) => {
                 if (event.target.classList.contains('partner-equity')) {
                     self.updateTotalEquity();
                 }
             });
             
-            // Remove partner button handler
             partnersContainer.addEventListener('click', (event) => {
                 if (event.target.classList.contains('remove-partner')) {
                     event.target.closest('.partner-entry').remove();
@@ -399,7 +395,7 @@ const editPropertiesModule = {
         const partnerHtml = `
             <div class="partner-entry mb-3">
                 <div class="row align-items-end">
-                    <div class="col-md-5">
+                    <div class="col-md-4">
                         <div class="form-group">
                             <label for="partner-select-${partnerCount}">Partner:</label>
                             <select id="partner-select-${partnerCount}" 
@@ -420,7 +416,7 @@ const editPropertiesModule = {
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-5">
+                    <div class="col-md-4">
                         <div class="form-group">
                             <label for="partner-equity-${partnerCount}">Equity Share (%):</label>
                             <input type="number" 
@@ -432,6 +428,26 @@ const editPropertiesModule = {
                                    max="100" 
                                    value="${partner.equity_share || ''}"
                                    required>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <div class="form-check d-flex align-items-center">
+                                <input type="checkbox" 
+                                       id="property-manager-${partnerCount}" 
+                                       name="partners[${partnerCount}][is_property_manager]" 
+                                       class="form-check-input property-manager-checkbox"
+                                       ${partner.is_property_manager ? 'checked' : ''}>
+                                <label class="form-check-label mx-2" for="property-manager-${partnerCount}">Property Manager</label>
+                                <i class="bi bi-info-circle" 
+                                   data-bs-toggle="tooltip" 
+                                   data-bs-placement="top" 
+                                   title="Property Managers have additional privileges including:
+                                   • Ability to edit property details
+                                   • Ability to delete properties
+                                   • Full transaction management rights">
+                                </i>
+                            </div>
                         </div>
                     </div>
                     <div class="col-md-2">
@@ -449,6 +465,12 @@ const editPropertiesModule = {
             }
         }
 
+        // Initialize tooltip for the new partner entry
+        const tooltipTriggerList = [].slice.call(partnersContainer.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+
         const newSelect = partnersContainer.querySelector(`#partner-select-${partnerCount}`);
         if (newSelect) {
             newSelect.addEventListener('change', (event) => this.handlePartnerSelectChange(event));
@@ -456,6 +478,18 @@ const editPropertiesModule = {
         
         this.updateTotalEquity();
         console.log('New partner fields added');
+    },
+
+    // Add property manager selection handler
+    handlePropertyManagerSelect: function(event) {
+        if (event.target.classList.contains('property-manager-checkbox')) {
+            const checkboxes = document.querySelectorAll('.property-manager-checkbox');
+            checkboxes.forEach(checkbox => {
+                if (checkbox !== event.target) {
+                    checkbox.checked = false;
+                }
+            });
+        }
     },
 
     handlePartnerChange: function(event) {
@@ -594,7 +628,8 @@ const editPropertiesModule = {
                 if (partnerName && !isNaN(equityShare)) {
                     propertyData.partners.push({
                         name: partnerName,
-                        equity_share: equityShare
+                        equity_share: equityShare,
+                        is_property_manager: entry.querySelector('.property-manager-checkbox').checked
                     });
                 }
             });
@@ -641,6 +676,54 @@ const editPropertiesModule = {
             console.error('Error preparing property data:', error);
             window.showNotification('Error preparing property data: ' + error.message, 'error', 'both');
         }
+    },
+
+    // Add property manager validation
+    validateForm: function(form) {
+        let isValid = true;
+
+        // Validate required fields
+        if (!form.querySelector('#property_select').value) {
+            window.showNotification('Please select a property.', 'error', 'both');
+            isValid = false;
+        }
+
+        // Validate partners
+        const partners = form.querySelectorAll('.partner-entry');
+        let totalEquity = 0;
+
+        partners.forEach((partner, index) => {
+            const nameSelect = partner.querySelector('.partner-select');
+            const equityInput = partner.querySelector('.partner-equity');
+            
+            if (!nameSelect.value) {
+                window.showNotification(`Please select a partner for entry ${index + 1}.`, 'error', 'both');
+                isValid = false;
+            }
+
+            if (!equityInput.value || isNaN(equityInput.value)) {
+                window.showNotification(`Please enter a valid equity share for partner ${index + 1}.`, 'error', 'both');
+                isValid = false;
+            } else {
+                totalEquity += parseFloat(equityInput.value);
+            }
+        });
+
+        // Validate property manager selection
+        const propertyManagerSelected = Array.from(form.querySelectorAll('.property-manager-checkbox'))
+            .some(checkbox => checkbox.checked);
+        
+        if (!propertyManagerSelected) {
+            window.showNotification('Please designate one partner as Property Manager.', 'error', 'both');
+            isValid = false;
+        }
+
+        if (Math.abs(totalEquity - 100) > 0.01) {
+            window.showNotification(`Total equity must equal 100%. Current total: ${totalEquity.toFixed(2)}%`, 'error', 'both');
+            isValid = false;
+        }
+
+        return isValid;
     },
 
     calculateTotalEquity: function() {

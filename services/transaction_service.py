@@ -8,14 +8,10 @@ from fuzzywuzzy import process
 import re
 
 def get_properties_for_user(user_id, user_name, is_admin=False):
-    logging.debug(f"Getting properties for user: {user_name} (ID: {user_id}), is_admin: {is_admin}")
+    logging.debug(f"Getting properties for user: {user_name} (ID: {user_id})")
     try:
         properties = read_json(current_app.config['PROPERTIES_FILE'])
         logging.debug(f"Read properties file, found {len(properties)} properties")
-        
-        if is_admin:
-            logging.info(f"Admin user, returning all {len(properties)} properties")
-            return properties
         
         user_properties = [
             prop for prop in properties

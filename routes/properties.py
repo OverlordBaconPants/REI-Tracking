@@ -461,14 +461,17 @@ def edit_properties():
                 properties = json.load(f)
                 logger.debug(f"Successfully loaded {len(properties)} properties for editing")
 
-            # If user is not admin, filter properties to only show those they're a partner in
+            # Filter properties for non-admin users
             if not current_user.role.lower() == 'admin':
-                original_count = len(properties)
-                properties = [
+                filtered_properties = [
                     prop for prop in properties
-                    if any(partner['name'] == current_user.name for partner in prop.get('partners', []))
+                    if any(
+                        partner['name'] == current_user.name and 
+                        (partner.get('is_property_manager', False) or current_user.role.lower() == 'admin')
+                        for partner in prop.get('partners', [])
+                    )
                 ]
-                logger.debug(f"Filtered properties for non-admin user. Original: {original_count}, Filtered: {len(properties)}")
+                properties = filtered_properties
 
         except FileNotFoundError:
             logger.warning(f"Properties file not found at {properties_file}, creating new file")

@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container mt-4">
+    <div class="card mb-4">
+        <div class="card-header bg-navy">
+            <h4 class="mb-0">KPI Comparison</h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="property_select" class="form-label">Choose a property</label>
+                    <select class="form-select" id="property_select">
+                        <option value="">Select a property...</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button class="btn btn-primary" id="loadKpisBtn">Load KPIs</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="kpiContainer" style="display: none;">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header bg-navy">
+                        <h5 class="mb-0">Planned KPIs</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="noAnalysisAlert" style="display: none;">
+                            <div class="alert alert-warning">
+                                No analysis found for this property.
+                                <a href="#" id="createAnalysisBtn" class="btn btn-sm btn-warning ms-2">Create Analysis</a>
+                            </div>
+                        </div>
+                        <div id="plannedMetrics">
+                            <p><strong>Monthly Income:</strong> <span id="planned_income">$0.00</span></p>
+                            <p><strong>Monthly Expenses:</strong> <span id="planned_expenses">$0.00</span></p>
+                            <p><strong>Monthly Cash Flow:</strong> <span id="planned_cashflow">$0.00</span></p>
+                            <p><strong>Annual Cash Flow:</strong> <span id="planned_annual_cashflow">$0.00</span></p>
+                            <p><strong>Cash-on-Cash Return:</strong> <span id="planned_coc">0.00%</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header bg-navy">
+                        <h5 class="mb-0">Actual KPIs</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Monthly Income:</strong> <span id="actual_income">$0.00</span></p>
+                        <p><strong>Monthly Expenses:</strong> <span id="actual_expenses">$0.00</span></p>
+                        <p><strong>Monthly Cash Flow:</strong> <span id="actual_cashflow">$0.00</span></p>
+                        <p><strong>Annual Cash Flow:</strong> <span id="actual_annual_cashflow">$0.00</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-3">
+            <div class="col-12 text-end">
+                <button class="btn btn-primary" id="downloadReportBtn">Download PDF Report</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/modules/kpi_comparison.js') }}"></script>
+{% endblock %}
