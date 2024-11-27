@@ -5,7 +5,7 @@ from reportlab.lib.units import inch
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer, Table, 
                               TableStyle, Image, BaseDocTemplate, PageTemplate, 
-                              Frame, FrameBreak, PageBreak)
+                              Frame, FrameBreak, PageBreak, KeepTogether)
 import os
 from typing import Dict, List, Tuple, Union
 from io import BytesIO
@@ -387,99 +387,74 @@ class AnalysisReport(BaseReport):
             logger.error(f"Error creating header: {str(e)}")
             return Paragraph("Report", self.styles['Header'])
 
-    def _create_loan_details_table_ltr(self, loans: List[Dict], col_widths: List[float] = None) -> List:
-        """Create tables for LTR loan details with headers."""
-        if not col_widths:
-            col_widths = [1.75*inch, 1.25*inch]
-        
-        tables = []
-        for loan in loans:
-            # Create loan data
-            loan_data = [
-                ("Amount", loan.get('amount')),
-                ("Interest Rate", loan.get('interest_rate')),
-                ("Term", f"{loan.get('term_months', 0)} months"),
-                ("Down Payment", loan.get('down_payment')),
-                ("Closing Costs", loan.get('closing_costs'))
-            ]
-            
-            # Create table with loan name as header
-            loan_table = self._create_table(loan.get('name', 'Unnamed Loan'), loan_data, column_widths=col_widths)
-            tables.append(loan_table)
-            tables.append(Spacer(1, 0.25*inch))
-            
-        return tables
-
     def _add_content(self, story: List) -> None:
-        """Add report content based on analysis type."""
-        # Add header and common elements to left column
+        """Add analysis-specific content in two columns"""
+        # Add header
         story.append(self._create_header())
-        story.append(Spacer(1, 0.25*inch))
-        story.append(FrameBreak())  # Move to left column
-
-        col_widths = [1.75*inch, 1.25*inch]
-
-        # Purchase Details and Income & Returns in left column
+        story.append(Spacer(1, 0.25*inch))  # Quarter-inch spacer
+        
+        # Calculate column widths (accounting for gap between columns)
+        page_width = self.pagesize[0] - self.margins['left'] - self.margins['right']
+        col_width = (page_width - 0.25*inch) / 2  # Quarter-inch gap between columns
+        
+        # Create left column content
+        # Purchase Details
         purchase_data = [
             ("Purchase Price", self.data.get('purchase_price')),
             ("After Repair Value", self.data.get('after_repair_value')),
             ("Renovation Costs", self.data.get('renovation_costs')),
             ("Renovation Duration", f"{self.data.get('renovation_duration', 0)} months")
         ]
-        story.append(self._create_table("Purchase Details", purchase_data, column_widths=col_widths))
+        story.append(self._create_table("Purchase Details", purchase_data, column_widths=[col_width * 0.6, col_width * 0.4]))
         story.append(Spacer(1, 0.25*inch))
-
-        returns_data = [
-            ("Monthly Rent", self.data.get('monthly_rent')),
-            ("Monthly Cash Flow", self.data.get('monthly_cash_flow')),
-            ("Annual Cash Flow", self.data.get('annual_cash_flow')),
-            ("Cash on Cash Return", self.data.get('cash_on_cash_return'))
-        ]
-        story.append(self._create_table("Income & Returns", returns_data, column_widths=col_widths))
-
-        # Move to right column for loan details
-        story.append(FrameBreak())
-
-        analysis_type = self.data.get('analysis_type', '')
-
-        if 'BRRRR' in analysis_type:
-            # Initial Loan Details
-            initial_loan_data = [
-                ("Initial Loan Amount", self.data.get('initial_loan_amount')),
-                ("Interest Rate", self.data.get('initial_interest_rate')),
-                ("Monthly Payment", self.data.get('initial_monthly_payment')),
-                ("Loan Term", f"{self.data.get('initial_loan_term', 0)} months"),
-                ("Down Payment", self.data.get('initial_down_payment')),
-                ("Closing Costs", self.data.get('initial_closing_costs'))
-            ]
-            story.append(self._create_table("Initial Loan Details", initial_loan_data, column_widths=col_widths))
-            story.append(Spacer(1, 0.25*inch))
-
-            # Refinance Details
-            refinance_data = [
-                ("Refinance Loan Amount", self.data.get('refinance_loan_amount')),
-                ("Interest Rate", self.data.get('refinance_interest_rate')),
-                ("Monthly Payment", self.data.get('refinance_monthly_payment')),
-                ("Loan Term", f"{self.data.get('refinance_loan_term', 0)} months"),
-                ("Down Payment", self.data.get('refinance_down_payment')),
-                ("Closing Costs", self.data.get('refinance_closing_costs'))
-            ]
-            story.append(self._create_table("Refinance Details", refinance_data, column_widths=col_widths))
-
-            # Investment Summary below loan details
-            story.append(Spacer(1, 0.25*inch))
+        
+        # Investment Summary if BRRRR
+        if 'BRRRR' in self.data.get('analysis_type', ''):
             investment_data = [
                 ("Total Project Costs", self.data.get('total_project_costs')),
                 ("Total Cash Invested", self.data.get('total_cash_invested')),
                 ("Cash Recouped", self.data.get('cash_recouped')),
                 ("Equity Captured", self.data.get('equity_captured'))
             ]
-            story.append(self._create_table("Investment Summary", investment_data, column_widths=col_widths))
-
-        elif 'LTR' in analysis_type and self.data.get('loans'):
-            # Add individual loan tables
-            loan_tables = self._create_loan_details_table_ltr(self.data['loans'], col_widths)
-            story.extend(loan_tables)
+            story.append(self._create_table("Investment Summary", investment_data, column_widths=[col_width * 0.6, col_width * 0.4]))
+        
+        # Add a frame break to move to right column
+        story.append(FrameBreak())
+        
+        # Income & Returns
+        returns_data = [
+            ("Monthly Rent", self.data.get('monthly_rent')),
+            ("Monthly Cash Flow", self.data.get('monthly_cash_flow')),
+            ("Annual Cash Flow", self.data.get('annual_cash_flow')),
+            ("Cash on Cash Return", self.data.get('cash_on_cash_return'))
+        ]
+        story.append(self._create_table("Income & Returns", returns_data, column_widths=[col_width * 0.6, col_width * 0.4]))
+        story.append(Spacer(1, 0.25*inch))
+        
+        # Financing Details for BRRRR
+        if 'BRRRR' in self.data.get('analysis_type', ''):
+            financing_data = [
+                ("Initial Loan Amount", self.data.get('initial_loan_amount')),
+                ("Initial Interest Rate", self.data.get('initial_interest_rate')),
+                ("Initial Monthly Payment", self.data.get('initial_monthly_payment')),
+                ("Initial Loan Term", f"{self.data.get('initial_loan_term', 0)} months"),
+                ("Refinance Loan Amount", self.data.get('refinance_loan_amount')),
+                ("Refinance Interest Rate", self.data.get('refinance_interest_rate')),
+                ("Refinance Monthly Payment", self.data.get('refinance_monthly_payment')),
+                ("Refinance Loan Term", f"{self.data.get('refinance_loan_term', 0)} months")
+            ]
+            story.append(self._create_table("Financing Details", financing_data, column_widths=[col_width * 0.6, col_width * 0.4]))
+        elif 'LTR' in self.data.get('analysis_type', '') and self.data.get('loans'):
+            for i, loan in enumerate(self.data['loans'], 1):
+                loan_data = [
+                    ("Loan Amount", loan.get('amount')),
+                    ("Interest Rate", loan.get('interest_rate')),
+                    ("Monthly Payment", loan.get('monthly_payment')),
+                    ("Term", f"{loan.get('term', 0)} months")
+                ]
+                story.append(self._create_table(f"Loan {i} Details", loan_data, column_widths=[col_width * 0.6, col_width * 0.4]))
+                if i < len(self.data['loans']):
+                    story.append(Spacer(1, 0.25*inch))
 
     def _create_table(self, title: str, data: List[Tuple[str, str]], column_widths: List[float]) -> Table:
         """Create a formatted table with consistent styling"""
@@ -538,69 +513,81 @@ class TransactionReport(BaseReport):
     """Report generator for transaction reports"""
     
     def __init__(self, data: Dict, buffer: BytesIO):
-        # Set landscape_mode=True for transaction reports
+        # Transaction reports always in landscape mode with half-inch margins
         super().__init__(data, buffer, landscape_mode=True)
         self.margins = {
-            'left': 1*inch,
-            'right': 1*inch,
-            'top': 0.75*inch,
-            'bottom': 0.75*inch
+            'left': 0.5*inch,
+            'right': 0.5*inch,
+            'top': 0.5*inch,
+            'bottom': 0.5*inch
         }
         self.transactions_by_property = self._group_transactions()
-    
-    def _get_report_title(self) -> str:
-        """Get report title based on number of properties"""
-        if len(self.transactions_by_property) == 1:
-            property_name = next(iter(self.transactions_by_property.keys()))
-            return f"Transactions for {', '.join(property_name.split(',')[:2])}"
-        return "Portfolio Transactions"
 
     def _create_header(self) -> Table:
-        """Create header with logo and report title"""
+        """Create header with logo and title"""
         try:
+            # Get logo path
             static_folder = current_app.static_folder
             logo_path = os.path.join(static_folder, 'images', 'logo-blue.png')
             
-            # Get title and date range
-            title = self._get_report_title()
-            date_str = datetime.now().strftime("%Y-%m-%d")
-            date_range = ""
-            if 'start_date' in self.data and 'end_date' in self.data:
-                date_range = f"\n{self.data['start_date']} to {self.data['end_date']}"
+            # Determine title based on if property is selected
+            if len(self.transactions_by_property) == 1:
+                title = next(iter(self.transactions_by_property.keys()))
+                title = self._truncate_address(title)
             else:
-                date_range = f"\nAll Transactions as of {date_str}"
+                title = "Portfolio Transactions"
+
+            # Create date text
+            today = datetime.now().strftime('%Y-%m-%d')
+            date_range = self._get_date_range_text()
+            date_text = f"{today}<br/>{date_range}"
 
             if not os.path.exists(logo_path):
                 logger.warning(f"Logo file not found at {logo_path}")
-                header_table = Table([
-                    [Paragraph(title + date_range, self.styles['Header'])]
-                ], colWidths=[10*inch])
-            else:
-                img = Image(logo_path, width=1.0*inch, height=1.0*inch)
-                header_table = Table([
-                    [img, Paragraph(title + date_range, self.styles['Header'])]
-                ], colWidths=[1.5*inch, 8.5*inch])
+                return Paragraph(f"{title}<br/>{date_text}", self.styles['Header'])
+
+            # Create logo image
+            logo = Image(logo_path, width=0.75*inch, height=0.75*inch)
+            
+            # Create header table
+            header_table = Table([
+                [logo, Paragraph(title, self.styles['Header'])],
+                [None, Paragraph(date_text, self.styles['SubTitle'])]
+            ], colWidths=[1*inch, 9.5*inch])  # Adjusted for landscape orientation
 
             header_table.setStyle(TableStyle([
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('ALIGN', (0, 0), (0, -1), 'CENTER'),
+                ('ALIGN', (1, 0), (1, -1), 'LEFT'),
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                ('LEFTPADDING', (0, 0), (-1, -1), 0),
-                ('RIGHTPADDING', (0, 0), (-1, -1), 0)
+                ('LEFTPADDING', (1, 0), (1, -1), 12),
+                ('SPAN', (0, 0), (0, 1))  # Logo spans both rows
             ]))
 
             return header_table
 
         except Exception as e:
             logger.error(f"Error creating header: {str(e)}")
-            return Paragraph(self._get_report_title(), self.styles['Header'])
-            
+            return Paragraph("Report", self.styles['Header'])
+
+    def _get_date_range_text(self) -> str:
+        """Get formatted date range text"""
+        start_date = self.data.get('start_date')
+        end_date = self.data.get('end_date')
+        
+        if start_date and end_date:
+            return f"From {start_date} to {end_date}"
+        return "All of Time"
+
     def _add_content(self, story: List) -> None:
-        """Add report content in the exact format from the samples"""
+        """Add transaction-specific content"""
         # Add header
         story.append(self._create_header())
         story.append(Spacer(1, 0.25*inch))
 
-        # Add grand total summary for multiple properties
+        # Calculate total page width excluding margins
+        available_width = self.pagesize[0] - self.margins['left'] - self.margins['right']
+
+        # Add grand total summary if multiple properties
         if len(self.transactions_by_property) > 1:
             grand_total = self._calculate_grand_total()
             summary_data = [
@@ -608,18 +595,15 @@ class TransactionReport(BaseReport):
                 ("Total Expenses", grand_total['total_expenses']),
                 ("Net Income", grand_total['net_income'])
             ]
-            story.append(self._create_table(
+            summary_table = self._create_table(
                 "Grand Total Summary",
                 summary_data,
-                column_widths=[3*inch, 2*inch]
-            ))
-            story.append(Spacer(1, 0.2*inch))
+                column_widths=[available_width * 0.3, available_width * 0.2]
+            )
+            story.append(KeepTogether([summary_table, Spacer(1, 0.25*inch)]))
 
         # Process each property
         for property_id, transactions in self.transactions_by_property.items():
-            # Property header with in-line truncation
-            story.append(Paragraph(f"Property: {', '.join(property_id.split(',')[:2])}", self.styles['SectionHeader']))
-            
             # Property summary
             summary = self._calculate_property_summary(transactions)
             summary_data = [
@@ -627,22 +611,80 @@ class TransactionReport(BaseReport):
                 ("Total Expenses", summary['total_expenses']),
                 ("Net Income", summary['net_income'])
             ]
-            story.append(self._create_table(
-                "Property Summary",
+            
+            # Create property header and summary
+            property_name = self._truncate_address(property_id)
+            summary_table = self._create_table(
+                f"{property_name} Summary",
                 summary_data,
-                column_widths=[3*inch, 2*inch]
-            ))
-            story.append(Spacer(1, 0.2*inch))
+                column_widths=[available_width * 0.3, available_width * 0.2]
+            )
+            story.append(KeepTogether([summary_table, Spacer(1, 0.25*inch)]))
 
             # Sort transactions by date (newest first)
             transactions.sort(key=lambda x: datetime.strptime(x['date'], '%Y-%m-%d'), reverse=True)
 
-            # Create transaction table
-            story.append(self._create_transaction_table("Transactions", transactions))
+            # Add transactions table
+            story.append(self._create_transaction_table(
+                "Transactions",
+                transactions,
+                [1.5*inch, 4*inch, 1.5*inch, 2*inch, 1.5*inch]  # Column widths
+            ))
 
             # Add page break between properties (except last)
             if property_id != list(self.transactions_by_property.keys())[-1]:
                 story.append(PageBreak())
+
+    def _create_transaction_table(self, title: str, transactions: List[Dict], col_widths: List[float]) -> Table:
+        """Create a formatted transaction table"""
+        # Table headers
+        data = [[
+            Paragraph("Date", self.styles['TableHeader']),
+            Paragraph("Description", self.styles['TableHeader']),
+            Paragraph("Type", self.styles['TableHeader']),
+            Paragraph("Category", self.styles['TableHeader']),
+            Paragraph("Amount", self.styles['TableHeader'])
+        ]]
+        
+        # Add transaction rows
+        for t in transactions:
+            amount = float(t['amount'].replace('$', '').replace(',', ''))
+            if t['type'].lower() == 'expense':
+                amount = -amount
+            
+            data.append([
+                Paragraph(t['date'], self.styles['Normal']),
+                Paragraph(t['description'], self.styles['Normal']),
+                Paragraph(t['type'].title(), self.styles['Normal']),
+                Paragraph(t['category'], self.styles['Normal']),
+                Paragraph(self.format_currency(amount), self.styles['Normal'])
+            ])
+        
+        # Create and style table
+        table = Table(data, colWidths=col_widths)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#000080')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+            ('ALIGN', (-1, 1), (-1, -1), 'RIGHT'),  # Right align amounts
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey])
+        ]))
+        
+        return table
+
+    def _truncate_address(self, address: str) -> str:
+        """Truncate address to show only house number and street"""
+        if not address:
+            return "Unknown Address"
+        parts = address.split(',')
+        if len(parts) >= 2:
+            return f"{parts[0].strip()}, {parts[1].strip()}"
+        return address.strip()
 
     def _calculate_property_summary(self, transactions: List[Dict]) -> Dict:
         """Calculate summary totals for a property"""
@@ -656,7 +698,7 @@ class TransactionReport(BaseReport):
         )
         return {
             'total_income': total_income,
-            'total_expenses': -total_expenses,  # Make expenses negative
+            'total_expenses': total_expenses,
             'net_income': total_income - total_expenses
         }
 
@@ -673,47 +715,26 @@ class TransactionReport(BaseReport):
         return {
             'total_income': total_income,
             'total_expenses': total_expenses,
-            'net_income': total_income + total_expenses  # Expenses are already negative
+            'net_income': total_income - total_expenses
         }
 
     def _group_transactions(self) -> Dict[str, List[Dict]]:
         """Group transactions by property"""
         grouped = {}
         for transaction in self.data.get('transactions', []):
-            property_id = transaction.get('property_id', 'Unknown Property')
+            property_id = transaction['property_id']
             if property_id not in grouped:
                 grouped[property_id] = []
             grouped[property_id].append(transaction)
         return grouped
 
-    def generate(self) -> None:
-        """Override generate method to use SimpleDocTemplate for transaction reports"""
-        doc = SimpleDocTemplate(
-            self.buffer,
-            pagesize=self.pagesize,
-            rightMargin=self.margins['right'],
-            leftMargin=self.margins['left'],
-            topMargin=self.margins['top'],
-            bottomMargin=self.margins['bottom']
-        )
-        
-        story = []
-        self._add_content(story)
-        doc.build(story, onFirstPage=self._add_page_number, onLaterPages=self._add_page_number)
-    
 def generate_report(data: Dict, report_type: str = 'analysis') -> BytesIO:
     """Generate appropriate PDF report based on type"""
     buffer = BytesIO()
     
     if report_type == 'transaction':
-        # Extract date range from the view data if present
-        transactions_data = {
-            'transactions': data,
-            'start_date': data[0].get('date_filter_start') if data else None,
-            'end_date': data[0].get('date_filter_end') if data else None
-        }
-        report = TransactionReport(transactions_data, buffer)
-    else:  # Default to analysis report
+        report = TransactionReport(data, buffer)
+    else:
         report = AnalysisReport(data, buffer)
         
     report.generate()

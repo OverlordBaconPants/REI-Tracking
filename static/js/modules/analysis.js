@@ -6,7 +6,7 @@ const padSplitExpensesHTML = `
                 <label for="padsplit_platform_percentage" class="form-label">PadSplit Platform (%)</label>
                 <input type="number" class="form-control" id="padsplit_platform_percentage" 
                        name="padsplit_platform_percentage" value="12" min="0" max="100" 
-                       step="0.5" required>
+                       step="0.01" required>
             </div>
             <div class="col-md-6 mb-3">
                 <label for="utilities" class="form-label">Utilities</label>
@@ -499,44 +499,34 @@ window.analysisModule = {
         const financialTab = document.getElementById('financial');
         if (!financialTab) return;
         
+        // Load HTML content based on type
         let htmlContent;
         switch(type) {
-            case 'LTR':
+            case 'Long-Term Rental':
                 htmlContent = this.getLongTermRentalHTML();
                 break;
-                
             case 'PadSplit LTR':
                 htmlContent = this.getPadSplitLTRHTML();
                 break;
-                
             case 'BRRRR':
                 htmlContent = this.getBRRRRHTML();
                 break;
-                
             case 'PadSplit BRRRR':
                 htmlContent = this.getPadSplitBRRRRHTML();
                 break;
-                
             default:
                 htmlContent = '<p>Financial details for this analysis type are not yet implemented.</p>';
         }
     
-        if (type !== 'Maximum Allowable Offer') {
-            financialTab.innerHTML = htmlContent;
-            
-            const reportsTab = document.getElementById('reports-tab');
-            const reportsContent = document.getElementById('reports');
-            const submitBtn = document.getElementById('submitAnalysisBtn');
-            
-            if (reportsTab) reportsTab.style.display = '';
-            if (reportsContent) reportsContent.style.display = '';
-            if (submitBtn) submitBtn.style.display = '';
-            
-            this.initLoanHandlers();
-            
-            if (type.includes('BRRRR')) {
-                this.initRefinanceCalculations();
-            }
+        // Set the HTML content
+        financialTab.innerHTML = htmlContent;
+    
+        // Initialize handlers
+        this.initLoanHandlers();
+
+        // Initialize calculations if BRRRR type
+        if (type.includes('BRRRR')) {
+            this.initRefinanceCalculations();
         }
     },
 
@@ -667,24 +657,24 @@ window.analysisModule = {
                         <div class="col-md-6 mb-3">
                             <label for="management_percentage" class="form-label">Management (%)</label>
                             <input type="number" class="form-control" id="management_percentage" name="management_percentage" 
-                                   value="8" min="0" max="100" step="0.5" required>
+                                   value="8" min="0" max="100" step="0.01" required>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="capex_percentage" class="form-label">CapEx (%)</label>
                             <input type="number" class="form-control" id="capex_percentage" name="capex_percentage" 
-                                   value="2" min="0" max="100" step="0.5" required>
+                                   value="2" min="0" max="100" step="0.01" required>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="repairs_percentage" class="form-label">Repairs (%)</label>
                             <input type="number" class="form-control" id="repairs_percentage" name="repairs_percentage" 
-                                   value="2" min="0" max="100" step="0.5" required>
+                                   value="2" min="0" max="100" step="0.01" required>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="vacancy_percentage" class="form-label">Vacancy (%)</label>
                             <input type="number" class="form-control" id="vacancy_percentage" name="vacancy_percentage" 
-                                   value="4" min="0" max="100" step="0.5" required>
+                                   value="4" min="0" max="100" step="0.01" required>
                         </div>
                     </div>
                     <div class="row">
@@ -761,7 +751,7 @@ window.analysisModule = {
                         <div class="col-md-6 mb-3">
                             <label for="initial_interest_rate" class="form-label">Initial Interest Rate (%)</label>
                             <input type="number" class="form-control" id="initial_interest_rate" name="initial_interest_rate" 
-                                placeholder="Interest rate for initial loan" step="0.125" required>
+                                placeholder="Interest rate for initial loan" step="0.01" required>
                         </div>
                     </div>
                     <div class="row">
@@ -788,14 +778,14 @@ window.analysisModule = {
                             <label for="refinance_ltv_percentage" class="form-label">Expected Refinance LTV (%)</label>
                             <input type="number" class="form-control" id="refinance_ltv_percentage" 
                                 name="refinance_ltv_percentage" value="75" min="0" max="100" 
-                                step="5" required>
+                                step="1" required>
                             <div class="form-text">Expected Loan-to-Value ratio for refinance</div>
                         </div>
                         <div class="col-md-6">
                             <label for="max_cash_left" class="form-label">Maximum Cash Left in Deal</label>
                             <input type="number" class="form-control" id="max_cash_left" 
                                 name="max_cash_left" value="10000" min="0" 
-                                step="500" required>
+                                step="100" required>
                             <div class="form-text">Maximum cash to leave in deal after refinance</div>
                         </div>
                     </div>
@@ -818,7 +808,7 @@ window.analysisModule = {
                         <div class="col-md-6 mb-3">
                             <label for="refinance_interest_rate" class="form-label">Refinance Interest Rate (%)</label>
                             <input type="number" class="form-control" id="refinance_interest_rate" 
-                                name="refinance_interest_rate" step="0.125" required>
+                                name="refinance_interest_rate" step="0.01" required>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="refinance_loan_term" class="form-label">Refinance Loan Term (months)</label>
@@ -869,13 +859,13 @@ window.analysisModule = {
                         <div class="col-md-6 mb-3">
                             <label for="repairs_percentage" class="form-label">Maintenance (% of rent)</label>
                             <input type="number" class="form-control" id="repairs_percentage" name="repairs_percentage" 
-                                value="2" min="0" max="100" step="0.5" 
+                                value="2" min="0" max="100" step="0.1" 
                                 placeholder="Percentage of rent for maintenance" required>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="vacancy_percentage" class="form-label">Vacancy (% of rent)</label>
                             <input type="number" class="form-control" id="vacancy_percentage" name="vacancy_percentage" 
-                                value="4" min="0" max="100" step="0.5" 
+                                value="4" min="0" max="100" step="0.1" 
                                 placeholder="Percentage of rent for vacancy" required>
                         </div>
                     </div>
@@ -883,13 +873,13 @@ window.analysisModule = {
                         <div class="col-md-6 mb-3">
                             <label for="capex_percentage" class="form-label">CapEx (% of rent)</label>
                             <input type="number" class="form-control" id="capex_percentage" name="capex_percentage" 
-                                value="2" min="0" max="100" step="0.5" 
+                                value="2" min="0" max="100" step="0.1" 
                                 placeholder="Percentage of rent for capital expenditures" required>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="management_percentage" class="form-label">Management (% of rent)</label>
                             <input type="number" class="form-control" id="management_percentage" name="management_percentage" 
-                                value="8" min="0" max="100" step="0.5" 
+                                value="8" min="0" max="100" step="0.1" 
                                 placeholder="Percentage of rent for property management" required>
                         </div>
                     </div>
@@ -1020,7 +1010,7 @@ window.analysisModule = {
                             <label for="entry_fee_cap_percentage" class="form-label">Entry Fee Cap (% of ARV)</label>
                             <input type="number" class="form-control" id="entry_fee_cap_percentage" 
                                 name="entry_fee_cap_percentage" value="15" min="0" max="100" 
-                                step="0.5" required>
+                                step="1" required>
                             <div class="form-text">Maximum entry fee as percentage of ARV</div>
                         </div>
                     </div>
@@ -1069,13 +1059,13 @@ window.analysisModule = {
                         <div class="col-md-6 mb-3">
                             <label for="management_percentage" class="form-label">Management (% of rent)</label>
                             <input type="number" class="form-control" id="management_percentage" name="management_percentage" 
-                                   value="8" min="0" max="100" step="0.5" 
+                                   value="8" min="0" max="100" step="0.1" 
                                    placeholder="Percentage of rent for property management" required>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="capex_percentage" class="form-label">CapEx (% of rent)</label>
                             <input type="number" class="form-control" id="capex_percentage" name="capex_percentage" 
-                                   value="2" min="0" max="100" step="0.5" 
+                                   value="2" min="0" max="100" step="0.1" 
                                    placeholder="Percentage of rent for capital expenditures" required>
                         </div>
                     </div>
@@ -1083,13 +1073,13 @@ window.analysisModule = {
                         <div class="col-md-6 mb-3">
                             <label for="repairs_percentage" class="form-label">Repairs (% of rent)</label>
                             <input type="number" class="form-control" id="repairs_percentage" name="repairs_percentage" 
-                                   value="2" min="0" max="100" step="0.5" 
+                                   value="2" min="0" max="100" step="0.1" 
                                    placeholder="Percentage of rent for repairs" required>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="vacancy_percentage" class="form-label">Vacancy (% of rent)</label>
                             <input type="number" class="form-control" id="vacancy_percentage" name="vacancy_percentage" 
-                                   value="4" min="0" max="100" step="0.5" 
+                                   value="4" min="0" max="100" step="0.1" 
                                    placeholder="Percentage of rent for vacancy" required>
                         </div>
                     </div>
@@ -1159,7 +1149,7 @@ window.analysisModule = {
                                     <div style="flex: 1;">
                                         <label for="initial_interest_rate" class="form-label">Initial Interest Rate (%)</label>
                                         <input type="number" class="form-control" id="initial_interest_rate" name="initial_interest_rate" 
-                                            placeholder="Interest rate" step="0.125" required>
+                                            placeholder="Interest rate" step="0.01" required>
                                     </div>
                                     <div class="mb-2">
                                         <div class="form-check">
@@ -1196,14 +1186,14 @@ window.analysisModule = {
                             <label for="refinance_ltv_percentage" class="form-label">Expected Refinance LTV (%)</label>
                             <input type="number" class="form-control" id="refinance_ltv_percentage" 
                                 name="refinance_ltv_percentage" value="75" min="0" max="100" 
-                                step="5" required>
+                                step="1" required>
                             <div class="form-text">Expected Loan-to-Value ratio for refinance</div>
                         </div>
                         <div class="col-md-6">
                             <label for="max_cash_left" class="form-label">Maximum Cash Left in Deal</label>
                             <input type="number" class="form-control" id="max_cash_left" 
                                 name="max_cash_left" value="10000" min="0" 
-                                step="500" required>
+                                step="100" required>
                             <div class="form-text">Maximum cash to leave in deal after refinance</div>
                         </div>
                     </div>
@@ -1226,7 +1216,7 @@ window.analysisModule = {
                         <div class="col-md-6 mb-3">
                             <label for="refinance_interest_rate" class="form-label">Refinance Interest Rate (%)</label>
                             <input type="number" class="form-control" id="refinance_interest_rate" 
-                                name="refinance_interest_rate" step="0.125" required>
+                                name="refinance_interest_rate" step="0.01" required>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="refinance_loan_term" class="form-label">Refinance Loan Term (months)</label>
@@ -1277,13 +1267,13 @@ window.analysisModule = {
                         <div class="col-md-6 mb-3">
                             <label for="management_percentage" class="form-label">Management (% of rent)</label>
                             <input type="number" class="form-control" id="management_percentage" name="management_percentage" 
-                                   value="8" min="0" max="100" step="0.5" 
+                                   value="8" min="0" max="100" step="0.1" 
                                    placeholder="Percentage of rent for property management" required>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="capex_percentage" class="form-label">CapEx (% of rent)</label>
                             <input type="number" class="form-control" id="capex_percentage" name="capex_percentage" 
-                                   value="2" min="0" max="100" step="0.5" 
+                                   value="2" min="0" max="100" step="0.1" 
                                    placeholder="Percentage of rent for capital expenditures" required>
                         </div>
                     </div>
@@ -1291,13 +1281,13 @@ window.analysisModule = {
                         <div class="col-md-6 mb-3">
                             <label for="repairs_percentage" class="form-label">Maintenance (% of rent)</label>
                             <input type="number" class="form-control" id="repairs_percentage" name="repairs_percentage" 
-                                   value="2" min="0" max="100" step="0.5" 
+                                   value="2" min="0" max="100" step="0.1" 
                                    placeholder="Percentage of rent for maintenance" required>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="vacancy_percentage" class="form-label">Vacancy (% of rent)</label>
                             <input type="number" class="form-control" id="vacancy_percentage" name="vacancy_percentage" 
-                                   value="4" min="0" max="100" step="0.5" 
+                                   value="4" min="0" max="100" step="0.1" 
                                    placeholder="Percentage of rent for vacancy" required>
                         </div>
                     </div>
@@ -1353,7 +1343,7 @@ window.analysisModule = {
                                         <div class="col-md-6 mb-3">
                                             <label for="loan_interest_rate_${loanCount}" class="form-label">Interest Rate (%)</label>
                                             <input type="number" class="form-control" id="loan_interest_rate_${loanCount}" 
-                                                   name="loans[${loanCount}][interest_rate]" step="0.125" min="0" max="100" 
+                                                   name="loans[${loanCount}][interest_rate]" step="0.01" min="0" max="100" 
                                                    placeholder="Enter interest rate" required>
                                         </div>
                                     </div>
@@ -1426,17 +1416,26 @@ window.analysisModule = {
 
     handleSubmit: function(event) {
         event.preventDefault();
-        if (this.isSubmitting) return;
         
+        // Check if already submitting
+        if (this.isSubmitting) {
+            console.log('Form submission already in progress');
+            return;
+        }
+        
+        console.log('Starting form submission');
         this.isSubmitting = true;
+    
         const form = event.target;
+        // Get submit button reference FIRST
         const submitBtn = form.querySelector('button[type="submit"]');
         if (submitBtn) {
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Creating...';
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Creating...';
         }
     
         if (!this.validateForm(form)) {
+            console.log('Form validation failed');
             this.isSubmitting = false;
             if (submitBtn) {
                 submitBtn.disabled = false;
@@ -1446,15 +1445,56 @@ window.analysisModule = {
         }
     
         const formData = new FormData(form);
-        const analysisData = this._formatAnalysisData(formData);
+        const analysisData = {};
+    
+        // Process form data with proper numeric conversion
+        formData.forEach((value, key) => {
+            if (this.isNumericField(key)) {
+                // Convert to number and back to string to ensure proper format
+                const numValue = parseFloat(this.cleanNumericValue(value));
+                analysisData[key] = isNaN(numValue) ? '0' : numValue.toString();
+            } else {
+                analysisData[key] = value;
+            }
+        });
+    
+        // Process loan data if present
+        analysisData.loans = [];
+        const loanSections = form.querySelectorAll('.loan-section');
+        loanSections.forEach((section, index) => {
+            const loanNumber = index + 1;
+            if (formData.get(`loans[${loanNumber}][name]`)) {
+                analysisData.loans.push({
+                    name: formData.get(`loans[${loanNumber}][name]`),
+                    amount: parseFloat(this.cleanNumericValue(formData.get(`loans[${loanNumber}][amount]`))).toString(),
+                    down_payment: parseFloat(this.cleanNumericValue(formData.get(`loans[${loanNumber}][down_payment]`))).toString(),
+                    interest_rate: parseFloat(this.cleanNumericValue(formData.get(`loans[${loanNumber}][interest_rate]`))).toString(),
+                    term: parseInt(this.cleanNumericValue(formData.get(`loans[${loanNumber}][term]`))).toString(),
+                    closing_costs: parseFloat(this.cleanNumericValue(formData.get(`loans[${loanNumber}][closing_costs]`))).toString()
+                });
+            }
+        });
+    
+        // Handle boolean fields
+        analysisData.initial_interest_only = form.querySelector('#initial_interest_only')?.checked || false;
+    
+        console.log('Sending analysis data:', analysisData);
     
         fetch('/analyses/create_analysis', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+            },
             body: JSON.stringify(analysisData)
         })
-        .then(response => response.ok ? response.json() : response.json().then(err => { throw err; }))
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => { throw err; });
+            }
+            return response.json();
+        })
         .then(data => {
+            console.log('Server response:', data);
             if (data.success) {
                 this.currentAnalysisId = data.analysis.id;
                 this.populateReportsTab(data.analysis);
@@ -1470,7 +1510,10 @@ window.analysisModule = {
             toastr.error(error.message || 'Error creating analysis');
         })
         .finally(() => {
+            // Reset submission lock
             this.isSubmitting = false;
+            
+            // Re-enable submit button
             if (submitBtn) {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = 'Create Analysis';
@@ -1552,17 +1595,24 @@ window.analysisModule = {
 
     handleEditSubmit: function(event, analysisId) {
         event.preventDefault();
-        if (this.isSubmitting) return;
         
+        if (this.isSubmitting) {
+            console.log('Form submission already in progress');
+            return;
+        }
+        
+        console.log('Starting edit form submission');
         this.isSubmitting = true;
+    
         const form = event.target;
         const submitBtn = form.querySelector('button[type="submit"]');
         if (submitBtn) {
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Updating...';
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Updating...';
         }
     
         if (!this.validateForm(form)) {
+            console.log('Form validation failed');
             this.isSubmitting = false;
             if (submitBtn) {
                 submitBtn.disabled = false;
@@ -1572,27 +1622,100 @@ window.analysisModule = {
         }
     
         const formData = new FormData(form);
-        const analysisData = this._formatAnalysisData(formData);
-        analysisData.id = analysisId;
+        const analysisData = {
+            id: analysisId  // Always include the original ID
+        };
     
-        if (formData.get('analysis_type') !== this.initialAnalysisType) {
+        // Get current and original analysis types
+        const currentAnalysisType = formData.get('analysis_type');
+        const originalAnalysisType = this.initialAnalysisType;
+    
+        // Process form data with proper numeric conversion
+        formData.forEach((value, key) => {
+            if (this.isNumericField(key)) {
+                const numValue = parseFloat(this.cleanNumericValue(value));
+                analysisData[key] = isNaN(numValue) ? '0' : numValue.toString();
+            } else {
+                analysisData[key] = value;
+            }
+        });
+    
+        // Handle loan data if needed
+        if (currentAnalysisType.includes('LTR')) {
+            analysisData.loans = [];
+            const loanSections = form.querySelectorAll('.loan-section');
+            loanSections.forEach((section, index) => {
+                const loanNumber = index + 1;
+                if (formData.get(`loans[${loanNumber}][name]`)) {
+                    analysisData.loans.push({
+                        name: formData.get(`loans[${loanNumber}][name]`),
+                        amount: this.cleanNumericValue(formData.get(`loans[${loanNumber}][amount]`)),
+                        interest_rate: this.cleanNumericValue(formData.get(`loans[${loanNumber}][interest_rate]`)),
+                        term: this.cleanNumericValue(formData.get(`loans[${loanNumber}][term]`)),
+                        down_payment: this.cleanNumericValue(formData.get(`loans[${loanNumber}][down_payment]`)),
+                        closing_costs: this.cleanNumericValue(formData.get(`loans[${loanNumber}][closing_costs]`))
+                    });
+                }
+            });
+        }
+    
+        // Handle BRRRR-specific fields
+        if (currentAnalysisType.includes('BRRRR')) {
+            analysisData.initial_interest_only = form.querySelector('#initial_interest_only')?.checked || false;
+            
+            // Ensure required BRRRR fields are present
+            const brrrFields = [
+                'initial_loan_amount',
+                'initial_down_payment',
+                'initial_interest_rate',
+                'initial_loan_term',
+                'initial_closing_costs',
+                'refinance_loan_amount',
+                'refinance_down_payment',
+                'refinance_interest_rate',
+                'refinance_loan_term',
+                'refinance_closing_costs',
+                'max_cash_left'
+            ];
+            brrrFields.forEach(field => {
+                if (!analysisData[field]) {
+                    analysisData[field] = '0';
+                }
+            });
+        }
+    
+        // Only set create_new flag if analysis type has changed
+        if (currentAnalysisType !== originalAnalysisType) {
             analysisData.create_new = true;
         }
     
+        console.log('Sending update data:', analysisData);
+    
         fetch('/analyses/update_analysis', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+            },
             body: JSON.stringify(analysisData)
         })
-        .then(response => response.ok ? response.json() : response.json().then(err => { throw err; }))
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => { throw err; });
+            }
+            return response.json();
+        })
         .then(data => {
+            console.log('Server response:', data);
             if (data.success) {
+                // Update the current analysis ID if a new one was created
                 if (data.analysis.id !== analysisId) {
                     this.currentAnalysisId = data.analysis.id;
                     form.setAttribute('data-analysis-id', data.analysis.id);
+                    // Update URL without reloading the page
                     const newUrl = new URL(window.location.href);
                     newUrl.searchParams.set('analysis_id', data.analysis.id);
                     window.history.pushState({}, '', newUrl);
+                    
                     toastr.success(`New ${data.analysis.analysis_type} analysis created`);
                 } else {
                     toastr.success('Analysis updated successfully');
@@ -1602,8 +1725,9 @@ window.analysisModule = {
                 this.switchToReportsTab();
                 this.showReportActions();
                 
+                // Update initial analysis type if we didn't create a new analysis
                 if (data.analysis.id === analysisId) {
-                    this.initialAnalysisType = formData.get('analysis_type');
+                    this.initialAnalysisType = currentAnalysisType;
                 }
             } else {
                 throw new Error(data.message || 'Unknown error occurred');
@@ -1622,150 +1746,17 @@ window.analysisModule = {
         });
     },
 
-    // Add new helper function to format analysis data
-    _formatAnalysisData: function(formData) {
-        const analysisData = {
-            // Metadata
-            analysis_type: formData.get('analysis_type'),
-            analysis_name: formData.get('analysis_name'),
-            property_address: formData.get('property_address'),
-    
-            // Property Details
-            property_details: {
-                home_square_footage: this.cleanNumericValue(formData.get('home_square_footage')),
-                lot_square_footage: this.cleanNumericValue(formData.get('lot_square_footage')),
-                year_built: this.cleanNumericValue(formData.get('year_built'))
-            },
-    
-            // Purchase Details
-            purchase_details: {
-                purchase_price: this.cleanNumericValue(formData.get('purchase_price')),
-                after_repair_value: this.cleanNumericValue(formData.get('after_repair_value')),
-                renovation_costs: this.cleanNumericValue(formData.get('renovation_costs')),
-                renovation_duration: this.cleanNumericValue(formData.get('renovation_duration')),
-                cash_to_seller: this.cleanNumericValue(formData.get('cash_to_seller')),
-                closing_costs: this.cleanNumericValue(formData.get('closing_costs')),
-                assignment_fee: this.cleanNumericValue(formData.get('assignment_fee')),
-                marketing_costs: this.cleanNumericValue(formData.get('marketing_costs'))
-            },
-    
-            // Operating Income
-            monthly_rent: this.cleanNumericValue(formData.get('monthly_rent')),
-    
-            // Operating Expenses
-            operating_expenses: {
-                property_taxes: this.cleanNumericValue(formData.get('property_taxes')),
-                insurance: this.cleanNumericValue(formData.get('insurance')),
-                hoa_coa_coop: this.cleanNumericValue(formData.get('hoa_coa_coop')),
-                management_percentage: this.cleanNumericValue(formData.get('management_percentage')),
-                capex_percentage: this.cleanNumericValue(formData.get('capex_percentage')),
-                vacancy_percentage: this.cleanNumericValue(formData.get('vacancy_percentage')),
-                repairs_percentage: this.cleanNumericValue(formData.get('repairs_percentage'))
-            },
-    
-            // PadSplit specific expenses
-            padsplit_specific: {
-                platform_percentage: this.cleanNumericValue(formData.get('padsplit_platform_percentage')),
-                utilities: this.cleanNumericValue(formData.get('utilities')),
-                internet: this.cleanNumericValue(formData.get('internet')),
-                cleaning_costs: this.cleanNumericValue(formData.get('cleaning_costs')),
-                pest_control: this.cleanNumericValue(formData.get('pest_control')),
-                landscaping: this.cleanNumericValue(formData.get('landscaping'))
-            }
-        };
-    
-        // Add BRRRR-specific fields if present
-        if (analysisData.analysis_type.includes('BRRRR')) {
-            analysisData.initial_loan_amount = this.cleanNumericValue(formData.get('initial_loan_amount'));
-            analysisData.initial_down_payment = this.cleanNumericValue(formData.get('initial_down_payment'));
-            analysisData.initial_interest_rate = this.cleanNumericValue(formData.get('initial_interest_rate'));
-            analysisData.initial_loan_term = this.cleanNumericValue(formData.get('initial_loan_term'));
-            analysisData.initial_closing_costs = this.cleanNumericValue(formData.get('initial_closing_costs'));
-            analysisData.initial_interest_only = formData.get('initial_interest_only') === 'on';
-            
-            analysisData.refinance_loan_amount = this.cleanNumericValue(formData.get('refinance_loan_amount'));
-            analysisData.refinance_down_payment = this.cleanNumericValue(formData.get('refinance_down_payment'));
-            analysisData.refinance_interest_rate = this.cleanNumericValue(formData.get('refinance_interest_rate'));
-            analysisData.refinance_loan_term = this.cleanNumericValue(formData.get('refinance_loan_term'));
-            analysisData.refinance_closing_costs = this.cleanNumericValue(formData.get('refinance_closing_costs'));
-            analysisData.refinance_ltv_percentage = this.cleanNumericValue(formData.get('refinance_ltv_percentage'));
-            analysisData.max_cash_left = this.cleanNumericValue(formData.get('max_cash_left'));
-        }
-    
-        // Handle regular loans if present
-        const loanSections = document.querySelectorAll('.loan-section');
-        if (loanSections.length > 0) {
-            analysisData.loans = Array.from(loanSections).map((section, index) => {
-                const loanNumber = index + 1;
-                return {
-                    name: formData.get(`loans[${loanNumber}][name]`),
-                    amount: this.cleanNumericValue(formData.get(`loans[${loanNumber}][amount]`)),
-                    down_payment: this.cleanNumericValue(formData.get(`loans[${loanNumber}][down_payment]`)),
-                    interest_rate: this.cleanNumericValue(formData.get(`loans[${loanNumber}][interest_rate]`)),
-                    term: this.cleanNumericValue(formData.get(`loans[${loanNumber}][term]`)),
-                    closing_costs: this.cleanNumericValue(formData.get(`loans[${loanNumber}][closing_costs]`))
-                };
-            });
-        }
-    
-        return analysisData;
-    },
-
     calculateMAO: function(analysis) {
         try {
-            // Extract values and clean currency strings
-            const values = {
-                arv: parseFloat(analysis.after_repair_value?.replace(/[$,]/g, '')) || 0,
-                maxCashLeft: parseFloat(analysis.max_cash_left?.replace(/[$,]/g, '')) || 10000, // Default to 10k
-                renovationCosts: parseFloat(analysis.renovation_costs?.replace(/[$,]/g, '')) || 0,
-                closingCosts: parseFloat(analysis.closing_costs?.replace(/[$,]/g, '')) || 0,
-                renovationDuration: parseFloat(analysis.renovation_duration) || 0,
-                timeToRefinance: parseFloat(analysis.time_to_refinance) || 0,
-                utilities: parseFloat(analysis.utilities?.replace(/[$,]/g, '')) || 0,
-                hoaCoa: parseFloat(analysis.hoa_coa_coop?.replace(/[$,]/g, '')) || 0,
-                propertyTaxes: parseFloat(analysis.property_taxes?.replace(/[$,]/g, '')) || 0,
-                insurance: parseFloat(analysis.insurance?.replace(/[$,]/g, '')) || 0,
-                monthlyRent: parseFloat(analysis.monthly_rent?.replace(/[$,]/g, '')) || 0,
-                repairsPercentage: parseFloat(analysis.repairs_percentage) || 0,
-                interestRate: parseFloat(analysis.initial_interest_rate) || 0,
-                expectedLtv: parseFloat(analysis.refinance_ltv_percentage) || 75,
-                isInterestOnly: analysis.initial_interest_only || false
-            };
-    
-            // Calculate maintenance as percentage of rent
-            const maintenance = (values.repairsPercentage / 100) * values.monthlyRent;
-    
-            // Calculate base monthly holding costs
-            const baseMonthlyHoldingCosts = values.utilities + 
-                                          values.hoaCoa + 
-                                          maintenance +
-                                          values.propertyTaxes + 
-                                          values.insurance;
-    
-            // Calculate total duration
-            const totalMonths = values.renovationDuration;
-    
-            // Calculate initial loan amount based on LTV
-            const initialLoanAmount = Math.round((values.arv * (values.expectedLtv / 100)) + values.renovationCosts);
-    
-            // Calculate monthly interest
-            const monthlyInterestRate = values.interestRate / 100 / 12;
-            const monthlyInterest = initialLoanAmount * monthlyInterestRate;
-    
-            // Calculate total monthly holding costs
-            const monthlyHoldingCosts = baseMonthlyHoldingCosts + monthlyInterest;
-    
-            // Calculate total holding costs for renovation period
-            const totalHoldingCosts = monthlyHoldingCosts * totalMonths;
-    
-            // Calculate total project costs
-            const totalProjectCosts = values.renovationCosts + 
-                                    values.closingCosts + 
-                                    totalHoldingCosts;
-    
+            // Extract numeric values from currency strings
+            const purchasePrice = parseFloat(analysis.purchase_price?.replace(/[$,]/g, '')) || 0;
+            const maxCashLeft = 10000; // Default $10k if not specified
+            const totalProjectCosts = parseFloat(analysis.total_project_costs?.replace(/[$,]/g, '')) || 0;
+            
             // Calculate MAO
-            const mao = values.arv - totalProjectCosts - values.maxCashLeft;
-    
+            const mao = purchasePrice + (maxCashLeft - totalProjectCosts);
+            
+            // Format as currency
             return new Intl.NumberFormat('en-US', {
                 style: 'currency',
                 currency: 'USD',
@@ -1778,398 +1769,155 @@ window.analysisModule = {
         }
     },
     
-    initMAOCalculation: function() {
-        const inputs = [
-            'after_repair_value',
-            'max_cash_left', 
-            'renovation_costs', 
-            'closing_costs',
-            'renovation_duration',
-            'time_to_refinance',
-            'property_taxes',
-            'insurance'
-        ];
-        
-        // Set up event listeners first
-        inputs.forEach(id => {
-            const input = document.getElementById(id);
-            if (input) {
-                input.addEventListener('input', () => {
-                    this.updateMAO();
-                });
-            }
-        });
-    },
-    
-    updateMAO: function() {
-        try {
-            // Get all input values with error checking
-            const values = {
-                arv: parseFloat(document.getElementById('after_repair_value')?.value) || 0,
-                maxCashLeft: parseFloat(document.getElementById('max_cash_left')?.value) || 0,
-                renovationCosts: parseFloat(document.getElementById('renovation_costs')?.value) || 0,
-                closingCosts: parseFloat(document.getElementById('closing_costs')?.value) || 0,
-                renovationDuration: parseFloat(document.getElementById('renovation_duration')?.value) || 0,
-                timeToRefinance: parseFloat(document.getElementById('time_to_refinance')?.value) || 0,
-                monthlyTaxes: parseFloat(document.getElementById('property_taxes')?.value) || 0,
-                monthlyInsurance: parseFloat(document.getElementById('insurance')?.value) || 0
-            };
-            
-            // Calculate MAO
-            const totalMonths = values.renovationDuration + values.timeToRefinance;
-            const monthlyHoldingCosts = values.monthlyTaxes + values.monthlyInsurance;
-            const totalHoldingCosts = monthlyHoldingCosts * totalMonths;
-            const totalProjectCosts = values.renovationCosts + values.closingCosts + totalHoldingCosts;
-            const mao = values.arv - totalProjectCosts - values.maxCashLeft;
-            
-            // Update display
-            const maoResult = document.getElementById('mao_result');
-            if (maoResult) {
-                maoResult.textContent = new Intl.NumberFormat('en-US', {
-                    style: 'currency',
-                    currency: 'USD',
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                }).format(mao);
-            }
-        } catch (error) {
-            console.error('Error calculating MAO:', error);
-        }
-    },
-    
-    // Add this helper function in analysis.js
-    getPadSplitLTRHTML: function() {
-        return `
-            <div class="card mb-4">
-                <div class="card-header">Purchase Details</div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="purchase_price" class="form-label">Purchase Price</label>
-                            <input type="number" class="form-control" id="purchase_price" name="purchase_price" 
-                                    placeholder="The sales price as recorded on the ALTA or HUD" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="after_repair_value" class="form-label">After Repair Value</label>
-                            <input type="number" class="form-control" id="after_repair_value" name="after_repair_value" 
-                                    placeholder="How much the property will be worth after renovation" required>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="renovation_costs" class="form-label">Renovation Costs (including Furnishing)</label>
-                            <input type="number" class="form-control" id="renovation_costs" name="renovation_costs" 
-                                    placeholder="How much you anticipate spending to renovate and furnish" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="renovation_duration" class="form-label">Renovation Duration (months)</label>
-                            <input type="number" class="form-control" id="renovation_duration" name="renovation_duration" 
-                                    placeholder="How long before the property is ready for market" required>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="cash_to_seller" class="form-label">Cash to Seller</label>
-                            <input type="number" class="form-control" id="cash_to_seller" name="cash_to_seller"
-                                    placeholder="How much cash you gave the seller at closing" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="assignment_fee" class="form-label">Assignment/Agent Fee</label>
-                            <input type="number" class="form-control" id="assignment_fee" name="assignment_fee" 
-                                    placeholder="Cost to work with someone to get this property" required>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="marketing_costs" class="form-label">Marketing Fee</label>
-                            <input type="number" class="form-control" id="marketing_costs" name="marketing_costs" 
-                                    placeholder="How much you intend to spend on marketing" required>
-                        </div>
-                    </div>
-                </div>
-                </div>
-
-            <div class="card mb-4">
-                <div class="card-header">Financing</div>
-                <div class="card-body" id="financing-section">
-                    <div id="loans-container">
-                        <!-- Loans will be dynamically added here -->
-                    </div>
-                    <button type="button" class="btn btn-primary mb-3" id="add-loan-btn">Add Loan</button>
-                </div>
-            </div>
-
-            <div class="card mb-4">
-                <div class="card-header">Rental Income</div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="monthly_rent" class="form-label">Monthly Income</label>
-                            <input type="number" class="form-control" id="monthly_rent" name="monthly_rent" 
-                                placeholder="Expected monthly rental income" required>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card mb-4">
-                <div class="card-header">Operating Expenses</div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="property_taxes" class="form-label">Property Taxes</label>
-                            <input type="number" class="form-control" id="property_taxes" name="property_taxes" 
-                                placeholder="Monthly property tax amount" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="insurance" class="form-label">Insurance</label>
-                            <input type="number" class="form-control" id="insurance" name="insurance" 
-                                placeholder="Monthly insurance costs" required>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="management_percentage" class="form-label">Management (%)</label>
-                            <input type="number" class="form-control" id="management_percentage" name="management_percentage" 
-                                value="8" min="0" max="100" step="0.5" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="capex_percentage" class="form-label">CapEx (%)</label>
-                            <input type="number" class="form-control" id="capex_percentage" name="capex_percentage" 
-                                value="2" min="0" max="100" step="0.5" required>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="repairs_percentage" class="form-label">Repairs (%)</label>
-                            <input type="number" class="form-control" id="repairs_percentage" name="repairs_percentage" 
-                                value="2" min="0" max="100" step="0.5" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="vacancy_percentage" class="form-label">Vacancy (%)</label>
-                            <input type="number" class="form-control" id="vacancy_percentage" name="vacancy_percentage" 
-                                value="4" min="0" max="100" step="0.5" required>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="hoa_coa_coop" class="form-label">HOA/COA/COOP</label>
-                            <input type="number" class="form-control" id="hoa_coa_coop" name="hoa_coa_coop" 
-                                placeholder="Monthly association costs, if any" required>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card mb-4">
-                <div class="card-header">PadSplit-Specific Expenses</div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="padsplit_platform_percentage" class="form-label">PadSplit Platform (%)</label>
-                            <input type="number" class="form-control" id="padsplit_platform_percentage" 
-                                name="padsplit_platform_percentage" value="12" min="0" max="100" 
-                                step="0.5" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="utilities" class="form-label">Utilities</label>
-                            <input type="number" class="form-control" id="utilities" name="utilities" 
-                                placeholder="Monthly utility costs" required>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="internet" class="form-label">Internet</label>
-                            <input type="number" class="form-control" id="internet" name="internet" 
-                                placeholder="Monthly Internet costs" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="cleaning_costs" class="form-label">Cleaning Costs</label>
-                            <input type="number" class="form-control" id="cleaning_costs" name="cleaning_costs" 
-                                placeholder="Monthly costs to clean common areas" required>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="pest_control" class="form-label">Pest Control</label>
-                            <input type="number" class="form-control" id="pest_control" name="pest_control" 
-                                placeholder="Monthly pest control costs" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="landscaping" class="form-label">Landscaping</label>
-                            <input type="number" class="form-control" id="landscaping" name="landscaping" 
-                                placeholder="Monthly landscaping budget" required>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    },
-    
     populateReportsTab: function(analysis) {
-        const reportsContent = document.querySelector('#reports');
-        if (!reportsContent) return;
-    
+        console.log('Starting populateReportsTab with analysis:', analysis);
+        
+        // Store ID and get reports container
         this.currentAnalysisId = analysis.id || null;
+        const reportsContent = document.querySelector('#reports');
+        
+        if (!reportsContent) {
+            console.error('Reports content element not found');
+            return;
+        }
+    
         const maoValue = this.calculateMAO(analysis);
+        console.log('Calculated MAO:', maoValue);
+    
+        // Verify content exists and structure
+        console.log('Found reports container:', reportsContent);
     
         let html = `
-            <div class="row align-items-start mb-4">
-                <div class="col">
-                    <h4 class="mb-0">${analysis.analysis_type || 'Analysis'}: ${analysis.analysis_name || 'Untitled'}</h4>
-                </div>
-                <div class="col-auto">
-                    <button onclick="analysisModule.downloadPdf('${this.currentAnalysisId}')" class="btn btn-primary ms-3">
-                        Download PDF
-                    </button>
-                </div>
+        <div class="row align-items-start mb-4">
+            <div class="col">
+                <h4 class="mb-0">${analysis.analysis_type || 'Analysis'}: ${analysis.analysis_name || 'Untitled'}</h4>
             </div>
-            
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="card mb-4">
-                        <div class="card-header">
-                            <h5 class="mb-0">Purchase Details</h5>
-                        </div>
-                        <div class="card-body">
-                            <p><strong>Purchase Price:</strong> ${analysis.purchase_details.purchase_price || '$0.00'}</p>
-                            <p><strong>Renovation Costs:</strong> ${analysis.purchase_details.renovation_costs || '$0.00'}</p>
-                            <p><strong>After Repair Value:</strong> ${analysis.purchase_details.after_repair_value || '$0.00'}</p>
-                            <p>
-                                <strong>Maximum Allowable Offer:</strong> ${maoValue}
-                                <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" data-bs-html="true" 
-                                   title="Maximum price based on your financing terms and cash requirements"></i>
-                            </p>
-                        </div>
-                    </div>
-                </div>
-    
-                <div class="col-md-6">
-                    <div class="card mb-4">
-                        <div class="card-header">
-                            <h5 class="mb-0">Income & Returns</h5>
-                        </div>
-                        <div class="card-body">
-                            <p><strong>Monthly Rent:</strong> ${analysis.financial_metrics.monthly_rent || '$0.00'}</p>
-                            <p><strong>Monthly Cash Flow:</strong> ${analysis.financial_metrics.monthly_cash_flow || '$0.00'}</p>
-                            <p><strong>Annual Cash Flow:</strong> ${analysis.financial_metrics.annual_cash_flow || '$0.00'}</p>
-                            <p><strong>Cash-on-Cash Return:</strong> ${analysis.financial_metrics.cash_on_cash_return || '0%'}</p>
-                        </div>
-                    </div>
-                </div>
+            <div class="col-auto">
+                <button 
+                    onclick="analysisModule.downloadPdf('${this.currentAnalysisId}')" 
+                    class="btn btn-primary ms-3"
+                >Download PDF</button>
             </div>
-    
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="card mb-4">
-                        <div class="card-header">
-                            <h5 class="mb-0">Operating Expenses</h5>
-                        </div>
-                        <div class="card-body">
-                            <p><strong>Property Taxes:</strong> ${analysis.operating_expenses.property_taxes || '$0.00'}</p>
-                            <p><strong>Insurance:</strong> ${analysis.operating_expenses.insurance || '$0.00'}</p>
-                            <p><strong>HOA/COA/COOP:</strong> ${analysis.operating_expenses.hoa_coa_coop || '$0.00'}</p>
-                            <p><strong>Management:</strong> ${analysis.operating_expenses.management_fee_percentage || '0%'}</p>
-                            <p><strong>CapEx:</strong> ${analysis.operating_expenses.capex_percentage || '0%'}</p>
-                            <p><strong>Repairs:</strong> ${analysis.operating_expenses.repairs_percentage || '0%'}</p>
-                            <p><strong>Vacancy:</strong> ${analysis.operating_expenses.vacancy_percentage || '0%'}</p>
-                            ${analysis.analysis_type.includes('PadSplit') ? `
-                                <p><strong>PadSplit Platform:</strong> ${analysis.operating_expenses.padsplit_platform_percentage || '0%'}</p>
-                                <p><strong>Utilities:</strong> ${analysis.operating_expenses.utilities || '$0.00'}</p>
-                                <p><strong>Internet:</strong> ${analysis.operating_expenses.internet || '$0.00'}</p>
-                                <p><strong>Cleaning:</strong> ${analysis.operating_expenses.cleaning || '$0.00'}</p>
-                                <p><strong>Pest Control:</strong> ${analysis.operating_expenses.pest_control || '$0.00'}</p>
-                                <p><strong>Landscaping:</strong> ${analysis.operating_expenses.landscaping || '$0.00'}</p>
-                            ` : ''}
-                            <p><strong>Total Monthly Expenses:</strong> ${analysis.operating_expenses.total_monthly_expenses || '$0.00'}</p>
-                        </div>
-                    </div>
-                </div>`;
-    
-        // BRRRR-specific sections
-        if (analysis.analysis_type.includes('BRRRR')) {
-            html += `
-                <div class="col-md-6">
-                    <div class="card mb-4">
-                        <div class="card-header">
-                            <h5 class="mb-0">Investment Summary</h5>
-                        </div>
-                        <div class="card-body">
-                            <p><strong>Total Project Costs:</strong> ${analysis.financial_metrics.total_project_costs || '$0.00'}</p>
-                            <p><strong>Total Cash Invested:</strong> ${analysis.financial_metrics.total_cash_invested || '$0.00'}</p>
-                            <p><strong>Cash Recouped:</strong> ${analysis.financial_metrics.cash_recouped || '$0.00'}</p>
-                            <p><strong>Equity Captured:</strong> ${analysis.financial_metrics.equity_captured || '$0.00'}</p>
-                        </div>
-                    </div>
-    
-                    <div class="card mb-4">
-                        <div class="card-header">
-                            <h5 class="mb-0">Financing Details</h5>
-                        </div>
-                        <div class="card-body">
-                            <h6 class="mb-2">Initial Purchase Loan</h6>
-                            <ul class="list-unstyled mb-4">
-                                <li>Amount: ${analysis.loans.initial_loan.amount || '$0.00'}</li>
-                                <li>Interest Rate: ${analysis.loans.initial_loan.interest_rate || '0.00%'}
-                                    <span class="badge ${analysis.loans.initial_loan.interest_only ? 'bg-success' : 'bg-info'} ms-2">
-                                        ${analysis.loans.initial_loan.interest_only ? 'Interest Only' : 'Amortized'}
-                                    </span>
-                                </li>
-                                <li>Term: ${analysis.loans.initial_loan.term_months || '0'} months</li>
-                                <li>Monthly Payment: ${analysis.loans.initial_loan.monthly_payment || '$0.00'}</li>
-                                <li>Down Payment: ${analysis.loans.initial_loan.down_payment || '$0.00'}</li>
-                                <li>Closing Costs: ${analysis.loans.initial_loan.closing_costs || '$0.00'}</li>
-                            </ul>
-                            <h6 class="mb-2">Refinance Loan</h6>
-                            <ul class="list-unstyled">
-                                <li>Amount: ${analysis.loans.refinance_loan.amount || '$0.00'}</li>
-                                <li>Interest Rate: ${analysis.loans.refinance_loan.interest_rate || '0.00%'}</li>
-                                <li>Term: ${analysis.loans.refinance_loan.term_months || '0'} months</li>
-                                <li>Monthly Payment: ${analysis.loans.refinance_loan.monthly_payment || '$0.00'}</li>
-                                <li>Down Payment: ${analysis.loans.refinance_loan.down_payment || '$0.00'}</li>
-                                <li>Closing Costs: ${analysis.loans.refinance_loan.closing_costs || '$0.00'}</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>`;
-        }
-    
-        
-        // LTR and PadSplit LTR loan details
-        if (analysis.analysis_type.includes('LTR') && analysis.loans?.length > 0) {
-            html += `
-                <div class="col-md-6">
-                    <div class="card mb-4">
-                        <div class="card-header">
-                            <h5 class="mb-0">Financing Details</h5>
-                        </div>
-                        <div class="card-body">
-                            ${analysis.loans.additional_loans.map(loan => `
-                                <div class="mb-4">
-                                    <h6 class="fw-bold">${loan.name}</h6>
-                                    <ul class="list-unstyled ms-3">
-                                        <li>Amount: ${this.cleanDisplayValue(loan.amount)}</li>
-                                        <li>Interest Rate: ${this.cleanDisplayValue(loan.interest_rate, 'percentage')}</li>
-                                        <li>Term: ${loan.term_months} months</li>
-                                        <li>Down Payment: ${this.cleanDisplayValue(loan.down_payment)}</li>
-                                        <li>Closing Costs: ${this.cleanDisplayValue(loan.closing_costs)}</li>
-                                    </ul>
+        </div>
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <h5 class="mb-3">Purchase Details</h5>
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <p class="mb-2"><strong>Purchase Price:</strong> ${analysis.purchase_price || '$0.00'}</p>
+                                    <p class="mb-2"><strong>Renovation Costs:</strong> ${analysis.renovation_costs || '$0.00'}</p>
+                                    <p class="mb-2"><strong>After Repair Value:</strong> ${analysis.after_repair_value || '$0.00'}</p>
+                                    <p class="mb-2">
+                                        <strong>Maximum Allowable Offer:</strong> ${maoValue}
+                                        <i class="ms-2 bi bi-info-circle" 
+                                           data-bs-toggle="tooltip" 
+                                           data-bs-html="true" 
+                                           title="This value represents the highest possible value of Purchase Price given your LTV Cash-Out Refi and the maximum amount you're willing to be stuck in a deal"></i>
+                                    </p>
                                 </div>
-                            `).join('')}
+                            </div>
+                        </div>
+    
+                        <div class="col-md-6 mb-4">
+                            <h5 class="mb-3">Income & Returns</h5>
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <p class="mb-2"><strong>Monthly Rent:</strong> ${analysis.monthly_rent || '$0.00'}</p>
+                                    <p class="mb-2"><strong>Monthly Cash Flow:</strong> ${analysis.monthly_cash_flow || '$0.00'}</p>
+                                    <p class="mb-2"><strong>Annual Cash Flow:</strong> ${analysis.annual_cash_flow || '$0.00'}</p>
+                                    <p class="mb-2"><strong>Cash-on-Cash Return:</strong> ${analysis.cash_on_cash_return || '0%'}</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>`;
-        }
+                </div>
 
-        html += '</div>'; // Close the main row
+                ${(analysis.analysis_type === 'BRRRR' || analysis.analysis_type === 'PadSplit BRRRR') ? `
+                <!-- Second row with Investment Summary and Financing Details -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>Investment Summary</h5>
+                        <div class="card bg-light mb-3">
+                            <div class="card-body">
+                                <p class="mb-2">
+                                    <strong>Total Project Costs:</strong> ${analysis.total_project_costs || '$0.00'}
+                                    <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" data-bs-html="true" 
+                                    title="Purchase Price + Renovation Costs + All Closing Costs - Cash Out from Refi"></i>
+                                </p>
+                                <p class="mb-2">
+                                    <strong>After Repair Value:</strong> ${analysis.after_repair_value || '$0.00'}
+                                </p>
+                                <p class="mb-2">
+                                    <strong>Refinance Loan Amount:</strong> ${analysis.refinance_loan_amount || '$0.00'}
+                                    <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" data-bs-html="true" 
+                                    title="New loan based on ARV × LTV%"></i>
+                                </p>
+                                <p class="mb-2">
+                                    <strong>Total Cash Invested:</strong> ${analysis.total_cash_invested || '$0.00'}
+                                    <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" data-bs-html="true" 
+                                    title="Total Project Costs - Refinance Loan Amount"></i>
+                                </p>
+                                <p class="mb-2">
+                                    <strong>Equity Captured:</strong> ${analysis.equity_captured || '$0.00'}
+                                    <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" data-bs-html="true" 
+                                    title="After Repair Value - Total Project Costs"></i>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
 
+                    <div class="col-md-6">
+                        <h5>Financing Details</h5>
+                        <div class="card bg-light mb-3">
+                            <div class="card-body">
+                                <p class="fw-bold mb-2">Initial Purchase Loan:</p>
+                                <ul class="list-unstyled ms-3 mb-3">
+                                    <li>Amount: ${analysis.initial_loan_amount || '$0.00'}</li>
+                                    <li>Interest Rate: ${analysis.initial_interest_rate || '0.00%'}
+                                        <span class="badge ${analysis.initial_interest_only ? 'bg-success' : 'bg-info'} ms-2">
+                                            ${analysis.initial_interest_only ? 'Interest Only' : 'Amortized'}
+                                        </span>
+                                    </li>
+                                    <li>Term: ${analysis.initial_loan_term || '0'} months</li>
+                                    <li>Monthly Payment: ${analysis.initial_monthly_payment || '$0.00'}</li>
+                                    <li>Down Payment: ${analysis.initial_down_payment || '$0.00'}</li>
+                                    <li>Closing Costs: ${analysis.initial_closing_costs || '$0.00'}</li>
+                                </ul>
+                                <p class="fw-bold mb-2">Refinance Loan:</p>
+                                <ul class="list-unstyled ms-3">
+                                    <li>Amount: ${analysis.refinance_loan_amount || '$0.00'}</li>
+                                    <li>Interest Rate: ${analysis.refinance_interest_rate || '0.00%'}
+                                        <span class="badge bg-info ms-2">Amortized</span>
+                                    </li>
+                                    <li>Term: ${analysis.refinance_loan_term || '0'} months</li>
+                                    <li>Monthly Payment: ${analysis.refinance_monthly_payment || '$0.00'}</li>
+                                    <li>Down Payment: ${analysis.refinance_down_payment || '$0.00'}</li>
+                                    <li>Closing Costs: ${analysis.refinance_closing_costs || '$0.00'}</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+            </div>
+        </div>`;
+
+        console.log('Generated HTML:', html);
+
+        // Set the HTML content
         reportsContent.innerHTML = html;
+        console.log('HTML content set. Current reports content:', reportsContent.innerHTML);
 
         // Initialize tooltips
         var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
         var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
             return new bootstrap.Tooltip(tooltipTriggerEl);
         });
+
+        // Add event handlers
+        this.initReportEventHandlers();
     },
 
     // Helper method to initialize report event handlers
@@ -2407,13 +2155,13 @@ window.analysisModule = {
         };
     
         try {
-            // Basic fields
+            // Set basic fields first
             console.log('Setting basic fields');
             setFieldValue('analysis_name', analysis.analysis_name);
-            setFieldValue('property_address', analysis.property_details.address);
-            setFieldValue('home_square_footage', analysis.property_details.square_footage, 'number');
-            setFieldValue('lot_square_footage', analysis.property_details.lot_size, 'number');
-            setFieldValue('year_built', analysis.property_details.year_built, 'number');
+            setFieldValue('property_address', analysis.property_address);
+            setFieldValue('home_square_footage', analysis.home_square_footage, 'number');
+            setFieldValue('lot_square_footage', analysis.lot_square_footage, 'number');
+            setFieldValue('year_built', analysis.year_built, 'number');
     
             // Set analysis type and trigger change event
             const analysisType = document.getElementById('analysis_type');
@@ -2427,33 +2175,33 @@ window.analysisModule = {
             setTimeout(() => {
                 console.log('Populating dynamic fields for type:', analysis.analysis_type);
                 
-                // Purchase details
-                console.log('Setting purchase details');
-                setFieldValue('purchase_price', analysis.purchase_details.purchase_price, 'money');
-                setFieldValue('after_repair_value', analysis.purchase_details.after_repair_value, 'money');
-                setFieldValue('renovation_costs', analysis.purchase_details.renovation_costs, 'money');
-                setFieldValue('renovation_duration', analysis.purchase_details.renovation_duration, 'number');
-                setFieldValue('cash_to_seller', analysis.purchase_details.cash_to_seller, 'money');
-                setFieldValue('closing_costs', analysis.purchase_details.closing_costs, 'money');
-                setFieldValue('assignment_fee', analysis.purchase_details.assignment_fee, 'money');
-                setFieldValue('marketing_costs', analysis.purchase_details.marketing_costs, 'money');
+                // Common fields for all analysis types
+                console.log('Setting common fields');
+                setFieldValue('purchase_price', analysis.purchase_price, 'money');
+                setFieldValue('after_repair_value', analysis.after_repair_value, 'money');
+                setFieldValue('renovation_costs', analysis.renovation_costs, 'money');
+                setFieldValue('renovation_duration', analysis.renovation_duration, 'number');
+                setFieldValue('monthly_rent', analysis.monthly_rent, 'money');
     
-                // Financial metrics
-                console.log('Setting financial metrics');
-                setFieldValue('monthly_rent', analysis.financial_metrics.monthly_rent, 'money');
+                // Common purchase closing details
+                console.log('Setting purchase closing details');
+                setFieldValue('cash_to_seller', analysis.cash_to_seller, 'money');
+                setFieldValue('closing_costs', analysis.closing_costs, 'money');
+                setFieldValue('assignment_fee', analysis.assignment_fee, 'money');
+                setFieldValue('marketing_costs', analysis.marketing_costs, 'money');
     
-                // Operating expenses
+                // Common operating expenses
                 console.log('Setting operating expenses');
-                setFieldValue('property_taxes', analysis.operating_expenses.property_taxes, 'money');
-                setFieldValue('insurance', analysis.operating_expenses.insurance, 'money');
-                setFieldValue('hoa_coa_coop', analysis.operating_expenses.hoa_coa_coop, 'money');
-                setFieldValue('management_percentage', analysis.operating_expenses.management_fee_percentage, 'percentage');
-                setFieldValue('capex_percentage', analysis.operating_expenses.capex_percentage, 'percentage');
-                setFieldValue('vacancy_percentage', analysis.operating_expenses.vacancy_percentage, 'percentage');
-                setFieldValue('repairs_percentage', analysis.operating_expenses.repairs_percentage, 'percentage');
+                setFieldValue('property_taxes', analysis.property_taxes, 'money');
+                setFieldValue('insurance', analysis.insurance, 'money');
+                setFieldValue('hoa_coa_coop', analysis.hoa_coa_coop, 'money');
+                setFieldValue('management_percentage', analysis.management_percentage, 'percentage');
+                setFieldValue('capex_percentage', analysis.capex_percentage, 'percentage');
+                setFieldValue('vacancy_percentage', analysis.vacancy_percentage, 'percentage');
+                setFieldValue('repairs_percentage', analysis.repairs_percentage, 'percentage');
     
                 // Handle loan data for both LTR and PadSplit LTR
-                if (analysis.analysis_type.includes('LTR') && analysis.loans.additional_loans) {
+                if (analysis.analysis_type.includes('LTR') && analysis.loans) {
                     console.log('Setting up loans for', analysis.analysis_type);
                     const loansContainer = document.getElementById('loans-container');
                     
@@ -2462,7 +2210,7 @@ window.analysisModule = {
                         loansContainer.innerHTML = '';
                         
                         // Add each loan
-                        analysis.loans.additional_loans.forEach((loan, index) => {
+                        analysis.loans.forEach((loan, index) => {
                             const addLoanBtn = document.getElementById('add-loan-btn');
                             if (addLoanBtn) {
                                 addLoanBtn.click();
@@ -2474,7 +2222,7 @@ window.analysisModule = {
                                     setFieldValue(`loan_amount_${loanNumber}`, loan.amount, 'money');
                                     setFieldValue(`loan_down_payment_${loanNumber}`, loan.down_payment, 'money');
                                     setFieldValue(`loan_interest_rate_${loanNumber}`, loan.interest_rate, 'percentage');
-                                    setFieldValue(`loan_term_${loanNumber}`, loan.term_months, 'number');
+                                    setFieldValue(`loan_term_${loanNumber}`, loan.term, 'number');
                                     setFieldValue(`loan_closing_costs_${loanNumber}`, loan.closing_costs, 'money');
                                 }, 100);
                             }
@@ -2487,37 +2235,37 @@ window.analysisModule = {
                     console.log('Setting BRRRR-specific fields');
                     
                     // Initial loan details
-                    setFieldValue('initial_loan_amount', analysis.loans.initial_loan.amount, 'money');
-                    setFieldValue('initial_down_payment', analysis.loans.initial_loan.down_payment, 'money');
-                    setFieldValue('initial_interest_rate', analysis.loans.initial_loan.interest_rate, 'percentage');
-                    setFieldValue('initial_loan_term', analysis.loans.initial_loan.term_months, 'number');
-                    setFieldValue('initial_closing_costs', analysis.loans.initial_loan.closing_costs, 'money');
+                    setFieldValue('initial_loan_amount', analysis.initial_loan_amount, 'money');
+                    setFieldValue('initial_down_payment', analysis.initial_down_payment, 'money');
+                    setFieldValue('initial_interest_rate', analysis.initial_interest_rate, 'percentage');
+                    setFieldValue('initial_loan_term', analysis.initial_loan_term, 'number');
+                    setFieldValue('initial_closing_costs', analysis.initial_closing_costs, 'money');
                     
                     // Set initial interest only checkbox
                     const initialInterestOnly = document.getElementById('initial_interest_only');
                     if (initialInterestOnly) {
-                        initialInterestOnly.checked = analysis.loans.initial_loan.interest_only;
+                        initialInterestOnly.checked = analysis.initial_interest_only;
                     }
                     
                     // Refinance details
-                    setFieldValue('refinance_loan_amount', analysis.loans.refinance_loan.amount, 'money');
-                    setFieldValue('refinance_down_payment', analysis.loans.refinance_loan.down_payment, 'money');
-                    setFieldValue('refinance_interest_rate', analysis.loans.refinance_loan.interest_rate, 'percentage');
-                    setFieldValue('refinance_loan_term', analysis.loans.refinance_loan.term_months, 'number');
-                    setFieldValue('refinance_closing_costs', analysis.loans.refinance_loan.closing_costs, 'money');
-                    setFieldValue('refinance_ltv_percentage', analysis.loans.refinance_loan.ltv_percentage, 'percentage');
-                    setFieldValue('max_cash_left', analysis.financial_metrics.max_cash_left, 'money');
+                    setFieldValue('refinance_loan_amount', analysis.refinance_loan_amount, 'money');
+                    setFieldValue('refinance_down_payment', analysis.refinance_down_payment, 'money');
+                    setFieldValue('refinance_interest_rate', analysis.refinance_interest_rate, 'percentage');
+                    setFieldValue('refinance_loan_term', analysis.refinance_loan_term, 'number');
+                    setFieldValue('refinance_closing_costs', analysis.refinance_closing_costs, 'money');
+                    setFieldValue('refinance_ltv_percentage', analysis.refinance_ltv_percentage, 'percentage');
+                    setFieldValue('max_cash_left', analysis.max_cash_left, 'money');
                 }
     
                 // PadSplit-specific fields
                 if (analysis.analysis_type.includes('PadSplit')) {
                     console.log('Setting PadSplit-specific fields');
-                    setFieldValue('padsplit_platform_percentage', analysis.operating_expenses.padsplit_platform_percentage, 'percentage');
-                    setFieldValue('utilities', analysis.operating_expenses.utilities, 'money');
-                    setFieldValue('internet', analysis.operating_expenses.internet, 'money');
-                    setFieldValue('cleaning_costs', analysis.operating_expenses.cleaning, 'money');
-                    setFieldValue('pest_control', analysis.operating_expenses.pest_control, 'money');
-                    setFieldValue('landscaping', analysis.operating_expenses.landscaping, 'money');
+                    setFieldValue('padsplit_platform_percentage', analysis.padsplit_platform_percentage, 'percentage');
+                    setFieldValue('utilities', analysis.utilities, 'money');
+                    setFieldValue('internet', analysis.internet, 'money');
+                    setFieldValue('cleaning_costs', analysis.cleaning_costs, 'money');
+                    setFieldValue('pest_control', analysis.pest_control, 'money');
+                    setFieldValue('landscaping', analysis.landscaping, 'money');
                 }
                 
             }, 500); // Added delay to ensure fields are loaded
@@ -2531,29 +2279,25 @@ window.analysisModule = {
     // Define setLoanFields as a method of the module
     setLoanFields: function(loanNumber, loan) {
         console.log(`Setting fields for loan ${loanNumber}:`, loan);
-    
+        
         const fields = {
             name: `loan_name_${loanNumber}`,
             amount: `loan_amount_${loanNumber}`,
             down_payment: `loan_down_payment_${loanNumber}`,
             interest_rate: `loan_interest_rate_${loanNumber}`,
-            term: `loan_term_${loanNumber}`,  // Changed from term_months
+            term: `loan_term_${loanNumber}`,
             closing_costs: `loan_closing_costs_${loanNumber}`
         };
 
         Object.entries(fields).forEach(([key, fieldId]) => {
             const field = document.getElementById(fieldId);
             if (field) {
-                // Get the loan value based on both possible field names
-                let value = loan[key] || loan[`${key}_months`] || '0';
-                
-                // Clean the value if it's a currency or percentage
-                if (typeof value === 'string') {
+                let value = loan[key];
+                if (typeof value === 'string' && (value.includes('$') || value.includes('%'))) {
                     value = value.replace(/[$,%]/g, '');
                 }
-                
                 field.value = value;
-                console.log(`Set ${fieldId} to ${value} (original: "${loan[key] || loan[`${key}_months`]}")`);
+                console.log(`Set ${fieldId} to ${value}`);
 
                 // Trigger change event
                 const event = new Event('change', { bubbles: true });

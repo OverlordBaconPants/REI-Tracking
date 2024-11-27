@@ -3,106 +3,56 @@
 
 <div class="container mt-4">
     <div class="card mb-4">
-        <div class="card-header bg-navy">
-            <h4 class="mb-0">MAO Calculator</h4>
+        <div class="card-header">
+            <h2 class="mb-0">Maximum Allowable Offer Calculator</h2>
         </div>
-        
+
         <div class="card-body">
             <form id="maoForm">
                 <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="mb-0">Required Fields</h5>
-                    </div>
+                    <div class="card-header">Property Details</div>
                     <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="after_repair_value" class="form-label">After Repair Value (ARV)</label>
-                                <input type="number" class="form-control" id="after_repair_value" name="after_repair_value" 
-                                       placeholder="Expected value after renovation" required>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="after_repair_value">After Repair Value</label>
+                                <input type="number" class="form-control" id="after_repair_value" required>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="max_cash_left" class="form-label">Maximum Cash Left in Deal</label>
-                                <input type="number" class="form-control" id="max_cash_left" name="max_cash_left" 
-                                       value="10000" placeholder="Maximum cash to leave in deal" required>
+                            <div class="form-group">
+                                <label for="renovation_costs">Renovation Costs</label>
+                                <input type="number" class="form-control" id="renovation_costs" required>
                             </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="renovation_costs" class="form-label">Renovation Costs</label>
-                                <input type="number" class="form-control" id="renovation_costs" name="renovation_costs" 
-                                       placeholder="Expected renovation costs" required>
+                            <div class="form-group">
+                                <label for="max_cash_left">Maximum Cash Left in Deal</label>
+                                <input type="number" class="form-control" id="max_cash_left" value="5000" step="500" required>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="closing_costs" class="form-label">Closing Costs</label>
-                                <input type="number" class="form-control" id="closing_costs" name="closing_costs" 
-                                       placeholder="Expected closing costs" required>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="renovation_duration" class="form-label">Renovation Duration (months)</label>
-                                <input type="number" class="form-control" id="renovation_duration" name="renovation_duration" 
-                                       placeholder="Expected renovation duration" required>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="time_to_refinance" class="form-label">Time to Refinance Post-Renovation (months)</label>
-                                <input type="number" class="form-control" id="time_to_refinance" name="time_to_refinance" 
-                                       placeholder="Expected time to secure refinancing" required>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="expected_ltv" class="form-label">Expected LTV (%)</label>
-                                    <input type="number" class="form-control" id="expected_ltv" name="expected_ltv" 
-                                           value="80" min="0" max="100" step="1" required>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label for="utilities" class="form-label">Monthly Utilities</label>
-                                <input type="number" class="form-control" id="utilities" name="utilities" 
-                                       value="100" placeholder="Monthly utility costs" required>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label for="hoa_coa" class="form-label">Monthly HOA/COA</label>
-                                <input type="number" class="form-control" id="hoa_coa" name="hoa_coa" 
-                                       value="0" placeholder="Monthly HOA/COA fees" required>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label for="maintenance" class="form-label">Monthly Maintenance</label>
-                                <input type="number" class="form-control" id="maintenance" name="maintenance" 
-                                       value="50" placeholder="Monthly maintenance costs" required>
+                            <div class="form-group">
+                                <label for="renovation_duration">Renovation Duration (months)</label>
+                                <input type="number" class="form-control" id="renovation_duration" step="1" required>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="mb-0">Initial Loan Details</h5>
-                    </div>
+                    <div class="card-header">Loan Details</div>
                     <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="loan_amount" class="form-label">Initial Loan Amount</label>
-                                <input type="number" class="form-control" id="loan_amount" name="loan_amount" 
-                                       placeholder="75% ARV + Renovation Costs" required>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="expected_ltv">Expected LTV (%)</label>
+                                <input type="number" class="form-control" id="expected_ltv" value="80" step="0.5" required>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <div class="d-flex align-items-end gap-2">
-                                    <div style="flex: 1;">
-                                        <label for="interest_rate" class="form-label">Interest Rate (%)</label>
-                                        <input type="number" class="form-control" id="interest_rate" name="interest_rate" 
-                                            value="12" step="0.125" required>
-                                    </div>
-                                    <div class="mb-2">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="interest_only" name="interest_only" checked>
-                                            <label class="form-check-label" for="interest_only">
-                                                Interest Only
-                                            </label>
-                                        </div>
-                                    </div>
+                            <div class="form-group">
+                                <label for="interest_rate">Interest Rate (%)</label>
+                                <input type="number" class="form-control" id="interest_rate" step="0.125" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="closing_costs">Closing Costs</label>
+                                <input type="number" class="form-control" id="closing_costs" required>
+                            </div>
+                            <div class="form-group">
+                                <div class="form-check mt-4">
+                                    <input type="checkbox" class="form-check-input" id="interest_only">
+                                    <label class="form-check-label" for="interest_only">Interest Only Loan</label>
                                 </div>
                             </div>
                         </div>
@@ -110,13 +60,48 @@
                 </div>
 
                 <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="mb-0">Maximum Allowable Offer</h5>
-                    </div>
+                    <div class="card-header">Monthly Expenses</div>
                     <div class="card-body">
-                        <div class="row">
-                            <div class="col-12">
-                                <h3 class="text-center" id="mao_result">$0.00</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="utilities">Monthly Utilities</label>
+                                <input type="number" class="form-control" id="utilities" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="hoa_coa">Monthly HOA/COA</label>
+                                <input type="number" class="form-control" id="hoa_coa" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="maintenance">Monthly Maintenance</label>
+                                <input type="number" class="form-control" id="maintenance" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="time_to_refinance">Time to Refinance (months)</label>
+                                <input type="number" class="form-control" id="time_to_refinance" step="1" required>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header">Results</div>
+                    <div class="card-body">
+                        <div class="form-grid">
+                            <div>
+                                <label>Maximum Allowable Offer:</label>
+                                <div id="mao_result" class="result-value">$0.00</div>
+                            </div>
+                            <div>
+                                <label>Initial Loan Amount:</label>
+                                <div id="loan_amount" class="result-value">$0.00</div>
+                            </div>
+                            <div>
+                                <label>Monthly Holding Costs:</label>
+                                <div id="monthly_holding_costs" class="result-value">$0.00</div>
+                            </div>
+                            <div>
+                                <label>Total Project Costs:</label>
+                                <div id="total_project_costs" class="result-value">$0.00</div>
                             </div>
                         </div>
                     </div>
@@ -129,8 +114,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script type="module">
-    import maoCalculator from "{{ url_for('static', filename='js/modules/mao_calculator.js') }}";
-    maoCalculator.init();
-</script>
+<script type="module" src="{{ url_for('static', filename='js/modules/mao_calculator.js') }}"></script>
 {% endblock %}

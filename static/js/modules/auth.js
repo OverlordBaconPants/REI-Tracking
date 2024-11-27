@@ -7,7 +7,6 @@ const authModule = {
             await this.initializePasswordValidation();
             this.setupFormValidation();
             this.setupPasswordStrengthMeter();
-            this.setupPasswordToggle();
             console.log('Auth module initialized successfully');
         } catch (error) {
             console.error('Error initializing auth module:', error);
@@ -42,156 +41,52 @@ const authModule = {
         const form = document.querySelector('form');
         if (!form) return;
 
-        // Remove any existing event listeners
-        const newForm = form.cloneNode(true);
-        form.parentNode.replaceChild(newForm, form);
-        
-        newForm.addEventListener('submit', async (e) => {
+        form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            if (this.validateForm(newForm)) {
-                const submitButton = newForm.querySelector('button[type="submit"]');
+            if (this.validateForm(form)) {
+                // Store the submit button reference
+                const submitButton = form.querySelector('button[type="submit"]');
                 const originalText = submitButton?.innerHTML || 'Submit';
                 
                 try {
+                    // Update button state
                     if (submitButton) {
                         submitButton.disabled = true;
                         submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
                     }
 
-                    const response = await fetch(newForm.action, {
-                        method: newForm.method,
-                        body: new FormData(newForm),
+                    // Submit the form
+                    const response = await fetch(form.action, {
+                        method: form.method,
+                        body: new FormData(form),
                         headers: {
                             'X-Requested-With': 'XMLHttpRequest'
                         }
                     });
 
-                    const text = await response.text();
-                    
-                    // Check if login was successful
-                    if (text.includes('Logged in successfully')) {
-                        // Clean up before redirect
-                        const cleanupAndRedirect = () => {
-                            // Remove all event listeners from the form
-                            newForm.replaceWith(newForm.cloneNode(true));
-                            
-                            // Remove toastr containers
-                            const toastrContainers = document.querySelectorAll('#toast-container, #toastr-top');
-                            toastrContainers.forEach(container => {
-                                if (container && container.parentNode) {
-                                    container.parentNode.removeChild(container);
-                                }
-                            });
+                    const data = await response.json();
 
-                            // Remove any bootstrap components
-                            const bootstrapElements = document.querySelectorAll('[data-bs-toggle]');
-                            bootstrapElements.forEach(element => {
-                                const tooltip = bootstrap.Tooltip.getInstance(element);
-                                if (tooltip) {
-                                    tooltip.dispose();
-                                }
-                                const popover = bootstrap.Popover.getInstance(element);
-                                if (popover) {
-                                    popover.dispose();
-                                }
-                            });
-
-                            // Parse the URL from the response
-                            const parser = new DOMParser();
-                            const doc = parser.parseFromString(text, 'text/html');
-                            const redirectMeta = doc.querySelector('meta[http-equiv="refresh"]');
-                            const redirectUrl = redirectMeta ? 
-                                redirectMeta.content.split('URL=')[1] : 
-                                '/';
-
-                            // Navigate to new page
-                            window.location.assign(redirectUrl);
-                        };
-
-                        // Show success notification and redirect
-                        window.showNotification('Logged in successfully.', 'success', 'both');
-                        setTimeout(cleanupAndRedirect, 1000);
+                    if (data.success) {
+                        window.showNotification(data.message || 'Success!', 'success');
+                        if (data.redirect) {
+                            setTimeout(() => {
+                                window.location.href = data.redirect;
+                            }, 1500);
+                        }
                     } else {
-                        // Handle error responses
-                        const parser = new DOMParser();
-                        const doc = parser.parseFromString(text, 'text/html');
-                        const errorMessages = Array.from(doc.querySelectorAll('.alert-danger, .error-message'))
-                            .map(el => el.textContent.trim())
-                            .filter(msg => msg);
-
-                        if (errorMessages.length > 0) {
-                            window.showNotification(errorMessages[0], 'error', 'both');
-                        } else if (text.includes('error')) {
-                            window.showNotification('An error occurred during login.', 'error', 'both');
-                        }
-                        
-                        // Update the page content
-                        document.body.innerHTML = text;
-                        // Reinitialize components
-                        if (window.mainInit) {
-                            window.mainInit();
-                        }
+                        throw new Error(data.message || 'An error occurred');
                     }
                 } catch (error) {
                     console.error('Form submission error:', error);
-                    window.showNotification('An error occurred. Please try again.', 'error', 'both');
-                } finally {
-                    // Reset button state if not redirecting
-                    if (!text?.includes('Logged in successfully')) {
-                        if (submitButton) {
-                            submitButton.disabled = false;
-                            submitButton.innerHTML = originalText;
-                        }
+                    window.showNotification(error.message || 'An error occurred. Please try again.', 'error');
+                    
+                    // Re-enable the submit button
+                    if (submitButton) {
+                        submitButton.disabled = false;
+                        submitButton.innerHTML = originalText;
                     }
                 }
             }
-        });
-    },
-
-    setupPasswordToggle: function() {
-        const passwordFields = document.querySelectorAll('input[type="password"]');
-        
-        passwordFields.forEach(passwordField => {
-            // Create wrapper div if it doesn't exist
-            let wrapper = passwordField.parentElement;
-            if (!wrapper.classList.contains('password-toggle-wrapper')) {
-                wrapper = document.createElement('div');
-                wrapper.className = 'password-toggle-wrapper position-relative';
-                passwordField.parentNode.insertBefore(wrapper, passwordField);
-                wrapper.appendChild(passwordField);
-            }
-
-            // Create and add toggle button
-            const toggleBtn = document.createElement('button');
-            toggleBtn.type = 'button';
-            toggleBtn.className = 'btn btn-link position-absolute top-50 end-0 translate-middle-y text-decoration-none pe-2';
-            toggleBtn.style.zIndex = '10';
-            toggleBtn.innerHTML = '<i class="bi bi-eye-slash"></i>';
-            
-            // Add aria label for accessibility
-            toggleBtn.setAttribute('aria-label', 'Toggle password visibility');
-            
-            // Add click handler
-            toggleBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                const icon = toggleBtn.querySelector('i');
-                if (passwordField.type === 'password') {
-                    passwordField.type = 'text';
-                    icon.className = 'bi bi-eye';
-                    toggleBtn.setAttribute('aria-label', 'Hide password');
-                } else {
-                    passwordField.type = 'password';
-                    icon.className = 'bi bi-eye-slash';
-                    toggleBtn.setAttribute('aria-label', 'Show password');
-                }
-                // Maintain focus on the password field
-                passwordField.focus();
-            });
-            
-            wrapper.appendChild(toggleBtn);
-            
-            // Adjust the password field's padding to prevent overlap
-            passwordField.style.paddingRight = '2.5rem';
         });
     },
 
@@ -266,6 +161,95 @@ const authModule = {
             
             // Update text
             strengthText.textContent = strength.label;
+        });
+    },
+
+    setupFormValidation: function() {
+        const form = document.querySelector('form');
+        if (!form) return;
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (this.validateForm(form)) {
+                // Store the submit button reference
+                const submitButton = form.querySelector('button[type="submit"]');
+                const originalText = submitButton?.innerHTML || 'Submit';
+                
+                try {
+                    // Update button state
+                    if (submitButton) {
+                        submitButton.disabled = true;
+                        submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
+                    }
+
+                    // Submit the form
+                    const response = await fetch(form.action, {
+                        method: form.method,
+                        body: new FormData(form),
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+
+                    // Check if the response redirects (success case)
+                    if (response.redirected) {
+                        window.location.href = response.url;
+                        return;
+                    }
+
+                    // Check content type
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                        // Handle JSON response
+                        const data = await response.json();
+                        if (data.success) {
+                            window.showNotification(data.message || 'Success!', 'success');
+                            if (data.redirect) {
+                                setTimeout(() => {
+                                    window.location.href = data.redirect;
+                                }, 1500);
+                            }
+                        } else {
+                            throw new Error(data.message || 'An error occurred');
+                        }
+                    } else {
+                        // Handle non-JSON response (likely HTML)
+                        const text = await response.text();
+                        
+                        // Check if it's a successful response with redirect
+                        if (response.ok) {
+                            // If there's a success message in a data attribute or similar
+                            const successMsg = form.dataset.successMessage || 'Success!';
+                            window.showNotification(successMsg, 'success');
+                            
+                            // Allow the form's natural submission to handle redirect
+                            setTimeout(() => {
+                                form.submit();
+                            }, 1500);
+                        } else {
+                            // Extract error message from HTML if possible
+                            let errorMsg = 'An error occurred';
+                            const errorElement = new DOMParser()
+                                .parseFromString(text, 'text/html')
+                                .querySelector('.alert-danger');
+                            
+                            if (errorElement) {
+                                errorMsg = errorElement.textContent.trim();
+                            }
+                            throw new Error(errorMsg);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Form submission error:', error);
+                    window.showNotification(error.message || 'An error occurred. Please try again.', 'error');
+                    
+                    // Re-enable the submit button
+                    if (submitButton) {
+                        submitButton.disabled = false;
+                        submitButton.innerHTML = originalText;
+                    }
+                }
+            }
         });
     },
 

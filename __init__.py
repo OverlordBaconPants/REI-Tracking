@@ -1,15 +1,14 @@
 from flask import Flask
-from flask_login import LoginManager, UserMixin
+from flask_login import LoginManager, login_required, UserMixin
 from config import Config
 import os
+import dash
 import logging
 from logging.handlers import RotatingFileHandler
 from dash_apps.dash_transactions import create_transactions_dash
 from dash_apps.dash_amortization import create_amortization_dash
 from dash_apps.dash_portfolio import create_portfolio_dash
-
-# Initialize login manager first
-login_manager = LoginManager()
+from flask.helpers import get_root_path
 
 # Make User available for import from this module
 __all__ = ['User', 'create_app']
@@ -52,6 +51,8 @@ class User(UserMixin):
     @property
     def is_anonymous(self):
         return False
+
+login_manager = LoginManager()
 
 def configure_logging(app):
     # Create logs directory if it doesn't exist
@@ -108,7 +109,6 @@ def create_app(config_class=Config):
     from routes.api import api_bp
     from routes.dashboards import dashboards_bp
     from routes.analyses import analyses_bp
-    from routes.monitor import monitor_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
@@ -117,7 +117,6 @@ def create_app(config_class=Config):
     app.register_blueprint(api_bp, url_prefix='/api')
     app.register_blueprint(dashboards_bp)
     app.register_blueprint(analyses_bp, url_prefix='/analyses')
-    app.register_blueprint(monitor_bp) 
 
     # Set up login loader
     @login_manager.user_loader

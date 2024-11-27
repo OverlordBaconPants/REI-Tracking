@@ -455,8 +455,7 @@ def add_security_headers(response):
         "script-src 'self' 'unsafe-inline' 'unsafe-eval' "
         "https://code.jquery.com "
         "https://cdn.jsdelivr.net "
-        "https://cdnjs.cloudflare.com "
-        "https://unpkg.com",  # Add this line for Lucide
+        "https://cdnjs.cloudflare.com",
         
         # Style sources
         "style-src 'self' 'unsafe-inline' "

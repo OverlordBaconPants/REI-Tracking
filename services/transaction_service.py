@@ -8,10 +8,14 @@ from fuzzywuzzy import process
 import re
 
 def get_properties_for_user(user_id, user_name, is_admin=False):
-    logging.debug(f"Getting properties for user: {user_name} (ID: {user_id})")
+    logging.debug(f"Getting properties for user: {user_name} (ID: {user_id}), is_admin: {is_admin}")
     try:
         properties = read_json(current_app.config['PROPERTIES_FILE'])
         logging.debug(f"Read properties file, found {len(properties)} properties")
+        
+        if is_admin:
+            logging.info(f"Admin user, returning all {len(properties)} properties")
+            return properties
         
         user_properties = [
             prop for prop in properties
@@ -151,11 +155,6 @@ def get_transactions_for_view(user_id, user_name, property_id=None, reimbursemen
         flat_t['documentation_file'] = t.get('documentation_file', '')
         flat_t['reimbursement_documentation'] = t.get('reimbursement', {}).get('documentation', '')
         flattened_transactions.append(flat_t)
-
-    # Add filter dates to each transaction if they exist
-    for t in flattened_transactions:
-        t['date_filter_start'] = start_date
-        t['date_filter_end'] = end_date
     
     return flattened_transactions
 

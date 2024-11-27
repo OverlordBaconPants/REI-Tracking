@@ -12,10 +12,8 @@ share/jupyter/*
 etc/*
 data/*
 lib/*
-lib64
+lib64/*
 pyvenv.config
 import_statement.txt
 venv/*
 .env
-generate_secret.py
-test_structure.txt

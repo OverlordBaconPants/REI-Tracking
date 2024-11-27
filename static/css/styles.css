@@ -1,12 +1,18 @@
-[data-lucide] {
-    stroke: white;
-    stroke-width: 1.5;
-    width: 18px;
-    height: 18px;
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
 }
 
-body {
-    overflow-x: hidden;
+.container-fluid {
+    min-height: 100vh;
+    padding: 0;
+    margin: 0;
+}
+
+.content {
+    flex: 1 0 auto;
 }
 
 .new-partner-name {
@@ -26,7 +32,9 @@ body {
     padding: 48px 0 0;
     box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
     background-color: navy;
-    width: 200px;
+    width: 250px;
+    height: 100vh;
+    overflow-y: auto;
 }
 
 .sidebar .accordion-button {
@@ -112,7 +120,7 @@ main {
 }
 
 .form-group, .btn {
-    margin: 10px 0;
+    margin: 5px 0;
 }
 
 .form-group.position-relative {
@@ -123,6 +131,30 @@ main {
 /* Add styles for the input focus state */
 .form-control:focus + .autocomplete-results {
     display: block;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    margin-bottom: 5px;
+}
+
+.full-width {
+    grid-column: 1 / -1;
+}
+
+.results-card {
+    background: #f8f9fa;
+    padding: px;
+    border-radius: 8px;
+    margin-top: 20px;
+}
+
+.result-value {
+    font-size: 24px;
+    font-weight: bold;
+    color: #28a745;
 }
 
 .autocomplete-container {
@@ -341,6 +373,32 @@ main {
     font-size: 0.875rem;
 }
 
+.password-toggle-wrapper {
+    position: relative;
+}
+
+.password-toggle-wrapper .btn-link {
+    color: #6c757d;  /* Bootstrap secondary color */
+    padding: 0;
+    margin: 0;
+}
+
+.password-toggle-wrapper .btn-link:hover {
+    color: #4a4f53;  /* Slightly darker on hover */
+}
+
+/* Ensure the icon doesn't interfere with any validation icons */
+.password-toggle-wrapper .btn-link {
+    pointer-events: auto;
+    z-index: 4;
+}
+
+/* Adjust padding for password fields */
+.password-toggle-wrapper input[type="password"],
+.password-toggle-wrapper input[type="text"] {
+    padding-right: 2.5rem;
+}
+
 .property-table thead{
     background-color: #000080 !important;  /* Navy blue */
     color: white !important;
@@ -459,32 +517,6 @@ main {
     height: 4px;
     background-color: rgba(0, 0, 0, 0.2);
     opacity: 0.8;
-}
-
-.password-toggle-wrapper {
-    position: relative;
-}
-
-.password-toggle-wrapper .btn-link {
-    color: #6c757d;  /* Bootstrap secondary color */
-    padding: 0;
-    margin: 0;
-}
-
-.password-toggle-wrapper .btn-link:hover {
-    color: #4a4f53;  /* Slightly darker on hover */
-}
-
-/* Ensure the icon doesn't interfere with any validation icons */
-.password-toggle-wrapper .btn-link {
-    pointer-events: auto;
-    z-index: 4;
-}
-
-/* Adjust padding for password fields */
-.password-toggle-wrapper input[type="password"],
-.password-toggle-wrapper input[type="text"] {
-    padding-right: 2.5rem;
 }
 
 /* Animation classes */

@@ -111,16 +111,9 @@ const addPropertiesModule = {
     },
 
     initPartnersSection: function() {
-       
         const partnersContainer = document.getElementById('partners-container');
         const addPartnerButton = document.getElementById('add-partner-button');
-
-        // Initialize tooltips
-        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl);
-        });
-
+        
         if (partnersContainer && addPartnerButton) {
             // Remove existing event listeners for better cleanup
             addPartnerButton.replaceWith(addPartnerButton.cloneNode(true));
@@ -133,10 +126,6 @@ const addPropertiesModule = {
             partnersContainer.addEventListener('change', this.handlePartnerChange.bind(this));
             partnersContainer.addEventListener('input', this.updateTotalEquity.bind(this));
             partnersContainer.addEventListener('click', this.removePartner.bind(this));
-            partnersContainer.addEventListener('change', (e) => {
-                this.handlePartnerChange(e);
-                this.handlePropertyManagerSelect(e);
-            });
     
             // Add initial partner if container is empty
             if (!partnersContainer.querySelector('.partner-entry')) {
@@ -266,7 +255,7 @@ const addPropertiesModule = {
         const newPartnerHtml = `
             <div class="partner-entry mb-3">
                 <div class="row align-items-end">
-                    <div class="col-md-4">
+                    <div class="col-md-5">
                         <div class="form-group">
                             <label for="partner-select-${partnerCount}">Partner:</label>
                             <select id="partner-select-${partnerCount}" name="partners[${partnerCount}][name]" class="form-control partner-select">
@@ -280,26 +269,10 @@ const addPropertiesModule = {
                             <input type="text" id="new-partner-name-${partnerCount}" name="partners[${partnerCount}][new_name]" class="form-control">
                         </div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-5">
                         <div class="form-group">
                             <label for="partner-equity-${partnerCount}">Equity Share (%):</label>
                             <input type="number" id="partner-equity-${partnerCount}" name="partners[${partnerCount}][equity_share]" class="form-control partner-equity" step="0.01" min="0" max="100">
-                        </div>
-                    </div>
-                    <div class="col-md-2">
-                        <div class="form-group">
-                            <div class="form-check d-flex align-items-center">
-                                <input type="checkbox" id="property-manager-${partnerCount}" name="partners[${partnerCount}][is_property_manager]" class="form-check-input property-manager-checkbox">
-                                <label class="form-check-label mx-2" for="property-manager-${partnerCount}">Property Manager</label>
-                                <i class="bi bi-info-circle" 
-                                data-bs-toggle="tooltip" 
-                                data-bs-placement="top" 
-                                title="Property Managers have additional privileges including:
-                                • Ability to edit property details
-                                • Ability to delete properties
-                                • Full transaction management rights">
-                                </i>
-                            </div>
                         </div>
                     </div>
                     <div class="col-md-2">
@@ -313,22 +286,9 @@ const addPropertiesModule = {
         console.log('New partner entry added');
     },
 
-    // Add event handler for property manager checkboxes
-    handlePropertyManagerSelect: function(event) {
-        if (event.target.classList.contains('property-manager-checkbox')) {
-            const checkboxes = document.querySelectorAll('.property-manager-checkbox');
-            checkboxes.forEach(checkbox => {
-                if (checkbox !== event.target) {
-                    checkbox.checked = false;
-                }
-            });
-        }
-    },
-
     getPartnerOptions: function() {
         // Use partners from template
         const partnerSelects = document.querySelectorAll('.partner-select');
-        
         if (partnerSelects.length > 0) {
             // If we have existing selects, use their options
             return Array.from(partnerSelects[0].options)
@@ -397,53 +357,61 @@ const addPropertiesModule = {
             return;
         }
     
-        // Helper function to convert to numeric value
-        const toNumber = (value) => {
-            if (!value || value === '') return 0;
-            // Remove any formatting characters and convert to number
-            const cleaned = value.toString().replace(/[$,%\s]/g, '');
-            return Number(cleaned);
+        // Helper function to safely get and parse numeric values
+        const getNumericValue = (fieldName, defaultValue = 0) => {
+            const value = formData.get(fieldName);
+            if (value === null || value === '') {
+                console.warn(`Field ${fieldName} is missing or empty, using default value: ${defaultValue}`);
+                return defaultValue;
+            }
+            return isNaN(parseFloat(value)) ? defaultValue : parseFloat(value);
+        };
+    
+        // Helper function to safely get string values
+        const getStringValue = (fieldName, defaultValue = '') => {
+            const value = formData.get(fieldName);
+            return value === null ? defaultValue : value;
         };
     
         try {
             const propertyData = {
-                address: (formData.get('property_address') || '').trim(),
-                purchase_price: toNumber(formData.get('purchase_price')),
-                down_payment: toNumber(formData.get('down_payment')),
-                primary_loan_rate: toNumber(formData.get('primary_loan_rate')),
-                primary_loan_term: toNumber(formData.get('primary_loan_term')),
-                purchase_date: formData.get('purchase_date') || '',
-                loan_amount: toNumber(formData.get('loan_amount')),
-                loan_start_date: formData.get('loan_start_date') || '',
-                seller_financing_amount: toNumber(formData.get('seller_financing_amount')),
-                seller_financing_rate: toNumber(formData.get('seller_financing_rate')),
-                seller_financing_term: toNumber(formData.get('seller_financing_term')),
-                closing_costs: toNumber(formData.get('closing_costs')),
-                renovation_costs: toNumber(formData.get('renovation_costs')),
-                marketing_costs: toNumber(formData.get('marketing_costs')),
-                holding_costs: toNumber(formData.get('holding_costs')),
+                address: getStringValue('property_address'),
+                purchase_price: getNumericValue('purchase_price'),
+                down_payment: getNumericValue('down_payment'),
+                primary_loan_rate: getNumericValue('primary_loan_rate'),
+                primary_loan_term: getNumericValue('primary_loan_term'),
+                purchase_date: getStringValue('purchase_date'),
+                loan_amount: getStringValue('loan_amount'),
+                loan_start_date: getStringValue('loan_start_date'),
+                seller_financing_amount: getNumericValue('seller_financing_amount'),
+                seller_financing_rate: getNumericValue('seller_financing_rate'),
+                seller_financing_term: getNumericValue('seller_financing_term'),
+                closing_costs: getNumericValue('closing_costs'),
+                renovation_costs: getNumericValue('renovation_costs'),
+                marketing_costs: getNumericValue('marketing_costs'),
+                holding_costs: getNumericValue('holding_costs'),
                 monthly_income: {
-                    rental_income: toNumber(formData.get('monthly_income[rental_income]')),
-                    parking_income: toNumber(formData.get('monthly_income[parking_income]')),
-                    laundry_income: toNumber(formData.get('monthly_income[laundry_income]')),
-                    other_income: toNumber(formData.get('monthly_income[other_income]')),
-                    income_notes: (formData.get('monthly_income[income_notes]') || '').trim()
+                    rental_income: getNumericValue('monthly_income[rental_income]'),
+                    parking_income: getNumericValue('monthly_income[parking_income]'),
+                    laundry_income: getNumericValue('monthly_income[laundry_income]'),
+                    other_income: getNumericValue('monthly_income[other_income]'),
+                    income_notes: getStringValue('monthly_income[income_notes]')
                 },
                 monthly_expenses: {
-                    property_tax: toNumber(formData.get('monthly_expenses[property_tax]')),
-                    insurance: toNumber(formData.get('monthly_expenses[insurance]')),
-                    repairs: toNumber(formData.get('monthly_expenses[repairs]')),
-                    capex: toNumber(formData.get('monthly_expenses[capex]')),
-                    property_management: toNumber(formData.get('monthly_expenses[property_management]')),
-                    hoa_fees: toNumber(formData.get('monthly_expenses[hoa_fees]')),
+                    property_tax: getNumericValue('monthly_expenses[property_tax]'),
+                    insurance: getNumericValue('monthly_expenses[insurance]'),
+                    repairs: getNumericValue('monthly_expenses[repairs]'),
+                    capex: getNumericValue('monthly_expenses[capex]'),
+                    property_management: getNumericValue('monthly_expenses[property_management]'),
+                    hoa_fees: getNumericValue('monthly_expenses[hoa_fees]'),
                     utilities: {
-                        water: toNumber(formData.get('monthly_expenses[utilities][water]')),
-                        electricity: toNumber(formData.get('monthly_expenses[utilities][electricity]')),
-                        gas: toNumber(formData.get('monthly_expenses[utilities][gas]')),
-                        trash: toNumber(formData.get('monthly_expenses[utilities][trash]'))
+                        water: getNumericValue('monthly_expenses[utilities][water]'),
+                        electricity: getNumericValue('monthly_expenses[utilities][electricity]'),
+                        gas: getNumericValue('monthly_expenses[utilities][gas]'),
+                        trash: getNumericValue('monthly_expenses[utilities][trash]')
                     },
-                    other_expenses: toNumber(formData.get('monthly_expenses[other_expenses]')),
-                    expense_notes: (formData.get('monthly_expenses[expense_notes]') || '').trim()
+                    other_expenses: getNumericValue('monthly_expenses[other_expenses]'),
+                    expense_notes: getStringValue('monthly_expenses[expense_notes]')
                 },
                 partners: []
             };
@@ -456,7 +424,7 @@ const addPropertiesModule = {
                 
                 if (nameInput && equityInput) {
                     let name = nameInput.value.trim();
-                    const equityShare = toNumber(equityInput.value);
+                    const equityShare = parseFloat(equityInput.value);
                     
                     if (name === 'new') {
                         const newPartnerNameInput = entry.querySelector(`[name="partners[${index}][new_name]"]`);
@@ -466,11 +434,7 @@ const addPropertiesModule = {
                     }
                     
                     if (name && !isNaN(equityShare)) {
-                        propertyData.partners.push({ 
-                            name, 
-                            equity_share: equityShare,
-                            is_property_manager: entry.querySelector(`[name="partners[${index}][is_property_manager]"]`).checked
-                        });
+                        propertyData.partners.push({ name, equity_share: equityShare });
                     }
                 }
             });
@@ -481,45 +445,21 @@ const addPropertiesModule = {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
                 },
                 body: JSON.stringify(propertyData)
             })
-            .then(response => {
-                if (!response.ok) {
-                    const contentType = response.headers.get('content-type');
-                    if (contentType && contentType.includes('application/json')) {
-                        return response.json().then(data => {
-                            throw new Error(data.message || 'Server error');
-                        });
-                    } else {
-                        return response.text().then(text => {
-                            console.error('Server error response:', text);
-                            throw new Error('Server error occurred. Check console for details.');
-                        });
-                    }
-                }
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
                 console.log('Server response:', data);
                 if (data.success) {
-                    window.showNotification('Property added successfully!', 'success', 'both');
-                    // Wait 2 seconds before redirecting
-                    setTimeout(() => {
-                        window.location.href = '/properties/add_properties';
-                    }, 2000);
+                    window.location.reload();
                 } else {
-                    if (data.errors && data.errors.length > 0) {
-                        window.showNotification('Validation errors: ' + data.errors.join(', '), 'error', 'both');
-                    } else {
-                        window.showNotification('Error: ' + data.message, 'error', 'both');
-                    }
+                    window.showNotification('Error: ' + data.message, 'error', 'both');
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                window.showNotification(error.message || 'An error occurred while adding the property. Check console for details.', 'error', 'both');
+                window.showNotification('An error occurred while adding the property. Please check the console for more details.', 'error', 'both');
             });
     
         } catch (error) {
@@ -574,15 +514,6 @@ const addPropertiesModule = {
                 totalEquity += parseFloat(equityInput.value);
             }
         });
-
-        // Validate property manager selection
-        const propertyManagerSelected = Array.from(form.querySelectorAll('.property-manager-checkbox'))
-        .some(checkbox => checkbox.checked);
-
-        if (!propertyManagerSelected) {
-            window.showNotification('Please designate one partner as Property Manager.', 'error', 'both');
-            isValid = false;
-        }
 
         if (Math.abs(totalEquity - 100) > 0.01) {
             window.showNotification(`Total equity must equal 100%. Current total: ${totalEquity.toFixed(2)}%`, 'error', 'both');

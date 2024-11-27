@@ -337,33 +337,37 @@ const editPropertiesModule = {
     },
 
     initPartnersSection: function() {
+        // Store reference to 'this' for use in callbacks
         const self = this;
         const partnersContainer = document.getElementById('partners-container');
         const addPartnerButton = document.getElementById('add-partner-button');
         
         if (partnersContainer && addPartnerButton) {
+            // Remove existing event listeners
             addPartnerButton.replaceWith(addPartnerButton.cloneNode(true));
             const newAddPartnerButton = document.getElementById('add-partner-button');
             
+            // Add single event listener for add partner button using arrow function
             newAddPartnerButton.addEventListener('click', () => {
                 self.addPartnerFields();
             });
             
+            // Add delegated event listeners for the container using arrow functions
             partnersContainer.addEventListener('change', (event) => {
                 if (event.target.classList.contains('partner-select')) {
                     self.handlePartnerChange(event);
                     self.updateTotalEquity();
-                } else if (event.target.classList.contains('property-manager-checkbox')) {
-                    self.handlePropertyManagerSelect(event);
                 }
             });
             
+            // Partner equity input handler
             partnersContainer.addEventListener('input', (event) => {
                 if (event.target.classList.contains('partner-equity')) {
                     self.updateTotalEquity();
                 }
             });
             
+            // Remove partner button handler
             partnersContainer.addEventListener('click', (event) => {
                 if (event.target.classList.contains('remove-partner')) {
                     event.target.closest('.partner-entry').remove();
@@ -395,7 +399,7 @@ const editPropertiesModule = {
         const partnerHtml = `
             <div class="partner-entry mb-3">
                 <div class="row align-items-end">
-                    <div class="col-md-4">
+                    <div class="col-md-5">
                         <div class="form-group">
                             <label for="partner-select-${partnerCount}">Partner:</label>
                             <select id="partner-select-${partnerCount}" 
@@ -416,7 +420,7 @@ const editPropertiesModule = {
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-5">
                         <div class="form-group">
                             <label for="partner-equity-${partnerCount}">Equity Share (%):</label>
                             <input type="number" 
@@ -428,26 +432,6 @@ const editPropertiesModule = {
                                    max="100" 
                                    value="${partner.equity_share || ''}"
                                    required>
-                        </div>
-                    </div>
-                    <div class="col-md-2">
-                        <div class="form-group">
-                            <div class="form-check d-flex align-items-center">
-                                <input type="checkbox" 
-                                       id="property-manager-${partnerCount}" 
-                                       name="partners[${partnerCount}][is_property_manager]" 
-                                       class="form-check-input property-manager-checkbox"
-                                       ${partner.is_property_manager ? 'checked' : ''}>
-                                <label class="form-check-label mx-2" for="property-manager-${partnerCount}">Property Manager</label>
-                                <i class="bi bi-info-circle" 
-                                   data-bs-toggle="tooltip" 
-                                   data-bs-placement="top" 
-                                   title="Property Managers have additional privileges including:
-                                   • Ability to edit property details
-                                   • Ability to delete properties
-                                   • Full transaction management rights">
-                                </i>
-                            </div>
                         </div>
                     </div>
                     <div class="col-md-2">
@@ -465,12 +449,6 @@ const editPropertiesModule = {
             }
         }
 
-        // Initialize tooltip for the new partner entry
-        const tooltipTriggerList = [].slice.call(partnersContainer.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl);
-        });
-
         const newSelect = partnersContainer.querySelector(`#partner-select-${partnerCount}`);
         if (newSelect) {
             newSelect.addEventListener('change', (event) => this.handlePartnerSelectChange(event));
@@ -478,18 +456,6 @@ const editPropertiesModule = {
         
         this.updateTotalEquity();
         console.log('New partner fields added');
-    },
-
-    // Add property manager selection handler
-    handlePropertyManagerSelect: function(event) {
-        if (event.target.classList.contains('property-manager-checkbox')) {
-            const checkboxes = document.querySelectorAll('.property-manager-checkbox');
-            checkboxes.forEach(checkbox => {
-                if (checkbox !== event.target) {
-                    checkbox.checked = false;
-                }
-            });
-        }
     },
 
     handlePartnerChange: function(event) {
@@ -538,23 +504,14 @@ const editPropertiesModule = {
     handleSubmit: function(event) {
         event.preventDefault();
         console.log('Form submission started');
-
-        // Helper functions for number conversions
-        const toFloat = (value) => {
-            if (!value || value === '') return 0.0;
-            // Remove any formatting characters
-            const cleaned = value.toString().replace(/[$,%\s]/g, '');
-            const num = parseFloat(cleaned);
-            return isNaN(num) ? 0.0 : num;
-        };
-
-        const toInt = (value) => {
-            if (!value || value === '') return 0;
-            // Remove any formatting characters
-            const cleaned = value.toString().replace(/[$,%\s]/g, '');
-            const num = parseInt(cleaned, 10);
-            return isNaN(num) ? 0 : num;
-        };
+        
+        // Validate total equity
+        const totalEquity = this.calculateTotalEquity();
+        console.log('Total equity:', totalEquity);
+        if (Math.abs(totalEquity - 100) > 0.01) {
+            window.showNotification('Total equity must equal 100%', 'error', 'both');
+            return;
+        }
 
         // Get property select value
         const propertySelect = document.getElementById('property_select');
@@ -563,167 +520,107 @@ const editPropertiesModule = {
             return;
         }
 
-        try {
-            // Collect the property data with strict type handling
-            const propertyData = {
-                address: propertySelect.value.trim(),
-                purchase_date: document.getElementById('purchase-date').value,
-                loan_amount: toFloat(document.getElementById('loan-amount').value),
-                loan_start_date: document.getElementById('loan-start-date').value,
-                purchase_price: toFloat(document.getElementById('purchase-price').value),
-                down_payment: toFloat(document.getElementById('down-payment').value),
-                primary_loan_rate: toFloat(document.getElementById('primary-loan-rate').value),
-                primary_loan_term: toInt(document.getElementById('primary-loan-term').value),
-                seller_financing_amount: toFloat(document.getElementById('seller-financing-amount').value),
-                seller_financing_rate: toFloat(document.getElementById('seller-financing-rate').value),
-                seller_financing_term: toInt(document.getElementById('seller-financing-term').value),
-                closing_costs: toFloat(document.getElementById('closing-costs').value),
-                renovation_costs: toFloat(document.getElementById('renovation-costs').value),
-                marketing_costs: toFloat(document.getElementById('marketing-costs').value),
-                holding_costs: toFloat(document.getElementById('holding-costs').value),
-                monthly_income: {
-                    rental_income: toFloat(document.getElementById('rental-income').value),
-                    parking_income: toFloat(document.getElementById('parking-income').value),
-                    laundry_income: toFloat(document.getElementById('laundry-income').value),
-                    other_income: toFloat(document.getElementById('other-income').value),
-                    income_notes: document.getElementById('income-notes').value || ''
+        // Collect the property data
+        const propertyData = {
+            address: propertySelect.value,
+            purchase_date: document.getElementById('purchase-date').value,
+            loan_amount: document.getElementById('loan-amount').value,
+            loan_start_date: document.getElementById('loan-start-date').value,
+            purchase_price: parseInt(document.getElementById('purchase-price').value),
+            down_payment: parseInt(document.getElementById('down-payment').value),
+            primary_loan_rate: parseFloat(document.getElementById('primary-loan-rate').value),
+            primary_loan_term: parseInt(document.getElementById('primary-loan-term').value),
+            seller_financing_amount: parseInt(document.getElementById('seller-financing-amount').value || '0'),
+            seller_financing_rate: parseFloat(document.getElementById('seller-financing-rate').value || '0'),
+            seller_financing_term: parseInt(document.getElementById('seller-financing-term').value || '0'),
+            closing_costs: parseInt(document.getElementById('closing-costs').value || '0'),
+            renovation_costs: parseInt(document.getElementById('renovation-costs').value || '0'),
+            marketing_costs: parseInt(document.getElementById('marketing-costs').value || '0'),
+            holding_costs: parseInt(document.getElementById('holding-costs').value || '0'),
+            monthly_income: {
+                rental_income: parseFloat(document.getElementById('rental-income').value || '0'),
+                parking_income: parseFloat(document.getElementById('parking-income').value || '0'),
+                laundry_income: parseFloat(document.getElementById('laundry-income').value || '0'),
+                other_income: parseFloat(document.getElementById('other-income').value || '0'),
+                income_notes: document.getElementById('income-notes').value
+            },
+            monthly_expenses: {
+                property_tax: parseFloat(document.getElementById('property-tax').value || '0'),
+                insurance: parseFloat(document.getElementById('insurance').value || '0'),
+                repairs: parseFloat(document.getElementById('repairs').value || '0'),
+                capex: parseFloat(document.getElementById('capex').value || '0'),
+                property_management: parseFloat(document.getElementById('property-management').value || '0'),
+                hoa_fees: parseFloat(document.getElementById('hoa-fees').value || '0'),
+                utilities: {
+                    water: parseFloat(document.getElementById('water').value || '0'),
+                    electricity: parseFloat(document.getElementById('electricity').value || '0'),
+                    gas: parseFloat(document.getElementById('gas').value || '0'),
+                    trash: parseFloat(document.getElementById('trash').value || '0')
                 },
-                monthly_expenses: {
-                    property_tax: toFloat(document.getElementById('property-tax').value),
-                    insurance: toFloat(document.getElementById('insurance').value),
-                    repairs: toFloat(document.getElementById('repairs').value),
-                    capex: toFloat(document.getElementById('capex').value),
-                    property_management: toFloat(document.getElementById('property-management').value),
-                    hoa_fees: toFloat(document.getElementById('hoa-fees').value),
-                    utilities: {
-                        water: toFloat(document.getElementById('water').value),
-                        electricity: toFloat(document.getElementById('electricity').value),
-                        gas: toFloat(document.getElementById('gas').value),
-                        trash: toFloat(document.getElementById('trash').value)
-                    },
-                    other_expenses: toFloat(document.getElementById('other-expenses').value),
-                    expense_notes: document.getElementById('expense-notes').value || ''
-                },
-                partners: []
-            };
+                other_expenses: parseFloat(document.getElementById('other-expenses').value || '0'),
+                expense_notes: document.getElementById('expense-notes').value
+            },
+            partners: []
+        };
 
-            // Collect partner data
-            const partnerEntries = document.querySelectorAll('.partner-entry');
-            partnerEntries.forEach((entry, index) => {
-                const select = entry.querySelector('.partner-select');
-                const equityInput = entry.querySelector('.partner-equity');
-                let partnerName;
+        console.log('Collected property data:', propertyData);
 
-                if (select.value === 'new') {
-                    const newNameInput = entry.querySelector('.new-partner-input input');
-                    if (newNameInput && newNameInput.value.trim()) {
-                        partnerName = newNameInput.value.trim();
-                    }
-                } else {
-                    partnerName = select.value;
+        // Collect partner data
+        const partnerEntries = document.querySelectorAll('.partner-entry');
+        partnerEntries.forEach((entry, index) => {
+            console.log(`Processing partner entry ${index}`);
+            const select = entry.querySelector('.partner-select');
+            const equityInput = entry.querySelector('.partner-equity');
+            let partnerName;
+
+            if (select.value === 'new') {
+                const newNameInput = entry.querySelector('.new-partner-input input');
+                if (newNameInput && newNameInput.value.trim()) {
+                    partnerName = newNameInput.value.trim();
                 }
-
-                const equityShare = toFloat(equityInput.value);
-
-                if (partnerName && !isNaN(equityShare)) {
-                    propertyData.partners.push({
-                        name: partnerName,
-                        equity_share: equityShare,
-                        is_property_manager: entry.querySelector('.property-manager-checkbox').checked
-                    });
-                }
-            });
-
-            // Log complete data before sending
-            console.log('Complete property data:', JSON.stringify(propertyData, null, 2));
-
-            // Send the POST request
-            fetch('/properties/edit_properties', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: JSON.stringify(propertyData)
-            })
-            .then(response => {
-                console.log('Response status:', response.status);
-                return response.json().then(data => {
-                    if (!response.ok) {
-                        console.error('Server validation errors:', data.errors);
-                        throw new Error(Array.isArray(data.errors) ? data.errors.join('\n') : data.message);
-                    }
-                    return data;
-                });
-            })
-            .then(data => {
-                console.log('Server response:', data);
-                if (data.success) {
-                    window.showNotification('Property updated successfully', 'success', 'both');
-                    setTimeout(() => {
-                        window.location.href = '/properties/edit_properties';
-                    }, 2000);
-                } else {
-                    throw new Error(data.message || 'Error updating property');
-                }
-            })
-            .catch(error => {
-                console.error('Error updating property:', error);
-                window.showNotification('Error updating property: ' + error.message, 'error', 'both');
-            });
-
-        } catch (error) {
-            console.error('Error preparing property data:', error);
-            window.showNotification('Error preparing property data: ' + error.message, 'error', 'both');
-        }
-    },
-
-    // Add property manager validation
-    validateForm: function(form) {
-        let isValid = true;
-
-        // Validate required fields
-        if (!form.querySelector('#property_select').value) {
-            window.showNotification('Please select a property.', 'error', 'both');
-            isValid = false;
-        }
-
-        // Validate partners
-        const partners = form.querySelectorAll('.partner-entry');
-        let totalEquity = 0;
-
-        partners.forEach((partner, index) => {
-            const nameSelect = partner.querySelector('.partner-select');
-            const equityInput = partner.querySelector('.partner-equity');
-            
-            if (!nameSelect.value) {
-                window.showNotification(`Please select a partner for entry ${index + 1}.`, 'error', 'both');
-                isValid = false;
+            } else {
+                partnerName = select.value;
             }
 
-            if (!equityInput.value || isNaN(equityInput.value)) {
-                window.showNotification(`Please enter a valid equity share for partner ${index + 1}.`, 'error', 'both');
-                isValid = false;
-            } else {
-                totalEquity += parseFloat(equityInput.value);
+            const equityShare = parseFloat(equityInput.value);
+
+            if (partnerName && !isNaN(equityShare)) {
+                propertyData.partners.push({
+                    name: partnerName,
+                    equity_share: equityShare
+                });
+                console.log(`Added partner: ${partnerName} with equity: ${equityShare}`);
             }
         });
 
-        // Validate property manager selection
-        const propertyManagerSelected = Array.from(form.querySelectorAll('.property-manager-checkbox'))
-            .some(checkbox => checkbox.checked);
-        
-        if (!propertyManagerSelected) {
-            window.showNotification('Please designate one partner as Property Manager.', 'error', 'both');
-            isValid = false;
-        }
+        console.log('Final property data to submit:', propertyData);
 
-        if (Math.abs(totalEquity - 100) > 0.01) {
-            window.showNotification(`Total equity must equal 100%. Current total: ${totalEquity.toFixed(2)}%`, 'error', 'both');
-            isValid = false;
-        }
-
-        return isValid;
+        // Send the POST request
+        fetch('/properties/edit_properties', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify(propertyData)
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Server response:', data);
+            if (data.success) {
+                window.showNotification('Property updated successfully', 'success');
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                throw new Error(data.message || 'Error updating property');
+            }
+        })
+        .catch(error => {
+            console.error('Error updating property:', error);
+            window.showNotification('Error updating property: ' + error.message, 'error', 'both');
+        });
     },
 
     calculateTotalEquity: function() {

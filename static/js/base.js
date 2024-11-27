@@ -101,8 +101,8 @@
     
                     if (Array.isArray(messages)) {
                         messages.forEach(([category, message]) => {
-                            // Show messages only at the top
-                            this.showNotification(message, category, 'top');
+                            // Show messages in both positions
+                            this.showNotification(message, category, 'both');
                         });
                     }
                 } catch (error) {
@@ -111,7 +111,7 @@
             }
         },
 
-        showNotification: function(message, category = 'info', position = 'top') { // Changed default to 'top'
+        showNotification: function(message, category = 'info', position = 'both') {
             if (typeof toastr === 'undefined') {
                 console.warn('Toastr not available, falling back to alert');
                 alert(message);

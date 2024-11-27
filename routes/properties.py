@@ -4,7 +4,6 @@ import logging
 from flask import Blueprint, render_template, request, current_app, jsonify
 from flask_login import login_required, current_user
 from utils.utils import admin_required
-from utils.flash import flash_message
 from services.transaction_service import get_partners_for_property
 from typing import Dict, List, Any, Optional, Tuple, Set
 from datetime import datetime
@@ -34,7 +33,6 @@ def validate_property_data(property_data: Dict[str, Any]) -> Tuple[bool, List[st
         Tuple of (is_valid: bool, error_messages: List[str])
     """
     errors = []
-    logger.debug(f"Validating property data: {json.dumps(property_data, indent=2)}")
     
     # Required fields with their types
     required_fields = {
@@ -92,9 +90,6 @@ def validate_property_data(property_data: Dict[str, Any]) -> Tuple[bool, List[st
     if 'partners' in property_data and property_data['partners']:
         partners_errors = validate_partners_data(property_data['partners'])
         errors.extend(partners_errors)
-
-    if errors:
-        logger.debug(f"Validation errors found: {errors}")
     
     return len(errors) == 0, errors
 
@@ -238,22 +233,16 @@ def add_properties():
             
     except FileNotFoundError:
         logger.error(f"Properties file not found at {current_app.config['PROPERTIES_FILE']}")
-        return jsonify({
-            'success': False, 
-            'message': 'Properties database not found'
-        }), 500
+        flash_message('Error: Properties database not found', 'error')
+        return jsonify({'success': False, 'message': 'Properties database not found'}), 500
     except json.JSONDecodeError as e:
         logger.error(f"JSON decode error in properties file: {str(e)}")
-        return jsonify({
-            'success': False, 
-            'message': 'Invalid properties database format'
-        }), 500
+        flash_message('Error: Invalid properties database format', 'error')
+        return jsonify({'success': False, 'message': 'Invalid properties database format'}), 500
     except Exception as e:
         logger.error(f"Unexpected error loading properties: {str(e)}")
-        return jsonify({
-            'success': False, 
-            'message': str(e)
-        }), 500
+        flash_message('An unexpected error occurred while loading properties', 'error')
+        return jsonify({'success': False, 'message': str(e)}), 500
 
     if request.method == 'POST':
         logger.debug("Processing POST request for add_properties")
@@ -262,20 +251,14 @@ def add_properties():
             new_property = request.get_json()
             if not new_property:
                 logger.warning("No property data received in POST request")
-                return jsonify({
-                    'success': False,
-                    'message': 'No property data received'
-                }), 400
+                raise ValueError("No property data received")
 
             logger.debug(f"Received new property data: {json.dumps(new_property, indent=2)}")
 
             # Check for duplicate address
             if any(p['address'] == new_property['address'] for p in properties):
                 logger.warning(f"Attempt to add duplicate property address: {new_property['address']}")
-                return jsonify({
-                    'success': False,
-                    'message': 'A property with this address already exists'
-                }), 400
+                raise ValueError("A property with this address already exists")
 
             # Validate property data
             is_valid, validation_errors = validate_property_data(new_property)
@@ -306,12 +289,9 @@ def add_properties():
             try:
                 with open(temp_file, 'w') as f:
                     json.dump(properties, f, indent=2)
+                import os
                 os.replace(temp_file, current_app.config['PROPERTIES_FILE'])
                 logger.info(f"New property successfully added: {complete_property['address']}")
-                return jsonify({
-                    'success': True, 
-                    'message': 'Property added successfully'
-                })
             except Exception as e:
                 logger.error(f"Error saving properties file: {str(e)}")
                 if os.path.exists(temp_file):
@@ -321,18 +301,17 @@ def add_properties():
                         logger.error(f"Error removing temporary file: {str(e2)}")
                 raise
 
+            flash_message('Property added successfully', 'success')
+            return jsonify({'success': True, 'message': 'Property added successfully'})
+
         except ValueError as ve:
             logger.warning(f"Validation error in add_properties: {str(ve)}")
-            return jsonify({
-                'success': False, 
-                'message': str(ve)
-            }), 400
+            flash_message(str(ve), 'error')
+            return jsonify({'success': False, 'message': str(ve)}), 400
         except Exception as e:
             logger.error(f"Unexpected error in add_properties: {str(e)}", exc_info=True)
-            return jsonify({
-                'success': False, 
-                'message': str(e)
-            }), 500
+            flash_message('An unexpected error occurred while adding the property', 'error')
+            return jsonify({'success': False, 'message': str(e)}), 500
 
     # For GET requests, render the template
     logger.debug(f"Rendering add_properties template with {len(partners)} partners")
@@ -461,17 +440,14 @@ def edit_properties():
                 properties = json.load(f)
                 logger.debug(f"Successfully loaded {len(properties)} properties for editing")
 
-            # Filter properties for non-admin users
+            # If user is not admin, filter properties to only show those they're a partner in
             if not current_user.role.lower() == 'admin':
-                filtered_properties = [
+                original_count = len(properties)
+                properties = [
                     prop for prop in properties
-                    if any(
-                        partner['name'] == current_user.name and 
-                        (partner.get('is_property_manager', False) or current_user.role.lower() == 'admin')
-                        for partner in prop.get('partners', [])
-                    )
+                    if any(partner['name'] == current_user.name for partner in prop.get('partners', []))
                 ]
-                properties = filtered_properties
+                logger.debug(f"Filtered properties for non-admin user. Original: {original_count}, Filtered: {len(properties)}")
 
         except FileNotFoundError:
             logger.warning(f"Properties file not found at {properties_file}, creating new file")
