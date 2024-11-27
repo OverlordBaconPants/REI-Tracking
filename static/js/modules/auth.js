@@ -7,6 +7,7 @@ const authModule = {
             await this.initializePasswordValidation();
             this.setupFormValidation();
             this.setupPasswordStrengthMeter();
+            this.setupPasswordToggles(); // Add this line
             console.log('Auth module initialized successfully');
         } catch (error) {
             console.error('Error initializing auth module:', error);
@@ -164,14 +165,45 @@ const authModule = {
         });
     },
 
+    setupPasswordToggles: function() {
+        const passwordFields = document.querySelectorAll('input[type="password"]');
+        
+        passwordFields.forEach(field => {
+            // Create wrapper if it doesn't exist
+            let wrapper = field.parentElement;
+            if (!wrapper.classList.contains('password-toggle-wrapper')) {
+                wrapper = document.createElement('div');
+                wrapper.className = 'password-toggle-wrapper position-relative';
+                field.parentNode.insertBefore(wrapper, field);
+                wrapper.appendChild(field);
+            }
+            
+            // Create toggle button
+            const toggleBtn = document.createElement('button');
+            toggleBtn.type = 'button';
+            toggleBtn.className = 'btn btn-link position-absolute top-50 end-0 translate-middle-y pe-2';
+            toggleBtn.innerHTML = '<i class="bi bi-eye"></i>';
+            toggleBtn.setAttribute('aria-label', 'Toggle password visibility');
+            
+            // Add click handler
+            toggleBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const isPassword = field.type === 'password';
+                field.type = isPassword ? 'text' : 'password';
+                toggleBtn.innerHTML = `<i class="bi bi-eye${isPassword ? '-slash' : ''}"></i>`;
+            });
+            
+            wrapper.appendChild(toggleBtn);
+        });
+    },
+
     setupFormValidation: function() {
         const form = document.querySelector('form');
         if (!form) return;
-
+    
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             if (this.validateForm(form)) {
-                // Store the submit button reference
                 const submitButton = form.querySelector('button[type="submit"]');
                 const originalText = submitButton?.innerHTML || 'Submit';
                 
@@ -181,7 +213,7 @@ const authModule = {
                         submitButton.disabled = true;
                         submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
                     }
-
+    
                     // Submit the form
                     const response = await fetch(form.action, {
                         method: form.method,
@@ -190,54 +222,27 @@ const authModule = {
                             'X-Requested-With': 'XMLHttpRequest'
                         }
                     });
-
-                    // Check if the response redirects (success case)
-                    if (response.redirected) {
-                        window.location.href = response.url;
-                        return;
+    
+                    // Parse JSON response
+                    let data;
+                    try {
+                        data = await response.json();
+                    } catch (error) {
+                        throw new Error('Invalid server response');
                     }
-
-                    // Check content type
-                    const contentType = response.headers.get('content-type');
-                    if (contentType && contentType.includes('application/json')) {
-                        // Handle JSON response
-                        const data = await response.json();
-                        if (data.success) {
-                            window.showNotification(data.message || 'Success!', 'success');
-                            if (data.redirect) {
-                                setTimeout(() => {
-                                    window.location.href = data.redirect;
-                                }, 1500);
-                            }
-                        } else {
-                            throw new Error(data.message || 'An error occurred');
+    
+                    if (data.success) {
+                        // Show success notification
+                        window.showNotification(data.message, 'success');
+                        
+                        // Wait for 2 seconds before redirecting
+                        if (data.redirect) {
+                            setTimeout(() => {
+                                window.location.href = data.redirect;
+                            }, 2000);
                         }
                     } else {
-                        // Handle non-JSON response (likely HTML)
-                        const text = await response.text();
-                        
-                        // Check if it's a successful response with redirect
-                        if (response.ok) {
-                            // If there's a success message in a data attribute or similar
-                            const successMsg = form.dataset.successMessage || 'Success!';
-                            window.showNotification(successMsg, 'success');
-                            
-                            // Allow the form's natural submission to handle redirect
-                            setTimeout(() => {
-                                form.submit();
-                            }, 1500);
-                        } else {
-                            // Extract error message from HTML if possible
-                            let errorMsg = 'An error occurred';
-                            const errorElement = new DOMParser()
-                                .parseFromString(text, 'text/html')
-                                .querySelector('.alert-danger');
-                            
-                            if (errorElement) {
-                                errorMsg = errorElement.textContent.trim();
-                            }
-                            throw new Error(errorMsg);
-                        }
+                        throw new Error(data.message || 'An error occurred');
                     }
                 } catch (error) {
                     console.error('Form submission error:', error);
@@ -248,6 +253,14 @@ const authModule = {
                         submitButton.disabled = false;
                         submitButton.innerHTML = originalText;
                     }
+                } finally {
+                    // Reset button in case of navigation cancellation
+                    setTimeout(() => {
+                        if (submitButton) {
+                            submitButton.disabled = false;
+                            submitButton.innerHTML = originalText;
+                        }
+                    }, 5000);
                 }
             }
         });

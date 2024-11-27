@@ -1,6 +1,6 @@
 # routes/auth.py
 
-from flask import Blueprint, render_template, redirect, url_for, request
+from flask import Blueprint, render_template, redirect, url_for, request, jsonify
 from flask_login import login_user, login_required, logout_user, current_user
 from __init__ import User
 from services.user_service import get_user_by_email, create_user, update_user_password, verify_password
@@ -283,12 +283,22 @@ def signup():
             validation_result = validator.validate_signup_data(request.form)
             
             if not validation_result.is_valid:
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return jsonify({
+                        'success': False,
+                        'message': validation_result.errors[0][1]  # Return first error message
+                    }), 400
                 handle_validation_errors(validation_result.errors)
                 return render_template('signup.html', form_data=request.form)
             
             # Check if user already exists
             sanitized_data = validation_result.sanitized_data
             if get_user_by_email(sanitized_data['email']):
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return jsonify({
+                        'success': False,
+                        'message': 'Email address already exists'
+                    }), 400
                 flash_message('Email address already exists', 'error')
                 return render_template('signup.html', form_data=request.form)
             
@@ -299,15 +309,34 @@ def signup():
                 password=sanitized_data['password'],
                 phone=sanitized_data['phone']
             ):
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return jsonify({
+                        'success': True,
+                        'message': 'Account created successfully. Redirecting to login...',
+                        'redirect': url_for('auth.login')
+                    })
                 flash_message('Account created successfully. Please log in.', 'success')
                 return redirect(url_for('auth.login'))
             else:
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return jsonify({
+                        'success': False,
+                        'message': 'An error occurred during account creation.'
+                    }), 500
                 flash_message('An error occurred during account creation.', 'error')
+                return render_template('signup.html', form_data=request.form)
                 
         except Exception as e:
             logger.error(f"Error during signup: {str(e)}")
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({
+                    'success': False,
+                    'message': 'An unexpected error occurred. Please try again.'
+                }), 500
             flash_message('An unexpected error occurred. Please try again.', 'error')
+            return render_template('signup.html', form_data=request.form)
     
+    # GET request - render the signup form
     return render_template('signup.html')
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
@@ -315,13 +344,17 @@ def login():
     if current_user.is_authenticated:
         return redirect(url_for('main.main'))
 
-
     if request.method == 'POST':
         try:
             # Validate login data
             validation_result = validator.validate_login_data(request.form)
             
             if not validation_result.is_valid:
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return jsonify({
+                        'success': False,
+                        'message': validation_result.errors[0][1]  # Return first error message
+                    }), 400
                 handle_validation_errors(validation_result.errors)
                 return render_template('login.html', form_data=request.form)
             
@@ -330,6 +363,11 @@ def login():
             
             if not user_data or not verify_password(user_data['password'], sanitized_data['password']):
                 logger.warning(f"Invalid login attempt for user: {sanitized_data['email']}")
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return jsonify({
+                        'success': False,
+                        'message': 'Invalid email or password.'
+                    }), 401
                 flash_message('Invalid email or password.', 'error')
                 return render_template('login.html', form_data=request.form)
             
@@ -355,6 +393,14 @@ def login():
                     
                     logger.debug(f"Found {len(user_properties)} properties for user {user.name}")
                     
+                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                        redirect_url = url_for('main.main') if user_properties else url_for('main.index')
+                        return jsonify({
+                            'success': True,
+                            'message': 'Logged in successfully.',
+                            'redirect': redirect_url
+                        })
+                    
                     flash_message('Logged in successfully.', 'success')
                     
                     if user_properties:
@@ -365,16 +411,31 @@ def login():
                         
                 except Exception as e:
                     logger.error(f"Error checking user properties: {str(e)}")
-                    # If we fail to check properties, default to main page as a fallback
+                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                        return jsonify({
+                            'success': True,
+                            'message': 'Logged in successfully.',
+                            'redirect': url_for('main.main')
+                        })
                     return redirect(url_for('main.main'))
                 
             except Exception as e:
                 logger.error(f"Error during login process: {str(e)}")
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return jsonify({
+                        'success': False,
+                        'message': 'An error occurred during login.'
+                    }), 500
                 flash_message('An error occurred during login.', 'error')
                 return render_template('login.html', form_data=request.form)
                 
         except Exception as e:
             logger.error(f"Error during login: {str(e)}")
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({
+                    'success': False,
+                    'message': 'An unexpected error occurred.'
+                }), 500
             flash_message('An unexpected error occurred.', 'error')
             return render_template('login.html')
     
@@ -392,6 +453,11 @@ def forgot_password():
             validation_result = validator.validate_password_reset_data(request.form)
             
             if not validation_result.is_valid:
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return jsonify({
+                        'success': False,
+                        'message': validation_result.errors[0][1]  # Return first error message
+                    }), 400
                 handle_validation_errors(validation_result.errors)
                 return render_template('forgot_password.html', form_data=request.form)
             
@@ -400,7 +466,11 @@ def forgot_password():
             
             if not user_data:
                 logger.warning(f"Password reset attempted for non-existent email: {sanitized_data['email']}")
-                # Use generic message for security
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return jsonify({
+                        'success': False,
+                        'message': 'If an account exists with this email, you will receive reset instructions.'
+                    }), 400
                 flash_message(
                     'If an account exists with this email, you will receive reset instructions.', 
                     'info'
@@ -410,6 +480,12 @@ def forgot_password():
             # Update password
             if update_user_password(sanitized_data['email'], sanitized_data['password']):
                 logger.info(f"Password reset successful for user: {sanitized_data['email']}")
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return jsonify({
+                        'success': True,
+                        'message': 'Password has been reset successfully. Redirecting to login...',
+                        'redirect': url_for('auth.login')
+                    })
                 flash_message(
                     'Password has been reset successfully. Please log in with your new password.', 
                     'success'
@@ -417,14 +493,26 @@ def forgot_password():
                 return redirect(url_for('auth.login'))
             else:
                 logger.error(f"Password reset failed for user: {sanitized_data['email']}")
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return jsonify({
+                        'success': False,
+                        'message': 'An error occurred during password reset. Please try again.'
+                    }), 500
                 flash_message(
                     'An error occurred during password reset. Please try again.', 
                     'error'
                 )
+                return render_template('forgot_password.html', form_data=request.form)
                 
         except Exception as e:
             logger.error(f"Error during password reset: {str(e)}")
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({
+                    'success': False,
+                    'message': 'An unexpected error occurred. Please try again.'
+                }), 500
             flash_message('An unexpected error occurred. Please try again.', 'error')
+            return render_template('forgot_password.html', form_data=request.form)
     
     return render_template('forgot_password.html')
 

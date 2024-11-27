@@ -373,30 +373,35 @@ main {
     font-size: 0.875rem;
 }
 
+/* Password toggle styles */
 .password-toggle-wrapper {
     position: relative;
 }
 
+.password-toggle-wrapper input[type="password"],
+.password-toggle-wrapper input[type="text"] {
+    padding-right: 2.5rem;
+}
+
 .password-toggle-wrapper .btn-link {
-    color: #6c757d;  /* Bootstrap secondary color */
+    color: #6c757d;
     padding: 0;
     margin: 0;
+    text-decoration: none;
 }
 
 .password-toggle-wrapper .btn-link:hover {
-    color: #4a4f53;  /* Slightly darker on hover */
+    color: #4a4f53;
+}
+
+.password-toggle-wrapper .btn-link:focus {
+    box-shadow: none;
 }
 
 /* Ensure the icon doesn't interfere with any validation icons */
 .password-toggle-wrapper .btn-link {
     pointer-events: auto;
     z-index: 4;
-}
-
-/* Adjust padding for password fields */
-.password-toggle-wrapper input[type="password"],
-.password-toggle-wrapper input[type="text"] {
-    padding-right: 2.5rem;
 }
 
 .property-table thead{
