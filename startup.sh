@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# Create required directories in /data
-mkdir -p /data/analyses
-mkdir -p /data/uploads
+# Create required directories in /data if they don't already exist
+mkdir /data/analyses
+mkdir /data/uploads
 
 # Ensure proper permissions
-chmod -R 777 /data
+chmod -R 644 /data
 
 # Create empty JSON files if they don't exist
 touch /data/users.json
