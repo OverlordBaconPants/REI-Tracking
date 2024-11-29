@@ -62,7 +62,7 @@ class ProductionConfig(Config):
         super().__init__()
         
         # Override paths for persistent storage
-        self.DATA_DIR = os.path.join(self.PERSISTENT_DIR, 'data')
+        self.DATA_DIR = os.path.join(self.PERSISTENT_DIR)
         self.ANALYSES_DIR = os.path.join(self.DATA_DIR, 'analyses')
         self.UPLOAD_FOLDER = os.path.join(self.PERSISTENT_DIR, 'uploads')
         
