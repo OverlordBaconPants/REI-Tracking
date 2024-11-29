@@ -6,11 +6,8 @@ class Config:
     """Base configuration with common settings"""
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'you-will-never-guess'
     
-    # Determine base directory based on environment
-    if os.environ.get('RENDER'):
-        BASE_DIR = '/data'
-    else:
-        BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+    # Base directory defaults to current directory for development
+    BASE_DIR = os.path.abspath(os.path.dirname(__file__))
     
     # File upload settings
     ALLOWED_EXTENSIONS = {'png', 'svg', 'pdf', 'jpg', 'csv', 'xls', 'xlsx'}
@@ -54,8 +51,15 @@ class ProductionConfig(Config):
     TESTING = False
     
     def __init__(self):
-        super().__init__()
+        # Override BASE_DIR for Render.com
+        self.BASE_DIR = '/data'
+        super().__init__()  # Initialize all paths after setting BASE_DIR
         print(f"Running in production mode. Using BASE_DIR: {self.BASE_DIR}")
+        print(f"Data directory: {self.DATA_DIR}")
+        print(f"Analyses directory: {self.ANALYSES_DIR}")
+        print(f"Upload folder: {self.UPLOAD_FOLDER}")
+        print(f"Users file: {self.USERS_FILE}")
+        print(f"Properties file: {self.PROPERTIES_FILE}")
 
 class TestingConfig(Config):
     """Testing configuration"""
@@ -63,10 +67,8 @@ class TestingConfig(Config):
     TESTING = True
     
     def __init__(self):
-        super().__init__()
-        # Use temporary directory for testing
         self.BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_data')
-        super().__init__()  # Reinitialize with test directory
+        super().__init__()  # Initialize with test directory
 
 # Configuration dictionary
 config = {
@@ -79,7 +81,9 @@ config = {
 def get_config():
     """Get the current configuration based on environment"""
     if os.environ.get('RENDER'):
-        return ProductionConfig()
+        config_instance = ProductionConfig()
+        print(f"Using production configuration with mounted path: {config_instance.BASE_DIR}")
+        return config_instance
     
     env = os.environ.get('FLASK_ENV', 'development')
     return config.get(env, config['default'])()
