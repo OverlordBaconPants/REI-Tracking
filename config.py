@@ -56,17 +56,13 @@ class ProductionConfig(Config):
     TESTING = False
     
     def __init__(self):
-        # For Render.com, use the mounted volume path
-        self.BASE_DIR = '/opt/render/project/src'  # Application root
-        self.PERSISTENT_DIR = '/data'              # Mounted volume
-        super().__init__()
+        # For Render.com, assume directories already exist
+        self.BASE_DIR = '/opt/render/project/src'      # Application root
+        self.DATA_DIR = '/data'                        # Data directory in mounted volume
+        self.ANALYSES_DIR = '/data/analyses'           # Analyses subdirectory
+        self.UPLOAD_FOLDER = '/data/uploads'           # Upload directory in mounted volume
         
-        # Override paths for persistent storage
-        self.DATA_DIR = os.path.join(self.PERSISTENT_DIR)
-        self.ANALYSES_DIR = os.path.join(self.DATA_DIR, 'analyses')
-        self.UPLOAD_FOLDER = os.path.join(self.PERSISTENT_DIR, 'uploads')
-        
-        # Update file paths
+        # JSON file paths
         self.USERS_FILE = os.path.join(self.DATA_DIR, 'users.json')
         self.PROPERTIES_FILE = os.path.join(self.DATA_DIR, 'properties.json')
         self.TRANSACTIONS_FILE = os.path.join(self.DATA_DIR, 'transactions.json')
@@ -75,8 +71,8 @@ class ProductionConfig(Config):
         
         print(f"Running in production mode on Render.com")
         print(f"Base directory: {self.BASE_DIR}")
-        print(f"Persistent directory: {self.PERSISTENT_DIR}")
         print(f"Data directory: {self.DATA_DIR}")
+        print(f"Upload folder: {self.UPLOAD_FOLDER}")
 
 class TestingConfig(Config):
     """Testing configuration"""

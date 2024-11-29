@@ -55,31 +55,31 @@ class User(UserMixin):
 login_manager = LoginManager()
 
 def configure_logging(app):
-    # Create logs directory if it doesn't exist
-    if not os.path.exists('logs'):
-        os.mkdir('logs')
+    # Create logs directory if not in production
+    if not os.environ.get('RENDER'):
+        if not os.path.exists('logs'):
+            os.mkdir('logs')
+        file_handler = RotatingFileHandler('logs/app.log', maxBytes=10240, backupCount=10)
+    else:
+        # In production, log to stdout/stderr
+        file_handler = logging.StreamHandler()
     
-    # Set up file handler
-    file_handler = RotatingFileHandler('logs/app.log', maxBytes=10240, backupCount=10)
     file_handler.setFormatter(logging.Formatter(
         '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
     ))
     file_handler.setLevel(logging.INFO)
     
-    # Remove default handlers
     app.logger.handlers = []
-    
-    # Add handlers to app logger
     app.logger.addHandler(file_handler)
     
     # Add console handler for development
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    ))
-    app.logger.addHandler(console_handler)
+    if not os.environ.get('RENDER'):
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        ))
+        app.logger.addHandler(console_handler)
     
-    # Set overall logging level based on config
     app.logger.setLevel(logging.DEBUG if app.debug else logging.INFO)
     app.logger.info(f'Application startup in {os.environ.get("FLASK_ENV", "development")} mode')
 
@@ -89,24 +89,29 @@ def create_app(config_class=None):
                 static_folder='static', 
                 static_url_path='/static')
     
-    # Get configuration based on environment
     if config_class is None:
         config_class = get_config()
     
-    # Apply configuration
     app.config.from_object(config_class)
     
-    # Log the environment and base directory being used
+    # Configure logging first
+    configure_logging(app)
+    
+    # Log the environment and paths
     app.logger.info(f"Running with BASE_DIR: {config_class.BASE_DIR}")
     app.logger.info(f"Environment: {'Production' if os.environ.get('RENDER') else 'Development'}")
 
-    # Configure logging
-    configure_logging(app)
-
-    # Ensure required directories exist
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-    os.makedirs(app.config['DATA_DIR'], exist_ok=True)
-    os.makedirs(app.config['ANALYSES_DIR'], exist_ok=True)
+    # Only create directories if not in production
+    if not os.environ.get('RENDER'):
+        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+        os.makedirs(app.config['DATA_DIR'], exist_ok=True)
+        os.makedirs(app.config['ANALYSES_DIR'], exist_ok=True)
+    else:
+        # In production, just log the paths we expect to use
+        app.logger.info(f"Production paths:")
+        app.logger.info(f"UPLOAD_FOLDER: {app.config['UPLOAD_FOLDER']}")
+        app.logger.info(f"DATA_DIR: {app.config['DATA_DIR']}")
+        app.logger.info(f"ANALYSES_DIR: {app.config['ANALYSES_DIR']}")
 
     # Initialize login manager
     login_manager = LoginManager()
