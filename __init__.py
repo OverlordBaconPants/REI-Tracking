@@ -1,6 +1,6 @@
 from flask import Flask
 from flask_login import LoginManager, login_required, UserMixin
-from config import Config
+from config import get_config
 import os
 import dash
 import logging
@@ -79,22 +79,34 @@ def configure_logging(app):
     ))
     app.logger.addHandler(console_handler)
     
-    # Set overall logging level
+    # Set overall logging level based on config
     app.logger.setLevel(logging.DEBUG if app.debug else logging.INFO)
-    app.logger.info('Application startup')
+    app.logger.info(f'Application startup in {os.environ.get("FLASK_ENV", "development")} mode')
 
-def create_app(config_class=Config):
+def create_app(config_class=None):
     app = Flask(__name__, 
                 template_folder='templates', 
                 static_folder='static', 
                 static_url_path='/static')
+    
+    # Get configuration based on environment
+    if config_class is None:
+        config_class = get_config()
+    
+    # Apply configuration
     app.config.from_object(config_class)
+    
+    # Log the environment and base directory being used
+    app.logger.info(f"Running with BASE_DIR: {config_class.BASE_DIR}")
+    app.logger.info(f"Environment: {'Production' if os.environ.get('RENDER') else 'Development'}")
 
     # Configure logging
     configure_logging(app)
 
-    # Ensure the upload folder exists
+    # Ensure required directories exist
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    os.makedirs(app.config['DATA_DIR'], exist_ok=True)
+    os.makedirs(app.config['ANALYSES_DIR'], exist_ok=True)
 
     # Initialize login manager
     login_manager = LoginManager()
