@@ -311,14 +311,35 @@ const addPropertiesModule = {
             console.log('Partner select changed:', event.target.value);
             const partnerEntry = event.target.closest('.partner-entry');
             const newPartnerNameInput = partnerEntry.querySelector('.new-partner-name');
+            
             if (event.target.value === 'new') {
                 console.log('New partner selected, showing input field');
                 newPartnerNameInput.style.display = 'block';
-            } else {
+            } else if (event.target.value) {  // Only check if a partner is actually selected
+                // Check for duplicates
+                if (this.checkDuplicatePartner(event.target.value)) {
+                    console.log('Duplicate partner selected:', event.target.value);
+                    window.showNotification(`Partner "${event.target.value}" has already been selected. Each partner can only be added once.`, 'error', 'both');
+                    event.target.value = ''; // Reset the selection
+                    return;
+                }
                 console.log('Existing partner selected, hiding input field');
                 newPartnerNameInput.style.display = 'none';
             }
         }
+    },
+
+    checkDuplicatePartner: function(selectedPartner) {
+        const partnerSelects = document.querySelectorAll('.partner-select');
+        let count = 0;
+        
+        partnerSelects.forEach(select => {
+            if (select.value === selectedPartner) {
+                count++;
+            }
+        });
+        
+        return count > 1;
     },
 
     removePartner: function(event) {
@@ -381,7 +402,7 @@ const addPropertiesModule = {
                 primary_loan_rate: getNumericValue('primary_loan_rate'),
                 primary_loan_term: getNumericValue('primary_loan_term'),
                 purchase_date: getStringValue('purchase_date'),
-                loan_amount: getStringValue('loan_amount'),
+                loan_amount: getNumericValue('loan_amount'),  // Changed from getStringValue to getNumericValue
                 loan_start_date: getStringValue('loan_start_date'),
                 seller_financing_amount: getNumericValue('seller_financing_amount'),
                 seller_financing_rate: getNumericValue('seller_financing_rate'),
@@ -452,14 +473,50 @@ const addPropertiesModule = {
             .then(data => {
                 console.log('Server response:', data);
                 if (data.success) {
-                    window.location.reload();
+                    // Show success notification
+                    window.showNotification('Property successfully added!', 'success', 'both');
+                    
+                    // Wait 2 seconds before redirecting
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
                 } else {
-                    window.showNotification('Error: ' + data.message, 'error', 'both');
+                    // Enhanced error handling
+                    if (data.errors && Array.isArray(data.errors)) {
+                        data.errors.forEach(error => {
+                            // Convert backend validation messages to user-friendly messages
+                            let userMessage = error;
+                            
+                            // Pattern matching for common validation messages
+                            if (error.includes('must equal 100%')) {
+                                userMessage = 'Partner equity shares must total exactly 100%';
+                            } else if (error.includes('cannot be negative')) {
+                                userMessage = error.replace('cannot be negative', 'must be a positive number');
+                            } else if (error.includes('Invalid numeric value')) {
+                                userMessage = error.replace('Invalid numeric value for', 'Please enter a valid number for');
+                            } else if (error.includes('Invalid date format')) {
+                                userMessage = 'Please enter dates in YYYY-MM-DD format';
+                            } else if (error.includes('Missing required field')) {
+                                userMessage = error.replace('Missing required field:', 'Please fill in the required field:');
+                            } else if (error.includes('Field cannot be null')) {
+                                userMessage = error.replace('Field cannot be null:', 'Please provide a value for:');
+                            }
+                            
+                            // Show the user-friendly message
+                            window.showNotification(userMessage, 'error', 'both');
+                        });
+                    } else if (data.message) {
+                        // Handle single error message
+                        window.showNotification(data.message, 'error', 'both');
+                    } else {
+                        // Fallback error message
+                        window.showNotification('An error occurred while saving the property. Please check all fields and try again.', 'error', 'both');
+                    }
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                window.showNotification('An error occurred while adding the property. Please check the console for more details.', 'error', 'both');
+                window.showNotification('An unexpected error occurred. Please try again later.', 'error', 'both');
             });
     
         } catch (error) {
@@ -495,7 +552,7 @@ const addPropertiesModule = {
             window.showNotification('Please enter a valid primary loan term.', 'error', 'both');
             isValid = false;
         }
-
+        
         const partners = form.querySelectorAll('.partner-entry');
         let totalEquity = 0;
         partners.forEach((partner, index) => {
@@ -512,6 +569,21 @@ const addPropertiesModule = {
                 isValid = false;
             } else {
                 totalEquity += parseFloat(equityInput.value);
+            }
+        });
+
+        // Add duplicate partner check
+        const partnerNames = new Set();        
+        partners.forEach((partner, index) => {
+            const nameInput = partner.querySelector(`[name="partners[${index}][name]"]`);
+            const name = nameInput.value.trim();
+            
+            if (name && name !== 'new') {
+                if (partnerNames.has(name)) {
+                    window.showNotification(`Duplicate partner "${name}" found. Each partner can only be added once.`, 'error', 'both');
+                    isValid = false;
+                }
+                partnerNames.add(name);
             }
         });
 

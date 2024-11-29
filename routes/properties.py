@@ -214,109 +214,129 @@ def add_properties():
     """Handle adding new properties"""
     logger.info(f"Add properties route accessed by user: {current_user.email}")
     
-    partners = []
-    properties = []
-
     try:
         # Load existing properties
-        with open(current_app.config['PROPERTIES_FILE'], 'r') as f:
-            properties = json.load(f)
-            logger.debug(f"Successfully loaded {len(properties)} existing properties")
-            
-            # Extract unique partners
-            partners = sorted(set(
-                partner['name'] 
-                for prop in properties 
-                for partner in prop.get('partners', [])
-            ))
-            logger.debug(f"Extracted {len(partners)} unique partners: {partners}")
-            
-    except FileNotFoundError:
-        logger.error(f"Properties file not found at {current_app.config['PROPERTIES_FILE']}")
-        flash_message('Error: Properties database not found', 'error')
-        return jsonify({'success': False, 'message': 'Properties database not found'}), 500
-    except json.JSONDecodeError as e:
-        logger.error(f"JSON decode error in properties file: {str(e)}")
-        flash_message('Error: Invalid properties database format', 'error')
-        return jsonify({'success': False, 'message': 'Invalid properties database format'}), 500
-    except Exception as e:
-        logger.error(f"Unexpected error loading properties: {str(e)}")
-        flash_message('An unexpected error occurred while loading properties', 'error')
-        return jsonify({'success': False, 'message': str(e)}), 500
-
-    if request.method == 'POST':
-        logger.debug("Processing POST request for add_properties")
+        properties = []
         try:
-            # Get and validate incoming data
-            new_property = request.get_json()
-            if not new_property:
-                logger.warning("No property data received in POST request")
-                raise ValueError("No property data received")
-
-            logger.debug(f"Received new property data: {json.dumps(new_property, indent=2)}")
-
-            # Check for duplicate address
-            if any(p['address'] == new_property['address'] for p in properties):
-                logger.warning(f"Attempt to add duplicate property address: {new_property['address']}")
-                raise ValueError("A property with this address already exists")
-
-            # Validate property data
-            is_valid, validation_errors = validate_property_data(new_property)
-            if not is_valid:
-                logger.warning(f"Property validation failed: {validation_errors}")
-                return jsonify({
-                    'success': False, 
-                    'message': 'Validation failed', 
-                    'errors': validation_errors
-                }), 400
-
-            # Sanitize and normalize the data
+            with open(current_app.config['PROPERTIES_FILE'], 'r') as f:
+                properties = json.load(f)
+                logger.debug(f"Successfully loaded {len(properties)} existing properties")
+        except FileNotFoundError:
+            logger.warning(f"Properties file not found, will create new file")
+            # Create an empty properties file
+            os.makedirs(os.path.dirname(current_app.config['PROPERTIES_FILE']), exist_ok=True)
+            with open(current_app.config['PROPERTIES_FILE'], 'w') as f:
+                json.dump([], f)
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON decode error in properties file: {str(e)}")
+            return jsonify({
+                'success': False,
+                'message': 'Invalid properties database format',
+                'errors': [str(e)]
+            }), 500
+            
+        if request.method == 'POST':
+            logger.debug("Processing POST request for add_properties")
             try:
-                complete_property = sanitize_property_data(new_property)
-                logger.debug("Property data sanitized successfully")
-            except ValueError as ve:
-                logger.error(f"Error sanitizing property data: {str(ve)}")
+                # Get and validate incoming data
+                new_property = request.get_json()
+                if not new_property:
+                    logger.warning("No property data received in POST request")
+                    return jsonify({
+                        'success': False,
+                        'message': 'No property data received',
+                        'errors': ['No property data received']
+                    }), 400
+
+                logger.debug(f"Received new property data: {json.dumps(new_property, indent=2)}")
+
+                # Check for duplicate address
+                if any(p['address'] == new_property['address'] for p in properties):
+                    logger.warning(f"Attempt to add duplicate property address: {new_property['address']}")
+                    return jsonify({
+                        'success': False,
+                        'message': 'A property with this address already exists',
+                        'errors': ['A property with this address already exists']
+                    }), 400
+
+                # Validate property data
+                is_valid, validation_errors = validate_property_data(new_property)
+                if not is_valid:
+                    logger.warning(f"Property validation failed: {validation_errors}")
+                    return jsonify({
+                        'success': False,
+                        'message': 'Validation failed',
+                        'errors': validation_errors
+                    }), 400
+
+                # Sanitize and normalize the data
+                try:
+                    complete_property = sanitize_property_data(new_property)
+                    logger.debug("Property data sanitized successfully")
+                except ValueError as ve:
+                    logger.error(f"Error sanitizing property data: {str(ve)}")
+                    return jsonify({
+                        'success': False,
+                        'message': f'Error processing property data',
+                        'errors': [str(ve)]
+                    }), 400
+
+                # Add the new property
+                properties.append(complete_property)
+                
+                # Save updated properties with atomic write
+                temp_file = current_app.config['PROPERTIES_FILE'] + '.tmp'
+                try:
+                    # Ensure directory exists
+                    os.makedirs(os.path.dirname(temp_file), exist_ok=True)
+                    
+                    with open(temp_file, 'w') as f:
+                        json.dump(properties, f, indent=2)
+                    os.replace(temp_file, current_app.config['PROPERTIES_FILE'])
+                    logger.info(f"New property successfully added: {complete_property['address']}")
+                except Exception as e:
+                    logger.error(f"Error saving properties file: {str(e)}")
+                    if os.path.exists(temp_file):
+                        try:
+                            os.remove(temp_file)
+                        except Exception as e2:
+                            logger.error(f"Error removing temporary file: {str(e2)}")
+                    return jsonify({
+                        'success': False,
+                        'message': 'Error saving property data',
+                        'errors': [str(e)]
+                    }), 500
+
+                return jsonify({
+                    'success': True,
+                    'message': 'Property added successfully'
+                })
+
+            except Exception as e:
+                logger.error(f"Unexpected error in add_properties POST handler: {str(e)}", exc_info=True)
                 return jsonify({
                     'success': False,
-                    'message': f'Error processing property data: {str(ve)}'
-                }), 400
+                    'message': 'An unexpected error occurred',
+                    'errors': [str(e)]
+                }), 500
 
-            # Add the new property
-            properties.append(complete_property)
-            
-            # Save updated properties with atomic write
-            temp_file = current_app.config['PROPERTIES_FILE'] + '.tmp'
-            try:
-                with open(temp_file, 'w') as f:
-                    json.dump(properties, f, indent=2)
-                import os
-                os.replace(temp_file, current_app.config['PROPERTIES_FILE'])
-                logger.info(f"New property successfully added: {complete_property['address']}")
-            except Exception as e:
-                logger.error(f"Error saving properties file: {str(e)}")
-                if os.path.exists(temp_file):
-                    try:
-                        os.remove(temp_file)
-                    except Exception as e2:
-                        logger.error(f"Error removing temporary file: {str(e2)}")
-                raise
+        # For GET requests, render the template
+        partners = sorted(set(
+            partner['name'] 
+            for prop in properties 
+            for partner in prop.get('partners', [])
+        ))
+        logger.debug(f"Rendering add_properties template with {len(partners)} partners")
+        return render_template('properties/add_properties.html', partners=partners)
 
-            flash_message('Property added successfully', 'success')
-            return jsonify({'success': True, 'message': 'Property added successfully'})
-
-        except ValueError as ve:
-            logger.warning(f"Validation error in add_properties: {str(ve)}")
-            flash_message(str(ve), 'error')
-            return jsonify({'success': False, 'message': str(ve)}), 400
-        except Exception as e:
-            logger.error(f"Unexpected error in add_properties: {str(e)}", exc_info=True)
-            flash_message('An unexpected error occurred while adding the property', 'error')
-            return jsonify({'success': False, 'message': str(e)}), 500
-
-    # For GET requests, render the template
-    logger.debug(f"Rendering add_properties template with {len(partners)} partners")
-    return render_template('properties/add_properties.html', partners=partners)
-
+    except Exception as e:
+        logger.error(f"Unexpected error in add_properties: {str(e)}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'message': 'An unexpected error occurred',
+            'errors': [str(e)]
+        }), 500
+        
 @properties_bp.route('/remove_properties', methods=['GET', 'POST'])
 @login_required
 @admin_required

@@ -505,26 +505,167 @@ const editPropertiesModule = {
         event.preventDefault();
         console.log('Form submission started');
         
-        // Validate total equity
-        const totalEquity = this.calculateTotalEquity();
-        console.log('Total equity:', totalEquity);
-        if (Math.abs(totalEquity - 100) > 0.01) {
-            window.showNotification('Total equity must equal 100%', 'error', 'both');
-            return;
-        }
-
         // Get property select value
         const propertySelect = document.getElementById('property_select');
         if (!propertySelect || !propertySelect.value) {
-            window.showNotification('No property selected', 'error', 'both');
+            window.showNotification('Please select a property to edit', 'error', 'both');
             return;
         }
 
-        // Collect the property data
-        const propertyData = {
-            address: propertySelect.value,
+        // Validate required fields
+        const requiredFields = {
+            'purchase-date': 'Purchase date',
+            'loan-amount': 'Loan amount',
+            'loan-start-date': 'Loan start date',
+            'purchase-price': 'Purchase price',
+            'down-payment': 'Down payment',
+            'primary-loan-rate': 'Primary loan rate',
+            'primary-loan-term': 'Primary loan term'
+        };
+
+        for (const [fieldId, fieldName] of Object.entries(requiredFields)) {
+            const field = document.getElementById(fieldId);
+            if (!field || !field.value.trim()) {
+                window.showNotification(`Please enter a value for ${fieldName}`, 'error', 'both');
+                return;
+            }
+        }
+
+        // Validate numeric fields are positive
+        const numericFields = {
+            'purchase-price': 'Purchase price',
+            'down-payment': 'Down payment',
+            'loan-amount': 'Loan amount',
+            'primary-loan-rate': 'Primary loan rate',
+            'primary-loan-term': 'Primary loan term',
+            'seller-financing-amount': 'Seller financing amount',
+            'seller-financing-rate': 'Seller financing rate',
+            'seller-financing-term': 'Seller financing term',
+            'closing-costs': 'Closing costs',
+            'renovation-costs': 'Renovation costs',
+            'marketing-costs': 'Marketing costs',
+            'holding-costs': 'Holding costs'
+        };
+
+        for (const [fieldId, fieldName] of Object.entries(numericFields)) {
+            const field = document.getElementById(fieldId);
+            const value = parseFloat(field?.value || '0');
+            if (isNaN(value) || value < 0) {
+                window.showNotification(`${fieldName} must be a positive number`, 'error', 'both');
+                return;
+            }
+        }
+
+        // Validate dates
+        const dateFields = ['purchase-date', 'loan-start-date'];
+        for (const fieldId of dateFields) {
+            const field = document.getElementById(fieldId);
+            if (!field || !this.isValidDate(field.value)) {
+                window.showNotification(`Please enter a valid date in YYYY-MM-DD format for ${fieldId.replace(/-/g, ' ')}`, 'error', 'both');
+                return;
+            }
+        }
+
+        // Validate partners
+        const partnerEntries = document.querySelectorAll('.partner-entry');
+        if (partnerEntries.length === 0) {
+            window.showNotification('At least one partner is required', 'error', 'both');
+            return;
+        }
+
+        const partners = [];
+        const partnerNames = new Set();
+
+        for (const entry of partnerEntries) {
+            const select = entry.querySelector('.partner-select');
+            const equityInput = entry.querySelector('.partner-equity');
+            let partnerName;
+
+            if (select.value === 'new') {
+                const newNameInput = entry.querySelector('.new-partner-input input');
+                if (!newNameInput || !newNameInput.value.trim()) {
+                    window.showNotification('Please enter a name for the new partner', 'error', 'both');
+                    return;
+                }
+                partnerName = newNameInput.value.trim();
+            } else if (!select.value) {
+                window.showNotification('Please select or enter a partner name', 'error', 'both');
+                return;
+            } else {
+                partnerName = select.value;
+            }
+
+            if (partnerNames.has(partnerName)) {
+                window.showNotification(`Duplicate partner name: ${partnerName}. Each partner can only be added once.`, 'error', 'both');
+                return;
+            }
+            partnerNames.add(partnerName);
+
+            const equityShare = parseFloat(equityInput.value);
+            if (isNaN(equityShare) || equityShare <= 0 || equityShare > 100) {
+                window.showNotification(`Please enter a valid equity share (between 0 and 100) for partner ${partnerName}`, 'error', 'both');
+                return;
+            }
+
+            partners.push({ name: partnerName, equity_share: equityShare });
+        }
+
+        // Validate total equity
+        const totalEquity = this.calculateTotalEquity();
+        if (Math.abs(totalEquity - 100) > 0.01) {
+            window.showNotification(`Total equity must equal 100%. Current total: ${totalEquity.toFixed(2)}%`, 'error', 'both');
+            return;
+        }
+
+        // Collect and send the property data...
+        const propertyData = this.collectPropertyData(propertySelect.value, partners);
+        
+        console.log('Sending property data:', propertyData);
+
+        // Send the POST request
+        fetch('/properties/edit_properties', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify(propertyData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Server response:', data);
+            if (data.success) {
+                window.showNotification('Property updated successfully', 'success', 'both');
+                setTimeout(() => window.location.reload(), 2000);
+            } else {
+                if (data.errors && Array.isArray(data.errors)) {
+                    data.errors.forEach(error => {
+                        window.showNotification(error, 'error', 'both');
+                    });
+                } else {
+                    window.showNotification(data.message || 'Error updating property', 'error', 'both');
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            window.showNotification('An unexpected error occurred while updating the property', 'error', 'both');
+        });
+    },
+
+    // Helper function to validate date format
+    isValidDate: function(dateString) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) return false;
+        const date = new Date(dateString);
+        return date instanceof Date && !isNaN(date) && date.toISOString().slice(0, 10) === dateString;
+    },
+
+    // Helper function to collect property data
+    collectPropertyData: function(address, partners) {
+        return {
+            address: address,
             purchase_date: document.getElementById('purchase-date').value,
-            loan_amount: document.getElementById('loan-amount').value,
+            loan_amount: parseFloat(document.getElementById('loan-amount').value),
             loan_start_date: document.getElementById('loan-start-date').value,
             purchase_price: parseInt(document.getElementById('purchase-price').value),
             down_payment: parseInt(document.getElementById('down-payment').value),
@@ -560,67 +701,8 @@ const editPropertiesModule = {
                 other_expenses: parseFloat(document.getElementById('other-expenses').value || '0'),
                 expense_notes: document.getElementById('expense-notes').value
             },
-            partners: []
+            partners: partners
         };
-
-        console.log('Collected property data:', propertyData);
-
-        // Collect partner data
-        const partnerEntries = document.querySelectorAll('.partner-entry');
-        partnerEntries.forEach((entry, index) => {
-            console.log(`Processing partner entry ${index}`);
-            const select = entry.querySelector('.partner-select');
-            const equityInput = entry.querySelector('.partner-equity');
-            let partnerName;
-
-            if (select.value === 'new') {
-                const newNameInput = entry.querySelector('.new-partner-input input');
-                if (newNameInput && newNameInput.value.trim()) {
-                    partnerName = newNameInput.value.trim();
-                }
-            } else {
-                partnerName = select.value;
-            }
-
-            const equityShare = parseFloat(equityInput.value);
-
-            if (partnerName && !isNaN(equityShare)) {
-                propertyData.partners.push({
-                    name: partnerName,
-                    equity_share: equityShare
-                });
-                console.log(`Added partner: ${partnerName} with equity: ${equityShare}`);
-            }
-        });
-
-        console.log('Final property data to submit:', propertyData);
-
-        // Send the POST request
-        fetch('/properties/edit_properties', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: JSON.stringify(propertyData)
-        })
-        .then(response => {
-            console.log('Response status:', response.status);
-            return response.json();
-        })
-        .then(data => {
-            console.log('Server response:', data);
-            if (data.success) {
-                window.showNotification('Property updated successfully', 'success');
-                setTimeout(() => window.location.reload(), 1500);
-            } else {
-                throw new Error(data.message || 'Error updating property');
-            }
-        })
-        .catch(error => {
-            console.error('Error updating property:', error);
-            window.showNotification('Error updating property: ' + error.message, 'error', 'both');
-        });
     },
 
     calculateTotalEquity: function() {
