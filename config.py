@@ -31,7 +31,12 @@ class Config:
         self.CATEGORIES_FILE = os.path.join(self.DATA_DIR, 'categories.json')
         self.REIMBURSEMENTS_FILE = os.path.join(self.DATA_DIR, 'reimbursements.json')
         
-        # Create necessary directories
+        # Create necessary directories if not in production
+        if not os.environ.get('RENDER'):
+            self.create_directories()
+
+    def create_directories(self):
+        """Create necessary directories if they don't exist"""
         os.makedirs(self.DATA_DIR, exist_ok=True)
         os.makedirs(self.ANALYSES_DIR, exist_ok=True)
         os.makedirs(self.UPLOAD_FOLDER, exist_ok=True)
@@ -51,15 +56,27 @@ class ProductionConfig(Config):
     TESTING = False
     
     def __init__(self):
-        # Override BASE_DIR for Render.com
-        self.BASE_DIR = '/data'
-        super().__init__()  # Initialize all paths after setting BASE_DIR
-        print(f"Running in production mode. Using BASE_DIR: {self.BASE_DIR}")
+        # For Render.com, use the mounted volume path
+        self.BASE_DIR = '/opt/render/project/src'  # Application root
+        self.PERSISTENT_DIR = '/data'              # Mounted volume
+        super().__init__()
+        
+        # Override paths for persistent storage
+        self.DATA_DIR = os.path.join(self.PERSISTENT_DIR, 'data')
+        self.ANALYSES_DIR = os.path.join(self.DATA_DIR, 'analyses')
+        self.UPLOAD_FOLDER = os.path.join(self.PERSISTENT_DIR, 'uploads')
+        
+        # Update file paths
+        self.USERS_FILE = os.path.join(self.DATA_DIR, 'users.json')
+        self.PROPERTIES_FILE = os.path.join(self.DATA_DIR, 'properties.json')
+        self.TRANSACTIONS_FILE = os.path.join(self.DATA_DIR, 'transactions.json')
+        self.CATEGORIES_FILE = os.path.join(self.DATA_DIR, 'categories.json')
+        self.REIMBURSEMENTS_FILE = os.path.join(self.DATA_DIR, 'reimbursements.json')
+        
+        print(f"Running in production mode on Render.com")
+        print(f"Base directory: {self.BASE_DIR}")
+        print(f"Persistent directory: {self.PERSISTENT_DIR}")
         print(f"Data directory: {self.DATA_DIR}")
-        print(f"Analyses directory: {self.ANALYSES_DIR}")
-        print(f"Upload folder: {self.UPLOAD_FOLDER}")
-        print(f"Users file: {self.USERS_FILE}")
-        print(f"Properties file: {self.PROPERTIES_FILE}")
 
 class TestingConfig(Config):
     """Testing configuration"""
@@ -68,7 +85,7 @@ class TestingConfig(Config):
     
     def __init__(self):
         self.BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_data')
-        super().__init__()  # Initialize with test directory
+        super().__init__()
 
 # Configuration dictionary
 config = {
@@ -81,9 +98,7 @@ config = {
 def get_config():
     """Get the current configuration based on environment"""
     if os.environ.get('RENDER'):
-        config_instance = ProductionConfig()
-        print(f"Using production configuration with mounted path: {config_instance.BASE_DIR}")
-        return config_instance
+        return ProductionConfig()
     
     env = os.environ.get('FLASK_ENV', 'development')
     return config.get(env, config['default'])()
