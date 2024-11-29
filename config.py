@@ -56,11 +56,11 @@ class ProductionConfig(Config):
     TESTING = False
     
     def __init__(self):
-        # For Render.com, assume directories already exist
-        self.BASE_DIR = '/opt/render/project/src'      # Application root
-        self.DATA_DIR = '/data'                        # Data directory in mounted volume
-        self.ANALYSES_DIR = '/data/analyses'           # Analyses subdirectory
-        self.UPLOAD_FOLDER = '/data/uploads'           # Upload directory in mounted volume
+        # For Render.com, use the correct mounted volume path
+        self.BASE_DIR = '/opt/render/project/src'                   # Application root
+        self.DATA_DIR = '/opt/render/project/src/data'             # Data directory in mounted volume
+        self.ANALYSES_DIR = '/opt/render/project/src/data/analyses' # Analyses subdirectory
+        self.UPLOAD_FOLDER = '/opt/render/project/src/data/uploads' # Upload directory in mounted volume
         
         # JSON file paths
         self.USERS_FILE = os.path.join(self.DATA_DIR, 'users.json')

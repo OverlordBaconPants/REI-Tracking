@@ -1,18 +1,18 @@
 #!/bin/bash
 
 # Create required directories in /data if they don't already exist
-mkdir /data/analyses
-mkdir /data/uploads
+mkdir /opt/render/project/python/data/analyses
+mkdir /opt/render/project/python/data/uploads
 
 # Ensure proper permissions
 chmod -R 644 /data
 
 # Create empty JSON files if they don't exist
-touch /data/users.json
-touch /data/properties.json
-touch /data/transactions.json
-touch /data/categories.json
-touch /data/reimbursements.json
+touch /opt/render/project/python/data/users.json
+touch /opt/render/project/python/data/properties.json
+touch /opt/render/project/python/data/transactions.json
+touch /opt/render/project/python/data/categories.json
+touch /opt/render/project/python/data/reimbursements.json
 
 # Initialize empty JSON arrays in files if they're empty
 for file in /data/*.json; do
