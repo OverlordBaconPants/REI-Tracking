@@ -1,14 +1,15 @@
 {% extends "base.html" %}
+{% block body_class %}bulk-import-page{% endblock %}
 {% block content %}
 
 <div class="container">
     <h1 class="mb-4">Bulk Import Transactions</h1>
-    <p></p>
+    
     <p>After selecting a file to upload, we'll walk you through mapping your columns to the fields we expect.</p>
 
     <div class="card">
         <div class="card-body">
-            <form id="bulk-import-form" action="{{ url_for('transactions.bulk_import') }}" method="post" enctype="multipart/form-data">
+            <form id="bulk-import-form" enctype="multipart/form-data">
                 <div class="mb-3">
                     <label for="file" class="form-label">Select XLS or CSV file</label>
                     <input type="file" class="form-control" id="file" name="file" accept=".csv,.xls,.xlsx">
@@ -18,7 +19,9 @@
                     <!-- Column mapping will be dynamically inserted here -->
                 </div>
 
-                <button type="submit" class="btn btn-primary">Import</button>
+                <div class="mb-3">
+                    <button type="submit" class="btn btn-primary" id="import-button">Import</button>
+                </div>
             </form>
         </div>
     </div>
@@ -27,14 +30,10 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{{ url_for('static', filename='js/bulk_import.js') }}"></script>
-<script>
+<script type="module">
+    import BulkImportModule from '/static/js/modules/bulk_import.js';
     document.addEventListener('DOMContentLoaded', function() {
-        if (window.BulkImportModule) {
-            window.BulkImportModule.init();
-        } else {
-            toastr.error('Bulk import module failed to load');
-        }
+        BulkImportModule.init();
     });
 </script>
 {% endblock %}

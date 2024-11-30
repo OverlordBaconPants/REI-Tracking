@@ -447,12 +447,12 @@ def create_transactions_dash(flask_app):
 
                 # Format documentation links
                 df['documentation_file'] = df['documentation_file'].apply(
-                    lambda x: f'[View/Download]({url_for("transactions.get_artifact", filename=x)})' if x else ''
+                    lambda x: f'<a href="{url_for("transactions.get_artifact", filename=x)}" target="_blank" class="btn btn-sm btn-primary">View</a>' if x else ''
                 )
 
                 # Handle reimbursement documentation with validation
                 df['reimbursement_documentation'] = df.apply(
-                    lambda row: (f'[View/Download]({url_for("transactions.get_artifact", filename=row.get("reimbursement", {}).get("documentation"))})'
+                    lambda row: (f'<a href="{url_for("transactions.get_artifact", filename=row.get("reimbursement", {}).get("documentation"))}" target="_blank" class="btn btn-sm btn-primary">View</a>'
                                 if isinstance(row.get('reimbursement'), dict) 
                                 and row.get('reimbursement', {}).get('documentation')
                                 else ''),

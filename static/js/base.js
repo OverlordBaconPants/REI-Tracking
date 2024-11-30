@@ -13,75 +13,7 @@
                 return;
             }
 
-            // Wait for toastr to be available
-            this.waitForToastr()
-                .then(() => {
-                    this.initializeToastr();
-                    this.initializeFlashMessages();
-                })
-                .catch(error => {
-                    console.error('Error initializing toastr:', error);
-                });
-
             this.initializeBootstrapComponents();
-        },
-
-        waitForToastr: function(timeout = 2000) {
-            return new Promise((resolve, reject) => {
-                const startTime = Date.now();
-                
-                const checkToastr = () => {
-                    if (typeof toastr !== 'undefined') {
-                        resolve();
-                    } else if (Date.now() - startTime >= timeout) {
-                        reject(new Error('Toastr failed to load'));
-                    } else {
-                        setTimeout(checkToastr, 100);
-                    }
-                };
-                
-                checkToastr();
-            });
-        },
-
-        initializeToastr: function() {
-            if (typeof toastr === 'undefined') {
-                console.error('Toastr not available');
-                return;
-            }
-
-            // Create a second toastr container for top notifications
-            const topContainer = document.createElement('div');
-            topContainer.id = 'toastr-top';
-            document.body.appendChild(topContainer);
-
-            // Configure bottom notifications (default)
-            window.toastrBottom = toastr;
-            toastrBottom.options = {
-                "closeButton": true,
-                "debug": false,
-                "newestOnTop": true,
-                "progressBar": true,
-                "positionClass": "toast-bottom-right",
-                "preventDuplicates": false,
-                "showDuration": "300",
-                "hideDuration": "1000",
-                "timeOut": "5000",
-                "extendedTimeOut": "1000",
-                "showEasing": "swing",
-                "hideEasing": "linear",
-                "showMethod": "fadeIn",
-                "hideMethod": "fadeOut",
-                "target": "body"
-            };
-
-            // Create and configure top notifications
-            window.toastrTop = Object.create(toastr);
-            window.toastrTop.options = {
-                ...toastrBottom.options,
-                "positionClass": "toast-top-right",
-                "target": "#toastr-top"
-            };
         },
 
         initializeFlashMessages: function() {
@@ -108,34 +40,6 @@
                 } catch (error) {
                     console.error('Error processing flash messages:', error);
                 }
-            }
-        },
-
-        showNotification: function(message, category = 'info', position = 'both') {
-            if (typeof toastr === 'undefined') {
-                console.warn('Toastr not available, falling back to alert');
-                alert(message);
-                return;
-            }
-
-            const categoryMap = {
-                'success': 'success',
-                'info': 'info',
-                'warning': 'warning',
-                'error': 'error',
-                'danger': 'error',
-                'message': 'info',
-                'default': 'info'
-            };
-
-            const toastrMethod = categoryMap[category] || categoryMap['default'];
-
-            // Show notification based on position preference
-            if (position === 'top' || position === 'both') {
-                window.toastrTop[toastrMethod](message);
-            }
-            if (position === 'bottom' || position === 'both') {
-                window.toastrBottom[toastrMethod](message);
             }
         },
 

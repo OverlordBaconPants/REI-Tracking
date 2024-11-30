@@ -1,3 +1,4 @@
+/* ===== Base Styles ===== */
 html, body {
     height: 100%;
     margin: 0;
@@ -5,24 +6,13 @@ html, body {
     overflow-x: hidden;
 }
 
-.container-fluid {
+body {
+    display: flex;
     min-height: 100vh;
-    padding: 0;
-    margin: 0;
 }
 
-.content {
-    flex: 1 0 auto;
-}
-
-.new-partner-name {
-    margin-top: 10px;
-}
-
-.remove-partner {
-    margin-top: 32px;
-}
-
+/* ===== Layout Components ===== */
+/* Sidebar */
 .sidebar {
     position: fixed;
     top: 0;
@@ -32,7 +22,7 @@ html, body {
     padding: 48px 0 0;
     box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
     background-color: navy;
-    width: 250px;
+    width: 200px;
     height: 100vh;
     overflow-y: auto;
 }
@@ -53,6 +43,12 @@ html, body {
 .sidebar .accordion-button:hover {
     background-color: #f8f9fa;
     color: navy !important;
+}
+
+.sidebar .accordion-button i {
+    margin-right: 10px;
+    width: 20px;
+    text-align: center;
 }
 
 .sidebar .accordion-body {
@@ -76,20 +72,35 @@ html, body {
     color: white !important;
 }
 
-.sidebar .accordion-button i {
-    margin-right: 10px;
-    width: 20px;
-    text-align: center;
+/* Main Content */
+main {
+    flex: 1;
+    margin-left: 200px;
+    padding: 20px;
+    min-height: 100vh;
+    width: calc(100% - 200px);
+    background-color: #fff;
 }
 
-.bg-navy {
-    background-color: navy !important;
-    color: white !important;
+.container-fluid {
+    min-height: calc(100vh - 40px);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
 }
 
-.bg-royal-purple {
-    background-color: #4B0082 !important;
-    color: white !important;
+/* ===== Cards ===== */
+.card {
+    box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
+    transition: 0.3s;
+}
+
+.card:hover {
+    box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2);
+}
+
+.card .card-header {
+    padding: 10px 15px;
 }
 
 .card .card-header h4,
@@ -99,28 +110,22 @@ html, body {
     margin-bottom: 0;
 }
 
-/* Make the utility section header match as well */
 .card .card-header h5 {
-    font-size: 1.25rem;  /* Makes h5 same size as h4 */
+    font-size: 1.25rem;
 }
 
-/* Optional: Add a bit more padding to match the navbar styling */
-.card .card-header {
-    padding: 10px 15px;
-}
-
-/* Target specifically the utilities card header while preserving other card header styles */
 .card .card-body .card .card-header h5 {
     color: black !important;
 }
 
-main {
-    margin-left: 200px;
-    padding: 20px;
-}
-
+/* ===== Forms and Inputs ===== */
 .form-group, .btn {
     margin: 5px 0;
+}
+
+.form-group {
+    flex: 1;
+    min-width: 200px;
 }
 
 .form-group.position-relative {
@@ -128,7 +133,6 @@ main {
     z-index: 100;
 }
 
-/* Add styles for the input focus state */
 .form-control:focus + .autocomplete-results {
     display: block;
 }
@@ -144,19 +148,7 @@ main {
     grid-column: 1 / -1;
 }
 
-.results-card {
-    background: #f8f9fa;
-    padding: px;
-    border-radius: 8px;
-    margin-top: 20px;
-}
-
-.result-value {
-    font-size: 24px;
-    font-weight: bold;
-    color: #28a745;
-}
-
+/* ===== Autocomplete Styles ===== */
 .autocomplete-container {
     position: relative;
     width: 100%;
@@ -164,7 +156,7 @@ main {
 
 .autocomplete-results {
     position: absolute;
-    top: calc(100% + 5px); /* Position below input with small gap */
+    top: calc(100% + 5px);
     left: 0;
     right: 0;
     z-index: 1000;
@@ -206,6 +198,106 @@ main {
     color: #dc3545;
 }
 
+/* ===== Dash Components ===== */
+/* Base Container */
+#_dash-app-content {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Dropdown Styling */
+.dash-dropdown {
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Table Container Structure */
+.dash-table-container {
+    flex: 1;
+    min-height: 0;  /* Critical for nested flex containers */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.dash-spreadsheet-container {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+}
+
+.dash-spreadsheet {
+    height: 100% !important;
+    min-height: 0 !important;
+}
+
+/* Table Header Styles */
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th {
+    background-color: navy !important;
+    color: white !important;
+    font-weight: bold !important;
+    height: 40px !important;
+    line-height: 40px !important;
+    padding: 0 10px !important;
+    text-overflow: ellipsis !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+}
+
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th .dash-header-cell-value {
+    color: white !important;
+}
+
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th .dash-sort {
+    color: white !important;
+    opacity: 0.7;
+}
+
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th:hover {
+    background-color: #000080 !important;
+}
+
+/* Table Cell Styles */
+.dash-cell {
+    padding: 10px !important;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif !important;
+    font-size: 14px !important;
+}
+
+/* Flex Container Styles */
+.flex-grow-1.d-flex.flex-column {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Table Wrapper */
+.dash-table-container .dash-spreadsheet {
+    overflow: auto;
+}
+
+/* Pagination Controls */
+.dash-table-container .previous-next-container {
+    margin-top: auto;
+    padding: 8px 0;
+}
+
+/* Header Row */
+.dash-header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background-color: navy;
+}
+
+/* ===== Property Management ===== */
+.property-table thead {
+    background-color: #000080 !important;
+    color: white !important;
+    font-weight: bold !important;
+}
+
 .remove-properties-select {
     margin-bottom: 1rem;
 }
@@ -223,7 +315,7 @@ main {
     width: 100%;
 }
 
-/* Styles for edit properties page */
+/* Partner Entry Styles */
 .partner-entry .row {
     margin-bottom: 15px;
 }
@@ -233,70 +325,27 @@ main {
 }
 
 .partner-entry .btn-danger {
-    height: 38px; /* Match the height of the input fields */
+    height: 38px;
 }
 
-/* Adjust the vertical alignment of the remove button */
 .partner-entry .col-md-2 {
     display: flex;
     align-items: flex-end;
 }
 
-/* Add some spacing between partner entries */
 .partner-entry + .partner-entry {
     margin-top: 15px;
 }
 
-.dash-dropdown {
-    font-family: Arial, Helvetica, sans-serif;
+.new-partner-name {
+    margin-top: 10px;
 }
 
-.filter-section {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-    margin-bottom: 20px;
+.remove-partner {
+    margin-top: 32px;
 }
 
-.form-group {
-    flex: 1;
-    min-width: 200px;
-}
-
-#transactions-header {
-    margin-top: 30px;
-    margin-bottom: 15px;
-}
-
-/* Styles for Dash table header */
-.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th {
-    background-color: navy !important;
-    color: white !important;
-    font-weight: bold !important;
-    height: 40px !important;
-    line-height: 40px !important;
-    padding: 0 10px !important;
-    text-overflow: ellipsis !important;
-    overflow: hidden !important;
-    white-space: nowrap !important;
-}
-
-/* Ensure the sort arrow in the header is visible */
-.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th .dash-header-cell-value {
-    color: white !important;
-}
-
-/* Style for the sort arrow */
-.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th .dash-sort {
-    color: white !important;
-    opacity: 0.7;
-}
-
-/* Hover effect for header cells */
-.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th:hover {
-    background-color: #000080 !important; /* Slightly darker shade of navy for hover effect */
-}
-
+/* ===== Loan Status Styles ===== */
 .loan-status-box {
     border: 1px solid #ccc;
     border-radius: 10px;
@@ -306,42 +355,33 @@ main {
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     font-family: Arial, sans-serif;
 }
+
 .loan-status-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
+
 .loan-status-item {
     flex: 1;
     padding: 0 10px;
 }
+
 .loan-status-label {
     font-weight: bold;
     margin-right: 5px;
 }
+
 .loan-status-value {
     font-weight: bold;
     color: #007bff;
-}
-
-.card {
-    box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
-    transition: 0.3s;
-}
-
-.card:hover {
-    box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2);
-}
-
-.font-weight-bold {
-    font-weight: bold;
 }
 
 #loan-info p {
     margin-bottom: 0;
 }
 
-/* Password validation styles */
+/* ===== Password Management ===== */
 .password-requirements {
     font-size: 0.875rem;
 }
@@ -373,9 +413,20 @@ main {
     font-size: 0.875rem;
 }
 
-/* Password toggle styles */
 .password-toggle-wrapper {
     position: relative;
+}
+
+.password-toggle-wrapper .btn-link {
+    color: #6c757d;
+    padding: 0;
+    margin: 0;
+    pointer-events: auto;
+    z-index: 4;
+}
+
+.password-toggle-wrapper .btn-link:hover {
+    color: #4a4f53;
 }
 
 .password-toggle-wrapper input[type="password"],
@@ -383,34 +434,11 @@ main {
     padding-right: 2.5rem;
 }
 
-.password-toggle-wrapper .btn-link {
-    color: #6c757d;
-    padding: 0;
-    margin: 0;
-    text-decoration: none;
+/* ===== Toast Notifications ===== */
+.toast-container {
+    z-index: 99999;
 }
 
-.password-toggle-wrapper .btn-link:hover {
-    color: #4a4f53;
-}
-
-.password-toggle-wrapper .btn-link:focus {
-    box-shadow: none;
-}
-
-/* Ensure the icon doesn't interfere with any validation icons */
-.password-toggle-wrapper .btn-link {
-    pointer-events: auto;
-    z-index: 4;
-}
-
-.property-table thead{
-    background-color: #000080 !important;  /* Navy blue */
-    color: white !important;
-    font-weight: bold !important;
-}
-
-/* Toastr positioning styles */
 #toastr-top {
     position: fixed;
     top: 12px;
@@ -420,6 +448,17 @@ main {
 
 #toastr-top .toast {
     margin-bottom: 8px;
+}
+
+.toast {
+    position: relative;
+    min-width: 300px;
+    padding: 15px;
+    margin-bottom: 8px;
+    background-color: #030303;
+    border-radius: 4px;
+    pointer-events: auto;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
 }
 
 .toast-top-right {
@@ -434,63 +473,12 @@ main {
     bottom: 12px;
 }
 
-/* Toast styling enhancements */
-.toast {
-    min-width: 300px;
-    padding: 15px;
-    margin-bottom: 8px;
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-}
+/* Toast Types */
+.toast-success { background-color: #51A351; }
+.toast-error { background-color: #BD362F; }
+.toast-info { background-color: navy; }
+.toast-warning { background-color: #F89406; }
 
-/* Ensure toasts stay above sidebar */
-.toast-container {
-    z-index: 99999;
-}
-
-/* Add responsive handling for mobile */
-@media (max-width: 480px) {
-    .toast {
-        width: calc(100vw - 24px);
-        min-width: unset;
-    }
-    
-    #toastr-top, 
-    .toast-bottom-right {
-        left: 12px;
-        right: 12px;
-    }
-}
-
-/* Toast Notification Styling */
-.toast {
-    position: relative;
-    min-width: 300px;
-    padding: 15px;
-    margin-bottom: 8px;
-    background-color: #030303;
-    border-radius: 4px;
-    pointer-events: auto;
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-}
-
-/* Specific toast types */
-.toast-success {
-    background-color: #51A351;
-}
-
-.toast-error {
-    background-color: #BD362F;
-}
-
-.toast-info {
-    background-color: navy;
-}
-
-.toast-warning {
-    background-color: #F89406;
-}
-
-/* Toast content styling */
 .toast-message {
     color: #fff;
     padding: 0;
@@ -498,7 +486,6 @@ main {
     word-wrap: break-word;
 }
 
-/* Close button styling */
 .toast-close-button {
     position: absolute;
     right: 8px;
@@ -514,7 +501,6 @@ main {
     opacity: 1;
 }
 
-/* Progress bar styling */
 .toast-progress {
     position: absolute;
     left: 0;
@@ -524,7 +510,22 @@ main {
     opacity: 0.8;
 }
 
-/* Animation classes */
+/* ===== Utility Classes ===== */
+.bg-navy {
+    background-color: navy !important;
+    color: white !important;
+}
+
+.bg-royal-purple {
+    background-color: #4B0082 !important;
+    color: white !important;
+}
+
+.font-weight-bold {
+    font-weight: bold;
+}
+
+/* ===== Animations ===== */
 .fadeIn {
     opacity: 0;
     animation: fadeIn 0.3s ease-in;
@@ -559,7 +560,24 @@ main {
     }
 }
 
-/* Responsive adjustments */
+/* ===== Responsive Styles ===== */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+    }
+    
+    main {
+        margin-left: 0;
+        width: 100%;
+    }
+    
+    .container-fluid {
+        padding: 10px;
+    }
+}
+
 @media (max-width: 480px) {
     .toast {
         width: calc(100vw - 24px);

@@ -639,4 +639,4 @@ const BulkImportModule = {
     }
 };
 
-export default bulkImportModule;
+export default BulkImportModule;

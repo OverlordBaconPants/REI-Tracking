@@ -336,10 +336,10 @@ def create_amortization_dash(flask_app):
                 try:
                     # Create date strings
                     df['date'] = [loan_start_date + relativedelta(months=i) for i in range(len(df))]
-                    df['date_str'] = [d.strftime('%y-%m') for d in df['date']]
+                    df['date_str'] = [d.strftime('%Y-%m') for d in df['date']]  # Changed format to YYYY-MM
                     
-                    # Filter for every 24 months (2 years) for better readability
-                    df_filtered = df[df.index % 24 == 0].copy()
+                    # Filter for every 6 months instead of 24
+                    df_filtered = df[df.index % 6 == 0].copy()
                     
                     logger.debug(f"Created graph data with {len(df_filtered)} points")
                     
@@ -373,7 +373,7 @@ def create_amortization_dash(flask_app):
                     ))
                     
                     # Add vertical line for today
-                    today_str = date.today().strftime('%y-%m')
+                    today_str = date.today().strftime('%Y-%m')  # Changed format to match
                     fig.add_shape(
                         type="line",
                         x0=today_str,
@@ -401,7 +401,7 @@ def create_amortization_dash(flask_app):
                         yanchor="bottom"
                     )
                     
-                    # Update layout
+                    # Update layout with custom date formatting
                     fig.update_layout(
                         title="Loan Amortization Over Time",
                         xaxis_title='Date',
@@ -410,7 +410,10 @@ def create_amortization_dash(flask_app):
                             tickangle=45,
                             tickmode='array',
                             tickvals=df_filtered['date_str'],
-                            ticktext=[d[:4] for d in df_filtered['date_str']]
+                            # Format the tick labels to show month and year
+                            ticktext=[f"{d[:4]}-{d[5:7]}" for d in df_filtered['date_str']],
+                            # Only show ticks where month is either 06 or 12
+                            tickformat="%Y-%m"
                         ),
                         showlegend=True,
                         legend=dict(

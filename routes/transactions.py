@@ -186,7 +186,7 @@ def bulk_import():
             }), 500, {'Content-Type': 'application/json'}
     
     # GET request: render the upload form
-    return render_template('transactions/bulk_import.html')
+    return render_template('transactions/bulk_import.html',body_class='bulk-import-page')
 
 def allowed_file(filename, file_type='documentation'):
     allowed_extensions = (current_app.config['ALLOWED_DOCUMENTATION_EXTENSIONS'] 

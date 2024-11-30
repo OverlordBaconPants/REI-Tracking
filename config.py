@@ -22,7 +22,7 @@ class Config:
         # Directory structure
         self.DATA_DIR = os.path.join(self.BASE_DIR, 'data')
         self.ANALYSES_DIR = os.path.join(self.DATA_DIR, 'analyses')
-        self.UPLOAD_FOLDER = os.path.join(self.BASE_DIR, 'uploads')
+        self.UPLOAD_FOLDER = os.path.join(self.DATA_DIR, 'uploads')
         
         # JSON file paths
         self.USERS_FILE = os.path.join(self.DATA_DIR, 'users.json')
