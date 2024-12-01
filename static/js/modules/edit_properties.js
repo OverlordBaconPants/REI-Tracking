@@ -12,11 +12,12 @@ const editPropertiesModule = {
             console.log('Module already initialized');
             return;
         }
-
+    
         try {
             console.log('Initializing edit properties module');
             await this.fetchAvailablePartners();
             this.initializeForm();
+            this.initPropertyManagerHandlers();
             this.initialized = true;
             window.showNotification('Edit Properties module loaded', 'success', 'both');
         } catch (error) {
@@ -276,9 +277,20 @@ const editPropertiesModule = {
             if (partnersContainer) {
                 partnersContainer.innerHTML = '';
                 if (property.partners && Array.isArray(property.partners)) {
-                    property.partners.forEach(partner => this.addPartnerFields(partner));
+                    property.partners.forEach(partner => {
+                        this.addPartnerFields({
+                            name: partner.name,
+                            equity_share: partner.equity_share,
+                            is_property_manager: partner.is_property_manager
+                        });
+                    });
+                    this.updateTotalEquity();
                 }
-                this.updateTotalEquity();
+            }
+
+            // If user is not Property Manager, disable editing
+            if (!property.is_property_manager) {
+                this.disableFormEditing();
             }
 
             // Update all totals
@@ -291,6 +303,30 @@ const editPropertiesModule = {
             window.showNotification('Error populating form fields', 'error', 'both');
             throw error;
         }
+    },
+
+    // Add method to disable form editing for non-Property Managers
+    disableFormEditing: function() {
+        const form = document.getElementById('editPropertyForm');
+        if (!form) return;
+
+        // Disable all inputs except those needed for viewing
+        const inputs = form.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+            input.disabled = true;
+        });
+
+        // Hide action buttons
+        const actionButtons = form.querySelectorAll('button[type="submit"], #add-partner-button');
+        actionButtons.forEach(button => {
+            button.style.display = 'none';
+        });
+
+        // Add notice to user
+        const notice = document.createElement('div');
+        notice.className = 'alert alert-warning mt-3';
+        notice.textContent = 'Only the designated Property Manager can edit property details.';
+        form.appendChild(notice);
     },
 
     clearForm: function() {
@@ -434,6 +470,20 @@ const editPropertiesModule = {
                                    required>
                         </div>
                     </div>
+                    <div class="col-md-3">
+                            <div class="form-group">
+                                <div class="form-check">
+                                <input type="checkbox" 
+                                    id="property-manager-${partnerCount}" 
+                                    name="partners[${partnerCount}][is_property_manager]" 
+                                    class="form-check-input property-manager-check"
+                                    ${partner.is_property_manager ? 'checked' : ''}>
+                                <label class="form-check-label" for="property-manager-${partnerCount}">
+                                    Property Manager
+                                </label>
+                            </div>
+                        </div>
+                    </div>
                     <div class="col-md-2">
                         <button type="button" class="btn btn-danger remove-partner">Remove</button>
                     </div>
@@ -499,6 +549,48 @@ const editPropertiesModule = {
 
         totalEquityElement.textContent = `Total Equity: ${total.toFixed(2)}%`;
         totalEquityElement.className = total === 100 ? 'text-success' : 'text-danger';
+    },
+
+    initPropertyManagerHandlers: function() {
+        const partnersContainer = document.getElementById('partners-container');
+        if (!partnersContainer) return;
+    
+        // Add click handler for Property Manager checkboxes
+        partnersContainer.addEventListener('change', (event) => {
+            if (event.target.classList.contains('property-manager-check')) {
+                this.handlePropertyManagerChange(event.target);
+            }
+        });
+    },
+    
+    handlePropertyManagerChange: function(checkbox) {
+        const partnersContainer = document.getElementById('partners-container');
+        const allCheckboxes = partnersContainer.querySelectorAll('.property-manager-check');
+        const partnerEntry = checkbox.closest('.partner-entry');
+        const partnerSelect = partnerEntry.querySelector('.partner-select');
+        const partnerName = partnerSelect.value === 'new' 
+            ? partnerEntry.querySelector('.new-partner-name input').value 
+            : partnerSelect.options[partnerSelect.selectedIndex].text;
+    
+        if (checkbox.checked) {
+            // Uncheck all other Property Manager checkboxes
+            allCheckboxes.forEach(cb => {
+                if (cb !== checkbox) {
+                    cb.checked = false;
+                }
+            });
+    
+            // Show toastr notification
+            if (partnerName) {
+                window.showNotification(`${partnerName} has been designated Property Manager!`, 'success', 'both');
+            }
+        }
+    
+        const anyChecked = Array.from(allCheckboxes).some(cb => cb.checked);
+        if (!anyChecked) {
+            checkbox.checked = true;
+            window.showNotification('At least one partner must be designated as Property Manager', 'warning', 'both');
+        }
     },
 
     handleSubmit: function(event) {
@@ -661,8 +753,8 @@ const editPropertiesModule = {
     },
 
     // Helper function to collect property data
-    collectPropertyData: function(address, partners) {
-        return {
+    collectPropertyData: function(address) {
+        const propertyData = {
             address: address,
             purchase_date: document.getElementById('purchase-date').value,
             loan_amount: parseFloat(document.getElementById('loan-amount').value),
@@ -701,8 +793,34 @@ const editPropertiesModule = {
                 other_expenses: parseFloat(document.getElementById('other-expenses').value || '0'),
                 expense_notes: document.getElementById('expense-notes').value
             },
-            partners: partners
+            partners: []
         };
+    
+        // Get all partner entries
+        const partnerEntries = document.querySelectorAll('.partner-entry');
+        partnerEntries.forEach((entry) => {
+            const nameSelect = entry.querySelector('.partner-select');
+            const equityInput = entry.querySelector('.partner-equity');
+            const propertyManagerCheck = entry.querySelector('.property-manager-check');
+            
+            let name = nameSelect.value;
+            if (name === 'new') {
+                const newNameInput = entry.querySelector('.new-partner-name input');
+                name = newNameInput.value.trim();
+            }
+            
+            const equityShare = parseFloat(equityInput.value);
+            
+            if (name && !isNaN(equityShare)) {
+                propertyData.partners.push({
+                    name: name,
+                    equity_share: equityShare,
+                    is_property_manager: propertyManagerCheck ? propertyManagerCheck.checked : false
+                });
+            }
+        });
+    
+        return propertyData;
     },
 
     calculateTotalEquity: function() {

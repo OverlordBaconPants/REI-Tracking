@@ -243,36 +243,47 @@ const addPropertiesModule = {
             console.error('Partners container not found');
             return;
         }
-
+    
         const existingPartners = partnersContainer.querySelectorAll('.partner-entry');
         const partnerCount = existingPartners.length;
-
+    
         // Check if we've reached the maximum number of partners (optional)
         if (partnerCount >= 10) {
             window.showNotification('Maximum number of partners reached', 'warning', 'both');
             return;
         }
+    
         const newPartnerHtml = `
             <div class="partner-entry mb-3">
                 <div class="row align-items-end">
-                    <div class="col-md-5">
+                    <div class="col-md-4">
                         <div class="form-group">
                             <label for="partner-select-${partnerCount}">Partner:</label>
-                            <select id="partner-select-${partnerCount}" name="partners[${partnerCount}][name]" class="form-control partner-select">
+                            <select id="partner-select-${partnerCount}" name="partners[${partnerCount}][name]" class="form-control partner-select" required>
                                 <option value="">Select a partner</option>
                                 ${this.getPartnerOptions()}
                                 <option value="new">Add new partner</option>
                             </select>
-                        </div>
-                        <div class="form-group mt-2 new-partner-name" style="display: none;">
-                            <label for="new-partner-name-${partnerCount}">New Partner Name:</label>
-                            <input type="text" id="new-partner-name-${partnerCount}" name="partners[${partnerCount}][new_name]" class="form-control">
+                            <div class="form-group mt-2 new-partner-name" style="display: none;">
+                                <label for="new-partner-name-${partnerCount}">New Partner Name:</label>
+                                <input type="text" id="new-partner-name-${partnerCount}" name="partners[${partnerCount}][new_name]" class="form-control">
+                            </div>
                         </div>
                     </div>
-                    <div class="col-md-5">
+                    <div class="col-md-3">
                         <div class="form-group">
                             <label for="partner-equity-${partnerCount}">Equity Share (%):</label>
-                            <input type="number" id="partner-equity-${partnerCount}" name="partners[${partnerCount}][equity_share]" class="form-control partner-equity" step="0.01" min="0" max="100">
+                            <input type="number" id="partner-equity-${partnerCount}" name="partners[${partnerCount}][equity_share]" class="form-control partner-equity" step="0.01" min="0" max="100" required>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <div class="form-check">
+                                <input type="checkbox" id="property-manager-${partnerCount}" name="partners[${partnerCount}][is_property_manager]" class="form-check-input property-manager-check">
+                                <label class="form-check-label" for="property-manager-${partnerCount}">
+                                    Property Manager
+                                </label>
+                            </div>
                         </div>
                     </div>
                     <div class="col-md-2">
@@ -281,7 +292,9 @@ const addPropertiesModule = {
                 </div>
             </div>
         `;
+    
         partnersContainer.insertAdjacentHTML('beforeend', newPartnerHtml);
+        this.initPropertyManagerHandlers();
         this.updateTotalEquity();
         console.log('New partner entry added');
     },
@@ -346,6 +359,49 @@ const addPropertiesModule = {
         if (event.target.classList.contains('remove-partner')) {
             event.target.closest('.partner-entry').remove();
             this.updateTotalEquity();
+        }
+    },
+
+    initPropertyManagerHandlers: function() {
+        const partnersContainer = document.getElementById('partners-container');
+        if (!partnersContainer) return;
+    
+        // Add click handler for property Manager checkboxes
+        partnersContainer.addEventListener('change', (event) => {
+            if (event.target.classList.contains('property-manager-check')) {
+                this.handlePropertyManagerChange(event.target);
+            }
+        });
+    },
+    
+    handlePropertyManagerChange: function(checkbox) {
+        const partnersContainer = document.getElementById('partners-container');
+        const allCheckboxes = partnersContainer.querySelectorAll('.property-manager-check');
+        const partnerEntry = checkbox.closest('.partner-entry');
+        const partnerSelect = partnerEntry.querySelector('.partner-select');
+        const partnerName = partnerSelect.value === 'new' 
+            ? partnerEntry.querySelector('.new-partner-name input').value 
+            : partnerSelect.options[partnerSelect.selectedIndex].text;
+    
+        if (checkbox.checked) {
+            // Uncheck all other Property Manager checkboxes
+            allCheckboxes.forEach(cb => {
+                if (cb !== checkbox) {
+                    cb.checked = false;
+                }
+            });
+    
+            // Show toastr notification
+            if (partnerName) {
+                window.showNotification(`${partnerName} has been designated Property Manager!`, 'success', 'both');
+            }
+        }
+    
+        // Ensure at least one checkbox is checked if this is the last one
+        const anyChecked = Array.from(allCheckboxes).some(cb => cb.checked);
+        if (!anyChecked) {
+            checkbox.checked = true;
+            window.showNotification('At least one partner must be designated as Property Manager', 'warning', 'both');
         }
     },
 
@@ -437,11 +493,14 @@ const addPropertiesModule = {
                 partners: []
             };
     
-            // Collect partner data
+            // Update partners collection to include property Manager status
             const partnerEntries = form.querySelectorAll('.partner-entry');
+            propertyData.partners = [];
+            
             partnerEntries.forEach((entry, index) => {
                 const nameInput = entry.querySelector(`[name="partners[${index}][name]"]`);
                 const equityInput = entry.querySelector(`[name="partners[${index}][equity_share]"]`);
+                const propertyManagerCheck = entry.querySelector(`[name="partners[${index}][is_property_manager]"]`);
                 
                 if (nameInput && equityInput) {
                     let name = nameInput.value.trim();
@@ -455,7 +514,11 @@ const addPropertiesModule = {
                     }
                     
                     if (name && !isNaN(equityShare)) {
-                        propertyData.partners.push({ name, equity_share: equityShare });
+                        propertyData.partners.push({
+                            name,
+                            equity_share: equityShare,
+                            is_property_manager: propertyManagerCheck.checked
+                        });
                     }
                 }
             });
@@ -587,8 +650,15 @@ const addPropertiesModule = {
             }
         });
 
-        if (Math.abs(totalEquity - 100) > 0.01) {
-            window.showNotification(`Total equity must equal 100%. Current total: ${totalEquity.toFixed(2)}%`, 'error', 'both');
+        // Add property Manager validation
+        const propertyManagerChecks = form.querySelectorAll('.property-manager-check');
+        const checkedCount = Array.from(propertyManagerChecks).filter(check => check.checked).length;
+        
+        if (checkedCount === 0) {
+            window.showNotification('Please designate one partner as Property Manager', 'error', 'both');
+            isValid = false;
+        } else if (checkedCount > 1) {
+            window.showNotification('Only one partner can be designated as Property Manager', 'error', 'both');
             isValid = false;
         }
 

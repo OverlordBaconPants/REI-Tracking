@@ -96,12 +96,6 @@ def validate_property_data(property_data: Dict[str, Any]) -> Tuple[bool, List[st
 def validate_partners_data(partners_data: List[Dict[str, Any]]) -> List[str]:
     """
     Validate partners data structure and equity shares
-    
-    Args:
-        partners_data: List of dictionaries containing partner information
-        
-    Returns:
-        List of error messages (empty if valid)
     """
     errors = []
     
@@ -110,6 +104,7 @@ def validate_partners_data(partners_data: List[Dict[str, Any]]) -> List[str]:
         return errors
         
     total_equity = Decimal('0')
+    property_manager_count = 0
     
     for partner in partners_data:
         # Validate partner structure
@@ -134,9 +129,19 @@ def validate_partners_data(partners_data: List[Dict[str, Any]]) -> List[str]:
         except (ValueError, TypeError, decimal.InvalidOperation):
             errors.append(f"Invalid equity share value for partner {partner.get('name', 'Unknown')}")
 
+        # Validate Property Manager designation
+        if partner.get('is_property_manager', False):
+            property_manager_count += 1
+
     # Validate total equity
     if total_equity != Decimal('100'):
         errors.append(f"Total equity must equal 100%, current total: {float(total_equity)}%")
+
+    # Validate Property Manager count
+    if property_manager_count == 0:
+        errors.append("One partner must be designated as Property Manager")
+    elif property_manager_count > 1:
+        errors.append("Only one partner can be designated as Property Manager")
         
     return errors
 
@@ -190,8 +195,17 @@ def sanitize_property_data(property_data: Dict[str, Any]) -> Dict[str, Any]:
                 'other_expenses': float(property_data.get('monthly_expenses', {}).get('other_expenses', 0)),
                 'expense_notes': str(property_data.get('monthly_expenses', {}).get('expense_notes', '')).strip()
             },
-            'partners': property_data['partners']
+            'partners': []
         }
+        
+        # Process partners data
+        for partner in property_data['partners']:
+            sanitized_partner = {
+                'name': str(partner['name']).strip(),
+                'equity_share': float(partner['equity_share']),
+                'is_property_manager': bool(partner.get('is_property_manager', False))
+            }
+            sanitized['partners'].append(sanitized_partner)
         
         # Round all numeric values to 2 decimal places
         def round_nested_dict(d: Dict) -> Dict:
@@ -207,6 +221,24 @@ def sanitize_property_data(property_data: Dict[str, Any]) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Error sanitizing property data: {str(e)}")
         raise ValueError(f"Error sanitizing property data: {str(e)}")
+
+def is_property_manager(user_email: str, property_data: Dict[str, Any]) -> bool:
+    """
+    Check if a user is the Property Manager for a property
+    """
+    try:
+        user = get_user_by_email(user_email)
+        if not user:
+            return False
+            
+        for partner in property_data.get('partners', []):
+            if partner.get('name') == user.get('name') and partner.get('is_property_manager', False):
+                return True
+                
+        return False
+    except Exception as e:
+        logger.error(f"Error checking Property Manager status: {str(e)}")
+        return False
     
 @properties_bp.route('/add_properties', methods=['GET', 'POST'])
 @login_required
@@ -606,22 +638,9 @@ def get_property_details():
 
         logger.debug(f"Fetching details for property: {address}")
 
-        # Load and validate properties file
-        try:
-            with open(current_app.config['PROPERTIES_FILE'], 'r') as f:
-                properties = json.load(f)
-        except FileNotFoundError:
-            logger.error("Properties database not found")
-            return jsonify({
-                'success': False,
-                'message': 'Properties database not found'
-            }), 500
-        except json.JSONDecodeError as e:
-            logger.error(f"Error decoding properties JSON: {str(e)}")
-            return jsonify({
-                'success': False,
-                'message': 'Error reading properties database'
-            }), 500
+        # Load properties file
+        with open(current_app.config['PROPERTIES_FILE'], 'r') as f:
+            properties = json.load(f)
 
         # Find the requested property
         property_details = next(
@@ -636,15 +655,22 @@ def get_property_details():
                 'message': 'Property not found'
             }), 404
 
-        # Check user permission
-        if not current_user.role.lower() == 'admin':
-            if not any(partner['name'] == current_user.name 
-                      for partner in property_details.get('partners', [])):
-                logger.warning(f"User {current_user.email} attempted to access unauthorized property details: {address}")
-                return jsonify({
-                    'success': False,
-                    'message': 'You do not have permission to view this property'
-                }), 403
+        # Check user permission - must be either Project Manager or a partner
+        is_partner = any(partner['name'] == current_user.name 
+                        for partner in property_details.get('partners', []))
+        is_pm = any(partner['name'] == current_user.name and 
+                partner.get('is_property_manager', False)  # Changed from user_is_project_manager
+                for partner in property_details.get('partners', []))
+        
+        if not (is_partner or is_pm):
+            logger.warning(f"User {current_user.email} attempted to access unauthorized property details: {address}")
+            return jsonify({
+                'success': False,
+                'message': 'You do not have permission to view this property'
+            }), 403
+
+        # Add flag to indicate if user is Project Manager
+        property_details['is_property_manager'] = is_pm
 
         logger.info(f"Successfully retrieved property details for: {address}")
         return jsonify({

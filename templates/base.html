@@ -60,11 +60,9 @@
                                     <li><a href="{{ url_for('properties.add_properties') }}" class="nav-link">
                                         <i class="bi bi-plus-square"></i> Add Properties
                                     </a></li>
-                                    {% if current_user.role == 'Admin' %}
                                     <li><a href="{{ url_for('properties.remove_properties') }}" class="nav-link">
                                         <i class="bi bi-trash"></i> Remove Properties
                                     </a></li>
-                                    {% endif %}
                                     <li><a href="{{ url_for('properties.edit_properties') }}" class="nav-link">
                                         <i class="bi bi-pencil"></i> Edit Properties
                                     </a></li>
@@ -94,11 +92,9 @@
                                     <li><a href="{{ url_for('transactions.view_transactions') }}" class="nav-link">
                                         <i class="bi bi-table"></i> View Transactions
                                     </a></li>
-                                    {% if current_user.role == 'Admin' %}
                                     <li><a href="{{ url_for('transactions.remove_transactions') }}" class="nav-link">
                                         <i class="bi bi-trash"></i> Remove Transactions
                                     </a></li>
-                                    {% endif %}
                                 </ul>
                             </div>
                         </div>

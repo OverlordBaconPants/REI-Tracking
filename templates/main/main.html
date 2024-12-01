@@ -86,6 +86,58 @@
         </div>
     </div>
 
+    <!-- Property Manager Card -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card rounded-lg shadow">
+                <div class="card-header text-white" style="background-color: #000080;">
+                    <h2 class="h4 mb-0 font-weight-bold">Properties You Manage</h2>
+                </div>
+                <div class="card-body">
+                    {% if user_properties %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Property</th>
+                                    <th>Purchase Date</th>
+                                    <th>Partners</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for property in user_properties %}
+                                    {% for partner in property.partners %}
+                                        {% if partner.name == name and partner.is_property_manager %}
+                                        <tr>
+                                            <td>{{ truncate_address(property.address) }}</td>
+                                            <td>{{ property.purchase_date }}</td>
+                                            <td>
+                                                {% for p in property.partners %}
+                                                {{ p.name }} ({{ p.equity_share }}%){% if not loop.last %}, {% endif %}
+                                                {% endfor %}
+                                            </td>
+                                            <td>
+                                                <a href="{{ url_for('properties.edit_properties') }}" class="btn btn-sm btn-primary">Edit</a>
+                                                <a href="{{ url_for('properties.remove_properties') }}" class="btn btn-sm btn-danger">Remove</a>
+                                            </td>
+                                        </tr>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        You are not currently designated as Property Manager for any properties.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="mt-4">
         <p>For property-related information, please select <a href="{{ url_for('properties.add_properties') }}">Properties</a> from the navbar.</p>
         <p>To add, <a href="{{ url_for('transactions.view_transactions') }}">view</a>, or edit transaction (within the View page) information for properties you are involved in, or to generate downloadable reports for transactions, please select <a href="{{ url_for('transactions.add_transactions') }}">Transactions</a> from the navbar.</p>

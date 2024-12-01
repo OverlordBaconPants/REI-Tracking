@@ -288,24 +288,73 @@
         </div>
     </div>
 
-    <!-- Partners Section -->
+    <!-- Partner Section -->
     <div class="card mb-4">
         <div class="card-header bg-royal-purple">
-            <h4 class="mb-0">Partners</h4>
+            <h4 id="partners" class="mb-0">Partners</h4>
         </div>
+
         <div class="card-body">
-            <!-- Add the hidden select here -->
+            <!-- Help Text Box -->
+            <div class="alert alert-info mb-4">
+                <h5 class="alert-heading">Property Manager Information</h5>
+                <p class="mb-0">One partner must be designated as Property Manager. While any partner can add property and transaction details, only the designated Property Manager can edit or remove them.</p>
+            </div>
+
             <select id="partners-list" style="display: none;">
                 {% for partner in partners %}
                     <option value="{{ partner }}">{{ partner }}</option>
                 {% endfor %}
             </select>
-    
+
+            <!-- Partners Container -->
             <div id="partners-container">
+                <!-- Partner entries will be dynamically added here -->
             </div>
-            
-            <button type="button" id="add-partner-button" class="btn btn-secondary mb-3">Add Partner</button>
-            
+
+            <button type="button" id="add-partner-button" class="btn btn-primary mt-3">Add Partner</button>
+
+            <!-- Partner Entry Template (used by JavaScript) -->
+            <template id="partner-entry-template">
+                <div class="partner-entry mb-3">
+                    <div class="row align-items-end">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="partner-select-{index}">Partner:</label>
+                                <select id="partner-select-{index}" name="partners[{index}][name]" class="form-control partner-select" required>
+                                    <option value="">Select a partner</option>
+                                    <!-- Partner options will be dynamically added -->
+                                    <option value="new">Add new partner</option>
+                                </select>
+                                <div class="form-group mt-2 new-partner-name" style="display: none;">
+                                    <label for="new-partner-name-{index}">New Partner Name:</label>
+                                    <input type="text" id="new-partner-name-{index}" name="partners[{index}][new_name]" class="form-control">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label for="partner-equity-{index}">Equity Share (%):</label>
+                                <input type="number" id="partner-equity-{index}" name="partners[{index}][equity_share]" class="form-control partner-equity" step="0.01" min="0" max="100" required>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <div class="form-check">
+                                    <input type="checkbox" id="project-manager-{index}" name="partners[{index}][is_project_manager]" class="form-check-input project-manager-check">
+                                    <label class="form-check-label" for="project-manager-{index}">
+                                        Property Manager
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="button" class="btn btn-danger remove-partner">Remove</button>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
             <div id="total-equity" class="mt-3 font-weight-bold" style="font-size: 1.2rem;">
                 Total Equity: 0%
             </div>
