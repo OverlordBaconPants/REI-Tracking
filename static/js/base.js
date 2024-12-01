@@ -1,18 +1,17 @@
-// base.js - Contains the base initialization code
+// base.js - Modified version
 (function(window) {
     const baseModule = {
         init: function() {
             console.log('Initializing base module');
             this.initializeLibraries();
+            this.initializeFlashMessages();
         },
 
         initializeLibraries: function() {
-            // Check for jQuery
             if (typeof jQuery === 'undefined') {
                 console.error('jQuery not loaded');
                 return;
             }
-
             this.initializeBootstrapComponents();
         },
 
@@ -33,8 +32,7 @@
     
                     if (Array.isArray(messages)) {
                         messages.forEach(([category, message]) => {
-                            // Show messages in both positions
-                            this.showNotification(message, category, 'both');
+                            window.showNotification(message, category, 'both');
                         });
                     }
                 } catch (error) {
@@ -44,13 +42,11 @@
         },
 
         initializeBootstrapComponents: function() {
-            // Initialize Bootstrap tooltips
             const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
             tooltipTriggerList.map(function (tooltipTriggerEl) {
                 return new bootstrap.Tooltip(tooltipTriggerEl);
             });
 
-            // Initialize Bootstrap popovers
             const popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
             popoverTriggerList.map(function (popoverTriggerEl) {
                 return new bootstrap.Popover(popoverTriggerEl);
@@ -58,10 +54,7 @@
         }
     };
 
-    // Expose the module and notification function
+    // Only expose the baseModule
     window.baseModule = baseModule;
-    window.showNotification = function(message, category, position = 'both') {
-        baseModule.showNotification(message, category, position);
-    };
 
 })(window);

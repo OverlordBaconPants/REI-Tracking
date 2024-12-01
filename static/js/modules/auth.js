@@ -1,5 +1,3 @@
-// /static/js/modules/auth.js
-
 const authModule = {
     init: async function() {
         console.log('Initializing auth module');

@@ -1,6 +1,5 @@
-// notifications.js
+// notifications.js - Modified version
 (function(window) {
-    // Configuration object for different positions
     const POSITIONS = {
         TOP: 'top',
         BOTTOM: 'bottom',
@@ -30,18 +29,16 @@
                 top: null,
                 bottom: null
             };
+            this.init();
         }
 
         init() {
             if (this.initialized) return;
 
-            // Create containers
             this.containers.top = this.createContainer('top');
             this.containers.bottom = this.createContainer('bottom');
 
-            // Initialize toastr if available
             if (typeof toastr !== 'undefined') {
-                // Configure bottom notifications
                 window.toastrBottom = toastr;
                 toastrBottom.options = {
                     ...DEFAULT_OPTIONS,
@@ -49,7 +46,6 @@
                     target: "body"
                 };
 
-                // Configure top notifications
                 window.toastrTop = Object.create(toastr);
                 toastrTop.options = {
                     ...DEFAULT_OPTIONS,
@@ -133,17 +129,12 @@
         }
     }
 
-    // Create and expose the notification system
+    // Create the notification system instance
     const notificationSystem = new NotificationSystem();
     
-    // Override the existing showNotification function
-    window.showNotification = function(message, type, position) {
+    // Define the global showNotification function
+    window.showNotification = function(message, type = 'info', position = POSITIONS.BOTH) {
         notificationSystem.show(message, type, position);
     };
-
-    // Initialize on DOM content loaded
-    document.addEventListener('DOMContentLoaded', () => {
-        notificationSystem.init();
-    });
 
 })(window);
