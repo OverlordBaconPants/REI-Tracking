@@ -341,31 +341,17 @@ def create_transactions_dash(flask_app):
     # Register callbacks
     @dash_app.callback(
         [Output('transactions-table', 'data'),
-         Output('transactions-header', 'children'),
-         Output('property-filter', 'options'),
-         Output('transactions-table', 'columns')],
+        Output('transactions-header', 'children'),
+        Output('property-filter', 'options'),
+        Output('transactions-table', 'columns')],
         [Input('refresh-trigger', 'data'),
-         Input('property-filter', 'value'),
-         Input('type-filter', 'value'),
-         Input('reimbursement-filter', 'value'),
-         Input('date-range', 'start_date'),
-         Input('date-range', 'end_date')]
+        Input('property-filter', 'value'),
+        Input('type-filter', 'value'),
+        Input('reimbursement-filter', 'value'),
+        Input('date-range', 'start_date'),
+        Input('date-range', 'end_date')]
     )
     def update_table(refresh_trigger, property_id, transaction_type, reimbursement_status, start_date, end_date):
-        """
-        Updates the transactions table based on filter criteria.
-        
-        Args:
-            refresh_trigger: Trigger for refresh
-            property_id: Selected property ID
-            transaction_type: Type of transaction (income/expense)
-            reimbursement_status: Status of reimbursement
-            start_date: Start date for filtering
-            end_date: End date for filtering
-            
-        Returns:
-            tuple: (table_data, header, property_options, columns)
-        """
         try:
             logger.debug(f"Updating table with filters: property={property_id}, "
                         f"type={transaction_type}, status={reimbursement_status}, "
@@ -459,9 +445,9 @@ def create_transactions_dash(flask_app):
                     axis=1
                 )
 
-                # Add edit links for admin users
+                # Add edit column based on property manager status
                 columns = base_columns.copy()
-                if current_user.is_authenticated and current_user.role == 'Admin':
+                if current_user.is_authenticated:
                     filter_options = {
                         'property_id': property_id,
                         'transaction_type': transaction_type,
@@ -470,9 +456,25 @@ def create_transactions_dash(flask_app):
                         'end_date': end_date
                     }
                     encoded_filter_options = urllib.parse.quote(json.dumps(filter_options))
-                    
+
+                    # Create a dictionary mapping property addresses to whether current user is property manager
+                    property_manager_status = {}
+                    for prop in properties:
+                        is_manager = any(
+                            partner['name'] == current_user.name and 
+                            partner.get('is_property_manager', False)
+                            for partner in prop.get('partners', [])
+                        )
+                        property_manager_status[prop['address']] = is_manager
+
+                    # Add edit column based on property manager status
                     df['edit'] = df.apply(
-                        lambda row: f'<a href="/transactions/edit/{str(row["id"])}?filters={encoded_filter_options}" target="_parent" class="btn btn-sm btn-primary">Edit</a>', 
+                        lambda row: (
+                            f'<a href="/transactions/edit/{str(row["id"])}?filters={encoded_filter_options}" '
+                            f'target="_parent" class="btn btn-sm btn-primary">Edit</a>'
+                            if property_manager_status.get(row['property_id'], False)
+                            else '<span class="text-muted">Edit Restricted for Property Manager</span>'
+                        ),
                         axis=1
                     )
                     columns.append({'name': 'Edit', 'id': 'edit', 'presentation': 'markdown'})
