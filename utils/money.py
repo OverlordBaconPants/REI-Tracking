@@ -8,87 +8,22 @@ class Money:
     Handles monetary values and formatting.
     """
     
-    def __init__(self, amount: Union[Decimal, str, float, int, 'Money', None]) -> None:
-        if amount is None:
-            self.amount = Decimal('0')
-        elif isinstance(amount, Money):
-            self.amount = amount.amount
-        elif isinstance(amount, Decimal):
-            self.amount = amount
-        elif isinstance(amount, (float, int)):
-            self.amount = Decimal(str(amount))
-        elif isinstance(amount, str):
-            # Remove currency symbols, commas, and spaces
-            cleaned = amount.replace('$', '').replace(',', '').replace(' ', '').strip()
-            try:
-                self.amount = Decimal(cleaned if cleaned else '0')
-            except (ValueError, Decimal.InvalidOperation) as e:
-                logging.error(f"Error converting string to Money: {amount}")
-                raise ValueError(f"Invalid monetary value: {amount}")
+    def __init__(self, amount):
+        if isinstance(amount, str):
+            cleaned = amount.replace('$', '').replace(',', '').strip()
+            self.amount = float(cleaned if cleaned else '0')
         else:
-            raise ValueError(f"Unsupported type for Money: {type(amount)}")
-            
-    def __add__(self, other: Union['Money', Decimal, float, int, str]) -> 'Money':
-        if isinstance(other, Money):
-            return Money(self.amount + other.amount)
-        return Money(self.amount + Decimal(str(other)))
-        
-    def __sub__(self, other: Union['Money', Decimal, float, int, str]) -> 'Money':
-        if isinstance(other, Money):
-            return Money(self.amount - other.amount)
-        return Money(self.amount - Decimal(str(other)))
-        
-    def __mul__(self, other: Union['Percentage', Decimal, float, int, str]) -> 'Money':
-        if isinstance(other, Percentage):
-            return Money(self.amount * other.as_decimal())
-        return Money(self.amount * Decimal(str(other)))
-        
-    def __truediv__(self, other: Union['Money', Decimal, float, int, str]) -> Union[Decimal, 'Money']:
-        if isinstance(other, Money):
-            return self.amount / other.amount
-        return Money(self.amount / Decimal(str(other)))
-        
-    def __eq__(self, other: Union['Money', Decimal, float, int, str]) -> bool:
-        if isinstance(other, Money):
-            return self.amount == other.amount
-        return self.amount == Decimal(str(other))
-        
-    def __lt__(self, other: Union['Money', Decimal, float, int, str]) -> bool:
-        if isinstance(other, Money):
-            return self.amount < other.amount
-        return self.amount < Decimal(str(other))
-        
-    def __gt__(self, other: Union['Money', Decimal, float, int, str]) -> bool:
-        if isinstance(other, Money):
-            return self.amount > other.amount
-        return self.amount > Decimal(str(other))
-        
-    def __le__(self, other: Union['Money', Decimal, float, int, str]) -> bool:
-        if isinstance(other, Money):
-            return self.amount <= other.amount
-        return self.amount <= Decimal(str(other))
-        
-    def __ge__(self, other: Union['Money', Decimal, float, int, str]) -> bool:
-        if isinstance(other, Money):
-            return self.amount >= other.amount
-        return self.amount >= Decimal(str(other))
-        
+            self.amount = float(amount or 0)
+
     @property
-    def dollars(self) -> Decimal:
-        """Return the raw decimal amount"""
+    def dollars(self):
         return self.amount
-        
-    def format(self, include_cents: bool = True) -> str:
-        """Format as currency string"""
-        if include_cents:
-            return f"${self.amount.quantize(Decimal('0.01'), ROUND_HALF_UP):,.2f}"
-        return f"${int(self.amount):,}"
-        
-    def __str__(self) -> str:
-        return self.format()
-        
-    def __repr__(self) -> str:
-        return f"Money('{self.format()}')"
+
+    def __str__(self):
+        return str(self.amount)
+
+    def __repr__(self):
+        return f"Money({self.amount})"
 
 class Percentage:
     """
@@ -101,48 +36,21 @@ class Percentage:
         print(tax_rate.as_decimal())  # Decimal('0.0725')
     """
     
-    def __init__(self, value: Union[Decimal, str, float, int, 'Percentage']) -> None:
-        if isinstance(value, Percentage):
-            self.value = value.value
-        elif isinstance(value, Decimal):
-            self.value = value
-        elif isinstance(value, (float, int)):
-            self.value = Decimal(str(value))
-        elif isinstance(value, str):
-            # Remove % symbol and spaces
-            cleaned = value.replace('%', '').strip()
-            try:
-                self.value = Decimal(cleaned if cleaned else '0')
-            except (ValueError, Decimal.InvalidOperation) as e:
-                logging.error(f"Error converting string to Percentage: {value}")
-                raise ValueError(f"Invalid percentage value: {value}")
-        else:
-            raise ValueError(f"Unsupported type for Percentage: {type(value)}")
-            
-    def as_decimal(self) -> Decimal:
-        """Convert percentage to decimal for calculations (e.g., 5% -> 0.05)"""
-        return self.value / Decimal('100')
-        
-    def format(self, decimal_places: int = 2) -> str:
-        """Format as percentage string with specified decimal places"""
-        format_str = f"0.{'0' * decimal_places}"
-        return f"{self.value.quantize(Decimal(format_str), ROUND_HALF_UP)}%"
-        
-    def __mul__(self, other: Union['Money', Decimal, float, int, str]) -> Union['Money', Decimal]:
-        if isinstance(other, Money):
-            return Money(other.dollars * self.as_decimal())
-        return Decimal(str(other)) * self.as_decimal()
-        
-    def __eq__(self, other: Union['Percentage', Decimal, float, int, str]) -> bool:
-        if isinstance(other, Percentage):
-            return self.value == other.value
-        return self.value == Decimal(str(other))
-        
-    def __str__(self) -> str:
-        return self.format()
-        
-    def __repr__(self) -> str:
-        return f"Percentage('{self.format()}')"
+    def __init__(self, value):
+       if isinstance(value, str):
+           cleaned = value.replace('%', '').strip()
+           self.value = float(cleaned if cleaned else '0')
+       else:
+           self.value = float(value or 0)
+
+    def as_decimal(self):
+       return self.value / 100.0
+
+    def __str__(self):
+       return str(self.value)
+
+    def __repr__(self):
+       return f"Percentage({self.value})"
 
 @dataclass
 class MonthlyPayment:

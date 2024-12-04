@@ -1,13 +1,22 @@
 const maoCalculator = {
     init: function() {
-        const form = document.getElementById('maoForm');
-        if (!form) return;
-
-        const inputs = form.querySelectorAll('input');
+        console.log('Initializing calculator...');
+        // Instead of looking for a specific form, attach listeners to all inputs
+        const inputs = document.querySelectorAll('input[type="number"]');
+        console.log(`Found ${inputs.length} number inputs`);
+        
         inputs.forEach(input => {
-            input.addEventListener('input', () => this.updateCalculations());
+            input.addEventListener('input', () => {
+                console.log(`Input changed: ${input.id}`);
+                this.updateCalculations();
+            });
+            input.addEventListener('change', () => {
+                console.log(`Input changed (change event): ${input.id}`);
+                this.updateCalculations();
+            });
         });
 
+        // Initial calculation
         this.updateCalculations();
     },
 
@@ -20,43 +29,90 @@ const maoCalculator = {
         }).format(value);
     },
 
+    calculateAcqRenoLoan: function(arv, renovationCosts) {
+        return Math.round(renovationCosts + (arv * 0.75));
+    },
+
+    calculateMonthlyInterestOnly: function(loanAmount, annualRate) {
+        return loanAmount * (annualRate / 100 / 12);
+    },
+
     updateCalculations: function() {
+        console.log('Updating calculations...');
+        
+        // Get all values and log them
         const values = {
             arv: parseFloat(document.getElementById('after_repair_value').value) || 0,
-            maxCashLeft: parseFloat(document.getElementById('max_cash_left').value) || 0,
             renovationCosts: parseFloat(document.getElementById('renovation_costs').value) || 0,
+            maxCashLeft: parseFloat(document.getElementById('max_cash_left').value) || 0,
             closingCosts: parseFloat(document.getElementById('closing_costs').value) || 0,
             renovationDuration: parseFloat(document.getElementById('renovation_duration').value) || 0,
             timeToRefinance: parseFloat(document.getElementById('time_to_refinance').value) || 0,
             utilities: parseFloat(document.getElementById('utilities').value) || 0,
             hoaCoa: parseFloat(document.getElementById('hoa_coa').value) || 0,
             maintenance: parseFloat(document.getElementById('maintenance').value) || 0,
-            interestRate: parseFloat(document.getElementById('interest_rate').value) || 0,
             expectedLtv: parseFloat(document.getElementById('expected_ltv').value) || 75,
-            isInterestOnly: document.getElementById('interest_only').checked
+            acqRenoRate: parseFloat(document.getElementById('acq_reno_rate').value) || 12
         };
+        
+        console.log('Current values:', values);
 
-        const baseMonthlyHoldingCosts = values.utilities + values.hoaCoa + values.maintenance;
+        // Calculate Acquisition/Renovation Loan Amount
+        const acqRenoLoan = this.calculateAcqRenoLoan(values.arv, values.renovationCosts);
+        console.log('Calculated acqRenoLoan:', acqRenoLoan);
+        
+        // Update the loan amount field
+        const acqRenoLoanEl = document.getElementById('acq_reno_loan');
+        if (acqRenoLoanEl) {
+            acqRenoLoanEl.value = acqRenoLoan.toFixed(2);
+        }
+
+        // Calculate Monthly Costs
+        const monthlyLoanPayment = this.calculateMonthlyInterestOnly(acqRenoLoan, values.acqRenoRate);
+        const monthlyExpenses = values.utilities + values.hoaCoa + values.maintenance;
+        const totalMonthlyHoldingCosts = monthlyLoanPayment + monthlyExpenses;
+
+        // Calculate Total Duration
         const totalMonths = values.renovationDuration + values.timeToRefinance;
-        const initialLoanAmount = Math.round((values.arv * (values.expectedLtv / 100)) + values.renovationCosts);
-        
-        const monthlyInterestRate = values.interestRate / 100 / 12;
-        const monthlyInterest = initialLoanAmount * monthlyInterestRate;
-        
-        const monthlyHoldingCosts = baseMonthlyHoldingCosts + monthlyInterest;
-        const totalHoldingCosts = monthlyHoldingCosts * totalMonths;
-        
-        const totalProjectCosts = values.renovationCosts + values.closingCosts + totalHoldingCosts;
-        const mao = values.arv - totalProjectCosts - values.maxCashLeft;
+
+        // Calculate MAO
+        const expectedValue = values.arv * (values.expectedLtv / 100);
+        const totalHoldingCosts = totalMonthlyHoldingCosts * totalMonths;
+        const mao = expectedValue - totalHoldingCosts - values.closingCosts - values.maxCashLeft;
+
+        console.log('Calculated values:', {
+            monthlyLoanPayment,
+            totalMonthlyHoldingCosts,
+            totalHoldingCosts,
+            mao
+        });
 
         // Update results
-        document.getElementById('mao_result').textContent = this.formatCurrency(mao);
-        document.getElementById('loan_amount').textContent = this.formatCurrency(initialLoanAmount);
-        document.getElementById('monthly_holding_costs').textContent = this.formatCurrency(monthlyHoldingCosts);
-        document.getElementById('total_project_costs').textContent = this.formatCurrency(totalProjectCosts);
+        const updateElement = (id, value) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = this.formatCurrency(value);
+            } else {
+                console.warn(`Element with id ${id} not found`);
+            }
+        };
+
+        updateElement('mao_result', mao);
+        updateElement('monthly_loan_payment', monthlyLoanPayment);
+        updateElement('monthly_holding_costs', totalMonthlyHoldingCosts);
+        updateElement('total_holding_costs', totalHoldingCosts);
     }
 };
 
-document.addEventListener('DOMContentLoaded', () => maoCalculator.init());
+// Make sure DOM is loaded before initializing
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('DOM loaded, initializing calculator...');
+        maoCalculator.init();
+    });
+} else {
+    console.log('DOM already loaded, initializing calculator...');
+    maoCalculator.init();
+}
 
 export default maoCalculator;

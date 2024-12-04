@@ -5,25 +5,25 @@ class AmortizationCalculator:
     """Calculator for loan amortization and payments"""
     
     @staticmethod
-    def calculate_monthly_payment(loan_amount: Money, annual_rate: Percentage, term_months: Union[int, str]) -> MonthlyPayment:
+    def calculate_monthly_payment(loan_amount: Money, annual_rate: Percentage, term: Union[int, str]) -> MonthlyPayment:
         """
         Calculate monthly payment for a loan.
         
         Args:
             loan_amount: Principal loan amount
             annual_rate: Annual interest rate as a percentage
-            term_months: Loan term in months
+            term: Loan term in months
             
         Returns:
             MonthlyPayment object containing payment details
         """
-        # Convert term_months to integer
+        # Convert term to integer
         try:
-            term_months = int(float(str(term_months)))
+            term = int(float(str(term)))
         except (ValueError, TypeError):
-            raise ValueError(f"Invalid loan term: {term_months}")
+            raise ValueError(f"Invalid loan term: {term}")
 
-        if term_months <= 0 or loan_amount.dollars <= 0:
+        if term <= 0 or loan_amount.dollars <= 0:
             return MonthlyPayment(
                 total=Money(0),
                 principal=Money(0),
@@ -34,7 +34,7 @@ class AmortizationCalculator:
         monthly_rate = annual_rate.as_decimal() / Decimal('12')
         
         if monthly_rate == 0:
-            monthly_payment = loan_amount.dollars / Decimal(term_months)
+            monthly_payment = loan_amount.dollars / Decimal(term)
             return MonthlyPayment(
                 total=Money(monthly_payment),
                 principal=Money(monthly_payment),
@@ -43,9 +43,9 @@ class AmortizationCalculator:
             
         # Standard mortgage payment formula
         payment_factor = (
-            monthly_rate * (1 + monthly_rate) ** term_months
+            monthly_rate * (1 + monthly_rate) ** term
         ) / (
-            (1 + monthly_rate) ** term_months - 1
+            (1 + monthly_rate) ** term - 1
         )
         
         monthly_payment = loan_amount.dollars * payment_factor

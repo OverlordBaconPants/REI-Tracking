@@ -22,7 +22,7 @@ body {
     padding: 48px 0 0;
     box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
     background-color: navy;
-    width: 200px;
+    width: 250px;
     height: 100vh;
     overflow-y: auto;
 }

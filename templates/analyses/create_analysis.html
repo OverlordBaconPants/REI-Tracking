@@ -50,7 +50,7 @@
                         <div class="mb-3">
                             <select class="form-select" id="analysis_type" name="analysis_type" required>
                                 <option value="">Select an analysis type</option>
-                                {% set analysis_types = ['Long-Term Rental', 'PadSplit LTR', 'BRRRR', 'PadSplit BRRRR'] %}
+                                {% set analysis_types = ['LTR', 'PadSplit LTR', 'BRRRR', 'PadSplit BRRRR'] %}
                                 {% for type in analysis_types %}
                                     <option value="{{ type }}" 
                                             {% if analysis and analysis.analysis_type == type %}selected{% endif %}>

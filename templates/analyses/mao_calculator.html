@@ -2,32 +2,32 @@
 {% block content %}
 
 <div class="container mt-4">
-    <div class="card mb-4">
-        <div class="card-header">
-            <h2 class="mb-0">Maximum Allowable Offer Calculator</h2>
-        </div>
+    <form id="maoForm">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h2 id="maximum-allowable-offer-calculator" class="mb-0">Maximum Allowable Offer Calculator</h2>
+            </div>
 
-        <div class="card-body">
-            <form id="maoForm">
+            <div class="card-body">
                 <div class="card mb-4">
                     <div class="card-header">Property Details</div>
                     <div class="card-body">
                         <div class="form-grid">
                             <div class="form-group">
                                 <label for="after_repair_value">After Repair Value</label>
-                                <input type="number" class="form-control" id="after_repair_value" required>
+                                <input type="number" id="after_repair_value" class="form-control" value="0" step="any">
                             </div>
                             <div class="form-group">
                                 <label for="renovation_costs">Renovation Costs</label>
-                                <input type="number" class="form-control" id="renovation_costs" required>
+                                <input type="number" id="renovation_costs" class="form-control" value="0" step="any">
                             </div>
                             <div class="form-group">
                                 <label for="max_cash_left">Maximum Cash Left in Deal</label>
-                                <input type="number" class="form-control" id="max_cash_left" value="5000" step="500" required>
+                                <input type="number" id="max_cash_left" class="form-control" value="0" step="any">
                             </div>
                             <div class="form-group">
                                 <label for="renovation_duration">Renovation Duration (months)</label>
-                                <input type="number" class="form-control" id="renovation_duration" step="1" required>
+                                <input type="number" id="renovation_duration" class="form-control" value="0" step="any">
                             </div>
                         </div>
                     </div>
@@ -38,22 +38,20 @@
                     <div class="card-body">
                         <div class="form-grid">
                             <div class="form-group">
-                                <label for="expected_ltv">Expected LTV (%)</label>
-                                <input type="number" class="form-control" id="expected_ltv" value="80" step="0.5" required>
+                                <label for="acq_reno_loan">Acquisition/Renovation Loan Amount</label>
+                                <input type="number" id="acq_reno_loan" class="form-control" readonly>
                             </div>
                             <div class="form-group">
-                                <label for="interest_rate">Interest Rate (%)</label>
-                                <input type="number" class="form-control" id="interest_rate" step="0.125" required>
+                                <label for="acq_reno_rate">Acq/Reno Loan Rate (%)</label>
+                                <input type="number" id="acq_reno_rate" class="form-control" value="12" step="0.1">
+                            </div>
+                            <div class="form-group">
+                                <label for="expected_ltv">Expected LTV (%)</label>
+                                <input type="number" id="expected_ltv" class="form-control" value="75" step="0.1">
                             </div>
                             <div class="form-group">
                                 <label for="closing_costs">Closing Costs</label>
-                                <input type="number" class="form-control" id="closing_costs" required>
-                            </div>
-                            <div class="form-group">
-                                <div class="form-check mt-4">
-                                    <input type="checkbox" class="form-check-input" id="interest_only">
-                                    <label class="form-check-label" for="interest_only">Interest Only Loan</label>
-                                </div>
+                                <input type="number" id="closing_costs" class="form-control" value="0" step="any">
                             </div>
                         </div>
                     </div>
@@ -65,19 +63,19 @@
                         <div class="form-grid">
                             <div class="form-group">
                                 <label for="utilities">Monthly Utilities</label>
-                                <input type="number" class="form-control" id="utilities" required>
+                                <input type="number" id="utilities" class="form-control" value="0" step="any">
                             </div>
                             <div class="form-group">
                                 <label for="hoa_coa">Monthly HOA/COA</label>
-                                <input type="number" class="form-control" id="hoa_coa" required>
+                                <input type="number" id="hoa_coa" class="form-control" value="0" step="any">
                             </div>
                             <div class="form-group">
                                 <label for="maintenance">Monthly Maintenance</label>
-                                <input type="number" class="form-control" id="maintenance" required>
+                                <input type="number" id="maintenance" class="form-control" value="0" step="any">
                             </div>
                             <div class="form-group">
                                 <label for="time_to_refinance">Time to Refinance (months)</label>
-                                <input type="number" class="form-control" id="time_to_refinance" step="1" required>
+                                <input type="number" id="time_to_refinance" class="form-control" value="0" step="any">
                             </div>
                         </div>
                     </div>
@@ -92,23 +90,23 @@
                                 <div id="mao_result" class="result-value">$0.00</div>
                             </div>
                             <div>
-                                <label>Initial Loan Amount:</label>
-                                <div id="loan_amount" class="result-value">$0.00</div>
+                                <label>Monthly Loan Payment:</label>
+                                <div id="monthly_loan_payment" class="result-value">$0.00</div>
                             </div>
                             <div>
                                 <label>Monthly Holding Costs:</label>
                                 <div id="monthly_holding_costs" class="result-value">$0.00</div>
                             </div>
                             <div>
-                                <label>Total Project Costs:</label>
-                                <div id="total_project_costs" class="result-value">$0.00</div>
+                                <label>Total Holding Costs:</label>
+                                <div id="total_holding_costs" class="result-value">$0.00</div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </form>
+            </div>
         </div>
-    </div>
+    </form>
 </div>
 
 {% endblock %}
