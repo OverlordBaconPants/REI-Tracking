@@ -2,7 +2,7 @@ from datetime import datetime
 import logging
 import os
 import uuid
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, Optional
 import traceback
 from services.report_generator import generate_report
 from flask import current_app
@@ -10,25 +10,15 @@ from flask_login import current_user
 from io import BytesIO
 from utils.json_handler import read_json, write_json
 from utils.money import Money, Percentage
-from services.analysis_calculations import (
-    Analysis,
-    BRRRRAnalysis,
-    LTRAnalysis, 
-    PadSplitBRRRRAnalysis,
-    PadSplitLTRAnalysis,
-    Loan,
-    LoanCollection,
-    PropertyDetails,
-    PurchaseDetails,
-    OperatingExpenses,
-    PadSplitOperatingExpenses
-)
+from services.analysis_calculations import create_analysis
+from typing import Dict, List, Tuple, Optional
 
 class AnalysisService:
     """Service for handling property investment analyses."""
     
     def __init__(self):
         self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(logging.DEBUG)
 
     def create_analysis(self, analysis_data: Dict, user_id: int) -> Dict:
         """
@@ -41,10 +31,6 @@ class AnalysisService:
         Returns:
             Dictionary containing the calculated analysis results
         """
-
-        """Add user_id from current_user"""
-        analysis_data['user_id'] = current_user.id
-
         try:
             self.logger.info(f"Creating new analysis for user {user_id}")
             
@@ -57,8 +43,14 @@ class AnalysisService:
             analysis_data['created_at'] = datetime.now().isoformat()
             analysis_data['updated_at'] = analysis_data['created_at']
 
-            # Standardize and calculate results
-            standardized_data = self._create_standardized_analysis(analysis_data)
+            # Create Analysis object and perform calculations
+            analysis = create_analysis(analysis_data)
+            
+            # Get report data which includes all calculated values
+            report_data = analysis.get_report_data()
+            
+            # Convert report data back to dict format for storage
+            standardized_data = self._convert_report_data_to_dict(report_data, analysis_data)
 
             # Save to file
             self._save_analysis(standardized_data, user_id)
@@ -276,52 +268,107 @@ class AnalysisService:
             processed_loans.append(processed_loan)
         
         return processed_loans
+
+    def _convert_report_data_to_dict(self, report_data: 'AnalysisReportData', original_data: Dict) -> Dict:
+        """Convert report data to storage format while preserving original metadata."""
+        self.logger.debug("=== Converting Report Data to Dict ===")
+        self.logger.debug(f"Original loan data:")
+        self.logger.debug(f"Initial loan amount: {original_data.get('initial_loan_amount')}")
+        self.logger.debug(f"Refinance loan amount: {original_data.get('refinance_loan_amount')}")
+
+        storage_data = {
+            # Preserve metadata
+            'id': original_data.get('id'),
+            'user_id': original_data.get('user_id'),
+            'created_at': original_data.get('created_at'),
+            'updated_at': original_data.get('updated_at'),
+            
+            # Explicitly preserve all loan-related fields
+            'initial_loan_amount': original_data.get('initial_loan_amount'),
+            'initial_interest_rate': original_data.get('initial_interest_rate'),
+            'initial_loan_term': original_data.get('initial_loan_term'),
+            'initial_down_payment': original_data.get('initial_down_payment'),
+            'initial_closing_costs': original_data.get('initial_closing_costs'),
+            'initial_interest_only': original_data.get('initial_interest_only'),
+            'initial_monthly_payment': original_data.get('initial_monthly_payment'),
+            
+            'refinance_loan_amount': original_data.get('refinance_loan_amount'),
+            'refinance_interest_rate': original_data.get('refinance_interest_rate'),
+            'refinance_loan_term': original_data.get('refinance_loan_term'),
+            'refinance_down_payment': original_data.get('refinance_down_payment'),
+            'refinance_closing_costs': original_data.get('refinance_closing_costs'),
+            'refinance_ltv_percentage': original_data.get('refinance_ltv_percentage'),
+            'refinance_monthly_payment': original_data.get('refinance_monthly_payment'),
+            
+            # Basic info
+            'analysis_name': report_data.analysis_name,
+            'analysis_type': report_data.analysis_type,
+            'property_address': report_data.property_address,
+            
+            # Convert sections to flat structure
+            **self._flatten_sections(report_data.sections)
+        }
+        
+        self.logger.debug("=== Converted Data ===")
+        self.logger.debug(f"Stored loan data:")
+        self.logger.debug(f"Initial loan amount: {storage_data.get('initial_loan_amount')}")
+        self.logger.debug(f"Refinance loan amount: {storage_data.get('refinance_loan_amount')}")
+        
+        return storage_data
+
+    def _flatten_sections(self, sections: List['ReportSection']) -> Dict:
+        """Convert report sections into a flat dictionary structure."""
+        flattened = {}
+        for section in sections:
+            for label, value in section.data:
+                # Convert label to snake_case for storage
+                key = self._to_snake_case(label)
+                flattened[key] = value
+        return flattened
+
+    @staticmethod
+    def _to_snake_case(text: str) -> str:
+        """Convert a label to snake_case for storage."""
+        # Remove special characters and convert spaces to underscores
+        return text.lower().replace(' ', '_').replace('/', '_').replace('-', '_')
     
     def update_analysis(self, analysis_data: Dict, user_id: int) -> Dict:
-        """Update an existing analysis or create a new one if type changes."""
-
-        """Add user_id from current_user"""
-        analysis_data['user_id'] = current_user.id
-
         try:
             analysis_id = analysis_data.get('id')
             if not analysis_id:
                 raise ValueError("Analysis ID is required for updates")
 
-            self.logger.info(f"Updating analysis {analysis_id} for user {user_id}")
+            self.logger.debug("=== Starting Analysis Update ===")
+            self.logger.debug(f"Incoming loan data:")
+            self.logger.debug(f"Initial loan amount: {analysis_data.get('initial_loan_amount')}")
+            self.logger.debug(f"Refinance loan amount: {analysis_data.get('refinance_loan_amount')}")
+            self.logger.debug(f"Full analysis data: {analysis_data}")
 
-            # Get existing analysis
-            existing_analysis = self.get_analysis(analysis_id, user_id)
-            if not existing_analysis:
-                raise ValueError("Analysis not found or access denied")
-
-            # Check if we should create a new analysis
-            create_new = analysis_data.get('create_new', False)
-            if create_new:
-                # Check if analysis of new type already exists for this property
-                property_analyses = self._get_analyses_by_property(analysis_data['property_address'])
-                for analysis in property_analyses:
-                    if analysis['analysis_type'] == analysis_data['analysis_type']:
-                        raise ValueError(f"{analysis_data['analysis_type']} Analysis already exists for this property")
-
-                # Create new analysis with new type
-                analysis_data['id'] = str(uuid.uuid4())
-                analysis_data['created_at'] = datetime.now().isoformat()
-                analysis_data['updated_at'] = analysis_data['created_at']
-            else:
-                # Regular update
-                analysis_data['created_at'] = existing_analysis['created_at']
-                analysis_data['updated_at'] = datetime.now().isoformat()
-
-            # Validate and standardize data
+            # Validate and create Analysis object
             self.validate_analysis_data(analysis_data)
-            standardized_data = self._create_standardized_analysis(analysis_data)
+            analysis = create_analysis(analysis_data)
+            
+            # Get report data with all calculations
+            report_data = analysis.get_report_data()
+            self.logger.debug(f"Generated report data: {report_data}")
+            
+            # Convert to storage format
+            updated_data = self._convert_report_data_to_dict(report_data, analysis_data)
+            self.logger.debug(f"Converted storage data: {updated_data}")
+            
+            updated_data['updated_at'] = datetime.now().isoformat()
 
             # Save analysis
-            self._save_analysis(standardized_data, user_id)
+            self._save_analysis(updated_data, user_id)
 
-            self.logger.info(f"Successfully {'created new' if create_new else 'updated'} analysis {standardized_data['id']}")
-            return standardized_data
+            self.logger.debug("=== Completed Analysis Update ===")
+            self.logger.debug(f"Final data being returned: {updated_data}")
+
+            return {
+                'success': True,
+                'message': 'Analysis updated successfully',
+                'analysis': updated_data
+            }
 
         except Exception as e:
             self.logger.error(f"Error updating analysis: {str(e)}")

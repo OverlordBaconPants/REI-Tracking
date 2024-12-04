@@ -34,7 +34,7 @@ const addPropertiesModule = {
         resultsList.className = 'autocomplete-results list-group position-absolute w-100 shadow-sm';
         resultsList.style.zIndex = '1000';
         let timeoutId;
-
+    
         if (addressInput) {
             // Insert the results list after the input
             addressInput.parentNode.appendChild(resultsList);
@@ -92,14 +92,14 @@ const addPropertiesModule = {
                     }
                 }, 300);
             });
-
+    
             // Close suggestions when clicking outside
             document.addEventListener('click', function(e) {
                 if (e.target !== addressInput && e.target !== resultsList) {
                     resultsList.innerHTML = '';
                 }
             });
-
+    
             // Prevent form submission when selecting from dropdown
             resultsList.addEventListener('click', function(e) {
                 e.preventDefault();

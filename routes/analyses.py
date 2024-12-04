@@ -5,6 +5,7 @@ from utils.flash import flash_message
 import logging
 from typing import Dict, Any
 import traceback
+from datetime import datetime
 
 analyses_bp = Blueprint('analyses', __name__)
 logger = logging.getLogger(__name__)
@@ -103,7 +104,6 @@ def get_analysis(analysis_id: str):
 def view_edit_analysis():
     """View/edit analysis list page"""
     try:
-        # Get page parameter with error handling
         try:
             page = max(1, int(request.args.get('page', 1)))
         except (TypeError, ValueError) as e:
@@ -114,13 +114,21 @@ def view_edit_analysis():
         
         logger.info(f"Fetching analyses for user {current_user.id}, page {page}")
         
-        # Get analyses with explicit error handling
         try:
             analyses, total_pages = analysis_service.get_analyses_for_user(
                 current_user.id, 
                 page, 
                 analyses_per_page
             )
+            
+            # Format dates for display
+            for analysis in analyses:
+                if analysis.get('created_at'):
+                    created_date = datetime.fromisoformat(analysis['created_at'].replace('Z', '+00:00'))
+                    analysis['created_at'] = created_date.strftime('%Y-%m-%d')
+                if analysis.get('updated_at'):
+                    updated_date = datetime.fromisoformat(analysis['updated_at'].replace('Z', '+00:00'))
+                    analysis['updated_at'] = updated_date.strftime('%Y-%m-%d')
             
             logger.debug(f"Retrieved {len(analyses) if analyses else 0} analyses")
             
@@ -129,13 +137,13 @@ def view_edit_analysis():
                 analyses=analyses, 
                 current_page=page, 
                 total_pages=total_pages,
-                body_class='view-edit-analysis-page'  # Add this line
+                body_class='view-edit-analysis-page'
             )
             
         except Exception as e:
             logger.error(f"Error retrieving analyses from service: {str(e)}")
             logger.error(traceback.format_exc())
-            raise  # Re-raise to be caught by outer try block
+            raise
         
     except Exception as e:
         logger.error(f"Error in view_edit_analysis: {str(e)}")
@@ -158,6 +166,27 @@ def view_analysis(analysis_id: str):
         logger.error(f"Error viewing analysis: {str(e)}")
         flash_message('Error loading analysis', 'error')
         return redirect(url_for('analyses.view_edit_analysis'))
+
+@analyses_bp.route('/delete_analysis/<analysis_id>', methods=['POST'])
+@login_required
+def delete_analysis(analysis_id: str):
+    """Delete an analysis by ID"""
+    try:
+        if analysis_service.delete_analysis(analysis_id, current_user.id):
+            return jsonify({
+                "success": True,
+                "message": "Analysis deleted successfully"
+            })
+        return jsonify({
+            "success": False,
+            "message": "Analysis not found"
+        }), 404
+    except Exception as e:
+        logger.error(f"Error deleting analysis: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error deleting analysis: {str(e)}"
+        }), 500
 
 @analyses_bp.route('/generate_pdf/<analysis_id>', methods=['GET'])
 @login_required

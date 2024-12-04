@@ -583,7 +583,6 @@ const analysisModule = {
     },
 
     initEventListeners() {
-        this.initAddressAutocomplete();
         this.initLoanHandlers();
         this.initAnalysisTypeHandler();
         this.initTabHandling();
@@ -613,6 +612,39 @@ const analysisModule = {
         integer: (value) => {
             if (!value) return 0;
             return parseInt(value) || 0;
+        }
+    },
+
+    // Add formatValue object for formatting
+    formatValue: {
+        money: (value) => {
+            if (!value) return '$0.00';
+            const amount = typeof value === 'string' ? 
+                parseFloat(value.replace(/[$,]/g, '')) : 
+                parseFloat(value);
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD'
+            }).format(amount || 0);
+        },
+        
+        percentage: (value) => {
+            if (!value) return '0.00%';
+            const amount = typeof value === 'string' ? 
+                parseFloat(value.replace(/%/g, '')) : 
+                parseFloat(value);
+            return new Intl.NumberFormat('en-US', {
+                style: 'percent',
+                minimumFractionDigits: 2
+            }).format(amount / 100 || 0);
+        },
+        
+        integer: (value) => {
+            if (!value) return '0';
+            const amount = typeof value === 'string' ? 
+                parseInt(value.replace(/,/g, '')) : 
+                parseInt(value);
+            return new Intl.NumberFormat('en-US').format(amount || 0);
         }
     },
 
@@ -687,55 +719,57 @@ const analysisModule = {
     },
 
     populateFormFields(analysis) {
+        const data = analysis.analysis || analysis;  // Fallback in case it's not nested
+
         // Basic Details
-        this.setFieldValue('analysis_name', analysis.analysis_name, 'text');
-        this.setFieldValue('property_address', analysis.property_address, 'text');
-        this.setFieldValue('home_square_footage', analysis.home_square_footage, 'integer');
-        this.setFieldValue('lot_square_footage', analysis.lot_square_footage, 'integer');
-        this.setFieldValue('year_built', analysis.year_built, 'integer');
+        this.setFieldValue('analysis_name', data.analysis_name, 'text');
+        this.setFieldValue('property_address', data.property_address, 'text');
+        this.setFieldValue('home_square_footage', data.home_square_footage, 'integer');
+        this.setFieldValue('lot_square_footage', data.lot_square_footage, 'integer');
+        this.setFieldValue('year_built', data.year_built, 'integer');
     
         const analysisType = document.getElementById('analysis_type');
         if (analysisType) {
-            analysisType.value = analysis.analysis_type;
+            analysisType.value = data.analysis_type;
             analysisType.dispatchEvent(new Event('change'));
         }
     
         setTimeout(() => {
             // Purchase Details
-            this.setFieldValue('purchase_price', analysis.purchase_price, 'money');
-            this.setFieldValue('after_repair_value', analysis.after_repair_value, 'money');
-            this.setFieldValue('renovation_costs', analysis.renovation_costs, 'money');
-            this.setFieldValue('renovation_duration', analysis.renovation_duration, 'integer');
-            this.setFieldValue('cash_to_seller', analysis.cash_to_seller, 'money');
-            this.setFieldValue('closing_costs', analysis.closing_costs, 'money');
-            this.setFieldValue('assignment_fee', analysis.assignment_fee, 'money');
-            this.setFieldValue('marketing_costs', analysis.marketing_costs, 'money');
+            this.setFieldValue('purchase_price', data.purchase_price, 'money');
+            this.setFieldValue('after_repair_value', data.after_repair_value, 'money');
+            this.setFieldValue('renovation_costs', data.renovation_costs, 'money');
+            this.setFieldValue('renovation_duration', data.renovation_duration, 'integer');
+            this.setFieldValue('cash_to_seller', data.cash_to_seller, 'money');
+            this.setFieldValue('closing_costs', data.closing_costs, 'money');
+            this.setFieldValue('assignment_fee', data.assignment_fee, 'money');
+            this.setFieldValue('marketing_costs', data.marketing_costs, 'money');
     
             // Financial Metrics
-            this.setFieldValue('monthly_rent', analysis.monthly_rent, 'money');
-            this.setFieldValue('max_cash_left', analysis.max_cash_left, 'money');
+            this.setFieldValue('monthly_rent', data.monthly_rent, 'money');
+            this.setFieldValue('max_cash_left', data.max_cash_left, 'money');
     
             // Operating Expenses
-            this.setFieldValue('property_taxes', analysis.property_taxes, 'money');
-            this.setFieldValue('insurance', analysis.insurance, 'money');
-            this.setFieldValue('hoa_coa_coop', analysis.hoa_coa_coop, 'money');
-            this.setFieldValue('management_percentage', analysis.management_percentage, 'percentage');
-            this.setFieldValue('capex_percentage', analysis.capex_percentage, 'percentage');
-            this.setFieldValue('vacancy_percentage', analysis.vacancy_percentage, 'percentage');
-            this.setFieldValue('repairs_percentage', analysis.repairs_percentage, 'percentage');
+            this.setFieldValue('property_taxes', data.property_taxes, 'money');
+            this.setFieldValue('insurance', data.insurance, 'money');
+            this.setFieldValue('hoa_coa_coop', data.hoa_coa_coop, 'money');
+            this.setFieldValue('management_percentage', data.management_percentage, 'percentage');
+            this.setFieldValue('capex_percentage', data.capex_percentage, 'percentage');
+            this.setFieldValue('vacancy_percentage', data.vacancy_percentage, 'percentage');
+            this.setFieldValue('repairs_percentage', data.repairs_percentage, 'percentage');
     
             // BRRRR-specific fields
-            if (analysis.analysis_type.includes('BRRRR')) {
+            if (data.analysis_type.includes('BRRRR')) {
                 this.populateBRRRRFields(analysis);
             }
     
             // PadSplit fields 
-            if (analysis.analysis_type.includes('PadSplit')) {
+            if (data.analysis_type.includes('PadSplit')) {
                 this.populatePadSplitFields(analysis);
             }
     
             // Handle loans
-            if (analysis.analysis_type.includes('LTR')) {
+            if (data.analysis_type.includes('LTR')) {
                 this.populateLoanFields(analysis);
             }
         }, 500);
@@ -776,25 +810,27 @@ const analysisModule = {
     },
 
     populateBRRRRFields(analysis) { 
+        const data = analysis.analysis || analysis;  // Fallback in case it's not nested
+
         // Initial loan details
-        this.setFieldValue('initial_loan_amount', analysis.initial_loan_amount, 'money');
-        this.setFieldValue('initial_down_payment', analysis.initial_down_payment, 'money');
-        this.setFieldValue('initial_interest_rate', analysis.initial_interest_rate, 'percentage');
-        this.setFieldValue('initial_loan_term', analysis.initial_loan_term, 'integer');
-        this.setFieldValue('initial_closing_costs', analysis.initial_closing_costs, 'money');
+        this.setFieldValue('initial_loan_amount', data.initial_loan_amount, 'money');
+        this.setFieldValue('initial_down_payment', data.initial_down_payment, 'money');
+        this.setFieldValue('initial_interest_rate', data.initial_interest_rate, 'percentage');
+        this.setFieldValue('initial_loan_term', data.initial_loan_term, 'integer');
+        this.setFieldValue('initial_closing_costs', data.initial_closing_costs, 'money');
         
         const initialInterestOnly = document.getElementById('initial_interest_only');
         if (initialInterestOnly) {
-            initialInterestOnly.checked = Boolean(analysis.initial_interest_only);
+            initialInterestOnly.checked = Boolean(data.initial_interest_only);
         }
         
         // Refinance details
-        this.setFieldValue('refinance_loan_amount', analysis.refinance_loan_amount, 'money');
-        this.setFieldValue('refinance_down_payment', analysis.refinance_down_payment, 'money');
-        this.setFieldValue('refinance_interest_rate', analysis.refinance_interest_rate, 'percentage');
-        this.setFieldValue('refinance_loan_term', analysis.refinance_loan_term, 'integer');
-        this.setFieldValue('refinance_closing_costs', analysis.refinance_closing_costs, 'money');
-        this.setFieldValue('refinance_ltv_percentage', analysis.refinance_ltv_percentage, 'percentage');
+        this.setFieldValue('refinance_loan_amount', data.refinance_loan_amount, 'money');
+        this.setFieldValue('refinance_down_payment', data.refinance_down_payment, 'money');
+        this.setFieldValue('refinance_interest_rate', data.refinance_interest_rate, 'percentage');
+        this.setFieldValue('refinance_loan_term', data.refinance_loan_term, 'integer');
+        this.setFieldValue('refinance_closing_costs', data.refinance_closing_costs, 'money');
+        this.setFieldValue('refinance_ltv_percentage', data.refinance_ltv_percentage, 'percentage');
         
         // Trigger any calculation updates
         const refinanceLtvField = document.getElementById('refinance_ltv_percentage');
@@ -804,12 +840,14 @@ const analysisModule = {
     },
      
     populatePadSplitFields(analysis) {    
-        this.setFieldValue('padsplit_platform_percentage', analysis.padsplit_platform_percentage, 'percentage');
-        this.setFieldValue('utilities', analysis.utilities, 'money');
-        this.setFieldValue('internet', analysis.internet, 'money');
-        this.setFieldValue('cleaning_costs', analysis.cleaning_costs, 'money');
-        this.setFieldValue('pest_control', analysis.pest_control, 'money');
-        this.setFieldValue('landscaping', analysis.landscaping, 'money');
+        const data = analysis.analysis || analysis;  // Fallback in case it's not nested
+
+        this.setFieldValue('padsplit_platform_percentage', data.padsplit_platform_percentage, 'percentage');
+        this.setFieldValue('utilities', data.utilities, 'money');
+        this.setFieldValue('internet', data.internet, 'money');
+        this.setFieldValue('cleaning_costs', data.cleaning_costs, 'money');
+        this.setFieldValue('pest_control', data.pest_control, 'money');
+        this.setFieldValue('landscaping', data.landscaping, 'money');
     },
 
     setLoanFields(loanNumber, loan) {
@@ -833,13 +871,15 @@ const analysisModule = {
     },
      
     populateLoanFields(analysis) {
+        const data = analysis.analysis || analysis;  // Fallback in case it's not nested
+
         const loansContainer = document.getElementById('loans-container');
         if (!loansContainer) return;
      
         loansContainer.innerHTML = '';
         
-        if (analysis.loans?.length > 0) {
-            analysis.loans.forEach((loan, index) => {
+        if (data.loans?.length > 0) {
+            data.loans.forEach((loan, index) => {
                 const addLoanBtn = document.getElementById('add-loan-btn');
                 if (addLoanBtn) {
                     addLoanBtn.click();
@@ -876,12 +916,27 @@ const analysisModule = {
             }
             
             const analysisData = this.prepareFormData(form);
-            const response = await this.api.submitAnalysis(analysisData);
             
-            if (response.success) {
-                this.handleSubmitSuccess(response);
+            const response = await fetch('/analyses/create_analysis', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(analysisData)
+            });
+
+            const data = await response.json();
+            
+            if (data.success) {
+                toastr.success('Analysis created successfully');
+                // Redirect to the view page for the new analysis
+                if (data.analysis?.id) {
+                    window.location.href = `/analyses/view_analysis/${data.analysis.id}`;
+                } else {
+                    window.location.href = '/analyses/view_edit_analysis';
+                }
             } else {
-                throw new Error(response.message || 'Unknown error occurred');
+                throw new Error(data.message || 'Unknown error occurred');
             }
         } catch (error) {
             console.error('Submit error:', error);
@@ -923,6 +978,8 @@ const analysisModule = {
     },
 
     async handleEditSubmit(event, analysisId) {
+        const data = analysis.analysis || analysis;  // Fallback in case it's not nested
+
         event.preventDefault();
         if (this.state.isSubmitting) return;
         
@@ -938,28 +995,27 @@ const analysisModule = {
             }
             
             const analysisData = this.prepareFormData(form, analysisId);
-            console.log('Submitting analysis data:', analysisData);
             
-            const response = await this.updateAnalysis(analysisData);
-            console.log('Update response:', response);
+            const response = await fetch('/analyses/update_analysis', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(analysisData)
+            });
 
-            console.log("Full analysis data:", JSON.stringify(response.analysis, null, 2));
-            console.log("Loans data:", JSON.stringify(response.analysis.loans, null, 2));
+            const data = await response.json();
             
-            if (response.success && response.analysis) {
+            if (data.success && data.analysis) {
                 toastr.success('Analysis updated successfully');
-                console.log('Populating reports tab with analysis:', response.analysis);
-                this.populateReportsTab(response.analysis);
+                this.populateReportsTab(data.analysis);
                 
                 const reportsTab = document.getElementById('reports-tab');
                 if (reportsTab) {
-                    console.log('Switching to reports tab');
                     reportsTab.click();
-                } else {
-                    console.error('Reports tab element not found');
                 }
             } else {
-                throw new Error(response.message || 'Unknown error occurred');
+                throw new Error(data.message || 'Unknown error occurred');
             }
         } catch (error) {
             console.error('Update error:', error);
@@ -1066,7 +1122,7 @@ const analysisModule = {
         }
     },
 
-    async submitAnalysis(data) {
+    submitAnalysis: async function(data) {
         const response = await fetch('/analyses/create_analysis', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1080,7 +1136,7 @@ const analysisModule = {
         return response.json();
     },
 
-    async updateAnalysis(data) {
+    updateAnalysis: async function(data) {
         const response = await fetch('/analyses/update_analysis', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1104,9 +1160,8 @@ const analysisModule = {
         return response.blob();
     },
 
-    async searchAddress(query) {
+    searchAddress: async function(query) {
         const response = await fetch(`/api/autocomplete?query=${encodeURIComponent(query)}`);
-        
         if (!response.ok) {
             const error = await response.json();
             throw new Error(error.message || 'Failed to search address');
@@ -1222,8 +1277,22 @@ const analysisModule = {
     },
 
     getReportHTML(analysis) {
-        // Store current analysis ID for PDF downloads
-        this.currentAnalysisId = analysis.id;
+        // Get the actual analysis data from the nested structure
+        const data = analysis.analysis || analysis;  // Fallback in case it's not nested
+
+        console.log('GetReportHTML using data:', data);
+
+        console.log('GetReportHTML input:', analysis);
+        console.log('Analysis values:', {
+            purchasePrice: data.purchase_price,
+            renovationCosts: data.renovation_costs,
+            afterRepairValue: data.after_repair_value,
+            monthlyRent: data.monthly_rent,
+            monthlyCashFlow: data.monthly_cash_flow,
+            annualCashFlow: data.annual_cash_flow,
+            cashOnCash: data.cash_on_cash_return,
+            roi: data.roi
+        });
     
         // Ensure proper formatting of numeric values
         const formatValue = (value, type) => {
@@ -1235,20 +1304,20 @@ const analysisModule = {
         };
     
         // Handle purchase price and project costs calculations
-        const purchasePrice = typeof analysis.purchase_price === 'number' ? 
-            analysis.purchase_price : 
-            parseFloat(String(analysis.purchase_price).replace(/[$,]/g, ''));
+        const purchasePrice = typeof data.purchase_price === 'number' ? 
+        data.purchase_price : 
+            parseFloat(String(data.purchase_price).replace(/[$,]/g, ''));
         
-        const mao = this.calculateMAO({
-            purchase_price: purchasePrice,
-            total_project_costs: analysis.total_project_costs,
-            max_cash_left: analysis.max_cash_left
-        });
+            const mao = this.calculateMAO({
+                purchase_price: data.purchase_price,
+                total_project_costs: data.total_project_costs,
+                max_cash_left: data.max_cash_left
+            });
     
         const baseSummaryHTML = `
             <div class="row align-items-start mb-4">
                 <div class="col">
-                    <h4 class="mb-0">${analysis.analysis_type || 'Analysis'}: ${analysis.analysis_name || 'Untitled'}</h4>
+                    <h4 class="mb-0">${data.analysis_type || 'Analysis'}: ${data.analysis_name || 'Untitled'}</h4>
                 </div>
                 <div class="col-auto">
                     <button 
@@ -1265,10 +1334,10 @@ const analysisModule = {
                                 <h5 class="mb-3">Purchase Details</h5>
                                 <div class="card bg-light">
                                     <div class="card-body">
-                                        <p class="mb-2"><strong>Purchase Price:</strong> ${formatValue(analysis.purchase_price, 'money')}</p>
-                                        <p class="mb-2"><strong>Renovation Costs:</strong> ${formatValue(analysis.renovation_costs, 'money')}</p>
-                                        <p class="mb-2"><strong>After Repair Value:</strong> ${formatValue(analysis.after_repair_value, 'money')}</p>
-                                        <p class="mb-2"><strong>Maximum Allowable Offer:</strong> ${formatValue(mao, 'money')}</p>
+                                        <p class="mb-2"><strong>Purchase Price:</strong> ${this.formatValue.money(data.purchase_price)}</p>
+                                        <p class="mb-2"><strong>Renovation Costs:</strong> ${this.formatValue.money(data.renovation_costs)}</p>
+                                        <p class="mb-2"><strong>After Repair Value:</strong> ${this.formatValue.money(data.after_repair_value)}</p>
+                                        <p class="mb-2"><strong>Maximum Allowable Offer:</strong> ${this.formatValue.money(mao)}</p>
                                     </div>
                                 </div>
                             </div>
@@ -1277,11 +1346,19 @@ const analysisModule = {
                                 <h5 class="mb-3">Income & Returns</h5>
                                 <div class="card bg-light">
                                     <div class="card-body">
-                                        <p class="mb-2"><strong>Monthly Rent:</strong> ${formatValue(analysis.monthly_rent, 'money')}</p>
-                                        <p class="mb-2"><strong>Monthly Cash Flow:</strong> ${formatValue(analysis.monthly_cash_flow, 'money')}</p>
-                                        <p class="mb-2"><strong>Annual Cash Flow:</strong> ${formatValue(analysis.annual_cash_flow, 'money')}</p>
-                                        <p class="mb-2"><strong>Cash-on-Cash Return:</strong> ${formatValue(analysis.cash_on_cash_return, 'percentage')}</p>
-                                        <p class="mb-2"><strong>ROI:</strong> ${formatValue(analysis.roi, 'percentage')}</p>
+                                        <p class="mb-2"><strong>Monthly Rent:</strong> ${this.formatValue.money(data.monthly_rent)}</p>
+                                        <p class="mb-2"><strong>Monthly Cash Flow:</strong> ${this.formatValue.money(data.monthly_cash_flow)}</p>
+                                        <p class="mb-2"><strong>Annual Cash Flow:</strong> ${this.formatValue.money(data.annual_cash_flow)}</p>
+                                        <p class="mb-2"><strong>Cash-on-Cash Return:</strong> ${
+                                            data.cash_on_cash_return === "Infinite" ? 
+                                            "∞" : 
+                                            this.formatValue.percentage(data.cash_on_cash_return)
+                                        }</p>
+                                        <p class="mb-2"><strong>ROI:</strong> ${
+                                            data.roi === "Infinite" ? 
+                                            "∞" : 
+                                            this.formatValue.percentage(data.roi)
+                                        }</p>
                                     </div>
                                 </div>
                             </div>
@@ -1290,7 +1367,7 @@ const analysisModule = {
                 </div>
             </div>`;
     
-        if (analysis.analysis_type?.includes('BRRRR')) {
+        if (data.analysis_type?.includes('BRRRR')) {
             return baseSummaryHTML + this.getBRRRRDetailsHTML(analysis);
         }
     
@@ -1298,6 +1375,7 @@ const analysisModule = {
     },
     
     getBRRRRDetailsHTML(analysis) {
+        const data = analysis.analysis || analysis;  // Fallback in case it's not nested
         return `
             <div class="row">
                 <div class="col-md-6">
@@ -1305,25 +1383,25 @@ const analysisModule = {
                     <div class="card bg-light mb-3">
                         <div class="card-body">
                             <p class="mb-2">
-                                <strong>Total Project Costs:</strong> ${this.parseValue.money(analysis.total_project_costs)}
+                                <strong>Total Project Costs:</strong> ${this.formatValue.money(data.total_project_costs)}
                                 <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" data-bs-html="true" 
                                 title="Purchase Price + Renovation Costs + All Closing Costs - Cash Out from Refi"></i>
                             </p>
                             <p class="mb-2">
-                                <strong>After Repair Value:</strong> ${this.parseValue.money(analysis.after_repair_value)}
+                                <strong>After Repair Value:</strong> ${this.formatValue.money(data.after_repair_value)}
                             </p>
                             <p class="mb-2">
-                                <strong>Refinance Loan Amount:</strong> ${this.parseValue.money(analysis.refinance_loan_amount)}
+                                <strong>Refinance Loan Amount:</strong> ${this.formatValue.money(data.refinance_loan_amount)}
                                 <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" data-bs-html="true" 
                                 title="New loan based on ARV × LTV%"></i>
                             </p>
                             <p class="mb-2">
-                                <strong>Total Cash Invested:</strong> ${this.parseValue.money(analysis.total_cash_invested)}
+                                <strong>Total Cash Invested:</strong> ${this.formatValue.money(data.total_cash_invested)}
                                 <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" data-bs-html="true" 
                                 title="Total Project Costs - Refinance Loan Amount"></i>
                             </p>
                             <p class="mb-2">
-                                <strong>Equity Captured:</strong> ${this.parseValue.money(analysis.equity_captured)}
+                                <strong>Equity Captured:</strong> ${this.formatValue.money(data.equity_captured)}
                                 <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" data-bs-html="true" 
                                 title="After Repair Value - Total Project Costs"></i>
                             </p>
@@ -1337,25 +1415,25 @@ const analysisModule = {
                         <div class="card-body">
                             <p class="fw-bold mb-2">Initial Purchase Loan:</p>
                             <ul class="list-unstyled ms-3 mb-3">
-                                <li>Amount: ${this.parseValue.money(analysis.initial_loan_amount)}</li>
-                                <li>Interest Rate: ${this.parseValue.percentage(analysis.initial_interest_rate)}
-                                    <span class="badge ${analysis.initial_interest_only ? 'bg-success' : 'bg-info'} ms-2">
-                                        ${analysis.initial_interest_only ? 'Interest Only' : 'Amortized'}
+                                <li>Amount: ${this.formatValue.money(data.initial_loan_amount)}</li>
+                                <li>Interest Rate: ${this.formatValue.percentage(data.initial_interest_rate)}
+                                    <span class="badge ${data.initial_interest_only ? 'bg-success' : 'bg-info'} ms-2">
+                                        ${data.initial_interest_only ? 'Interest Only' : 'Amortized'}
                                     </span>
                                 </li>
-                                <li>Term: ${this.parseValue.integer(analysis.initial_loan_term)} months</li>
-                                <li>Monthly Payment: ${this.parseValue.money(analysis.initial_monthly_payment)}</li>
-                                <li>Down Payment: ${this.parseValue.money(analysis.initial_down_payment)}</li>
-                                <li>Closing Costs: ${this.parseValue.money(analysis.initial_closing_costs)}</li>
+                                <li>Term: ${this.formatValue.integer(data.initial_loan_term)} months</li>
+                                <li>Monthly Payment: ${this.formatValue.money(data.initial_monthly_payment)}</li>
+                                <li>Down Payment: ${this.formatValue.money(data.initial_down_payment)}</li>
+                                <li>Closing Costs: ${this.formatValue.money(data.initial_closing_costs)}</li>
                             </ul>
                             <p class="fw-bold mb-2">Refinance Loan:</p>
                             <ul class="list-unstyled ms-3">
-                                <li>Amount: ${this.parseValue.money(analysis.refinance_loan_amount)}</li>
-                                <li>Interest Rate: ${this.parseValue.percentage(analysis.refinance_interest_rate)}</li>
-                                <li>Term: ${this.parseValue.integer(analysis.refinance_loan_term)} months</li>
-                                <li>Monthly Payment: ${this.parseValue.money(analysis.refinance_monthly_payment)}</li>
-                                <li>Down Payment: ${this.parseValue.money(analysis.refinance_down_payment)}</li>
-                                <li>Closing Costs: ${this.parseValue.money(analysis.refinance_closing_costs)}</li>
+                                <li>Amount: ${this.formatValue.money(data.refinance_loan_amount)}</li>
+                                <li>Interest Rate: ${this.formatValue.percentage(data.refinance_interest_rate)}</li>
+                                <li>Term: ${this.formatValue.integer(data.refinance_loan_term)} months</li>
+                                <li>Monthly Payment: ${this.formatValue.money(data.refinance_monthly_payment)}</li>
+                                <li>Down Payment: ${this.formatValue.money(data.refinance_down_payment)}</li>
+                                <li>Closing Costs: ${this.formatValue.money(data.refinance_closing_costs)}</li>
                             </ul>
                         </div>
                     </div>
@@ -1429,41 +1507,6 @@ const analysisModule = {
         tabs.financial.content.classList.remove('show', 'active');
         tabs.reports.tab.classList.add('active');
         tabs.reports.content.classList.add('show', 'active');
-    },
-
-    initAddressAutocomplete() {
-        const addressInput = document.getElementById('property_address');
-        const resultsList = document.getElementById('addressSuggestions');
-        let timeoutId;
-
-        if (!addressInput || !resultsList) return;
-
-        const handleInput = async () => {
-            clearTimeout(timeoutId);
-            const query = addressInput.value;
-            
-            if (query.length <= 2) {
-                resultsList.innerHTML = '';
-                return;
-            }
-
-            try {
-                const response = await this.api.searchAddress(query);
-                this.updateAddressSuggestions(response, resultsList, addressInput);
-            } catch (error) {
-                resultsList.innerHTML = `<li class="error">Error: ${error.message}</li>`;
-            }
-        };
-
-        addressInput.addEventListener('input', () => {
-            timeoutId = setTimeout(handleInput, 300);
-        });
-
-        document.addEventListener('click', (e) => {
-            if (e.target !== addressInput && e.target !== resultsList) {
-                resultsList.innerHTML = '';
-            }
-        });
     },
 
     initLoanHandlers() {
@@ -1605,19 +1648,20 @@ const analysisModule = {
     },
 
     calculateMAO(analysis) {
+        const data = analysis.analysis || analysis;  // Fallback in case it's not nested
         try {
             // Ensure we're working with numbers
-            const purchasePrice = typeof analysis.purchase_price === 'number' ? 
-                analysis.purchase_price : 
-                parseFloat(String(analysis.purchase_price).replace(/[$,]/g, '')) || 0;
+            const purchasePrice = typeof data.purchase_price === 'number' ? 
+            data.purchase_price : 
+                parseFloat(String(data.purchase_price).replace(/[$,]/g, '')) || 0;
                 
-            const projectCosts = typeof analysis.total_project_costs === 'number' ?
-                analysis.total_project_costs :
-                parseFloat(String(analysis.total_project_costs).replace(/[$,]/g, '')) || 0;
+            const projectCosts = typeof data.total_project_costs === 'number' ?
+            data.total_project_costs :
+                parseFloat(String(data.total_project_costs).replace(/[$,]/g, '')) || 0;
                 
-            const maxCashLeft = typeof analysis.max_cash_left === 'number' ?
-                analysis.max_cash_left :
-                parseFloat(String(analysis.max_cash_left).replace(/[$,]/g, '')) || DEFAULTS.MAX_CASH_LEFT;
+            const maxCashLeft = typeof data.max_cash_left === 'number' ?
+            data.max_cash_left :
+                parseFloat(String(data.max_cash_left).replace(/[$,]/g, '')) || DEFAULTS.MAX_CASH_LEFT;
     
             const mao = purchasePrice + (maxCashLeft - projectCosts);
             return isNaN(mao) ? 0 : mao;

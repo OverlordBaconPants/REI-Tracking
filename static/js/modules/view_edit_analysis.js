@@ -1,7 +1,6 @@
 const viewEditAnalysisModule = {
     init: function() {
         console.log('Initializing view/edit analysis module');
-        // We don't need initializePdfButtons anymore since we're using onclick
     },
 
     downloadPdf: function(analysisId) {
@@ -12,26 +11,21 @@ const viewEditAnalysisModule = {
             return;
         }
         
-        // Get button reference
         const btn = document.querySelector(`button[data-analysis-id="${analysisId}"]`);
         if (btn) {
-            // Show loading state
             const originalText = btn.innerHTML;
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
         }
         
-        // Create hidden form for download
         const form = document.createElement('form');
         form.method = 'GET';
         form.action = `/analyses/generate_pdf/${analysisId}`;
         document.body.appendChild(form);
         
-        // Submit form to trigger download
         form.submit();
         document.body.removeChild(form);
         
-        // Reset button after delay
         setTimeout(() => {
             if (btn) {
                 btn.disabled = false;
@@ -39,8 +33,35 @@ const viewEditAnalysisModule = {
             }
         }, 2000);
         
-        // Show success message
         toastr.success('Generating PDF report...');
+    },
+
+    deleteAnalysis: async function(analysisId) {
+        if (!confirm('Are you sure you want to delete this analysis? This action cannot be undone.')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/analyses/delete_analysis/${analysisId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                toastr.success('Analysis deleted successfully');
+                // Reload the page to show updated list
+                window.location.reload();
+            } else {
+                toastr.error(data.message || 'Error deleting analysis');
+            }
+        } catch (error) {
+            console.error('Error deleting analysis:', error);
+            toastr.error('Error deleting analysis');
+        }
     }
 };
 

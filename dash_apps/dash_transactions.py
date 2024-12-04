@@ -29,7 +29,7 @@ from typing import Dict, List, Optional
 
 # Local imports
 from services.transaction_service import get_transactions_for_view, get_properties_for_user
-from services.report_generator import TransactionReport  # after adding TransactionReport to report_generator.py
+from services.report_generator import ReportGenerator
 
 # Configure logging
 logger = logging.getLogger(__name__)

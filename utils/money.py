@@ -11,19 +11,47 @@ class Money:
     def __init__(self, amount):
         if isinstance(amount, str):
             cleaned = amount.replace('$', '').replace(',', '').strip()
-            self.amount = float(cleaned if cleaned else '0')
+            self.amount = Decimal(cleaned if cleaned else '0')
         else:
-            self.amount = float(amount or 0)
+            self.amount = Decimal(str(amount or 0))
 
     @property
     def dollars(self):
-        return self.amount
+        return float(self.amount)  # Convert back to float for display
 
     def __str__(self):
         return str(self.amount)
 
     def __repr__(self):
         return f"Money({self.amount})"
+    
+    def __add__(self, other):
+        if isinstance(other, Money):
+            return Money(self.amount + other.amount)
+        if hasattr(other, 'as_decimal'):  # Handle Percentage objects
+            return Money(self.amount * other.as_decimal())
+        return Money(self.amount + Decimal(str(other)))
+
+    def __sub__(self, other):
+        if isinstance(other, Money):
+            return Money(self.amount - other.amount)
+        if hasattr(other, 'as_decimal'):  # Handle Percentage objects
+            return Money(self.amount * other.as_decimal())
+        return Money(self.amount - Decimal(str(other)))
+
+    def __mul__(self, other):
+        if isinstance(other, Money):
+            return Money(self.amount * other.amount)
+        if hasattr(other, 'as_decimal'):  # Handle Percentage objects
+            return Money(self.amount * other.as_decimal())
+        return Money(self.amount * Decimal(str(other)))
+
+    def __truediv__(self, other):
+        if isinstance(other, Money):
+            return Money(self.amount / other.amount)
+        if hasattr(other, 'as_decimal'):  # Handle Percentage objects
+            return Money(self.amount * other.as_decimal())
+        return Money(self.amount / Decimal(str(other)))
 
 class Percentage:
     """
@@ -37,20 +65,21 @@ class Percentage:
     """
     
     def __init__(self, value):
-       if isinstance(value, str):
-           cleaned = value.replace('%', '').strip()
-           self.value = float(cleaned if cleaned else '0')
-       else:
-           self.value = float(value or 0)
+        if isinstance(value, str):
+            cleaned = value.replace('%', '').strip()
+            self.value = float(cleaned if cleaned else '0')
+        else:
+            self.value = float(value or 0)
 
-    def as_decimal(self):
-       return self.value / 100.0
+    def as_decimal(self) -> Decimal:
+        # Return a Decimal instead of float
+        return Decimal(str(self.value / 100.0))
 
     def __str__(self):
-       return str(self.value)
+        return str(self.value)
 
     def __repr__(self):
-       return f"Percentage({self.value})"
+        return f"Percentage({self.value})"
 
 @dataclass
 class MonthlyPayment:
