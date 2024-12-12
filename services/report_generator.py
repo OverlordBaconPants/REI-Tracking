@@ -1,291 +1,280 @@
+from datetime import datetime
+from typing import Dict, Optional, Any
+import logging
+from io import BytesIO
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import letter, landscape
+from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
-from reportlab.lib.enums import TA_CENTER, TA_LEFT
-from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer, Table, 
-                               TableStyle, Image, BaseDocTemplate, PageTemplate, 
-                               Frame, FrameBreak, PageBreak, KeepTogether)
-from typing import Dict, List, Optional, Union
-from io import BytesIO
-from flask import current_app
-import logging
-import os
-from datetime import datetime
-from typing import Dict, List, Tuple, Optional
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 
 logger = logging.getLogger(__name__)
 
 class ReportGenerator:
-    """Base class for generating PDF reports from structured data."""
+    """Generates PDF reports from analysis data using flat structure."""
     
-    def __init__(self, data: Dict, buffer: BytesIO, landscape_mode: bool = False):
-        self.data = data
-        self.buffer = buffer
-        self.landscape_mode = landscape_mode
-        self.styles = self._create_styles()
-        self.pagesize = landscape(letter) if landscape_mode else letter
-        self.margins = {
-            'left': 0.75*inch,
-            'right': 0.75*inch,
-            'top': 0.75*inch,
-            'bottom': 0.75*inch
-        }
-
-    def _create_styles(self) -> Dict:
-        """Create standardized styles for the report"""
-        styles = getSampleStyleSheet()
-        
-        styles.add(ParagraphStyle(
-            'Header',
-            parent=styles['Heading1'],
-            fontSize=16,
-            textColor=colors.HexColor('#000080'),
-            spaceAfter=20,
-            alignment=TA_CENTER
+    def __init__(self):
+        self.styles = getSampleStyleSheet()
+        # Add custom styles
+        self.styles.add(ParagraphStyle(
+            name='SectionHeader',
+            parent=self.styles['Heading2'],
+            spaceBefore=12,
+            spaceAfter=6
         ))
         
-        styles.add(ParagraphStyle(
-            'SubTitle',
-            parent=styles['Heading2'],
-            fontSize=14,
-            textColor=colors.HexColor('#000080'),
-            spaceAfter=10,
-            alignment=TA_CENTER
-        ))
-        
-        styles.add(ParagraphStyle(
-            'SectionHeader',
-            parent=styles['Heading2'],
-            fontSize=14,
-            textColor=colors.HexColor('#000080'),
-            spaceBefore=15,
-            spaceAfter=10,
-            alignment=TA_LEFT
-        ))
-        
-        styles.add(ParagraphStyle(
-            'TableHeader',
-            parent=styles['Normal'],
-            fontSize=10,
-            textColor=colors.white,
-            alignment=TA_LEFT
-        ))
-        
-        return styles
-
-    def _create_header(self) -> Table:
-        """Create report header with logo and title."""
-        try:
-            logo_path = os.path.join(current_app.static_folder, 'images', 'logo-blue.png')
-            
-            if 'analysis_name' in self.data:
-                # Analysis report header
-                title = self.data.get('analysis_name', 'Analysis Report')
-                subtitle = f"{self.data.get('analysis_type', 'Analysis')}"
-                date = self.data.get('generated_date', datetime.now().strftime("%Y-%m-%d"))
-            else:
-                # Transaction report header
-                title = "Transaction Report"
-                subtitle = f"Generated on {datetime.now().strftime('%Y-%m-%d')}"
-                date = self.data.get('date_range', 'All Time')
-
-            if not os.path.exists(logo_path):
-                logger.warning(f"Logo file not found at {logo_path}")
-                header_data = [
-                    [Paragraph(title, self.styles['Header'])],
-                    [Paragraph(f"{subtitle}<br/>{date}", self.styles['SubTitle'])]
-                ]
-                header_table = Table(header_data, colWidths=[7*inch])
-            else:
-                img = Image(logo_path, width=0.75*inch, height=0.75*inch)
-                header_data = [
-                    [img, Paragraph(title, self.styles['Header'])],
-                    [None, Paragraph(f"{subtitle}<br/>{date}", self.styles['SubTitle'])]
-                ]
-                header_table = Table(header_data, colWidths=[1*inch, 6*inch])
-
-            header_table.setStyle(TableStyle([
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                ('LEFTPADDING', (0, 0), (-1, -1), 0),
-                ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-                ('SPAN', (0, 0), (0, 1))
-            ]))
-
-            return header_table
-        except Exception as e:
-            logger.error(f"Error creating header: {str(e)}")
-            return Paragraph("Report", self.styles['Header'])
-
-    def _create_table(self, title: str, data: List[tuple[str, str]], column_widths: Optional[List[float]] = None) -> Table:
-        """Create a formatted table with data."""
-        if not column_widths:
-            column_widths = [3*inch, 2*inch]
-
-        table_data = [[Paragraph(title, self.styles['TableHeader']), '']]
-        
-        for label, value in data:
-            table_data.append([
-                Paragraph(str(label), self.styles['Normal']),
-                Paragraph(str(value), self.styles['Normal'])
-            ])
-        
-        table = Table(table_data, colWidths=column_widths)
-        
-        style = [
-            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
-            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
-            ('SPAN', (0, 0), (1, 0)),
-            ('BACKGROUND', (0, 0), (1, 0), colors.HexColor('#000080')),
-            ('TEXTCOLOR', (0, 0), (1, 0), colors.white),
-            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('TOPPADDING', (0, 0), (-1, -1), 6),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black)
-        ]
-        
-        for i in range(1, len(table_data), 2):
-            style.append(('BACKGROUND', (0, i), (1, i), colors.lightgrey))
-            
-        table.setStyle(TableStyle(style))
-        return table
-
-    def _create_transaction_table(self, title: str, transactions: List[Dict]) -> Table:
-        """Create transaction table for transaction reports."""
-        headers = ['Date', 'Description', 'Type', 'Category', 'Amount']
-        data = [headers]
-        
-        col_widths = [1.5*inch, 4*inch, 1.5*inch, 2*inch, 1.5*inch]
-        
-        for t in transactions:
-            data.append([
-                t['date'],
-                t['description'],
-                t['type'].title(),
-                t['category'],
-                t['amount']
-            ])
-        
-        table = Table(data, colWidths=col_widths)
-        
-        style = [
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#000080')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('ALIGN', (-1, 0), (-1, -1), 'RIGHT'),
-            ('ALIGN', (0, 1), (0, -1), 'CENTER'),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey])
-        ]
-        
-        table.setStyle(TableStyle(style))
-        return table
-
-    def _add_content(self, story: List) -> None:
-        """Add report content based on report type."""
-        story.append(self._create_header())
-        story.append(Spacer(1, 0.25*inch))
-
-        if 'sections' in self.data:
-            # Analysis report content
-            col_width = (self.pagesize[0] - sum(self.margins.values())) / 2 - 0.125*inch
-            
-            for i, section in enumerate(self.data['sections']):
-                table = self._create_table(
-                    section['title'],
-                    section['data'],
-                    column_widths=[col_width * 0.6, col_width * 0.4]
-                )
-                story.append(table)
-                
-                if i < len(self.data['sections']) - 1:
-                    story.append(Spacer(1, 0.25*inch))
-                
-                if i % 2 == 1 and i < len(self.data['sections']) - 1:
-                    story.append(FrameBreak())
-        else:
-            # Transaction report content
-            if 'transactions' in self.data:
-                for property_id, transactions in self.data['transactions'].items():
-                    story.append(self._create_transaction_table(
-                        f"Transactions - {property_id}",
-                        transactions
-                    ))
-                    story.append(Spacer(1, 0.25*inch))
-
-    def _add_page_number(self, canvas, doc):
-        """Add page number to each page."""
-        canvas.saveState()
-        canvas.setFont('Helvetica', 9)
-        page_num = canvas.getPageNumber()
-        text = f"Page {page_num}"
-        canvas.drawRightString(
-            self.pagesize[0] - self.margins['right'],
-            self.margins['bottom'] / 2,
-            text
-        )
-        canvas.restoreState()
-
-    def generate(self) -> None:
-        """Generate the complete report."""
-        doc = BaseDocTemplate(
-            self.buffer,
-            pagesize=self.pagesize,
-            rightMargin=self.margins['right'],
-            leftMargin=self.margins['left'],
-            topMargin=self.margins['top'],
-            bottomMargin=self.margins['bottom']
+    def generate_report(self, data: Dict) -> BytesIO:
+        """Generate a PDF report from analysis data."""
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=letter,
+            rightMargin=72,
+            leftMargin=72,
+            topMargin=72,
+            bottomMargin=72
         )
         
-        header_height = 1.25*inch
-        content_width = doc.width / 2 - 0.125*inch
-        content_height = doc.height - header_height - 0.5*inch
-        
-        header_frame = Frame(
-            doc.leftMargin,
-            doc.height - header_height,
-            doc.width,
-            header_height,
-            id='header'
-        )
-        
-        left_frame = Frame(
-            doc.leftMargin,
-            doc.bottomMargin,
-            content_width,
-            content_height,
-            id='left'
-        )
-        
-        right_frame = Frame(
-            doc.leftMargin + content_width + 0.25*inch,
-            doc.bottomMargin,
-            content_width,
-            content_height,
-            id='right'
-        )
-        
-        template = PageTemplate(
-            id='normal',
-            frames=[header_frame, left_frame, right_frame],
-            onPage=self._add_page_number
-        )
-        doc.addPageTemplates([template])
-        
+        # Build story (content) for the PDF
         story = []
-        self._add_content(story)
+        
+        # Add header
+        story.extend(self._create_header(data))
+        
+        # Add property details
+        story.extend(self._create_property_section(data))
+        
+        # Add financial overview
+        story.extend(self._create_financial_section(data))
+        
+        # Add loan details
+        story.extend(self._create_loan_section(data))
+        
+        # Add operating expenses
+        story.extend(self._create_expenses_section(data))
+        
+        # Add type-specific details
+        if 'BRRRR' in data.get('analysis_type', ''):
+            story.extend(self._create_brrrr_section(data))
+            
+        if 'PadSplit' in data.get('analysis_type', ''):
+            story.extend(self._create_padsplit_section(data))
+        
+        # Build the PDF
         doc.build(story)
+        buffer.seek(0)
+        return buffer
 
-def generate_report(data: Dict, report_type: str = 'analysis') -> BytesIO:
-    """Generate appropriate PDF report based on type."""
-    buffer = BytesIO()
-    is_landscape = report_type == 'transaction'
-    report = ReportGenerator(data, buffer, landscape_mode=is_landscape)
-    report.generate()
-    buffer.seek(0)
-    return buffer
+    def _create_header(self, data: Dict) -> list:
+        """Create report header section."""
+        elements = []
+        
+        # Title
+        title = Paragraph(
+            f"{data.get('analysis_name', 'Analysis Report')}",
+            self.styles['Title']
+        )
+        elements.append(title)
+        
+        # Subtitle with analysis type and date
+        subtitle = Paragraph(
+            f"Type: {data.get('analysis_type', 'Unknown')} | "
+            f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+            self.styles['Italic']
+        )
+        elements.append(subtitle)
+        elements.append(Spacer(1, 12))
+        
+        return elements
+
+    def _create_property_section(self, data: Dict) -> list:
+        """Create property details section."""
+        elements = []
+        
+        elements.append(Paragraph("Property Details", self.styles['SectionHeader']))
+        
+        # Create property details table
+        property_data = [
+            ["Address:", data.get('property_address', 'N/A')],
+            ["Square Footage:", str(data.get('square_footage', 'N/A'))],
+            ["Lot Size:", str(data.get('lot_size', 'N/A'))],
+            ["Year Built:", str(data.get('year_built', 'N/A'))],
+            ["Purchase Price:", f"${data.get('purchase_price', 0):,.2f}"],
+            ["After Repair Value:", f"${data.get('after_repair_value', 0):,.2f}"],
+            ["Renovation Costs:", f"${data.get('renovation_costs', 0):,.2f}"]
+        ]
+        
+        table = Table(property_data, colWidths=[2*inch, 4*inch])
+        table.setStyle(TableStyle([
+            ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+            ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
+            ('PADDING', (0, 0), (-1, -1), 6)
+        ]))
+        
+        elements.append(table)
+        elements.append(Spacer(1, 12))
+        
+        return elements
+
+    def _create_financial_section(self, data: Dict) -> list:
+        """Create financial overview section."""
+        elements = []
+        
+        elements.append(Paragraph("Financial Overview", self.styles['SectionHeader']))
+        
+        # Monthly income and expenses
+        monthly_rent = float(data.get('monthly_rent', 0))
+        total_expenses = self._calculate_total_expenses(data)
+        loan_payments = self._calculate_total_loan_payments(data)
+        monthly_cash_flow = monthly_rent - total_expenses - loan_payments
+        
+        financial_data = [
+            ["Monthly Rent:", f"${monthly_rent:,.2f}"],
+            ["Operating Expenses:", f"${total_expenses:,.2f}"],
+            ["Loan Payments:", f"${loan_payments:,.2f}"],
+            ["Monthly Cash Flow:", f"${monthly_cash_flow:,.2f}"],
+            ["Annual Cash Flow:", f"${monthly_cash_flow * 12:,.2f}"]
+        ]
+        
+        table = Table(financial_data, colWidths=[2*inch, 4*inch])
+        table.setStyle(TableStyle([
+            ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+            ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
+            ('PADDING', (0, 0), (-1, -1), 6)
+        ]))
+        
+        elements.append(table)
+        elements.append(Spacer(1, 12))
+        
+        return elements
+
+    def _create_loan_section(self, data: Dict) -> list:
+        """Create loan details section."""
+        elements = []
+        
+        elements.append(Paragraph("Loan Details", self.styles['SectionHeader']))
+        
+        # Handle regular loans
+        for i in range(1, 4):
+            prefix = f'loan{i}_loan'
+            if data.get(f'{prefix}_amount'):
+                loan_data = [
+                    [f"Loan {i} Details"],
+                    ["Amount:", f"${data.get(f'{prefix}_amount', 0):,.2f}"],
+                    ["Interest Rate:", f"{data.get(f'{prefix}_loan_interest_rate', 0)}%"],
+                    ["Term:", f"{data.get(f'{prefix}_loan_term', 0)} months"],
+                    ["Down Payment:", f"${data.get(f'{prefix}_loan_down_payment', 0):,.2f}"],
+                    ["Closing Costs:", f"${data.get(f'{prefix}_loan_closing_costs', 0):,.2f}"]
+                ]
+                
+                table = Table(loan_data, colWidths=[2*inch, 4*inch])
+                table.setStyle(TableStyle([
+                    ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+                    ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
+                    ('SPAN', (0, 0), (-1, 0)),
+                    ('PADDING', (0, 0), (-1, -1), 6)
+                ]))
+                
+                elements.append(table)
+                elements.append(Spacer(1, 12))
+        
+        return elements
+
+    def _calculate_total_expenses(self, data: Dict) -> float:
+        """Calculate total monthly operating expenses."""
+        expenses = sum([
+            float(data.get('property_taxes', 0)),
+            float(data.get('insurance', 0)),
+            float(data.get('hoa_coa_coop', 0))
+        ])
+        
+        # Add percentage-based expenses
+        monthly_rent = float(data.get('monthly_rent', 0))
+        for field in ['management_fee_percentage', 'capex_percentage', 
+                     'vacancy_percentage', 'repairs_percentage']:
+            percentage = float(data.get(field, 0)) / 100
+            expenses += monthly_rent * percentage
+        
+        # Add PadSplit-specific expenses
+        if 'PadSplit' in data.get('analysis_type', ''):
+            padsplit_expenses = sum([
+                float(data.get('utilities', 0)),
+                float(data.get('internet', 0)),
+                float(data.get('cleaning', 0)),
+                float(data.get('pest_control', 0)),
+                float(data.get('landscaping', 0))
+            ])
+            padsplit_percentage = float(data.get('padsplit_platform_percentage', 0)) / 100
+            expenses += padsplit_expenses + (monthly_rent * padsplit_percentage)
+        
+        return expenses
+
+    def _calculate_total_loan_payments(self, data: Dict) -> float:
+        """Calculate total monthly loan payments."""
+        total_payment = 0.0
+        
+        # Calculate regular loan payments
+        for i in range(1, 4):
+            prefix = f'loan{i}_loan'
+            if data.get(f'{prefix}_amount'):
+                total_payment += self._calculate_loan_payment(
+                    amount=float(data.get(f'{prefix}_amount', 0)),
+                    rate=float(data.get(f'{prefix}_loan_interest_rate', 0)),
+                    term=int(data.get(f'{prefix}_loan_term', 0))
+                )
+        
+        # Add BRRRR-specific loans if applicable
+        if 'BRRRR' in data.get('analysis_type', ''):
+            # Initial loan
+            if data.get('initial_loan_amount'):
+                total_payment += self._calculate_loan_payment(
+                    amount=float(data.get('initial_loan_amount', 0)),
+                    rate=float(data.get('initial_loan_interest_rate', 0)),
+                    term=int(data.get('initial_loan_term', 0)),
+                    is_interest_only=True
+                )
+            
+            # Refinance loan
+            if data.get('refinance_loan_amount'):
+                total_payment += self._calculate_loan_payment(
+                    amount=float(data.get('refinance_loan_amount', 0)),
+                    rate=float(data.get('refinance_loan_interest_rate', 0)),
+                    term=int(data.get('refinance_loan_term', 0))
+                )
+        
+        return total_payment
+
+    def _calculate_loan_payment(self, amount: float, rate: float, 
+                              term: int, is_interest_only: bool = False) -> float:
+        """Calculate monthly loan payment."""
+        if amount == 0 or term == 0:
+            return 0.0
+            
+        if is_interest_only:
+            return amount * (rate / 1200)
+            
+        monthly_rate = rate / 1200
+        if monthly_rate == 0:
+            return amount / term
+            
+        factor = (1 + monthly_rate) ** term
+        return amount * monthly_rate * factor / (factor - 1)
+    
+# Create a singleton instance
+_generator = ReportGenerator()
+
+def generate_report(data: Dict) -> BytesIO:
+    """
+    Generate a PDF report from analysis data.
+    
+    Args:
+        data: Dictionary containing analysis data in flat structure
+        
+    Returns:
+        BytesIO buffer containing the generated PDF
+    """
+    try:
+        return _generator.generate_report(data)
+    except Exception as e:
+        logger.error(f"Error generating report: {str(e)}")
+        raise RuntimeError(f"Failed to generate report: {str(e)}")

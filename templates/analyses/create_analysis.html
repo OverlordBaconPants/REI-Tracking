@@ -1,110 +1,96 @@
 {% extends "base.html" %}
-
 {% block body_class %}analysis-page{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
-    <div class="card mb-4">
-        <div class="card-header">
-            <h2 class="mb-0" id="analysisTitle">
-                {% if analysis and analysis.edit_mode %}
-                    View/Edit Analysis
-                {% else %}
-                    Create Analysis
-                {% endif %}
-            </h2>
-        </div>
-
-        <div class="card-body">
+    <div class="row">
+        <div class="col">
+            <h2 class="mb-4">{% if editing_analysis %}Edit{% else %}Create{% endif %} Analysis</h2>
+            
             <form id="analysisForm" method="POST">
-                {% if analysis %}
-                    <input type="hidden" name="id" value="{{ analysis.id }}">
-                {% endif %}
-                
-                <!-- Property Information -->
+                <!-- Analysis Type and Name Section -->
                 <div class="card mb-4">
-                    <div class="card-header">Property Information</div>
+                    <div class="card-header">Analysis Information</div>
                     <div class="card-body">
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label for="analysis_name" class="form-label">Analysis Name</label>
-                                <input type="text" class="form-control" id="analysis_name" name="analysis_name" 
-                                       value="{{ analysis.analysis_name if analysis else '' }}" required>
+                                <label for="analysis_type" class="form-label">Analysis Type</label>
+                                <select class="form-select" id="analysis_type" name="analysis_type" required>
+                                    <option value="BRRRR">BRRRR</option>
+                                    <option value="PadSplit BRRRR">PadSplit BRRRR</option>
+                                    <option value="LTR">LTR</option>
+                                    <option value="PadSplit LTR">PadSplit LTR</option>
+                                </select>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label for="property_address" class="form-label">Property Address</label>
-                                <div class="autocomplete-container">
-                                    <input type="text" class="form-control" id="property_address" name="property_address" 
-                                           value="{{ analysis.property_address if analysis else '' }}" required>
-                                    <ul id="addressSuggestions" class="autocomplete-results"></ul>
-                                </div>
+                                <label for="analysis_name" class="form-label">Analysis Name</label>
+                                <input type="text" class="form-control" id="analysis_name" name="analysis_name" required>
                             </div>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Analysis Type -->
-                <div class="card mb-4">
-                    <div class="card-header">Analysis Type</div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <select class="form-select" id="analysis_type" name="analysis_type" required>
-                                <option value="">Select an analysis type</option>
-                                {% set analysis_types = ['LTR', 'PadSplit LTR', 'BRRRR', 'PadSplit BRRRR'] %}
-                                {% for type in analysis_types %}
-                                    <option value="{{ type }}" 
-                                            {% if analysis and analysis.analysis_type == type %}selected{% endif %}>
-                                        {{ type }}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                            {% if analysis %}
-                                <div class="form-text fw-bold">Changing analysis type will create a new copy of this analysis</div>
-                            {% endif %}
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <label for="address" class="form-label">Property Address</label>
+                                <input type="text" class="form-control" id="address" name="address" required>
+                                <ul id="addressSuggestions" class="list-unstyled position-absolute bg-white border rounded-bottom shadow-sm" style="z-index: 1000; display: none;"></ul>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Tab Navigation -->
-                <ul class="nav nav-tabs" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="financial-tab" data-bs-toggle="tab" 
-                                data-bs-target="#financial" type="button" role="tab">Financial Details</button>
+                <ul class="nav nav-tabs mb-4" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link active" id="financial-tab" data-bs-toggle="tab" data-bs-target="#financial" type="button">Financial</button>
                     </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="reports-tab" data-bs-toggle="tab" 
-                                data-bs-target="#reports" type="button" role="tab">Reports</button>
+                    <li class="nav-item">
+                        <button class="nav-link" id="reports-tab" data-bs-toggle="tab" data-bs-target="#reports" type="button">Reports</button>
                     </li>
                 </ul>
 
-                <div class="tab-content mt-3" id="analysisTabContent">
-                    <div class="tab-pane fade show active" id="financial" role="tabpanel" aria-labelledby="financial-tab">
-                        <!-- Dynamic content will be loaded here -->
+                <!-- Tab Content -->
+                <div class="tab-content" id="analysisTabContent">
+                    <!-- Financial Tab -->
+                    <div class="tab-pane fade show active" id="financial" role="tabpanel">
+                        <!-- Dynamic content will be loaded here by JavaScript -->
                     </div>
-                    <div class="tab-pane fade" id="reports" role="tabpanel" aria-labelledby="reports-tab">
-                        <!-- Reports content will be loaded here -->
+
+                    <!-- Reports Tab -->
+                    <div class="tab-pane fade" id="reports" role="tabpanel">
+                        <!-- Report content will be dynamically populated -->
                     </div>
                 </div>
 
-                <div class="mt-3 analysis-buttons">
-                    <button type="submit" class="btn btn-primary" id="submitAnalysisBtn">
-                        {% if analysis and analysis.edit_mode %}
-                            Update Analysis
+                <!-- Action Buttons -->
+                <div class="mt-4 mb-4">
+                    <div class="d-flex gap-2">
+                        {% if editing_analysis %}
+                            <button type="submit" id="submitAnalysisBtn" class="btn btn-success">
+                                <i class="bi bi-save me-2"></i>Update Analysis
+                            </button>
+                            <a href="{{ url_for('analyses.view_edit_analysis') }}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left me-2"></i>Back to Analyses
+                            </a>
                         {% else %}
-                            Create Analysis
+                            <button type="submit" id="submitAnalysisBtn" class="btn btn-success">
+                                <i class="bi bi-save me-2"></i>Create Analysis
+                            </button>
+                            <a href="{{ url_for('analyses.view_edit_analysis') }}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle me-2"></i>Cancel
+                            </a>
                         {% endif %}
-                    </button>
-                    {% if analysis and analysis.edit_mode %}
-                        <a href="{{ url_for('analyses.view_edit_analysis') }}" class="btn btn-secondary" id="cancelBtn">Cancel</a>
-                    {% endif %}
+                    </div>
                 </div>
             </form>
-
-            <div class="mt-3" id="reportActions" style="display: none;">
-                <button type="button" class="btn btn-primary" id="editAnalysisBtn">Edit Analysis</button>
-                <button type="button" class="btn btn-primary" id="createNewAnalysisBtn">Create New Analysis</button>
-            </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{% if analysis %}
+<script type="application/json" id="analysis-data">
+    {{ analysis|tojson|safe }}
+</script>
+{% endif %}
 {% endblock %}

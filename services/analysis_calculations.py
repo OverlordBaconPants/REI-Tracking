@@ -5,6 +5,7 @@ from decimal import Decimal
 from utils.money import Money, Percentage, MonthlyPayment
 from datetime import datetime
 import logging
+import uuid
 import traceback
 
 # Configure logger
@@ -20,601 +21,722 @@ if not logger.handlers:
     logger.addHandler(ch)
 
 @dataclass
-class ReportSection:
-    """Represents a section of the analysis report with formatted data"""
-    title: str
-    data: List[tuple[str, str]]  # List of (label, formatted_value) pairs
-
-@dataclass
-class AnalysisReportData:
-    """Container for all data needed to generate an analysis report"""
+class AnalysisReport:
+    """Container for complete analysis report data matching flat schema"""
+    # Core metadata
+    id: str
+    user_id: str
     analysis_name: str
     analysis_type: str
-    property_address: str
+    address: str
     generated_date: str
-    sections: List[ReportSection]
-
-class ReportDataProvider(ABC):
-    """Base interface for providing formatted report data"""
     
-    @abstractmethod
-    def get_report_data(self) -> AnalysisReportData:
-        """Get fully formatted data for report generation"""
-        pass
+    # Property details
+    square_footage: int
+    lot_size: int
+    year_built: int
+    
+    # Financial details
+    purchase_price: int
+    after_repair_value: int
+    renovation_costs: int
+    renovation_duration: int
+    monthly_rent: int
+    
+    # Operating expenses
+    property_taxes: int
+    insurance: int
+    hoa_coa_coop: int
+    management_fee_percentage: float
+    capex_percentage: float
+    vacancy_percentage: float
+    repairs_percentage: float
+    
+    # Calculated metrics
+    metrics: Dict
 
-@dataclass
-class Loan:
-    """Represents a loan with its terms and payments"""
-    def __init__(self, amount, interest_rate, term, down_payment, closing_costs, 
-                 is_interest_only: bool = False, name: Optional[str] = None,
-                 monthly_payment: Optional[str] = None):
-        self.amount = Money(amount)
-        self.interest_rate = Percentage(interest_rate)
-        self.term = int(float(str(term))) if term else 0
-        self.down_payment = Money(down_payment)
-        self.closing_costs = Money(closing_costs)
-        self.is_interest_only = bool(is_interest_only)
-        self.name = name
-        self._monthly_payment = Money(monthly_payment) if monthly_payment else None
-
-    def _validate_and_convert_types(self):
-        try:
-            self.amount = Money(self.amount)
-            self.interest_rate = Percentage(self.interest_rate)
-            self.term = int(float(str(self.term)))
-            self.down_payment = Money(self.down_payment)
-            self.closing_costs = Money(self.closing_costs)
-        except (ValueError, TypeError) as e:
-            raise ValueError(f"Invalid loan parameters: {str(e)}")
-
-    def calculate_payment(self) -> MonthlyPayment:
-        """Calculate monthly payment with proper handling of interest-only"""
-        if not self.term or not self.amount:
-            return MonthlyPayment(total=Money(0), principal=Money(0), interest=Money(0))
+    def to_dict(self) -> Dict:
+        """Convert report to dictionary format."""
+        return {
+            # Core metadata
+            'id': self.id,
+            'user_id': self.user_id,
+            'analysis_name': self.analysis_name,
+            'analysis_type': self.analysis_type,
+            'address': self.address,
+            'generated_date': self.generated_date,
             
-        if self.is_interest_only:
-            monthly_interest = float(self.amount.dollars) * float(self.interest_rate.as_decimal()) / 12
-            return MonthlyPayment(total=Money(monthly_interest), principal=Money(0), interest=Money(monthly_interest))
+            # Property details
+            'square_footage': self.square_footage,
+            'lot_size': self.lot_size,
+            'year_built': self.year_built,
             
-        # Amortization calculation
-        monthly_rate = Decimal(str(self.interest_rate.as_decimal())) / Decimal('12')
-        principal_amount = Decimal(str(self.amount.dollars))
-        
-        if monthly_rate == 0:
-            monthly_payment = principal_amount / Decimal(str(self.term))
-        else:
-            factor = (1 + monthly_rate) ** Decimal(str(self.term))
-            monthly_payment = principal_amount * monthly_rate * factor / (factor - 1)
-        
-        return MonthlyPayment(total=Money(float(monthly_payment)), principal=Money(0), interest=Money(0))
-
-    @property
-    def total_initial_costs(self) -> Money:
-        return self.down_payment + self.closing_costs
-
-@dataclass
-class PropertyDetails:
-    """Represents property details"""
-    def __init__(self, data: Dict):
-        self.address = data.get('property_address')
-        self.square_footage = int(data.get('home_square_footage', 0))
-        self.lot_size = int(data.get('lot_square_footage', 0))
-        self.year_built = int(data.get('year_built', 0))
-
-@dataclass
-class PurchaseDetails:
-    """Purchase and renovation details"""
-    def __init__(self, data: Dict):
-        self.purchase_price = Money(data.get('purchase_price', 0))
-        self.after_repair_value = Money(data.get('after_repair_value', 0))
-        self.renovation_costs = Money(data.get('renovation_costs', 0))
-        self.renovation_duration = int(data.get('renovation_duration', 0))
-        self.cash_to_seller = Money(data.get('cash_to_seller', 0))
-        self.closing_costs = Money(data.get('closing_costs', 0))
-        self.assignment_fee = Money(data.get('assignment_fee', 0))
-        self.marketing_costs = Money(data.get('marketing_costs', 0))
-
-class OperatingExpenses:
-    """Base operating expenses calculations"""
-    def __init__(self, data: Dict):
-        self.monthly_rent = Money(data.get('monthly_rent', 0))
-        self.property_taxes = Money(data.get('property_taxes', 0))
-        self.insurance = Money(data.get('insurance', 0))
-        self.hoa_coa_coop = Money(data.get('hoa_coa_coop', 0))
-        self.management_percentage = Percentage(data.get('management_percentage', 0))
-        self.capex_percentage = Percentage(data.get('capex_percentage', 0))
-        self.vacancy_percentage = Percentage(data.get('vacancy_percentage', 0))
-        self.repairs_percentage = Percentage(data.get('repairs_percentage', 0))
-
-        # Store the total if provided, otherwise calculate it
-        self._total = Money(data.get('total_operating_expenses', 0))
-
-    @property
-    def management_fee(self) -> Money:
-        return self.monthly_rent * self.management_percentage
-
-    @property
-    def capex(self) -> Money:
-        return self.monthly_rent * self.capex_percentage
-
-    @property
-    def vacancy(self) -> Money:
-        return self.monthly_rent * self.vacancy_percentage
-
-    @property
-    def repairs(self) -> Money:
-        return self.monthly_rent * self.repairs_percentage
-
-    @property
-    def total(self) -> Money:
-        if self._total.dollars > 0:
-            return self._total
-        return sum([
-            self.property_taxes,
-            self.insurance,
-            self.hoa_coa_coop,
-            self.management_fee,
-            self.capex,
-            self.vacancy,
-            self.repairs
-        ], Money(0))
-
-class PadSplitOperatingExpenses(OperatingExpenses):
-    """PadSplit-specific operating expenses"""
-    def __init__(self, data: Dict):
-        super().__init__(data)
-        self.platform_percentage = Percentage(data.get('padsplit_platform_percentage', 0))
-        self.utilities = Money(data.get('utilities', 0))
-        self.internet = Money(data.get('internet', 0))
-        self.cleaning = Money(data.get('cleaning_costs', 0))
-        self.pest_control = Money(data.get('pest_control', 0))
-        self.landscaping = Money(data.get('landscaping', 0))
-
-    @property
-    def platform_fee(self) -> Money:
-        return self.monthly_rent * self.platform_percentage
-
-    @property
-    def total(self) -> Money:
-        if self._total.dollars > 0:
-            logger.debug(f"Using stored total operating expenses: {self._total}")
-            return self._total
+            # Financial details
+            'purchase_price': self.purchase_price,
+            'after_repair_value': self.after_repair_value,
+            'renovation_costs': self.renovation_costs,
+            'renovation_duration': self.renovation_duration,
+            'monthly_rent': self.monthly_rent,
             
-        base_expenses = super().total
-        logger.debug(f"Base operating expenses: {base_expenses}")
-        
-        padsplit_expenses = sum([
-            self.platform_fee,
-            self.utilities,
-            self.internet,
-            self.cleaning,
-            self.pest_control,
-            self.landscaping
-        ], Money(0))
-        logger.debug(f"PadSplit specific expenses: {padsplit_expenses}")
-        
-        total = base_expenses + padsplit_expenses
-        logger.debug(f"Total operating expenses: {total}")
-        return total
-
-class LoanCollection:
-    """Manages all loans for an analysis"""
-    def __init__(self, data: Dict):
-        logger.debug("=== Initializing LoanCollection ===")
-        logger.debug(f"Received data: {data}")
-        
-        # Initialize BRRRR loans if present
-        self.initial_loan = None
-        self.refinance_loan = None
-        
-        if data.get('initial_loan_amount'):
-            logger.debug(f"Creating initial loan with amount: {data.get('initial_loan_amount')}")
-            self.initial_loan = Loan(
-                amount=data.get('initial_loan_amount', 0),
-                interest_rate=data.get('initial_interest_rate', 0),
-                term=data.get('initial_loan_term', 0),
-                down_payment=data.get('initial_down_payment', 0),
-                closing_costs=data.get('initial_closing_costs', 0),
-                is_interest_only=data.get('initial_interest_only', False),
-                name="Initial Purchase Loan",
-                monthly_payment=data.get('initial_monthly_payment')
-            )
-            logger.debug(f"Created initial loan: {self.initial_loan.__dict__}")
-
-        if data.get('refinance_loan_amount'):
-            logger.debug(f"Creating refinance loan with amount: {data.get('refinance_loan_amount')}")
-            self.refinance_loan = Loan(
-                amount=data.get('refinance_loan_amount', 0),
-                interest_rate=data.get('refinance_interest_rate', 0),
-                term=data.get('refinance_loan_term', 0),
-                down_payment=data.get('refinance_down_payment', 0),
-                closing_costs=data.get('refinance_closing_costs', 0),
-                name="Refinance Loan",
-                monthly_payment=data.get('refinance_monthly_payment')
-            )
-            logger.debug(f"Created refinance loan: {self.refinance_loan.__dict__}")
-
-        logger.debug("=== Completed LoanCollection Initialization ===")
-
-    @property
-    def all_loans(self) -> List[Loan]:
-        loans = []
-        if self.initial_loan and self.initial_loan.amount.dollars > 0:
-            loans.append(self.initial_loan)
-        if self.refinance_loan and self.refinance_loan.amount.dollars > 0:
-            loans.append(self.refinance_loan)
-        loans.extend([loan for loan in self.additional_loans if loan.amount.dollars > 0])
-        return loans
-
-    @property
-    def total_monthly_payment(self) -> Money:
-        total = sum((loan.calculate_payment().total for loan in self.all_loans), Money(0))
-        logger.debug(f"Total monthly loan payment: {total}")
-        return total
-
-    @property
-    def total_initial_costs(self) -> Money:
-        return sum((loan.total_initial_costs for loan in self.all_loans), Money(0))
-
-class Analysis(ReportDataProvider, ABC): 
-    """Abstract base class for all analysis types"""
-    def __init__(self, data: Dict):
-        logger.debug("=== Initializing Base Analysis ===")
-        logger.debug(f"Analysis type: {data.get('analysis_type')}")
-        logger.debug(f"Initial loan data: {data.get('initial_loan_amount')}")
-        logger.debug(f"Refinance loan data: {data.get('refinance_loan_amount')}")
-        logger.debug(f"Additional loans: {data.get('loans')}")
-        
-        self.data = data
-        self.id = data.get('id')
-        self.user_id = data.get('user_id')
-        self.analysis_type = data.get('analysis_type')
-        self.analysis_name = data.get('analysis_name')
-        self.monthly_rent = Money(data.get('monthly_rent', 0))
-        
-        # Convert loans list to dictionary if it isn't already
-        if isinstance(data.get('loans'), list):
-            loans_data = {
-                'loans': data.get('loans', []),
-                **{k: v for k, v in data.items() if k != 'loans'}
-            }
-            logger.debug(f"Converted loan data: {loans_data}")
-        else:
-            loans_data = data
+            # Operating expenses
+            'property_taxes': self.property_taxes,
+            'insurance': self.insurance,
+            'hoa_coa_coop': self.hoa_coa_coop,
+            'management_fee_percentage': self.management_fee_percentage,
+            'capex_percentage': self.capex_percentage,
+            'vacancy_percentage': self.vacancy_percentage,
+            'repairs_percentage': self.repairs_percentage,
             
-        self.property_details = PropertyDetails(data)
-        self.purchase_details = PurchaseDetails(data)
-        self.loans = LoanCollection(loans_data)
-        self.operating_expenses = self._create_operating_expenses()
-        
-        logger.debug("=== Completed Base Analysis Initialization ===")
+            # Calculated metrics
+            'metrics': self.metrics
+        }
 
-    def get_report_data(self) -> AnalysisReportData:
-        """Base implementation of report data generation"""
-        logger.debug("=== Generating Base Report Data ===")
-        logger.debug(f"Analysis type: {self.analysis_type}")
-        logger.debug(f"Loan data: {[loan.__dict__ for loan in self.loans.all_loans]}")
-        
-        sections = [
-            ReportSection(
-                title="Purchase Details",
-                data=[
-                    ("Purchase Price", str(self.purchase_details.purchase_price)),
-                    ("After Repair Value", str(self.purchase_details.after_repair_value)),
-                    ("Renovation Costs", str(self.purchase_details.renovation_costs)),
-                    ("Renovation Duration", f"{self.purchase_details.renovation_duration} months")
-                ]
-            ),
-            ReportSection(
-                title="Income & Returns",
-                data=[
-                    ("Monthly Rent", str(self.monthly_rent)),
-                    ("Monthly Cash Flow", str(self.calculate_monthly_cash_flow())),
-                    ("Annual Cash Flow", str(self.annual_cash_flow)),
-                    ("Cash on Cash Return", str(self.cash_on_cash_return)),
-                    ("ROI", str(self.roi))
-                ]
-            ),
-            ReportSection(
-                title="Operating Expenses",
-                data=[
-                    ("Property Taxes", str(self.operating_expenses.property_taxes)),
-                    ("Insurance", str(self.operating_expenses.insurance)),
-                    ("HOA/COA/COOP", str(self.operating_expenses.hoa_coa_coop)),
-                    ("Management Fee", str(self.operating_expenses.management_fee)),
-                    ("CapEx", str(self.operating_expenses.capex)),
-                    ("Vacancy", str(self.operating_expenses.vacancy)),
-                    ("Repairs", str(self.operating_expenses.repairs)),
-                    ("Total Monthly Expenses", str(self.operating_expenses.total))
-                ]
-            )
-        ]
-
-        logger.debug("=== Completed Base Report Data ===")
-        return AnalysisReportData(
-            analysis_name=self.analysis_name,
-            analysis_type=self.analysis_type,
-            property_address=self.property_details.address,
-            generated_date=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            sections=sections
+    @classmethod
+    def from_analysis(cls, analysis: 'Analysis') -> 'AnalysisReport':
+        """Create report from analysis instance."""
+        return cls(
+            # Core metadata
+            id=analysis.data['id'],
+            user_id=analysis.data['user_id'],
+            analysis_name=analysis.data['analysis_name'],
+            analysis_type=analysis.data['analysis_type'],
+            address=analysis.data['address'],
+            generated_date=datetime.now().isoformat(),
+            
+            # Property details
+            square_footage=analysis.data.get('square_footage', 0),
+            lot_size=analysis.data.get('lot_size', 0),
+            year_built=analysis.data.get('year_built', 0),
+            
+            # Financial details
+            purchase_price=analysis.data.get('purchase_price', 0),
+            after_repair_value=analysis.data.get('after_repair_value', 0),
+            renovation_costs=analysis.data.get('renovation_costs', 0),
+            renovation_duration=analysis.data.get('renovation_duration', 0),
+            monthly_rent=analysis.data.get('monthly_rent', 0),
+            
+            # Operating expenses
+            property_taxes=analysis.data.get('property_taxes', 0),
+            insurance=analysis.data.get('insurance', 0),
+            hoa_coa_coop=analysis.data.get('hoa_coa_coop', 0),
+            management_fee_percentage=analysis.data.get('management_fee_percentage', 0.0),
+            capex_percentage=analysis.data.get('capex_percentage', 0.0),
+            vacancy_percentage=analysis.data.get('vacancy_percentage', 0.0),
+            repairs_percentage=analysis.data.get('repairs_percentage', 0.0),
+            
+            # Get calculated metrics
+            metrics=analysis.get_report_data()['metrics']
         )
 
-    @abstractmethod
-    def _create_operating_expenses(self) -> OperatingExpenses:
-        pass
+    def get_type_specific_data(self) -> Dict:
+        """Get additional data specific to analysis type."""
+        if 'BRRRR' in self.analysis_type:
+            return {
+                'equity_captured': self.metrics.get('equity_captured'),
+                'cash_recouped': self.metrics.get('cash_recouped'),
+                'total_project_costs': self.metrics.get('total_project_costs'),
+                'holding_costs': self.metrics.get('holding_costs')
+            }
+        if 'PadSplit' in self.analysis_type:
+            return {
+                'utilities': self.metrics.get('utilities'),
+                'internet': self.metrics.get('internet'),
+                'cleaning': self.metrics.get('cleaning'),
+                'pest_control': self.metrics.get('pest_control'),
+                'landscaping': self.metrics.get('landscaping'),
+                'platform_fee': self.metrics.get('platform_fee')
+            }
+        return {}
+
+class Analysis(ABC):
+    """Base class for all property investment analysis types."""
+    
+    def __init__(self, data: Dict):
+        """Initialize analysis with flat data structure."""
+        self.data = data
+        self._validate_base_requirements()
+
+    def _validate_base_requirements(self) -> None:
+        """Validate base requirements common to all analysis types."""
+        try:
+            # 1. Validate metadata fields
+            required_meta = {
+                'id': str,
+                'user_id': str,
+                'created_at': str,
+                'updated_at': str,
+                'analysis_type': str,
+                'analysis_name': str,
+                'address': str
+            }
+            for field, expected_type in required_meta.items():
+                value = self.data.get(field)
+                if not value:
+                    raise ValueError(f"Missing required metadata field: {field}")
+                if not isinstance(value, expected_type):
+                    raise TypeError(f"Field {field} must be type {expected_type.__name__}")
+
+            # 2. Validate core calculation fields
+            for field in ['monthly_rent']:
+                value = self.data.get(field)
+                if not value or not isinstance(value, (int, float)) or value < 0:
+                    raise ValueError(f"Invalid {field}: must be a positive number")
+
+            # 3. Validate percentage fields
+            percentage_fields = [
+                'management_fee_percentage',
+                'capex_percentage',
+                'vacancy_percentage',
+                'repairs_percentage'
+            ]
+            for field in percentage_fields:
+                value = self.data.get(field, 0)
+                if not isinstance(value, (int, float)) or value < 0 or value > 100:
+                    raise ValueError(f"Invalid {field}: must be between 0 and 100")
+
+            # 4. Validate date formats
+            for date_field in ['created_at', 'updated_at']:
+                try:
+                    datetime.fromisoformat(self.data[date_field].replace('Z', '+00:00'))
+                except (ValueError, AttributeError):
+                    raise ValueError(f"Invalid datetime format for {date_field}")
+
+            # 5. Validate UUID
+            try:
+                uuid.UUID(str(self.data['id']))
+            except ValueError:
+                raise ValueError("Invalid UUID format for id field")
+
+        except Exception as e:
+            logger.error(f"Validation error: {str(e)}")
+            logger.error(traceback.format_exc())
+            raise
+
+    def _get_money(self, field: str) -> Money:
+        """Safely get a money value from data."""
+        return Money(self.data.get(field, 0))
+
+    def _get_percentage(self, field: str) -> Percentage:
+        """Safely get a percentage value from data."""
+        return Percentage(self.data.get(field, 0))
 
     def calculate_monthly_cash_flow(self) -> Money:
-        """Calculate monthly cash flow with detailed logging"""
+        """Calculate monthly cash flow."""
         try:
             logger.debug("=== Starting Monthly Cash Flow Calculation ===")
-            logger.debug(f"Monthly rent: {self.monthly_rent.dollars}")
-            logger.debug(f"Operating expenses total: {self.operating_expenses.total.dollars}")
-            logger.debug(f"Monthly loan payment: {self.loans.total_monthly_payment.dollars}")
             
-            cash_flow = (
-                self.monthly_rent.dollars -
-                self.operating_expenses.total.dollars -
-                self.loans.total_monthly_payment.dollars
-            )
+            # Get income
+            monthly_income = self._get_money('monthly_rent')
+            logger.debug(f"Monthly income: {monthly_income}")
             
-            logger.debug(f"Calculated cash flow: {cash_flow}")
+            # Calculate expenses
+            operating_expenses = self._calculate_operating_expenses()
+            logger.debug(f"Operating expenses: {operating_expenses}")
             
-            logger.debug("=== Cash Flow Components ===")
-            logger.debug(f"Monthly Rent: +{self.monthly_rent.dollars}")
-            logger.debug(f"Operating Expenses: -{self.operating_expenses.total.dollars}")
-            logger.debug(f"Loan Payments: -{self.loans.total_monthly_payment.dollars}")
-            logger.debug(f"Final Cash Flow: {cash_flow}")
-            logger.debug("================================")
+            # Calculate loan payments
+            loan_payments = self._calculate_loan_payments()
+            logger.debug(f"Loan payments: {loan_payments}")
             
-            return Money(cash_flow)
+            # Calculate final cash flow
+            cash_flow = monthly_income - operating_expenses - loan_payments
+            logger.debug(f"Final monthly cash flow: {cash_flow}")
+            
+            return cash_flow
         except Exception as e:
-            logger.error("Error calculating monthly cash flow:")
-            logger.error(f"Error message: {str(e)}")
-            logger.error(f"Traceback:\n{traceback.format_exc()}")
-            logger.error(f"Input values:")
-            logger.error(f"- Monthly rent: {getattr(self, 'monthly_rent', 'N/A')}")
-            logger.error(f"- Operating expenses: {getattr(self.operating_expenses, 'total', 'N/A')}")
-            logger.error(f"- Loan payments: {getattr(self.loans, 'total_monthly_payment', 'N/A')}")
+            logger.error(f"Error calculating monthly cash flow: {str(e)}")
             raise
+
+    def _calculate_operating_expenses(self) -> Money:
+        """Calculate total monthly operating expenses."""
+        # Fixed expenses
+        fixed_expenses = sum([
+            self._get_money('property_taxes'),
+            self._get_money('insurance'),
+            self._get_money('hoa_coa_coop')
+        ], Money(0))
+        
+        # Percentage-based expenses
+        monthly_rent = self._get_money('monthly_rent')
+        rent_based_expenses = sum([
+            monthly_rent * self._get_percentage('management_fee_percentage'),
+            monthly_rent * self._get_percentage('capex_percentage'),
+            monthly_rent * self._get_percentage('vacancy_percentage'),
+            monthly_rent * self._get_percentage('repairs_percentage')
+        ], Money(0))
+        
+        # PadSplit-specific expenses if applicable
+        padsplit_expenses = Money(0)
+        if 'PadSplit' in self.data.get('analysis_type', ''):
+            padsplit_expenses = sum([
+                self._get_money('utilities'),
+                self._get_money('internet'),
+                self._get_money('cleaning'),
+                self._get_money('pest_control'),
+                self._get_money('landscaping'),
+                monthly_rent * self._get_percentage('padsplit_platform_percentage')
+            ], Money(0))
+        
+        return fixed_expenses + rent_based_expenses + padsplit_expenses
+
+    def _calculate_loan_payments(self) -> Money:
+        """Calculate total monthly loan payments."""
+        try:
+            # For BRRRR, we only want the refinance loan payment
+            if 'BRRRR' in self.data.get('analysis_type', ''):
+                refinance_payment = self._calculate_single_loan_payment(
+                    amount=self._get_money('refinance_loan_amount'),
+                    interest_rate=self._get_percentage('refinance_loan_interest_rate'),
+                    term=self.data.get('refinance_loan_term', 0),
+                    is_interest_only=False
+                )
+                logger.debug(f"BRRRR refinance payment: ${refinance_payment.dollars:.2f}")
+                return refinance_payment
+            
+            # For LTR/PadSplit LTR, calculate all loan payments
+            total_payments = Money(0)
+            loan_prefixes = ['loan1', 'loan2', 'loan3']
+            
+            for prefix in loan_prefixes:
+                amount = self._get_money(f'{prefix}_loan_amount')
+                if amount.dollars > 0:
+                    payment = self._calculate_single_loan_payment(
+                        amount=amount,
+                        interest_rate=self._get_percentage(f'{prefix}_loan_interest_rate'),
+                        term=self.data.get(f'{prefix}_loan_term', 0),
+                        is_interest_only=self.data.get(f'{prefix}_interest_only', False)
+                    )
+                    total_payments += payment
+                    logger.debug(f"Loan {prefix} payment: ${payment.dollars:.2f}")
+                    
+            return total_payments
+            
+        except Exception as e:
+            logger.error(f"Error calculating loan payments: {str(e)}")
+            logger.error(traceback.format_exc())
+            return Money(0)
+
+    def _calculate_single_loan_payment(self, amount: Money, interest_rate: Percentage, 
+                                 term: int, is_interest_only: bool = False) -> Money:
+        """Calculate monthly payment for a single loan."""
+        if amount.dollars <= 0 or term <= 0:
+            return Money(0)
+            
+        try:
+            # Convert to decimal for precise calculation
+            loan_amount = Decimal(str(amount.dollars))
+            annual_rate = Decimal(str(interest_rate.as_decimal()))
+            monthly_rate = annual_rate / Decimal('12')
+            term_months = Decimal(str(term))
+            
+            # Handle zero interest rate
+            if annual_rate == 0:
+                # For 0% loans, always divide principal by term (whether interest-only or not)
+                # This effectively makes it a principal-only payment
+                payment = float(loan_amount / term_months)
+                logger.debug(f"Calculated principal-only payment: ${payment:.2f} for 0% loan amount: ${amount.dollars:.2f}")
+                return Money(payment)
+                
+            # Handle normal interest-bearing loans
+            if is_interest_only:
+                # For interest-only, calculate the monthly interest
+                payment = float(loan_amount * monthly_rate)
+                logger.debug(f"Calculated interest-only payment: ${payment:.2f} for loan amount: ${amount.dollars:.2f}")
+                return Money(payment)
+                
+            # For regular amortizing loans
+            factor = (1 + monthly_rate) ** term_months
+            payment = float(loan_amount * (monthly_rate * factor / (factor - 1)))
+            logger.debug(f"Calculated amortized payment: ${payment:.2f} for loan amount: ${amount.dollars:.2f}")
+            return Money(payment)
+            
+        except Exception as e:
+            logger.error(f"Error calculating loan payment: {str(e)}")
+            logger.error(traceback.format_exc())
+            return Money(0)
+
+    def calculate_total_cash_invested(self) -> Money:
+        """Calculate total cash invested in the project."""
+        # Base investment costs
+        base_costs = sum([
+            self._get_money('purchase_price'),
+            self._get_money('renovation_costs'),
+            self._get_money('cash_to_seller'),
+            self._get_money('closing_costs'),
+            self._get_money('assignment_fee'),
+            self._get_money('marketing_costs')
+        ], Money(0))
+        
+        # Add loan down payments and closing costs
+        loan_costs = Money(0)
+        for prefix in ['loan1', 'loan2', 'loan3']:
+            loan_costs += sum([
+                self._get_money(f'{prefix}_loan_down_payment'),
+                self._get_money(f'{prefix}_loan_closing_costs')
+            ], Money(0))
+        
+        # Handle BRRRR-specific calculations if applicable
+        if 'BRRRR' in self.data.get('analysis_type', ''):
+            loan_costs += sum([
+                self._get_money('initial_loan_down_payment'),
+                self._get_money('initial_loan_closing_costs'),
+                self._get_money('refinance_loan_closing_costs')
+            ], Money(0))
+            # Subtract refinance amount (cash recouped)
+            loan_costs -= self._get_money('refinance_loan_amount')
+        
+        total = base_costs + loan_costs
+        return Money(max(0, float(total.dollars)))
 
     @property
     def annual_cash_flow(self) -> Money:
-        monthly = self.calculate_monthly_cash_flow()
-        annual = Money(float(monthly.dollars) * 12)
-        logger.debug(f"Annual cash flow: {annual}")
-        return annual
-
-    def calculate_total_cash_invested(self) -> Money:
-        """Calculate total cash invested"""
-        total = sum([
-            self.purchase_details.renovation_costs,
-            self.loans.total_initial_costs,
-            self.purchase_details.cash_to_seller,
-            self.purchase_details.assignment_fee,
-            self.purchase_details.marketing_costs
-        ], Money(0))
-        
-        logger.debug(f"Total Cash Invested: {total}")
-        return total
-
-    @property
-    def roi(self) -> Union[str, Percentage]:
-        """Calculate ROI"""
-        cash_invested = float(self.calculate_total_cash_invested().dollars)
-        if cash_invested <= 0:
-            return "Infinite"
-        annual_cf = float(self.annual_cash_flow.dollars)
-        return Percentage((annual_cf / cash_invested) * 100 if cash_invested > 0 else 0)
+        """Calculate annual cash flow."""
+        return self.calculate_monthly_cash_flow() * 12
 
     @property
     def cash_on_cash_return(self) -> Union[str, Percentage]:
+        """Calculate Cash on Cash return."""
+        cash_invested = self.calculate_total_cash_invested()
+        if cash_invested.dollars <= 0:
+            return "Infinite"
+            
+        return Percentage(
+            (float(self.annual_cash_flow.dollars) / float(cash_invested.dollars)) * 100
+        )
+
+    @property
+    def roi(self) -> Union[str, Percentage]:
+        """Calculate ROI including equity and cash flow."""
         try:
-            cash_invested = float(self.calculate_total_cash_invested().dollars)
-            logger.debug(f"Total cash invested: {cash_invested}")
-            
-            if cash_invested <= 0:
-                logger.debug("Cash invested is zero or negative, returning 'Infinite'")
+            cash_invested = self.calculate_total_cash_invested()
+            if cash_invested.dollars <= 0:
                 return "Infinite"
-                
-            annual_cf = float(self.annual_cash_flow.dollars)
-            logger.debug(f"Annual cash flow for CoC calculation: {annual_cf}")
             
-            coc = Percentage((annual_cf / cash_invested) * 100)
-            logger.debug(f"Calculated Cash on Cash return: {coc}")
-            return coc
+            # Calculate total return
+            annual_cf = float(self.annual_cash_flow.dollars)
+            
+            # Add equity captured for BRRRR analysis
+            equity_captured = 0
+            if 'BRRRR' in self.data.get('analysis_type', ''):
+                arv = self._get_money('after_repair_value')
+                total_costs = sum([
+                    self._get_money('purchase_price'),
+                    self._get_money('renovation_costs')
+                ], Money(0))
+                equity_captured = float((arv - total_costs).dollars)
+            
+            total_return = annual_cf + equity_captured
+            
+            return Percentage((total_return / float(cash_invested.dollars)) * 100)
+            
         except Exception as e:
-            logger.error(f"Error calculating cash on cash return: {str(e)}\n{traceback.format_exc()}")
-            return Percentage(0)
+            logger.error(f"Error calculating ROI: {str(e)}")
+            raise
+
+    def get_report_data(self) -> Dict:
+        """Get analysis report data with calculated metrics."""
+        try:
+            # Calculate cash flow first for debugging
+            monthly_cf = self.calculate_monthly_cash_flow()
+            logger.debug(f"Calculated monthly cash flow: {monthly_cf}")
+            
+            metrics = {
+                'monthly_cash_flow': str(monthly_cf),
+                'annual_cash_flow': str(self.annual_cash_flow),
+                'total_cash_invested': str(self.calculate_total_cash_invested()),
+                'cash_on_cash_return': str(self.cash_on_cash_return),
+                'roi': str(self.roi)
+            }
+            
+            if 'BRRRR' in self.data.get('analysis_type', ''):
+                # Calculate and log both loan payments
+                initial_payment = self._calculate_single_loan_payment(
+                    amount=self._get_money('initial_loan_amount'),
+                    interest_rate=self._get_percentage('initial_loan_interest_rate'),
+                    term=self.data.get('initial_loan_term', 0),
+                    is_interest_only=self.data.get('initial_interest_only', False)
+                )
+                logger.debug(f"Calculated initial loan payment: {initial_payment}")
+
+                refinance_payment = self._calculate_single_loan_payment(
+                    amount=self._get_money('refinance_loan_amount'),
+                    interest_rate=self._get_percentage('refinance_loan_interest_rate'),
+                    term=self.data.get('refinance_loan_term', 0),
+                    is_interest_only=False
+                )
+                logger.debug(f"Calculated refinance loan payment: {refinance_payment}")
+
+                arv = self._get_money('after_repair_value')
+                total_costs = sum([
+                    self._get_money('purchase_price'),
+                    self._get_money('renovation_costs')
+                ], Money(0))
+
+                metrics.update({
+                    'equity_captured': str(arv - total_costs),
+                    'cash_recouped': str(self._get_money('refinance_loan_amount')),
+                    'initial_loan_payment': str(initial_payment),
+                    'refinance_loan_payment': str(refinance_payment)
+                })
+                
+                # Log the final metrics for debugging
+                logger.debug(f"Final metrics: {metrics}")
+            
+            return {
+                'metrics': metrics
+            }
+            
+        except Exception as e:
+            logger.error(f"Error generating report data: {str(e)}")
+            raise
 
 class LTRAnalysis(Analysis):
-    """Long-term rental analysis implementation"""
-    def _create_operating_expenses(self) -> OperatingExpenses:
-        return OperatingExpenses(self.data)
+    """Long-term rental analysis implementation."""
+    
+    def __init__(self, data: Dict):
+        """Initialize with validation for LTR-specific requirements."""
+        if data.get('analysis_type') not in ['LTR', 'PadSplit LTR']:
+            raise ValueError("Invalid analysis type for LTR analysis")
+            
+        super().__init__(data)
+        self._validate_ltr_requirements()
 
-    def get_report_data(self) -> AnalysisReportData:
-        """LTR-specific report data implementation"""
-        logger.debug("=== Generating LTR Report Data ===")
-        logger.debug(f"Number of loans: {len(self.loans.all_loans)}")
+    def _calculate_loan_payments(self) -> Money:
+        """Calculate total monthly loan payments."""
+        try:
+            total_payments = Money(0)
+            loan_prefixes = ['loan1', 'loan2', 'loan3']
+            
+            for prefix in loan_prefixes:
+                amount = self._get_money(f'{prefix}_loan_amount')
+                if amount.dollars > 0:
+                    payment = self._calculate_single_loan_payment(
+                        amount=amount,
+                        interest_rate=self._get_percentage(f'{prefix}_loan_interest_rate'),
+                        term=self.data.get(f'{prefix}_loan_term', 0),
+                        is_interest_only=self.data.get(f'{prefix}_interest_only', False)
+                    )
+                    total_payments += payment
+                    logger.debug(f"LTR {prefix} payment: ${payment.dollars:.2f}")
+                    
+            logger.debug(f"LTR total loan payments: ${total_payments.dollars:.2f}")
+            return total_payments
+            
+        except Exception as e:
+            logger.error(f"Error calculating LTR loan payments: {str(e)}")
+            logger.error(traceback.format_exc())
+            return Money(0)
+    
+    def _validate_ltr_requirements(self) -> None:
+        """Validate fields specific to LTR analysis."""
+        try:
+            # Validate required numeric fields
+            ltr_fields = {
+                'purchase_price': 'Purchase price',
+                'monthly_rent': 'Monthly rent',
+                'property_taxes': 'Property taxes',
+                'insurance': 'Insurance'
+            }
+            
+            for field, display_name in ltr_fields.items():
+                value = self._get_money(field)
+                if value.dollars <= 0:
+                    raise ValueError(f"{display_name} must be greater than 0")
+
+            # Validate percentage fields have reasonable values
+            percentage_fields = {
+                'management_fee_percentage': (0, 15),  # Typical range 0-15%
+                'capex_percentage': (0, 10),          # Typical range 0-10%
+                'vacancy_percentage': (0, 15),        # Typical range 0-15%
+                'repairs_percentage': (0, 15)         # Typical range 0-15%
+            }
+            
+            for field, (min_val, max_val) in percentage_fields.items():
+                value = float(self._get_percentage(field).value)
+                if value < 0 or value > max_val:
+                    raise ValueError(f"{field} should be between {min_val}% and {max_val}%")
+
+        except Exception as e:
+            logger.error(f"LTR validation error: {str(e)}")
+            raise ValueError(f"LTR validation failed: {str(e)}")
         
-        base_data = super().get_report_data()
-        
-        # Add loan sections if they exist
-        for i, loan in enumerate(self.loans.all_loans, 1):
-            logger.debug(f"Processing loan {i}: {loan.__dict__}")
-            base_data.sections.append(ReportSection(
-                title=f"Loan {i} Details",
-                data=[
-                    ("Loan Amount", str(loan.amount)),
-                    ("Interest Rate", str(loan.interest_rate)),
-                    ("Monthly Payment", str(loan.calculate_payment().total)),
-                    ("Term", f"{loan.term} months"),
-                    ("Down Payment", str(loan.down_payment)),
-                    ("Closing Costs", str(loan.closing_costs))
-                ]
-            ))
-        
-        logger.debug("=== Completed LTR Report Data ===")
-        return base_data
+    def get_report_data(self) -> Dict:
+        """Get analysis report data with individual loan payment metrics."""
+        try:
+            # Get base metrics first
+            base_metrics = super().get_report_data()
+            
+            # Add individual loan payments to metrics
+            loan_metrics = {}
+            loan_prefixes = ['loan1', 'loan2', 'loan3']
+            
+            for prefix in loan_prefixes:
+                amount = self._get_money(f'{prefix}_loan_amount')
+                if amount.dollars > 0:
+                    payment = self._calculate_single_loan_payment(
+                        amount=amount,
+                        interest_rate=self._get_percentage(f'{prefix}_loan_interest_rate'),
+                        term=self.data.get(f'{prefix}_loan_term', 0),
+                        is_interest_only=self.data.get(f'{prefix}_interest_only', False)
+                    )
+                    loan_metrics[f'{prefix}_loan_payment'] = str(payment)
+                    logger.debug(f"Adding {prefix} payment to metrics: {str(payment)}")
+            
+            base_metrics['metrics'].update(loan_metrics)
+            logger.debug(f"Final LTR metrics: {base_metrics}")
+            return base_metrics
+            
+        except Exception as e:
+            logger.error(f"Error generating LTR report data: {str(e)}")
+            raise
 
 class BRRRRAnalysis(Analysis):
-    """BRRRR strategy analysis implementation"""
-    def _create_operating_expenses(self) -> OperatingExpenses:
-        return OperatingExpenses(self.data)
+    """BRRRR strategy analysis implementation."""
+    
+    def __init__(self, data: Dict):
+        """Initialize with validation for BRRRR-specific requirements."""
+        if data.get('analysis_type') not in ['BRRRR', 'PadSplit BRRRR']:
+            raise ValueError("Invalid analysis type for BRRRR analysis")
+            
+        super().__init__(data)
+        self._validate_brrrr_requirements()
 
-    def get_report_data(self) -> AnalysisReportData:
-        """BRRRR-specific report data implementation"""
-        logger.debug("=== Generating BRRRR Report Data ===")
-        logger.debug(f"Initial loan amount: {self.loans.initial_loan.amount if self.loans.initial_loan else 'No initial loan'}")
-        logger.debug(f"Refinance loan amount: {self.loans.refinance_loan.amount if self.loans.refinance_loan else 'No refinance loan'}")
-        
-        base_data = super().get_report_data()
-        
-        # Add BRRRR-specific sections
-        investment_summary = ReportSection(
-            title="Investment Summary",
-            data=[
-                ("Total Project Costs", str(self.total_project_costs)),
-                ("Total Cash Invested", str(self.total_cash_invested)),
-                ("Cash Recouped", str(self.cash_recouped)),
-                ("Equity Captured", str(self.equity_captured))
-            ]
-        )
-        base_data.sections.append(investment_summary)
-        
-        # Add financing details if loans exist
-        if self.loans.initial_loan:
-            logger.debug("Adding initial loan section")
-            base_data.sections.append(ReportSection(
-                title="Initial Financing",
-                data=[
-                    ("Loan Amount", str(self.loans.initial_loan.amount)),
-                    ("Interest Rate", str(self.loans.initial_loan.interest_rate)),
-                    ("Monthly Payment", str(self.loans.initial_loan.calculate_payment().total)),
-                    ("Term", f"{self.loans.initial_loan.term} months"),
-                    ("Down Payment", str(self.loans.initial_loan.down_payment)),
-                    ("Closing Costs", str(self.loans.initial_loan.closing_costs)),
-                    ("Interest Only", str(self.loans.initial_loan.is_interest_only))
-                ]
-            ))
-        
-        if self.loans.refinance_loan:
-            logger.debug("Adding refinance loan section")
-            base_data.sections.append(ReportSection(
-                title="Refinance Details",
-                data=[
-                    ("Loan Amount", str(self.loans.refinance_loan.amount)),
-                    ("Interest Rate", str(self.loans.refinance_loan.interest_rate)),
-                    ("Monthly Payment", str(self.loans.refinance_loan.calculate_payment().total)),
-                    ("Term", f"{self.loans.refinance_loan.term} months"),
-                    ("Down Payment", str(self.loans.refinance_loan.down_payment)),
-                    ("Closing Costs", str(self.loans.refinance_loan.closing_costs))
-                ]
-            ))
-        
-        logger.debug("=== Completed BRRRR Report Data ===")
-        return base_data
+    def _validate_brrrr_requirements(self) -> None:
+        """Validate fields specific to BRRRR analysis."""
+        try:
+            # Validate required BRRRR fields
+            required_fields = {
+                'purchase_price': 'Purchase price',
+                'after_repair_value': 'After repair value',
+                'renovation_costs': 'Renovation costs',
+                'renovation_duration': 'Renovation duration',
+                'initial_loan_amount': 'Initial loan amount',
+                'refinance_loan_amount': 'Refinance loan amount'
+            }
+            
+            for field, display_name in required_fields.items():
+                value = self._get_money(field) if field != 'renovation_duration' else self.data.get(field, 0)
+                if not value or (hasattr(value, 'dollars') and value.dollars <= 0) or (isinstance(value, (int, float)) and value <= 0):
+                    raise ValueError(f"{display_name} must be greater than 0")
 
-    def calculate_monthly_cash_flow(self) -> Money:
-        """Only consider refinance loan payment for cash flow"""
-        refinance_payment = self.loans.refinance_loan.calculate_payment().total if self.loans.refinance_loan else Money(0)
-        cash_flow = (
-            self.monthly_rent -
-            self.operating_expenses.total -
-            refinance_payment
-        )
-        return cash_flow
+            # Validate loan parameters
+            self._validate_loan_parameters('initial_loan', is_initial=True)
+            self._validate_loan_parameters('refinance_loan')
+
+            # Validate renovation duration
+            renovation_duration = self.data.get('renovation_duration', 0)
+            if renovation_duration <= 0 or renovation_duration > 24:  # Assuming max 24 months renovation
+                raise ValueError("Renovation duration must be between 1 and 24 months")
+
+            # Validate ARV is greater than purchase price + renovation costs
+            arv = self._get_money('after_repair_value')
+            total_cost = self._get_money('purchase_price') + self._get_money('renovation_costs')
+            if arv <= total_cost:
+                raise ValueError("After repair value must be greater than purchase price plus renovation costs")
+            
+            # Validate initial_interest_only is boolean if present
+            initial_interest_only = self.data.get('initial_interest_only')
+            if initial_interest_only is not None and not isinstance(initial_interest_only, bool):
+                try:
+                    # Convert string values to boolean
+                    if isinstance(initial_interest_only, str):
+                        self.data['initial_interest_only'] = initial_interest_only.lower() in ('true', '1')
+                    else:
+                        self.data['initial_interest_only'] = bool(initial_interest_only)
+                except (ValueError, TypeError):
+                    raise ValueError("initial_interest_only must be a boolean value")
+
+        except Exception as e:
+            logger.error(f"BRRRR validation error: {str(e)}")
+            raise ValueError(f"BRRRR validation failed: {str(e)}")
+
+    def _validate_loan_parameters(self, loan_prefix: str, is_initial: bool = False) -> None:
+        """Validate loan parameters for a given loan type."""
+        try:
+            # Validate loan amount
+            loan_amount = self._get_money(f'{loan_prefix}_amount')
+            if loan_amount.dollars <= 0:
+                raise ValueError(f"{loan_prefix} amount must be greater than 0")
+
+            # Validate interest rate
+            interest_rate = self._get_percentage(f'{loan_prefix}_interest_rate')
+            if interest_rate.value <= 0 or interest_rate.value >= 30:  # Assuming max 30% interest
+                raise ValueError(f"{loan_prefix} interest rate must be between 0% and 30%")
+
+            # Validate loan term
+            loan_term = self.data.get(f'{loan_prefix}_term', 0)
+            if is_initial:
+                if loan_term <= 0 or loan_term > 24:  # Initial loan typically 3-24 months
+                    raise ValueError("Initial loan term must be between 1 and 24 months")
+            else:
+                if loan_term <= 0 or loan_term > 360:  # Long-term loan typically up to 30 years
+                    raise ValueError("Refinance loan term must be between 1 and 360 months")
+
+        except Exception as e:
+            logger.error(f"Loan validation error: {str(e)}")
+            raise ValueError(f"Loan validation failed: {str(e)}")
 
     @property
     def holding_costs(self) -> Money:
+        """Calculate holding costs during renovation period."""
         monthly_costs = sum([
-            self.operating_expenses.property_taxes,
-            self.operating_expenses.insurance,
-            self.loans.initial_loan.calculate_payment().total if self.loans.initial_loan else Money(0)
+            self._get_money('property_taxes'),
+            self._get_money('insurance'),
+            self._calculate_single_loan_payment(
+                amount=self._get_money('initial_loan_amount'),
+                interest_rate=self._get_percentage('initial_loan_interest_rate'),
+                term=self.data.get('initial_loan_term', 0),
+                is_interest_only=True
+            )
         ], Money(0))
-        return monthly_costs * self.purchase_details.renovation_duration
+        
+        renovation_duration = self.data.get('renovation_duration', 0)
+        return monthly_costs * renovation_duration
 
     @property
     def total_project_costs(self) -> Money:
-        monthly_holding = sum([
-            self.operating_expenses.property_taxes,
-            self.operating_expenses.insurance,
-            self.loans.initial_loan.calculate_payment().total if self.loans.initial_loan else Money(0)
-        ], Money(0))
-        
-        total_holding_costs = monthly_holding * self.purchase_details.renovation_duration
-        
+        """Calculate total project costs including holding costs."""
         return sum([
-            self.purchase_details.purchase_price,
-            self.purchase_details.renovation_costs,
-            total_holding_costs,
-            self.loans.initial_loan.closing_costs if self.loans.initial_loan else Money(0),
-            self.loans.refinance_loan.closing_costs if self.loans.refinance_loan else Money(0)
+            self._get_money('purchase_price'),
+            self._get_money('renovation_costs'),
+            self.holding_costs,
+            self._get_money('initial_loan_closing_costs'),
+            self._get_money('refinance_loan_closing_costs')
         ], Money(0))
 
-    @property
-    def total_cash_invested(self) -> Money:
-        """Return calculated value or 0 if negative"""
-        calculated = self.total_project_costs - self.cash_recouped
-        return Money(max(0, float(calculated.dollars)))
-
-    @property
-    def cash_recouped(self) -> Money:
-        return self.loans.refinance_loan.amount if self.loans.refinance_loan else Money(0)
-
-    @property
-    def equity_captured(self) -> Money:
-        """Down payment minus cash left in deal"""
-        down_payment = self.loans.refinance_loan.down_payment if self.loans.refinance_loan else Money(0)
-        max_cash_left = Money(self.data.get('max_cash_left', 0))
-        return down_payment - max_cash_left
-
-class PadSplitAnalysisMixin:
-    """Mixin to add PadSplit-specific report data"""
-    
-    def get_report_data(self) -> AnalysisReportData:
-        """Add PadSplit section to report data"""
-        logger.debug("=== Generating PadSplit Report Data ===")
-        base_data = super().get_report_data()
-        
-        padsplit_section = ReportSection(
-            title="PadSplit Expenses",
-            data=[
-                ("Platform Fee", str(self.operating_expenses.platform_fee)),
-                ("Utilities", str(self.operating_expenses.utilities)),
-                ("Internet", str(self.operating_expenses.internet)),
-                ("Cleaning", str(self.operating_expenses.cleaning)),
-                ("Pest Control", str(self.operating_expenses.pest_control)),
-                ("Landscaping", str(self.operating_expenses.landscaping))
-            ]
-        )
-        base_data.sections.append(padsplit_section)
-        
-        logger.debug("=== Completed PadSplit Report Data ===")
-        return base_data
-
-class PadSplitLTRAnalysis(PadSplitAnalysisMixin, LTRAnalysis):
-    """PadSplit LTR implementation"""
-    def _create_operating_expenses(self) -> PadSplitOperatingExpenses:
-        return PadSplitOperatingExpenses(self.data)
-
-class PadSplitBRRRRAnalysis(PadSplitAnalysisMixin, BRRRRAnalysis):
-    """PadSplit BRRRR implementation"""
-    def _create_operating_expenses(self) -> PadSplitOperatingExpenses:
-        return PadSplitOperatingExpenses(self.data)
+    def calculate_mao(self) -> Money:
+        """Calculate Maximum Allowable Offer."""
+        try:
+            arv = self._get_money('after_repair_value')
+            renovation_costs = self._get_money('renovation_costs')
+            holding_costs = self.holding_costs
+            closing_costs = sum([
+                self._get_money('initial_loan_closing_costs'),
+                self._get_money('refinance_loan_closing_costs')
+            ], Money(0))
+            
+            # Typical BRRRR wants 75% ARV - costs
+            target_loan = arv * Percentage(75)
+            mao = target_loan - (renovation_costs + holding_costs + closing_costs)
+            
+            return Money(max(0, float(mao.dollars)))
+            
+        except Exception as e:
+            logger.error(f"Error calculating MAO: {str(e)}")
+            raise
 
 def create_analysis(data: Dict) -> Analysis:
-    """Factory function to create appropriate analysis type"""
+    """Factory function to create appropriate analysis instance"""
     analysis_types = {
+        'LTR': LTRAnalysis,
         'BRRRR': BRRRRAnalysis,
-        'PadSplit BRRRR': PadSplitBRRRRAnalysis,
-        'PadSplit LTR': PadSplitLTRAnalysis,
-        'LTR': LTRAnalysis
+        'PadSplit LTR': LTRAnalysis,  # PadSplit handling now in base class
+        'PadSplit BRRRR': BRRRRAnalysis  # PadSplit handling now in base class
     }
     
     analysis_type = data.get('analysis_type')
     analysis_class = analysis_types.get(analysis_type)
     
     if not analysis_class:
-        raise ValueError(f"Unknown analysis type: {analysis_type}")
+        raise ValueError(f"Invalid analysis type: {analysis_type}")
         
     return analysis_class(data)

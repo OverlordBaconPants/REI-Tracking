@@ -345,6 +345,31 @@ main {
     margin-top: 32px;
 }
 
+input[type="number"][data-raw-value]:not(:focus)::before {
+    content: attr(data-raw-value);
+    position: absolute;
+    left: 0;
+    right: 0;
+    visibility: visible;
+}
+
+input[type="number"][data-raw-value]:not(:focus) {
+    color: transparent;
+}
+
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
 /* ===== Loan Status Styles ===== */
 .loan-status-box {
     border: 1px solid #ccc;

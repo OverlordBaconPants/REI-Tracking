@@ -1,11 +1,10 @@
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, send_file
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, send_file, current_app
 from flask_login import login_required, current_user
 from services.analysis_service import AnalysisService
 from utils.flash import flash_message
 import logging
-from typing import Dict, Any
 import traceback
-from datetime import datetime
+import os
 
 analyses_bp = Blueprint('analyses', __name__)
 logger = logging.getLogger(__name__)
@@ -54,6 +53,7 @@ def create_analysis():
     return render_template(
         'analyses/create_analysis.html',
         analysis=existing_analysis,
+        editing_analysis=analysis_id is not None,
         body_class='analysis-page'
     )
 
@@ -104,16 +104,21 @@ def get_analysis(analysis_id: str):
 def view_edit_analysis():
     """View/edit analysis list page"""
     try:
+        # Add debug logging at each step
+        analyses_dir = current_app.config['ANALYSES_DIR']
+        logger.info(f"1. Using analyses directory: {analyses_dir}")
+        logger.info(f"2. Current user ID: {current_user.id}")
+        
         try:
             page = max(1, int(request.args.get('page', 1)))
+            logger.info(f"3. Page number: {page}")
         except (TypeError, ValueError) as e:
             logger.warning(f"Invalid page parameter: {str(e)}")
             page = 1
-
+        
         analyses_per_page = 10
-        
-        logger.info(f"Fetching analyses for user {current_user.id}, page {page}")
-        
+        logger.info(f"4. Files in analyses directory: {os.listdir(analyses_dir)}")
+            
         try:
             analyses, total_pages = analysis_service.get_analyses_for_user(
                 current_user.id, 
@@ -121,22 +126,20 @@ def view_edit_analysis():
                 analyses_per_page
             )
             
-            # Format dates for display
-            for analysis in analyses:
-                if analysis.get('created_at'):
-                    created_date = datetime.fromisoformat(analysis['created_at'].replace('Z', '+00:00'))
-                    analysis['created_at'] = created_date.strftime('%Y-%m-%d')
-                if analysis.get('updated_at'):
-                    updated_date = datetime.fromisoformat(analysis['updated_at'].replace('Z', '+00:00'))
-                    analysis['updated_at'] = updated_date.strftime('%Y-%m-%d')
+            logger.info(f"5. Found {len(analyses) if analyses else 0} analyses for user")
+            if analyses:
+                logger.info(f"6. First analysis: {analyses[0]['analysis_name']}")
             
-            logger.debug(f"Retrieved {len(analyses) if analyses else 0} analyses")
+            start_page = max(1, page - 2)
+            end_page = min(total_pages, page + 2)
+            page_range = list(range(start_page, end_page + 1))
             
             return render_template(
                 'analyses/view_edit_analysis.html', 
                 analyses=analyses, 
                 current_page=page, 
                 total_pages=total_pages,
+                page_range=page_range,
                 body_class='view-edit-analysis-page'
             )
             
@@ -167,27 +170,6 @@ def view_analysis(analysis_id: str):
         flash_message('Error loading analysis', 'error')
         return redirect(url_for('analyses.view_edit_analysis'))
 
-@analyses_bp.route('/delete_analysis/<analysis_id>', methods=['POST'])
-@login_required
-def delete_analysis(analysis_id: str):
-    """Delete an analysis by ID"""
-    try:
-        if analysis_service.delete_analysis(analysis_id, current_user.id):
-            return jsonify({
-                "success": True,
-                "message": "Analysis deleted successfully"
-            })
-        return jsonify({
-            "success": False,
-            "message": "Analysis not found"
-        }), 404
-    except Exception as e:
-        logger.error(f"Error deleting analysis: {str(e)}")
-        return jsonify({
-            "success": False,
-            "message": f"Error deleting analysis: {str(e)}"
-        }), 500
-
 @analyses_bp.route('/generate_pdf/<analysis_id>', methods=['GET'])
 @login_required
 def generate_pdf(analysis_id: str):
@@ -211,3 +193,29 @@ def generate_pdf(analysis_id: str):
 @login_required
 def mao_calculator():
     return render_template('analyses/mao_calculator.html')
+
+@analyses_bp.route('/delete_analysis/<analysis_id>', methods=['DELETE'])
+@login_required
+def delete_analysis(analysis_id: str):
+    """Delete an analysis by ID"""
+    try:
+        # Attempt to delete the analysis
+        success = analysis_service.delete_analysis(analysis_id, current_user.id)
+        
+        if success:
+            return jsonify({
+                "success": True,
+                "message": "Analysis deleted successfully"
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "message": "Analysis not found"
+            }), 404
+            
+    except Exception as e:
+        logger.error(f"Error deleting analysis: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error deleting analysis: {str(e)}"
+        }), 500
