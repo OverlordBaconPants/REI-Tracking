@@ -38,30 +38,51 @@ const viewEditAnalysisModule = {
         
         // Get button reference
         const btn = document.querySelector(`button[data-analysis-id="${analysisId}"]`);
+        let originalHtml = '<i class="bi bi-file-pdf"></i> PDF'; // Default button HTML
+        
         if (btn) {
             // Store original content and show loading state
-            const originalHtml = btn.innerHTML;
+            originalHtml = btn.innerHTML;
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
         }
         
-        // Create hidden form for download
-        const form = document.createElement('form');
-        form.method = 'GET';
-        form.action = `/analyses/generate_pdf/${analysisId}`;
-        document.body.appendChild(form);
-        
-        // Submit form to trigger download
-        form.submit();
-        document.body.removeChild(form);
-        
-        // Reset button after delay
-        setTimeout(() => {
+        // Make AJAX request
+        fetch(`/analyses/generate_pdf/${analysisId}`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/pdf',
+            },
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => { throw err; });
+            }
+            return response.blob();
+        })
+        .then(blob => {
+            // Create download link
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `analysis_${analysisId}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            toastr.success('PDF generated successfully');
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            toastr.error(error.error || 'Error generating PDF');
+        })
+        .finally(() => {
             if (btn) {
                 btn.disabled = false;
-                btn.innerHTML = '<i class="bi bi-file-pdf"></i> PDF';
+                btn.innerHTML = originalHtml;
             }
-        }, 2000);
+        });
     },
 
     deleteAnalysis: function(analysisId, analysisName) {

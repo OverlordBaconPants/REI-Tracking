@@ -1413,9 +1413,9 @@ window.analysisModule = {
                     <h4 class="mb-0">${data.analysis_type || 'Analysis'}: ${data.analysis_name || 'Untitled'}</h4>
                 </div>
                 <div class="col-auto">
-                    <div class="btn-group" role="group">
-                        <button type="button" class="btn btn-primary" id="downloadPdfBtn" onclick="analysisModule.downloadPdf('${data.id}')">
-                            <i class="bi bi-file-pdf me-1"></i>Download PDF
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-secondary" id="downloadPdfBtn" onclick="analysisModule.downloadPdf('${data.id}')">
+                            <i class="bi bi-file-earmark-pdf me-1"></i>Download PDF
                         </button>
                         <button type="button" class="btn btn-primary" id="reEditButton">
                             <i class="bi bi-pencil me-1"></i>Re-Edit Analysis
@@ -1967,33 +1967,45 @@ window.analysisModule = {
             return;
         }
         
-        // Get button reference and show loading state
-        const downloadBtn = document.querySelector('#downloadPdfBtn') || 
-                           document.querySelector(`button[data-analysis-id="${analysisId}"]`);
-        
+        // Get button reference
+        const downloadBtn = document.getElementById('downloadPdfBtn');
         if (downloadBtn) {
+            // Show loading state
             downloadBtn.disabled = true;
-            const originalHtml = downloadBtn.innerHTML;
-            downloadBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generating...';
+            downloadBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generating PDF...';
         }
         
-        // Create hidden form for download
-        const form = document.createElement('form');
-        form.method = 'GET';
-        form.action = `/analyses/generate_pdf/${analysisId}`;
-        document.body.appendChild(form);
-        
-        // Submit form to trigger download
-        form.submit();
-        document.body.removeChild(form);
-        
-        // Reset button after delay
-        setTimeout(() => {
-            if (downloadBtn) {
-                downloadBtn.disabled = false;
-                downloadBtn.innerHTML = originalHtml;
-            }
-        }, 2000);
+        // Make AJAX request instead of form submission
+        fetch(`/analyses/generate_pdf/${analysisId}`)
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => { throw err; });
+                }
+                return response.blob();
+            })
+            .then(blob => {
+                // Create download link
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `analysis_${analysisId}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                toastr.success('PDF generated successfully');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                toastr.error(error.message || 'Error generating PDF');
+            })
+            .finally(() => {
+                if (downloadBtn) {
+                    downloadBtn.disabled = false;
+                    downloadBtn.innerHTML = 'Download PDF';
+                }
+            });
     },
 
     // Updated validation function for flat schema

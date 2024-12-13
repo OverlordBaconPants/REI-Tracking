@@ -26,10 +26,24 @@ const maoCalculator = {
         return monthlyLoanPayment + utilities + hoaCoa + maintenance;
     },
 
-    calculateMAO: function(arv, ltv, renovationCosts, closingCosts, monthlyHoldingCosts, duration) {
+    calculateAcquisitionLoanAmount: function(arv, renovationCosts) {
+        // Calculate as 80% of ARV plus renovation costs
+        return (arv * 0.80) + renovationCosts;
+    },
+
+    calculateMAO: function(arv, ltv, renovationCosts, closingCosts, monthlyHoldingCosts, totalHoldingMonths, maxCashLeft) {
+        // Calculate loan amount based on LTV
         const loanAmount = arv * (ltv / 100);
-        const totalHoldingCosts = monthlyHoldingCosts * duration;
-        const mao = loanAmount - renovationCosts - closingCosts - totalHoldingCosts;
+        
+        // Calculate total holding costs based on total holding months
+        const totalHoldingCosts = monthlyHoldingCosts * totalHoldingMonths;
+        
+        // Calculate base MAO
+        let mao = loanAmount - renovationCosts - closingCosts - totalHoldingCosts;
+        
+        // Simply add maxCashLeft to MAO since this represents additional cash willing to be left in deal
+        mao += maxCashLeft;
+        
         return Math.max(0, mao);
     },
 
@@ -38,23 +52,29 @@ const maoCalculator = {
             arv: parseFloat(document.getElementById('after_repair_value').value) || 0,
             renovationCosts: parseFloat(document.getElementById('renovation_costs').value) || 0,
             closingCosts: parseFloat(document.getElementById('closing_costs').value) || 0,
+            timeToRefinance: parseFloat(document.getElementById('time_to_refinance').value) || 0,
             renovationDuration: parseFloat(document.getElementById('renovation_duration').value) || 0,
             expectedLtv: parseFloat(document.getElementById('expected_ltv').value) || 75,
             utilities: parseFloat(document.getElementById('utilities').value) || 0,
             hoaCoa: parseFloat(document.getElementById('hoa_coa').value) || 0,
             maintenance: parseFloat(document.getElementById('maintenance').value) || 0,
-            acqRenoRate: parseFloat(document.getElementById('acq_reno_rate').value) || 12
+            acqRenoRate: parseFloat(document.getElementById('acq_reno_rate').value) || 12,
+            maxCashLeft: parseFloat(document.getElementById('max_cash_left').value) || 0
         };
 
-        const initialLoanAmount = values.arv * 0.75;  // Initial loan amount at 75% ARV
+        // Calculate acquisition/renovation loan amount (80% ARV + Reno Costs)
+        const acquisitionLoanAmount = this.calculateAcquisitionLoanAmount(values.arv, values.renovationCosts);
         
         const monthlyHoldingCosts = this.calculateMonthlyHoldingCosts(
-            initialLoanAmount,
+            acquisitionLoanAmount,
             values.acqRenoRate,
             values.utilities,
             values.hoaCoa,
             values.maintenance
         );
+
+        // Total holding months is sum of renovation duration and time to refinance
+        const totalHoldingMonths = values.renovationDuration + values.timeToRefinance;
 
         const mao = this.calculateMAO(
             values.arv,
@@ -62,10 +82,12 @@ const maoCalculator = {
             values.renovationCosts,
             values.closingCosts,
             monthlyHoldingCosts,
-            values.renovationDuration
+            totalHoldingMonths,
+            values.maxCashLeft
         );
 
-        const totalHoldingCosts = monthlyHoldingCosts * values.renovationDuration;
+        const totalHoldingCosts = monthlyHoldingCosts * totalHoldingMonths;
+        const monthlyLoanPayment = this.calculateMonthlyInterestOnly(acquisitionLoanAmount, values.acqRenoRate);
 
         // Update results
         const updateElement = (id, value) => {
@@ -76,9 +98,10 @@ const maoCalculator = {
         };
 
         updateElement('mao_result', mao);
+        updateElement('monthly_loan_payment', monthlyLoanPayment);
         updateElement('monthly_holding_costs', monthlyHoldingCosts);
         updateElement('total_holding_costs', totalHoldingCosts);
-        updateElement('initial_loan', initialLoanAmount);
+        updateElement('acquisition_loan_amount', acquisitionLoanAmount);
     }
 };
 

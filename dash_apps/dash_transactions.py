@@ -29,6 +29,7 @@ from typing import Dict, List, Optional
 
 # Local imports
 from services.transaction_service import get_transactions_for_view, get_properties_for_user
+from services.transaction_report_generator import TransactionReportGenerator
 from services.report_generator import ReportGenerator
 
 # Configure logging
@@ -518,12 +519,16 @@ def create_transactions_dash(flask_app):
     
     @dash_app.callback(
         Output("download-pdf", "data"),
-        Output("download-status", "children"),
+        Output("download-status", "children", allow_duplicate=True),
         Input("download-pdf-btn", "n_clicks"),
-        State("transactions-table", "data"),
+        [State("property-filter", "value"),
+        State("type-filter", "value"),
+        State("date-range", "start_date"),
+        State("date-range", "end_date"),
+        State("transactions-table", "data")],
         prevent_initial_call=True
     )
-    def generate_pdf_report(n_clicks, transactions_data):
+    def generate_pdf_report(n_clicks, property_id, transaction_type, start_date, end_date, transactions_data):
         """Generate and return PDF report of transactions"""
         if not n_clicks or not transactions_data:
             return None, ""
@@ -532,25 +537,24 @@ def create_transactions_dash(flask_app):
             # Create buffer for PDF
             buffer = io.BytesIO()
             
-            # Prepare data for report - note the changed date format here
-            report_data = {
-                'transactions': transactions_data,
-                'generated_date': datetime.now().strftime('%Y-%m-%d'),  # Changed format to exclude time
-                'user': current_user.name
+            # Prepare metadata for the report
+            metadata = {
+                'user': current_user.name,
+                'date_range': f"{start_date or 'earliest'} to {end_date or 'latest'}",
+                'property': property_id if property_id and property_id != 'all' else 'All Properties'
             }
             
-            # Generate report
-            report = TransactionReport(report_data, buffer)
-            report.generate()
+            # Generate report using our new generator
+            report_generator = TransactionReportGenerator()
+            report_generator.generate(transactions_data, buffer, metadata)
             
             # Prepare buffer for download
             buffer.seek(0)
             
-            # Modified filename format to be consistent
             return dcc.send_bytes(
                 buffer.getvalue(),
-                f"transactions_report_{datetime.now().strftime('%Y%m%d')}.pdf"
-            ), ""
+                f"transactions_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+            ), html.Div("Report generated successfully", className="text-success")
             
         except Exception as e:
             current_app.logger.error(f"Error generating PDF: {str(e)}")
@@ -574,38 +578,79 @@ def create_transactions_dash(flask_app):
             
             # Create ZIP file
             with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-                # Track which files we've added to avoid duplicates
-                added_files = set()
+                # Track files and organize by type
+                added_files = {
+                    'transaction_docs': set(),
+                    'reimbursement_docs': set()
+                }
                 
                 for transaction in transactions_data:
-                    # Add transaction documentation if it exists
-                    doc_file = transaction.get('documentation_file')
+                    # Handle transaction documentation
+                    doc_file = transaction.get('documentation_file', '')
                     if doc_file:
                         try:
-                            # Extract filename from markdown link format
-                            match = re.search(r'/artifact/([^)]+)', doc_file)
+                            # Extract filename from HTML link if necessary
+                            match = re.search(r'/artifact/([^"]+)', doc_file)
                             if match:
-                                filename = unquote(match.group(1))  # Get the actual filename and decode URL encoding
-                                if filename not in added_files:
+                                filename = unquote(match.group(1))
+                                if filename not in added_files['transaction_docs']:
                                     file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
                                     if os.path.exists(file_path):
-                                        zip_file.write(file_path, filename)
-                                        added_files.add(filename)
-                                    else:
-                                        current_app.logger.warning(f"File not found: {file_path}")
+                                        # Add to transactions subfolder
+                                        zip_file.write(
+                                            file_path, 
+                                            f"transaction_documents/{filename}"
+                                        )
+                                        added_files['transaction_docs'].add(filename)
                         except Exception as e:
-                            current_app.logger.error(f"Error adding file {doc_file} to ZIP: {str(e)}")
+                            current_app.logger.warning(f"Error adding transaction doc {doc_file}: {str(e)}")
+                    
+                    # Handle reimbursement documentation
+                    reimb_doc = transaction.get('reimbursement_documentation', '')
+                    if reimb_doc:
+                        try:
+                            match = re.search(r'/artifact/([^"]+)', reimb_doc)
+                            if match:
+                                filename = unquote(match.group(1))
+                                if filename not in added_files['reimbursement_docs']:
+                                    file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                                    if os.path.exists(file_path):
+                                        # Add to reimbursements subfolder
+                                        zip_file.write(
+                                            file_path, 
+                                            f"reimbursement_documents/{filename}"
+                                        )
+                                        added_files['reimbursement_docs'].add(filename)
+                        except Exception as e:
+                            current_app.logger.warning(f"Error adding reimbursement doc {reimb_doc}: {str(e)}")
+                
+                # Add a README file
+                readme_content = f"""Transaction Documents Export
+    Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+    Generated by: {current_user.name}
+
+    Contents:
+    - Transaction Documents: {len(added_files['transaction_docs'])} files
+    - Reimbursement Documents: {len(added_files['reimbursement_docs'])} files
+
+    Note: Documents are organized in separate folders for transactions and reimbursements.
+    """
+                zip_file.writestr('README.txt', readme_content)
             
             # Prepare buffer for download
             buffer.seek(0)
             
-            if not added_files:
-                return None, html.Div("No documentation files found to add to ZIP", className="text-warning")
+            total_files = sum(len(files) for files in added_files.values())
+            if total_files == 0:
+                return None, html.Div("No documentation files found", className="text-warning")
             
             return dcc.send_bytes(
                 buffer.getvalue(),
-                f"transaction_documents_{datetime.now().strftime('%Y%m%d')}.zip"
-            ), html.Div(f"Successfully added {len(added_files)} files to ZIP", className="text-success")
+                f"transaction_documents_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+            ), html.Div(
+                f"Successfully exported {total_files} documents",
+                className="text-success"
+            )
             
         except Exception as e:
             current_app.logger.error(f"Error generating ZIP: {str(e)}")

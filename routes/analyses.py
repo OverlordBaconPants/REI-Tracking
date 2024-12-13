@@ -170,23 +170,28 @@ def view_analysis(analysis_id: str):
         flash_message('Error loading analysis', 'error')
         return redirect(url_for('analyses.view_edit_analysis'))
 
-@analyses_bp.route('/generate_pdf/<analysis_id>', methods=['GET'])
-@login_required
-def generate_pdf(analysis_id: str):
-    """Generate PDF report for an analysis"""
+@analyses_bp.route('/generate_pdf/<analysis_id>')
+def generate_pdf(analysis_id):
+    """Generate and send PDF report for an analysis."""
     try:
-        pdf_buffer = analysis_service.generate_pdf_report(analysis_id, current_user.id)
-        if not pdf_buffer:
-            return jsonify({'error': 'Failed to generate PDF'}), 500
+        # Get user ID from current_user (Flask-Login)
+        user_id = current_user.id
+        if not user_id:
+            return jsonify({'error': 'User not authenticated'}), 401
 
+        # Generate PDF
+        buffer = analysis_service.generate_pdf_report(analysis_id, user_id)
+        
+        # Return the PDF file
         return send_file(
-            pdf_buffer,
+            buffer,
             mimetype='application/pdf',
             as_attachment=True,
-            download_name=f"analysis_{analysis_id}_report.pdf"
+            download_name=f'analysis_{analysis_id}.pdf'
         )
+        
     except Exception as e:
-        logger.error(f"Error generating PDF: {str(e)}")
+        current_app.logger.error(f"Error generating PDF: {str(e)}")
         return jsonify({'error': f'Error generating PDF: {str(e)}'}), 500
     
 @analyses_bp.route('/mao-calculator')
