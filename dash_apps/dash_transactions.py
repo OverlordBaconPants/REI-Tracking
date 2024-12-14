@@ -158,11 +158,17 @@ def create_transactions_dash(flask_app):
         # Filters row
         dbc.Row([
             dbc.Col([
-                dbc.Label('Property Address'),
+                dbc.Label([
+                    html.I(className="bi bi-building me-2"),
+                    "Property Address"
+                ]),
                 dcc.Dropdown(id='property-filter', placeholder='Select Property', multi=False)
             ], width=3),
             dbc.Col([
-                dbc.Label('Transaction Type'),
+                dbc.Label([
+                    html.I(className="bi bi-tags me-2"),
+                    "Transaction Type"
+                ]),
                 dcc.Dropdown(
                     id='type-filter',
                     options=[
@@ -173,7 +179,10 @@ def create_transactions_dash(flask_app):
                 )
             ], width=3),
             dbc.Col([
-                dbc.Label('Reimbursement Status'),
+                dbc.Label([
+                    html.I(className="bi bi-arrow-repeat me-2"),
+                    "Reimbursement Status"
+                ]),
                 dcc.Dropdown(
                     id='reimbursement-filter',
                     options=[
@@ -186,7 +195,10 @@ def create_transactions_dash(flask_app):
                 )
             ], width=3),
             dbc.Col([
-                dbc.Label('Date Range'),
+                dbc.Label([
+                    html.I(className="bi bi-calendar-range me-2"),
+                    "Date Range"
+                ]),
                 dcc.DatePickerRange(
                     id='date-range',
                     start_date_placeholder_text='Start Date',
@@ -201,31 +213,45 @@ def create_transactions_dash(flask_app):
                 html.Div([
                     html.P(
                         "Use these buttons to download all your transactions (filtered above) and supporting documentation.",
-                        className="text-muted mb-2"  # mb-2 adds margin bottom for spacing
+                        className="text-muted mb-2"
                     ),
                 ]),
                 html.Div([
-                    dbc.Button(
-                        [
-                            html.I(className="fas fa-file-pdf me-2"),
-                            "Download PDF Report"
-                        ],
-                        id="download-pdf-btn",
-                        color="primary",
-                        className="me-2"
-                    ),
-                    dcc.Download(id="download-pdf"),
-                    dbc.Button(
-                        [
-                            html.I(className="fas fa-file-archive me-2"),
-                            "Download Documents ZIP"
-                        ],
-                        id="download-zip-btn",
-                        color="secondary",
-                        className="me-2"
-                    ),
-                    dcc.Download(id="download-zip"),
-                ], className="d-flex align-items-center"),
+                    # Group the buttons together in a div
+                    html.Div([
+                        dbc.Button(
+                            [
+                                html.I(className="bi bi-file-pdf me-2"),
+                                "Download PDF Report"
+                            ],
+                            id="download-pdf-btn",
+                            color="primary",
+                            className="me-2"
+                        ),
+                        dcc.Download(id="download-pdf"),
+                        dbc.Button(
+                            [
+                                html.I(className="bi bi-file-zip me-2"),
+                                "Download Documents ZIP"
+                            ],
+                            id="download-zip-btn",
+                            color="secondary",
+                            className="me-2"  # adds margin to the right
+                        ),
+                        dcc.Download(id="download-zip"),
+                        html.A(
+                            dbc.Button(
+                                [
+                                    html.I(className="bi bi-plus-lg me-2"),
+                                    "Add Transaction"
+                                ],
+                                color="success",
+                            ),
+                            href="/transactions/add",
+                            target="_parent"
+                        )
+                    ], className="d-flex")
+                ], className="d-flex justify-content-start"),  # This pushes the button group to the right
                 dbc.Spinner(
                     html.Div(id="download-status"),
                     color="primary",
