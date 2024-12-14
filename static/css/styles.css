@@ -200,10 +200,43 @@ main {
 
 /* ===== Dash Components ===== */
 /* Base Container */
+/* Ensure Dash app content fills space */
 #_dash-app-content {
-    min-height: 100vh;
+    height: 100%;
+}
+
+.view-transactions-page {
     display: flex;
     flex-direction: column;
+    min-height: 100vh;
+}
+
+.bulk-import-container {
+    flex: 0 0 auto;
+}
+
+.transactions-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    padding: 10px;
+    height: 100%;
+}
+
+.transactions-frame {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+.iframe-wrapper {
+    flex: 1;
+    position: relative;
+    min-height: 0;
+    height: 100%;
 }
 
 /* Dropdown Styling */

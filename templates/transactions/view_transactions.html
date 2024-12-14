@@ -5,12 +5,23 @@
 {% block body_class %}view-transactions-page{% endblock %}
 
 {% block content %}
-    {% if show_bulk_import %}
-        <a href="{{ url_for('transactions.bulk_import') }}" class="btn btn-primary mb-3">Bulk Import Transactions</a>
-    {% endif %}
+    <!-- Remove any height constraints from container div -->
+    <div class="transactions-container">
+        {% if show_bulk_import %}
+            <div class="bulk-import-container">
+                <a href="{{ url_for('transactions.bulk_import') }}" class="btn btn-primary mb-3">Bulk Import Transactions</a>
+            </div>
+        {% endif %}
 
-    <div>
-        <iframe src="{{ url_for('transactions.view_transactions') }}dash/" width="100%" height="800px" frameborder="0"></iframe>
+        <!-- Add explicit styling to force full height -->
+        <div class="iframe-wrapper">
+            <iframe 
+                src="{{ url_for('transactions.view_transactions') }}dash/" 
+                class="transactions-frame"
+                style="width: 100%; height: 100%;"
+                frameborder="0"
+            ></iframe>
+        </div>
     </div>
     
     <div id="edit-transaction-modal" class="modal fade" tabindex="-1" aria-labelledby="editTransactionModalLabel" aria-hidden="true">
@@ -52,6 +63,25 @@
             showMethod: "fadeIn",
             hideMethod: "fadeOut"
         };
+
+        // Adjust iframe height
+        function adjustIframeHeight() {
+            const navbar = document.querySelector('.navbar');
+            const iframeWrapper = document.querySelector('.iframe-wrapper');
+            
+            if (navbar && iframeWrapper) {
+                const navbarHeight = navbar.offsetHeight;
+                const windowHeight = window.innerHeight;
+                const topOffset = iframeWrapper.getBoundingClientRect().top;
+                const availableHeight = windowHeight - topOffset;
+                
+                iframeWrapper.style.height = `${availableHeight}px`;
+            }
+        }
+
+        // Call on load and resize
+        window.addEventListener('load', adjustIframeHeight);
+        window.addEventListener('resize', adjustIframeHeight);
 
         // Add a global message handler for the iframe
         window.addEventListener('message', function(event) {
