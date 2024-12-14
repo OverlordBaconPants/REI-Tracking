@@ -309,8 +309,22 @@ def create_transactions_dash(flask_app):
             ],
             style_data_conditional=[
                 {
-                    'if': {'column_id': 'amount'},
+                    'if': {'row_index': 'odd'},
+                    'backgroundColor': 'rgb(248, 248, 248)'
+                },
+                {
+                    'if': {
+                        'column_id': 'amount',
+                        'filter_query': '{type} eq "income"'
+                    },
                     'color': 'green'
+                },
+                {
+                    'if': {
+                        'column_id': 'amount',
+                        'filter_query': '{type} eq "expense"'
+                    },
+                    'color': 'red'
                 },
                 {
                     'if': {'column_id': ['documentation_file', 'reimbursement_documentation']},
