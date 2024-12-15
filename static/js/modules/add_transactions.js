@@ -182,7 +182,15 @@ const addTransactionsModule = {
         try {
             const selectedProperty = propertySelect.options[propertySelect.selectedIndex];
             const propertyData = JSON.parse(selectedProperty.dataset.property);
-            return (propertyData.partners || []).length > 1;
+            console.log('Parsed property data:', propertyData);
+            
+            // Add address truncation for display
+            if (propertyData.address) {
+                const parts = propertyData.address.split(',');
+                propertyData.displayAddress = parts.length >= 2 
+                    ? parts.slice(0, 2).join(',').trim() 
+                    : parts[0];
+            }
         } catch (error) {
             console.error('Error checking for partners:', error);
             return false;

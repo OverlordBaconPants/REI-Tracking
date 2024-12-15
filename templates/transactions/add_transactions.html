@@ -16,9 +16,11 @@
                     <select id="property_id" name="property_id" class="form-select">
                         <option value="">Select a property</option>
                         {% for property in properties %}
+                            {% set address_parts = property.address.split(',') %}
+                            {% set display_address = ', '.join(address_parts[:2]).strip() if address_parts|length >= 2 else property.address %}
                             <option value="{{ property.address }}" 
                                     data-property='{{ property|tojson|safe }}'>
-                                {{ property.address }}
+                                {{ display_address }}
                             </option>
                         {% endfor %}
                     </select>
