@@ -10,7 +10,11 @@ app.log
 share/*
 share/jupyter/*
 etc/*
-data/*
+data/analyses/*
+data/uploads/*
+data/properties.json
+data/transactions.json
+data/users.json
 lib/*
 lib64/*
 pyvenv.config
