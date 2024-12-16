@@ -44,17 +44,33 @@ MAX_FUTURE_DAYS = 30     # Maximum days into future for datesr
 
 # Base columns definition for the transactions table
 base_columns = [
-    {'name': 'ID', 'id': 'id', 'hidden': True},
-    {'name': 'Category', 'id': 'category'},
-    {'name': 'Description', 'id': 'description'},
-    {'name': 'Amount', 'id': 'amount'},
-    {'name': 'Date Incurred', 'id': 'date'},
-    {'name': 'Collector/Payer', 'id': 'collector_payer'},
-    {'name': 'Transaction Doc', 'id': 'documentation_file', 'presentation': 'markdown'},
-    {'name': 'Reimb. Date', 'id': 'date_shared'},
-    {'name': 'Reimb. Description', 'id': 'share_description'},
-    {'name': 'Reimb. Doc', 'id': 'reimbursement_documentation', 'presentation': 'markdown'},
-]
+        {'name': 'ID', 'id': 'id', 'hidden': True},
+        {'name': 'Property', 'id': 'property_id'},  # Add Property column
+        {'name': 'Category', 'id': 'category'},
+        {'name': 'Description', 'id': 'description'},
+        {'name': 'Amount', 'id': 'amount'},
+        {'name': 'Date Incurred', 'id': 'date'},
+        {'name': 'Collector/Payer', 'id': 'collector_payer'},
+        {'name': 'Transaction Doc', 'id': 'documentation_file', 'presentation': 'markdown'},
+        {'name': 'Reimb. Date', 'id': 'date_shared'},
+        {'name': 'Reimb. Description', 'id': 'share_description'},
+        {'name': 'Reimb. Doc', 'id': 'reimbursement_documentation', 'presentation': 'markdown'},
+    ]
+
+def truncate_address(address):
+    """
+    Truncates an address to show only house number, street, and city.
+    
+    Args:
+        address (str): Full property address
+        
+    Returns:
+        str: Truncated address
+    """
+    if not address:
+        return ""
+    parts = address.split(',')
+    return ', '.join(parts[:2]).strip() if len(parts) >= 2 else parts[0]
 
 def validate_date_range(start_date: Optional[str], end_date: Optional[str]) -> tuple[bool, str]:
     """
@@ -273,28 +289,7 @@ def create_transactions_dash(flask_app):
         html.H2(id='transactions-header', className='mt-4 mb-3'),
         dash_table.DataTable(
             id='transactions-table',
-            columns=[
-                *[col for col in base_columns if col['id'] not in ['documentation_file', 'reimbursement_documentation']],
-                {
-                    'name': 'Transaction Doc',
-                    'id': 'documentation_file',
-                    'presentation': 'markdown',
-                    'type': 'text'
-                },
-                {
-                    'name': 'Reimb. Doc',
-                    'id': 'reimbursement_documentation',
-                    'presentation': 'markdown',
-                    'type': 'text'
-                },
-                # Updated edit column for direct navigation
-                {
-                    'name': 'Edit',
-                    'id': 'edit',
-                    'presentation': 'markdown',
-                    'type': 'text'
-                }
-            ],
+            columns=base_columns,
             style_cell={
                 'textAlign': 'left',
                 'padding': '10px',
@@ -382,15 +377,15 @@ def create_transactions_dash(flask_app):
     # Register callbacks
     @dash_app.callback(
         [Output('transactions-table', 'data'),
-        Output('transactions-header', 'children'),
-        Output('property-filter', 'options'),
-        Output('transactions-table', 'columns')],
+         Output('transactions-header', 'children'),
+         Output('property-filter', 'options'),
+         Output('transactions-table', 'columns')],
         [Input('refresh-trigger', 'data'),
-        Input('property-filter', 'value'),
-        Input('type-filter', 'value'),
-        Input('reimbursement-filter', 'value'),
-        Input('date-range', 'start_date'),
-        Input('date-range', 'end_date')]
+         Input('property-filter', 'value'),
+         Input('type-filter', 'value'),
+         Input('reimbursement-filter', 'value'),
+         Input('date-range', 'start_date'),
+         Input('date-range', 'end_date')]
     )
     def update_table(refresh_trigger, property_id, transaction_type, reimbursement_status, start_date, end_date):
         try:
@@ -467,6 +462,32 @@ def create_transactions_dash(flask_app):
                 if transaction_type:
                     df = df[df['type'].str.lower() == transaction_type.lower()]
 
+                # Define columns based on property filter
+                columns = base_columns.copy()
+                if property_id and property_id != 'all':
+                    # Remove property column only when a specific property is selected
+                    columns = [col for col in columns if col['id'] != 'property_id']
+                else:
+                    # Show property column with truncated address for 'all' or no selection
+                    df['property_id'] = df['property_id'].apply(lambda x: ', '.join(x.split(',')[:2]).strip() if x else '')
+
+                # Add the documentation columns with markdown presentation
+                columns = [col for col in columns if col['id'] not in ['documentation_file', 'reimbursement_documentation']]
+                columns.extend([
+                    {
+                        'name': 'Transaction Doc',
+                        'id': 'documentation_file',
+                        'presentation': 'markdown',
+                        'type': 'text'
+                    },
+                    {
+                        'name': 'Reimb. Doc',
+                        'id': 'reimbursement_documentation',
+                        'presentation': 'markdown',
+                        'type': 'text'
+                    }
+                ])
+
                 # Format amounts with validation
                 df['amount'] = df['amount'].apply(
                     lambda x: f"${abs(float(x)):.2f}" if pd.notnull(x) and isinstance(x, (int, float)) else ''
@@ -487,7 +508,6 @@ def create_transactions_dash(flask_app):
                 )
 
                 # Add edit column based on property manager status
-                columns = base_columns.copy()
                 if current_user.is_authenticated:
                     filter_options = {
                         'property_id': property_id,

@@ -1148,8 +1148,19 @@ window.analysisModule = {
         .then(data => {
             console.log('Server response:', data);
             if (data.success) {
-                this.currentAnalysisId = data.analysis.id;
-                this.populateReportsTab(data.analysis);
+                // Extract the actual analysis data from the nested structure
+                const analysisData = data.analysis.analysis || data.analysis;
+                
+                // Debug the analysis data structure
+                console.log('Analysis data for reports:', analysisData);
+                
+                if (!analysisData.analysis_type) {
+                    console.error('Missing analysis type in data:', analysisData);
+                    throw new Error('Invalid analysis data structure');
+                }
+                
+                this.currentAnalysisId = analysisData.id;
+                this.populateReportsTab(analysisData);
                 this.switchToReportsTab();
                 this.showReportActions();
                 toastr.success('Analysis created successfully');
@@ -1296,12 +1307,7 @@ window.analysisModule = {
             analysisData.create_new = true;
         }
     
-        console.log('Sending analysis data:', {
-            ...analysisData,
-            loan1_interest_only: analysisData.loan1_interest_only,
-            loan2_interest_only: analysisData.loan2_interest_only,
-            loan3_interest_only: analysisData.loan3_interest_only
-        });
+        console.log('Sending analysis data:', analysisData);
     
         fetch('/analyses/update_analysis', {
             method: 'POST',
@@ -1320,22 +1326,15 @@ window.analysisModule = {
             console.log('Server response:', data);
             
             if (data.success) {
-                // Extract analysis data from nested structure
                 const analysisData = data.analysis.analysis || data.analysis;
+                console.log('Analysis data for reports:', analysisData);
                 
-                console.log('Extracted analysis data:', analysisData);
-                
-                // Verify data structure
-                if (!analysisData || typeof analysisData !== 'object') {
-                    console.error('Invalid analysis data received:', analysisData);
-                    throw new Error('Invalid response data structure');
-                }
-        
                 if (!analysisData.analysis_type) {
-                    console.error('Missing analysis type:', analysisData);
-                    throw new Error('Missing analysis type in response');
+                    console.error('Missing analysis type in data:', analysisData);
+                    throw new Error('Invalid analysis data structure');
                 }
-        
+    
+                // Update IDs and URLs if needed
                 if (analysisData.id !== analysisId) {
                     this.currentAnalysisId = analysisData.id;
                     form.setAttribute('data-analysis-id', analysisData.id);
@@ -1347,13 +1346,11 @@ window.analysisModule = {
                     toastr.success('Analysis updated successfully');
                 }
                 
+                // Add these three lines back
                 this.populateReportsTab(analysisData);
                 this.switchToReportsTab();
                 this.showReportActions();
                 
-                if (analysisData.id === analysisId) {
-                    this.initialAnalysisType = analysisData.analysis_type;
-                }
             } else {
                 throw new Error(data.message || 'Unknown error occurred');
             }
@@ -1366,7 +1363,8 @@ window.analysisModule = {
             this.isSubmitting = false;
             if (submitBtn) {
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = 'Update Analysis';
+                submitBtn.innerHTML = '<i class="bi bi-save me-2"></i>Update Analysis';
+                submitBtn.style.display = 'inline-block'; // Ensure button is visible
             }
         });
     },
@@ -1703,8 +1701,37 @@ window.analysisModule = {
             financialTab.click();
         }
     
-        if (submitBtn && reEditButton) {
+        console.log('Switching to financial tab, currentAnalysisId:', this.currentAnalysisId);
+        console.log('Submit button exists:', !!submitBtn);
+    
+        // Always create or show submit button when editing
+        if (!submitBtn) {
+            console.log('Creating new submit button');
+            const form = document.getElementById('analysisForm');
+            const actionButtons = form.querySelector('.d-flex.gap-2');
+            if (actionButtons) {
+                const newSubmitBtn = document.createElement('button');
+                newSubmitBtn.id = 'submitAnalysisBtn';
+                newSubmitBtn.type = 'submit';
+                newSubmitBtn.className = 'btn btn-success';
+                newSubmitBtn.innerHTML = '<i class="bi bi-save me-2"></i>Update Analysis';
+                actionButtons.insertBefore(newSubmitBtn, actionButtons.firstChild);
+                
+                // Set up form for editing
+                if (this.currentAnalysisId) {
+                    form.setAttribute('data-analysis-id', this.currentAnalysisId);
+                    form.onsubmit = (event) => this.handleEditSubmit(event, this.currentAnalysisId);
+                }
+                console.log('New submit button created');
+            }
+        } else {
+            console.log('Showing existing submit button');
             submitBtn.style.display = 'inline-block';
+            submitBtn.innerHTML = '<i class="bi bi-save me-2"></i>Update Analysis';
+        }
+    
+        // Hide re-edit button if it exists
+        if (reEditButton) {
             reEditButton.style.display = 'none';
         }
     },

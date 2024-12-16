@@ -75,10 +75,10 @@ body {
 /* Main Content */
 main {
     flex: 1;
-    margin-left: 200px;
+    margin-left: 250px;
     padding: 20px;
     min-height: 100vh;
-    width: calc(100% - 200px);
+    width: calc(100% - 250px);
     background-color: #fff;
 }
 
@@ -232,11 +232,56 @@ main {
     border: none;
 }
 
+.portfolio-page {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.portfolio-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100vh - 40px); /* Account for any padding */
+}
+
+.portfolio-header {
+    padding: 1.5rem;
+}
+
+.portfolio-header h1 {
+    margin: 0;
+}
+
+.portfolio-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0; /* Critical for nested flex containers */
+}
+
+#portfolio-frame {
+    width: 100%;
+    height: 100%;
+    min-height: 800px;
+    border: none;
+    position: relative;
+}
+
 .iframe-wrapper {
     flex: 1;
     position: relative;
     min-height: 0;
     height: 100%;
+}
+
+.dashboard-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 800px; /* Minimum height */
+    width: 100%;
+    position: relative;
 }
 
 /* Dropdown Styling */
@@ -288,6 +333,21 @@ main {
 
 .dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th:hover {
     background-color: #000080 !important;
+}
+
+#dash-container {
+    flex: 1;
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.dash-bootstrap .container-fluid {
+    max-width: 100%;
+    padding-right: 15px;
+    padding-left: 15px;
+    margin-right: auto;
+    margin-left: auto;
 }
 
 /* Table Cell Styles */

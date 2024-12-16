@@ -37,23 +37,26 @@ def create_analysis():
     # GET request - handle existing analysis editing
     analysis_id = request.args.get('analysis_id')
     existing_analysis = None
+    editing = False  # Add explicit editing flag
+    
     if analysis_id:
         try:
             existing_analysis = analysis_service.get_analysis(analysis_id, current_user.id)
             if existing_analysis:
-                existing_analysis['edit_mode'] = True
+                editing = True  # Set editing flag if we found an analysis
             else:
                 flash_message('Analysis not found', 'error')
                 return redirect(url_for('analyses.view_edit_analysis'))
         except Exception as e:
             logger.error(f"Error fetching analysis: {str(e)}")
+            logger.error(traceback.format_exc())
             flash_message('Error loading analysis', 'error')
             return redirect(url_for('analyses.view_edit_analysis'))
 
     return render_template(
         'analyses/create_analysis.html',
         analysis=existing_analysis,
-        editing_analysis=analysis_id is not None,
+        editing_analysis=editing,  # Pass explicit editing flag to template
         body_class='analysis-page'
     )
 

@@ -3,21 +3,25 @@
 {% block body_class %}portfolio-page{% endblock %}
 
 {% block content %}
-
-<div class="container-fluid mt-4">
-    <div class="row">
-        <div class="col-12">
-            <h1 class="mb-4">Your Portfolio Overview</h1>
-            
-            <!-- Portfolio Dashboard will be rendered here -->
-            <div id="dash-container">
-                <iframe src="{{ url_for('dashboards.portfolio_dash', path='') }}"
-                        style="width: 100%; height: 800px; border: none;"
-                        id="portfolio-frame">
-                </iframe>
+<div class="portfolio-container">
+    <div class="container-fluid py-4">
+        <div class="row">
+            <div class="col-12">
+                <h1 class="mb-4">Your Portfolio Overview</h1>
+                
+                <!-- Portfolio Dashboard -->
+                <div id="dash-container" class="dashboard-wrapper">
+                    <iframe 
+                        src="{{ url_for('dashboards.portfolio_dash', path='') }}"
+                        id="portfolio-frame"
+                        style="width: 100%; min-height: 800px; border: none;"
+                        onload="console.log('iframe loaded')"
+                        onerror="console.log('iframe error')"
+                    >
+                    </iframe>
+                </div>
             </div>
         </div>
     </div>
 </div>
-
 {% endblock %}
