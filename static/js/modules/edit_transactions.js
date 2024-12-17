@@ -24,7 +24,7 @@ const editTransactionsModule = {
             collectorPayer: document.getElementById('collector_payer'),
             type: document.querySelector('input[name="type"]:checked'),
             collectorPayerLabel: document.querySelector('label[for="collector_payer"]'),
-            typeRadios: document.querySelectorAll('input[name="type"]')  // Add this line
+            typeRadios: document.querySelectorAll('input[name="type"]')
         };
 
         console.log('Initial elements:', this.elements);
@@ -58,7 +58,15 @@ const editTransactionsModule = {
         this.updateCollectorPayerLabel(initialType);
         console.log('Categories populated');
 
-        this.updateCollectorPayerOptions();
+        await this.updateCollectorPayerOptions();
+        
+        // Set initial collector/payer value if it exists
+        if (this.initialValues.collectorPayerDataset) {
+            this.elements.collectorPayer.value = this.initialValues.collectorPayerDataset;
+        }
+        
+        // Now that everything is initialized, update reimbursement details
+        this.updateReimbursementDetails();
         
         // Initialize other event listeners
         this.initEventListeners();
@@ -362,36 +370,85 @@ const editTransactionsModule = {
     },
 
     updateReimbursementDetails: function() {
+        console.log('Updating reimbursement details');
         const amount = parseFloat(document.getElementById('amount')?.value) || 0;
-        const collectorPayer = document.getElementById('collector_payer')?.value;
+        const collectorPayerSelect = document.getElementById('collector_payer');
+        const collectorPayer = collectorPayerSelect?.value;
         const propertyId = document.getElementById('property_id')?.value;
         const type = document.querySelector('input[name="type"]:checked')?.value;
-
-        if (!propertyId || !type) {
+        
+        console.log('Current values:', {
+            amount,
+            collectorPayer,
+            propertyId,
+            type
+        });
+    
+        if (!propertyId || !type || !amount) {
+            console.log('Missing required fields for reimbursement calculation');
             return;
         }
-
-        fetch(`/transactions/api/partners?property_id=${encodeURIComponent(propertyId)}`)
-            .then(response => response.json())
-            .then(partners => {
-                const detailsContainer = document.getElementById('reimbursement-details');
-                if (!detailsContainer) return;
-
-                let html = '<ul>';
-                partners.forEach(partner => {
-                    if (partner.name !== collectorPayer) {
-                        const share = (partner.equity_share / 100) * amount;
-                        const shareText = type === 'income' ? 'is owed' : 'owes';
-                        html += `<li><b>${partner.name} (${partner.equity_share}% equity) ${shareText} $${share.toFixed(2)}</b></li>`;
-                    }
+    
+        if (!collectorPayer) {
+            console.log('No collector/payer selected');
+            return;
+        }
+    
+        try {
+            const propertyData = JSON.parse(
+                document.getElementById('property_id')
+                    .options[document.getElementById('property_id').selectedIndex]
+                    .dataset.property
+            );
+    
+            const partners = propertyData.partners || [];
+            const detailsContainer = document.getElementById('reimbursement-details');
+            
+            if (!detailsContainer || partners.length < 2) {
+                console.log('No details container or insufficient partners');
+                return;
+            }
+    
+            // Filter out the collector/payer first
+            const otherPartners = partners.filter(partner => {
+                const isCollectorPayer = partner.name === collectorPayer;
+                console.log(`Checking partner ${partner.name} against collector/payer ${collectorPayer}: ${isCollectorPayer}`);
+                return !isCollectorPayer;
+            });
+    
+            console.log('Partners after filtering:', otherPartners);
+    
+            let html = '<div class="reimbursement-breakdown mt-3">';
+            
+            if (otherPartners.length === 0) {
+                html += '<p class="text-muted">No reimbursements needed - single partner transaction</p>';
+            } else {
+                html += '<ul class="list-unstyled">';
+                otherPartners.forEach(partner => {
+                    const equityShare = partner.equity_share / 100;
+                    const share = equityShare * amount;
+                    const shareText = type === 'income' ? 'is owed' : 'owes';
+                    const amountClass = type === 'income' ? 'text-success' : 'text-danger';
+                    
+                    html += `
+                        <li class="mb-2">
+                            <strong>${partner.name}</strong> (${partner.equity_share}% equity) 
+                            ${shareText} <span class="${amountClass}">$${share.toFixed(2)}</span>
+                        </li>`;
                 });
                 html += '</ul>';
-                detailsContainer.innerHTML = html;
-            })
-            .catch(error => {
-                console.error('Error updating reimbursement details:', error);
-                toastr.error('Error calculating reimbursement details');
-            });
+                html += `<p class="text-muted small mt-2">
+                    Based on equity shares and a total ${type} of $${amount.toFixed(2)}
+                </p>`;
+            }
+    
+            html += '</div>';
+            detailsContainer.innerHTML = html;
+    
+        } catch (error) {
+            console.error('Error updating reimbursement details:', error);
+            toastr.error('Error calculating reimbursement details');
+        }
     },
 
     validateForm: function() {
