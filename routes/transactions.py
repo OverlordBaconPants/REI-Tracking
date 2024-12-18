@@ -296,13 +296,13 @@ def edit_transactions(transaction_id):
                             file.save(file_path)
                             updated_transaction['documentation_file'] = filename
 
-                # Handle reimbursement documentation
+                # When handling reimbursement file uploads
                 if 'reimbursement_documentation' in request.files:
                     file = request.files['reimbursement_documentation']
                     if file and file.filename:
                         if allowed_file(file.filename):
                             filename = f"reimb_{secure_filename(file.filename)}"
-                            file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                            file_path = os.path.join(current_app.config['REIMBURSEMENTS_DIR'], filename)
                             file.save(file_path)
                             updated_transaction['reimbursement']['documentation'] = filename
 
@@ -373,14 +373,8 @@ def get_artifact(filename):
     try:
         # Check if it's a reimbursement document
         if filename.startswith('reimb_'):
-            # Use os.path.join to create proper path
-            artifact_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'reimbursements')
+            artifact_dir = current_app.config['REIMBURSEMENTS_DIR']
             current_app.logger.debug(f"Reimbursement document detected, looking in: {artifact_dir}")
-            
-            # Ensure directory exists
-            if not os.path.exists(artifact_dir):
-                os.makedirs(artifact_dir)
-                current_app.logger.debug(f"Created reimbursements directory: {artifact_dir}")
         else:
             artifact_dir = current_app.config['UPLOAD_FOLDER']
             current_app.logger.debug(f"Regular document, looking in: {artifact_dir}")
@@ -389,7 +383,6 @@ def get_artifact(filename):
         full_path = os.path.join(artifact_dir, filename)
         current_app.logger.debug(f"Attempting to serve file from: {full_path}")
         
-        # Check if file exists
         if not os.path.exists(full_path):
             current_app.logger.error(f"File not found: {full_path}")
             abort(404)

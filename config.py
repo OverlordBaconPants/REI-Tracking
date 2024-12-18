@@ -23,13 +23,13 @@ class Config:
         self.DATA_DIR = os.path.join(self.BASE_DIR, 'data')
         self.ANALYSES_DIR = os.path.join(self.DATA_DIR, 'analyses')
         self.UPLOAD_FOLDER = os.path.join(self.DATA_DIR, 'uploads')
+        self.REIMBURSEMENTS_DIR = os.path.join(self.UPLOAD_FOLDER, 'reimbursements')
         
         # JSON file paths
         self.USERS_FILE = os.path.join(self.DATA_DIR, 'users.json')
         self.PROPERTIES_FILE = os.path.join(self.DATA_DIR, 'properties.json')
         self.TRANSACTIONS_FILE = os.path.join(self.DATA_DIR, 'transactions.json')
         self.CATEGORIES_FILE = os.path.join(self.DATA_DIR, 'categories.json')
-        self.REIMBURSEMENTS_FILE = os.path.join(self.DATA_DIR, 'reimbursements.json')
         
         # Create necessary directories if not in production
         if not os.environ.get('RENDER'):
@@ -40,6 +40,7 @@ class Config:
         os.makedirs(self.DATA_DIR, exist_ok=True)
         os.makedirs(self.ANALYSES_DIR, exist_ok=True)
         os.makedirs(self.UPLOAD_FOLDER, exist_ok=True)
+        os.makedirs(self.REIMBURSEMENTS_DIR, exist_ok=True)
 
 class DevelopmentConfig(Config):
     """Development configuration"""
@@ -61,18 +62,19 @@ class ProductionConfig(Config):
         self.DATA_DIR = '/opt/render/project/src/data'             # Data directory in mounted volume
         self.ANALYSES_DIR = '/opt/render/project/src/data/analyses' # Analyses subdirectory
         self.UPLOAD_FOLDER = '/opt/render/project/src/data/uploads' # Upload directory in mounted volume
+        self.REIMBURSEMENTS_DIR = os.path.join(self.UPLOAD_FOLDER, 'reimbursements')
         
         # JSON file paths
         self.USERS_FILE = os.path.join(self.DATA_DIR, 'users.json')
         self.PROPERTIES_FILE = os.path.join(self.DATA_DIR, 'properties.json')
         self.TRANSACTIONS_FILE = os.path.join(self.DATA_DIR, 'transactions.json')
         self.CATEGORIES_FILE = os.path.join(self.DATA_DIR, 'categories.json')
-        self.REIMBURSEMENTS_FILE = os.path.join(self.DATA_DIR, 'reimbursements.json')
         
         print(f"Running in production mode on Render.com")
         print(f"Base directory: {self.BASE_DIR}")
         print(f"Data directory: {self.DATA_DIR}")
         print(f"Upload folder: {self.UPLOAD_FOLDER}")
+        print(f"Reimbursements directory: {self.REIMBURSEMENTS_DIR}")
 
 class TestingConfig(Config):
     """Testing configuration"""

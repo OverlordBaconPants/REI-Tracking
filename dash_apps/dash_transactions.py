@@ -34,6 +34,7 @@ from services.report_generator import ReportGenerator
 
 # Configure logging
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 # Constants for validation
 MAX_DESCRIPTION_LENGTH = 500
@@ -71,6 +72,48 @@ def truncate_address(address):
         return ""
     parts = address.split(',')
     return ', '.join(parts[:2]).strip() if len(parts) >= 2 else parts[0]
+
+def is_wholly_owned_by_user(property_data, user_name):
+    """
+    Checks if a property is wholly owned by a single user.
+    
+    Args:
+        property_data (dict): Property data containing partners information
+        user_name (str): Name of the user to check
+        
+    Returns:
+        bool: True if the property is wholly owned by the user, False otherwise
+    """
+    logger.debug(f"Checking ownership for property: {property_data.get('address')} and user: {user_name}")
+    partners = property_data.get('partners', [])
+    logger.debug(f"Partners data: {partners}")
+    
+    # If there's only one partner and it's our user, the property is wholly owned
+    if len(partners) == 1:
+        logger.debug("Single partner found")
+        partner = partners[0]
+        is_user = partner.get('name', '').lower() == user_name.lower()
+        equity = float(partner.get('equity_share', 0))  # Changed from ownership_percentage to equity_share
+        logger.debug(f"Is user the owner? {is_user}, Equity share: {equity}")
+        if is_user and equity == 100:
+            return True
+    
+    # Calculate total equity
+    total_equity = sum(float(partner.get('equity_share', 0)) for partner in partners)  # Changed from ownership_percentage
+    logger.debug(f"Total equity: {total_equity}")
+    
+    # Find user's equity
+    user_equity = sum(  # Changed from ownership_percentage
+        float(partner.get('equity_share', 0))
+        for partner in partners
+        if partner.get('name', '').lower() == user_name.lower()
+    )
+    logger.debug(f"User equity: {user_equity}")
+    
+    # Consider it wholly owned if user owns 100% (allowing for small floating point differences)
+    is_wholly_owned = abs(user_equity - 100.0) < 0.01
+    logger.debug(f"Is wholly owned? {is_wholly_owned}")
+    return is_wholly_owned
 
 def validate_date_range(start_date: Optional[str], end_date: Optional[str]) -> tuple[bool, str]:
     """
@@ -284,6 +327,9 @@ def create_transactions_dash(flask_app):
                 ),
             ], width=12)
         ], className="mb-4"),
+
+        # Reimbursement info message container
+        html.Div(id='reimbursement-info', className='mb-3'),
         
         # Transactions table header and table
         html.H2(id='transactions-header', className='mt-4 mb-3'),
@@ -377,15 +423,16 @@ def create_transactions_dash(flask_app):
     # Register callbacks
     @dash_app.callback(
         [Output('transactions-table', 'data'),
-         Output('transactions-header', 'children'),
-         Output('property-filter', 'options'),
-         Output('transactions-table', 'columns')],
+        Output('transactions-header', 'children'),
+        Output('property-filter', 'options'),
+        Output('transactions-table', 'columns'),
+        Output('reimbursement-info', 'children')],  # New output
         [Input('refresh-trigger', 'data'),
-         Input('property-filter', 'value'),
-         Input('type-filter', 'value'),
-         Input('reimbursement-filter', 'value'),
-         Input('date-range', 'start_date'),
-         Input('date-range', 'end_date')]
+        Input('property-filter', 'value'),
+        Input('type-filter', 'value'),
+        Input('reimbursement-filter', 'value'),
+        Input('date-range', 'start_date'),
+        Input('date-range', 'end_date')]
     )
     def update_table(refresh_trigger, property_id, transaction_type, reimbursement_status, start_date, end_date):
         try:
@@ -393,19 +440,22 @@ def create_transactions_dash(flask_app):
                         f"type={transaction_type}, status={reimbursement_status}, "
                         f"dates={start_date} to {end_date}")
 
+            # Initialize reimbursement info message as None
+            reimbursement_info = None
+
             # Validate inputs
             if transaction_type and transaction_type not in VALID_TRANSACTION_TYPES:
                 logger.warning(f"Invalid transaction type received: {transaction_type}")
-                return [], "Invalid transaction type", [], base_columns
+                return [], "Invalid transaction type", [], base_columns, None
 
             if reimbursement_status not in VALID_REIMBURSEMENT_STATUS:
                 logger.warning(f"Invalid reimbursement status received: {reimbursement_status}")
-                return [], "Invalid reimbursement status", [], base_columns
+                return [], "Invalid reimbursement status", [], base_columns, None
 
             date_valid, date_error = validate_date_range(start_date, end_date)
             if not date_valid:
                 logger.warning(f"Invalid date range: {date_error}")
-                return [], date_error, [], base_columns
+                return [], date_error, [], base_columns, None
 
             # Get and validate properties
             try:
@@ -416,11 +466,11 @@ def create_transactions_dash(flask_app):
                 )
                 if not validate_property_id(property_id, properties):
                     logger.warning(f"Invalid property ID received: {property_id}")
-                    return [], "Invalid property selected", [], base_columns
+                    return [], "Invalid property selected", [], base_columns, None
                 
             except Exception as e:
                 logger.error(f"Error retrieving properties: {str(e)}")
-                return [], "Error loading properties", [], base_columns
+                return [], "Error loading properties", [], base_columns, None
 
             # Create property options
             property_options = [{'label': 'All Properties', 'value': 'all'}]
@@ -449,44 +499,83 @@ def create_transactions_dash(flask_app):
                 
             except Exception as e:
                 logger.error(f"Error retrieving transactions: {str(e)}")
-                return [], "Error loading transactions", property_options, base_columns
+                return [], "Error loading transactions", property_options, base_columns, None
 
             # Process transactions
             try:
                 df = pd.DataFrame(transactions)
                 if df.empty:
                     logger.info("No transactions found matching criteria")
-                    return [], "No transactions found", property_options, base_columns
+                    return [], "No transactions found", property_options, base_columns, None
 
                 # Apply type filter
                 if transaction_type:
                     df = df[df['type'].str.lower() == transaction_type.lower()]
 
-                # Define columns based on property filter
+                # Define columns based on property filter and ownership
                 columns = base_columns.copy()
+                wholly_owned = False
+
+                # Check property ownership and adjust columns
                 if property_id and property_id != 'all':
-                    # Remove property column only when a specific property is selected
+                    logger.debug(f"Selected specific property: {property_id}")
+                    # Remove property column when specific property is selected
                     columns = [col for col in columns if col['id'] != 'property_id']
+                    
+                    # Check if property is wholly owned by current user
+                    property_data = next(
+                        (prop for prop in properties if prop['address'] == property_id),
+                        None
+                    )
+                    
+                    if property_data:
+                        logger.debug(f"Found property data: {property_data}")
+                        wholly_owned = is_wholly_owned_by_user(property_data, current_user.name)
+                        logger.debug(f"Property {property_id} wholly owned status: {wholly_owned}")
+                        
+                        if wholly_owned:
+                            logger.debug("Removing reimbursement columns for wholly owned property")
+                            # Remove reimbursement-related columns for wholly owned properties
+                            reimbursement_columns = ['date_shared', 'share_description', 'reimbursement_documentation']
+                            columns = [col for col in columns if col['id'] not in reimbursement_columns]
+                            
+                            # Remove reimbursement data from DataFrame
+                            for col in reimbursement_columns:
+                                if col in df.columns:
+                                    df = df.drop(columns=[col])
+                            
+                            # Create info message
+                            reimbursement_info = html.Div([
+                                html.I(className="bi bi-info-circle me-2"),
+                                "Reimbursement columns are hidden because this property is wholly owned by you."
+                            ], className="alert alert-info")
+                            logger.debug(f"Remaining columns after removal: {[col['name'] for col in columns]}")
+                    else:
+                        logger.warning(f"Property data not found for ID: {property_id}")
                 else:
                     # Show property column with truncated address for 'all' or no selection
                     df['property_id'] = df['property_id'].apply(lambda x: ', '.join(x.split(',')[:2]).strip() if x else '')
 
                 # Add the documentation columns with markdown presentation
-                columns = [col for col in columns if col['id'] not in ['documentation_file', 'reimbursement_documentation']]
-                columns.extend([
-                    {
-                        'name': 'Transaction Doc',
-                        'id': 'documentation_file',
-                        'presentation': 'markdown',
-                        'type': 'text'
-                    },
-                    {
+                doc_columns = []
+                doc_columns.append({
+                    'name': 'Transaction Doc',
+                    'id': 'documentation_file',
+                    'presentation': 'markdown',
+                    'type': 'text'
+                })
+                
+                # Only add reimbursement documentation if not wholly owned
+                if not wholly_owned:
+                    doc_columns.append({
                         'name': 'Reimb. Doc',
                         'id': 'reimbursement_documentation',
                         'presentation': 'markdown',
                         'type': 'text'
-                    }
-                ])
+                    })
+                
+                columns = [col for col in columns if col['id'] not in ['documentation_file', 'reimbursement_documentation']]
+                columns.extend(doc_columns)
 
                 # Format amounts with validation
                 df['amount'] = df['amount'].apply(
@@ -498,14 +587,15 @@ def create_transactions_dash(flask_app):
                     lambda x: f'<a href="{url_for("transactions.get_artifact", filename=x)}" target="_blank" class="btn btn-sm btn-primary">View</a>' if x else ''
                 )
 
-                # Handle reimbursement documentation with validation
-                df['reimbursement_documentation'] = df.apply(
-                    lambda row: (f'<a href="{url_for("transactions.get_artifact", filename=row.get("reimbursement", {}).get("documentation"))}" target="_blank" class="btn btn-sm btn-primary">View</a>'
-                                if isinstance(row.get('reimbursement'), dict) 
-                                and row.get('reimbursement', {}).get('documentation')
-                                else ''),
-                    axis=1
-                )
+                # Handle reimbursement documentation if not wholly owned
+                if not wholly_owned and 'reimbursement_documentation' in df.columns:
+                    df['reimbursement_documentation'] = df.apply(
+                        lambda row: (f'<a href="{url_for("transactions.get_artifact", filename=row.get("reimbursement", {}).get("documentation"))}" target="_blank" class="btn btn-sm btn-primary">View</a>'
+                                    if isinstance(row.get('reimbursement'), dict) 
+                                    and row.get('reimbursement', {}).get('documentation')
+                                    else ''),
+                        axis=1
+                    )
 
                 # Add edit column based on property manager status
                 if current_user.is_authenticated:
@@ -549,15 +639,15 @@ def create_transactions_dash(flask_app):
                 )
 
                 logger.debug(f"Returning {len(df)} processed transactions")
-                return df.to_dict('records'), header, property_options, columns
+                return df.to_dict('records'), header, property_options, columns, reimbursement_info
 
             except Exception as e:
                 logger.error(f"Error processing transactions: {str(e)}")
-                return [], "Error processing data", property_options, base_columns
+                return [], "Error processing data", property_options, base_columns, None
 
         except Exception as e:
             logger.error(f"Unexpected error in update_table: {str(e)}\n{traceback.format_exc()}")
-            return [], "An unexpected error occurred", [], base_columns
+            return [], "An unexpected error occurred", [], base_columns, None
         
     # Filter options update callback
     @dash_app.callback(
