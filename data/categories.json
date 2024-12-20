@@ -1,4 +1,4 @@
 {
     "income": ["Rent", "Loan Repayment", "Utility Reimbursement", "Escrow Refund", "Insurance Refund"],
-    "expense": ["Asset Acquisition", "Insurance", "Mortgage", "Utilities", "Repairs", "Capital Expenditures", "Association Dues"]
+    "expense": ["Asset Acquisition", "Mortgage", "Utilities", "Insurance", "Taxes", "Repairs", "Capital Expenditures", "Association Dues"]
 }

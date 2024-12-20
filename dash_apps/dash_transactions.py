@@ -266,6 +266,23 @@ def create_transactions_dash(flask_app):
             ], width=3)
         ], className='mb-4'),
 
+        # Description search
+        dbc.Row([
+            dbc.Col([
+                dbc.Label([
+                    html.I(className="bi bi-search me-2"),
+                    "Search Description"
+                ]),
+                dbc.Input(
+                    id='description-search',
+                    type='text',
+                    placeholder='Enter description to search...',
+                    debounce=True,
+                    className='w-50'  # This makes it take up 50% of the column width
+                )
+            ], width=12)
+        ], className='mb-4'),
+
         # Add before the transactions table for PDF Report Generation
         dbc.Row([
             dbc.Col([
@@ -423,22 +440,25 @@ def create_transactions_dash(flask_app):
     # Register callbacks
     @dash_app.callback(
         [Output('transactions-table', 'data'),
-        Output('transactions-header', 'children'),
-        Output('property-filter', 'options'),
-        Output('transactions-table', 'columns'),
-        Output('reimbursement-info', 'children')],  # New output
+         Output('transactions-header', 'children'),
+         Output('property-filter', 'options'),
+         Output('transactions-table', 'columns'),
+         Output('reimbursement-info', 'children')],
         [Input('refresh-trigger', 'data'),
-        Input('property-filter', 'value'),
-        Input('type-filter', 'value'),
-        Input('reimbursement-filter', 'value'),
-        Input('date-range', 'start_date'),
-        Input('date-range', 'end_date')]
+         Input('property-filter', 'value'),
+         Input('type-filter', 'value'),
+         Input('reimbursement-filter', 'value'),
+         Input('date-range', 'start_date'),
+         Input('date-range', 'end_date'),
+         Input('description-search', 'value')]
     )
-    def update_table(refresh_trigger, property_id, transaction_type, reimbursement_status, start_date, end_date):
+    def update_table(refresh_trigger, property_id, transaction_type, reimbursement_status, 
+                    start_date, end_date, description_search):
         try:
             logger.debug(f"Updating table with filters: property={property_id}, "
                         f"type={transaction_type}, status={reimbursement_status}, "
-                        f"dates={start_date} to {end_date}")
+                        f"dates={start_date} to {end_date}, "
+                        f"description_search={description_search}")
 
             # Initialize reimbursement info message as None
             reimbursement_info = None
@@ -512,6 +532,14 @@ def create_transactions_dash(flask_app):
                 if transaction_type:
                     df = df[df['type'].str.lower() == transaction_type.lower()]
 
+                # Apply description search filter if provided
+                if description_search and not df.empty:
+                    description_search = description_search.lower().strip()
+                    df = df[df['description'].str.lower().str.contains(description_search, na=False)]
+                    if df.empty:
+                        logger.info(f"No transactions found matching description: {description_search}")
+                        return [], f"No transactions found matching '{description_search}'", property_options, base_columns, None
+
                 # Define columns based on property filter and ownership
                 columns = base_columns.copy()
                 wholly_owned = False
@@ -549,9 +577,7 @@ def create_transactions_dash(flask_app):
                                 html.I(className="bi bi-info-circle me-2"),
                                 "Reimbursement columns are hidden because this property is wholly owned by you."
                             ], className="alert alert-info")
-                            logger.debug(f"Remaining columns after removal: {[col['name'] for col in columns]}")
-                    else:
-                        logger.warning(f"Property data not found for ID: {property_id}")
+
                 else:
                     # Show property column with truncated address for 'all' or no selection
                     df['property_id'] = df['property_id'].apply(lambda x: ', '.join(x.split(',')[:2]).strip() if x else '')
@@ -565,7 +591,6 @@ def create_transactions_dash(flask_app):
                     'type': 'text'
                 })
                 
-                # Only add reimbursement documentation if not wholly owned
                 if not wholly_owned:
                     doc_columns.append({
                         'name': 'Reimb. Doc',
@@ -587,7 +612,6 @@ def create_transactions_dash(flask_app):
                     lambda x: f'<a href="{url_for("transactions.get_artifact", filename=x)}" target="_blank" class="btn btn-sm btn-primary">View</a>' if x else ''
                 )
 
-                # Handle reimbursement documentation if not wholly owned
                 if not wholly_owned and 'reimbursement_documentation' in df.columns:
                     df['reimbursement_documentation'] = df.apply(
                         lambda row: (f'<a href="{url_for("transactions.get_artifact", filename=row.get("reimbursement", {}).get("documentation"))}" target="_blank" class="btn btn-sm btn-primary">View</a>'
@@ -604,11 +628,11 @@ def create_transactions_dash(flask_app):
                         'transaction_type': transaction_type,
                         'reimbursement_status': reimbursement_status,
                         'start_date': start_date,
-                        'end_date': end_date
+                        'end_date': end_date,
+                        'description_search': description_search
                     }
                     encoded_filter_options = urllib.parse.quote(json.dumps(filter_options))
 
-                    # Create a dictionary mapping property addresses to whether current user is property manager
                     property_manager_status = {}
                     for prop in properties:
                         is_manager = any(
@@ -618,7 +642,6 @@ def create_transactions_dash(flask_app):
                         )
                         property_manager_status[prop['address']] = is_manager
 
-                    # Add edit column based on property manager status
                     df['edit'] = df.apply(
                         lambda row: (
                             f'<a href="/transactions/edit/{str(row["id"])}?filters={encoded_filter_options}" '
@@ -637,6 +660,8 @@ def create_transactions_dash(flask_app):
                     start_date or 'Earliest',
                     end_date or 'Latest'
                 )
+                if description_search:
+                    header += f" (Filtered by: '{description_search}')"
 
                 logger.debug(f"Returning {len(df)} processed transactions")
                 return df.to_dict('records'), header, property_options, columns, reimbursement_info
@@ -656,15 +681,18 @@ def create_transactions_dash(flask_app):
          Input('type-filter', 'value'),
          Input('reimbursement-filter', 'value'),
          Input('date-range', 'start_date'),
-         Input('date-range', 'end_date')]
+         Input('date-range', 'end_date'),
+         Input('description-search', 'value')]  # Add this new input
     )
-    def update_filter_options(property_id, transaction_type, reimbursement_status, start_date, end_date):
+    def update_filter_options(property_id, transaction_type, reimbursement_status, 
+                            start_date, end_date, description_search):
         return {
             'property_id': property_id,
             'transaction_type': transaction_type,
             'reimbursement_status': reimbursement_status,
             'start_date': start_date,
-            'end_date': end_date
+            'end_date': end_date,
+            'description_search': description_search  # Add this new field
         }
     
     @dash_app.callback(
@@ -763,7 +791,12 @@ def create_transactions_dash(flask_app):
                             if match:
                                 filename = unquote(match.group(1))
                                 if filename not in added_files['reimbursement_docs']:
-                                    file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                                    # Check if it's a reimbursement document (starts with reimb_)
+                                    if filename.startswith('reimb_'):
+                                        file_path = os.path.join(current_app.config['REIMBURSEMENTS_DIR'], filename)
+                                    else:
+                                        file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                                    
                                     if os.path.exists(file_path):
                                         # Add to reimbursements subfolder
                                         zip_file.write(
@@ -771,6 +804,9 @@ def create_transactions_dash(flask_app):
                                             f"reimbursement_documents/{filename}"
                                         )
                                         added_files['reimbursement_docs'].add(filename)
+                                        current_app.logger.debug(f"Added reimbursement document: {filename} from {file_path}")
+                                    else:
+                                        current_app.logger.warning(f"Reimbursement document not found at {file_path}")
                         except Exception as e:
                             current_app.logger.warning(f"Error adding reimbursement doc {reimb_doc}: {str(e)}")
                 

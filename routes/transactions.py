@@ -49,6 +49,21 @@ def add_transactions():
                 flash_message('Invalid file type. Allowed types are: ' + ', '.join(current_app.config['ALLOWED_DOCUMENTATION_EXTENSIONS']), 'error')
                 return redirect(url_for('transactions.add_transactions'))
 
+            # Handle reimbursement documentation if present
+            reimbursement_documentation = None
+            if 'reimbursement_documentation' in request.files:
+                reimb_file = request.files['reimbursement_documentation']
+                if reimb_file and reimb_file.filename:
+                    if allowed_file(reimb_file.filename, file_type='documentation'):
+                        reimb_filename = f"reimb_{secure_filename(reimb_file.filename)}"
+                        reimb_file_path = os.path.join(current_app.config['REIMBURSEMENTS_DIR'], reimb_filename)
+                        reimb_file.save(reimb_file_path)
+                        reimbursement_documentation = reimb_filename
+                    else:
+                        flash_message('Invalid reimbursement documentation file type. Allowed types are: ' + 
+                                    ', '.join(current_app.config['ALLOWED_DOCUMENTATION_EXTENSIONS']), 'error')
+                        return redirect(url_for('transactions.add_transactions'))
+
             # Get form data
             transaction_data = {
                 'property_id': request.form.get('property_id'),
@@ -62,7 +77,8 @@ def add_transactions():
                 'reimbursement': {
                     'date_shared': request.form.get('date_shared'),
                     'share_description': request.form.get('share_description'),
-                    'reimbursement_status': request.form.get('reimbursement_status')
+                    'reimbursement_status': request.form.get('reimbursement_status'),
+                    'documentation': reimbursement_documentation
                 }
             }
 
