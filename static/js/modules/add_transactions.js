@@ -127,6 +127,15 @@ const addTransactionsModule = {
             console.error('Type radio buttons not found');
         }
 
+        if (elements.collectorPayerSelect) {
+            elements.collectorPayerSelect.addEventListener('change', () => {
+                console.log('Collector/Payer selection changed');
+                this.updateReimbursementDetails();
+            });
+        } else {
+            console.error('Collector/Payer select element not found');
+        }
+
         if (elements.propertySelect) {
             elements.propertySelect.addEventListener('change', (event) => {
                 console.log('Property selection changed');

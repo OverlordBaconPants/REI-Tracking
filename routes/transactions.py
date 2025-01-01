@@ -448,3 +448,46 @@ def debug_api_test():
     except Exception as e:
         current_app.logger.error(f"Debug API test error: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+@transactions_bp.route('/delete/<int:transaction_id>', methods=['DELETE'])
+@login_required
+def delete_transaction(transaction_id):
+    try:
+        # Get the property ID from the request body
+        data = request.get_json()
+        property_id = data.get('property_id')
+        
+        if not property_id:
+            return jsonify({'success': False, 'message': 'Property ID is required'}), 400
+            
+        # Get the transaction
+        transaction = get_transaction_by_id(transaction_id)
+        if not transaction:
+            return jsonify({'success': False, 'message': 'Transaction not found'}), 404
+            
+        # Check if user is property manager for this property
+        properties = get_properties_for_user(current_user.id, current_user.name)
+        property_data = next((p for p in properties if p['address'] == property_id), None)
+        
+        if not property_data:
+            return jsonify({'success': False, 'message': 'Property not found'}), 404
+            
+        is_manager = any(
+            partner['name'] == current_user.name and 
+            partner.get('is_property_manager', False)
+            for partner in property_data.get('partners', [])
+        )
+        
+        if not is_manager:
+            return jsonify({'success': False, 'message': 'Not authorized to delete transactions'}), 403
+            
+        # Delete the transaction
+        transactions = read_json(current_app.config['TRANSACTIONS_FILE'])
+        transactions = [t for t in transactions if t['id'] != str(transaction_id)]
+        write_json(current_app.config['TRANSACTIONS_FILE'], transactions)
+        
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        current_app.logger.error(f"Error deleting transaction: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500

@@ -606,7 +606,7 @@ const editTransactionsModule = {
 
         // Show cancellation notification
         toastr.info('Transaction Edit Canceled. Refreshing Transactions...', '', {
-            timeOut: 3000,
+            timeOut: 1200,
             onHidden: () => {
                 // Add a timestamp to force cache refresh and trigger Dash update
                 const timestamp = new Date().getTime();
