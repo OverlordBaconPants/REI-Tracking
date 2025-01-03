@@ -28,10 +28,83 @@ const viewTransactionsModule = {
             
             this.initializeDashboard();
             this.initializeMessageHandler();
+            this.initializeDeleteHandlers();
         } catch (error) {
             console.error('Error initializing View Transactions module:', error);
             toastr.error('Error loading View Transactions module: ' + error.message);
         }
+    },
+
+    handleDeleteTransaction: function(transactionId, description) {
+        // Create and show modal
+        const modalHtml = `
+            <div class="modal fade" id="deleteConfirmModal" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Delete Transaction</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            Are you sure you want to delete the transaction "${description}"? This action cannot be undone.
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-danger" onclick="viewTransactionsModule.deleteTransaction(${transactionId})">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Remove existing modal if any
+        const existingModal = document.getElementById('deleteConfirmModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        // Add new modal to document
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        // Show the modal
+        const modal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+        modal.show();
+    },
+
+    deleteTransaction: async function(transactionId) {
+        try {
+            const response = await fetch(`/transactions/delete/${transactionId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // Trigger refresh of the Dash table
+                this.forceDataRefresh();
+                toastr.success('Transaction deleted successfully');
+            } else {
+                toastr.error(data.message || 'Error deleting transaction');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            toastr.error('Error deleting transaction');
+        }
+    },
+    
+    // Add event listener for delete buttons
+    initializeDeleteHandlers: function() {
+        document.addEventListener('click', (e) => {
+            if (e.target.matches('.delete-transaction')) {
+                const transactionId = e.target.dataset.transactionId;
+                if (confirm('Are you sure you want to delete this transaction? This action cannot be undone.')) {
+                    this.deleteTransaction(transactionId);
+                }
+            }
+        });
     },
 
     initializeDashboard: function() {

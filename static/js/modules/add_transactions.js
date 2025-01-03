@@ -1,3 +1,4 @@
+
 // add_transactions.js
 
 const addTransactionsModule = {
@@ -384,10 +385,14 @@ const addTransactionsModule = {
         const reimbursementStatus = formData.get('reimbursement_status');
         const reimbursementDoc = formData.get('reimbursement_documentation');
         const existingDoc = document.querySelector('[data-existing-reimbursement-doc]')?.dataset.existingReimbursementDoc;
+        const removeReimbDoc = formData.get('remove_reimbursement_documentation');
     
-        if (reimbursementStatus === 'completed' && !reimbursementDoc && !existingDoc) {
-            this.showFlashMessage('Supporting reimbursement documentation required to mark this as Complete.', 'danger');
-            return false;
+        // Only validate if status is 'completed' and document is being required
+        if (reimbursementStatus === 'completed' && !removeReimbDoc) {
+            if (!reimbursementDoc && !existingDoc) {
+                this.showFlashMessage('Supporting reimbursement documentation required to mark this as Complete.', 'danger');
+                return false;
+            }
         }
         return true;
     },
@@ -402,11 +407,6 @@ const addTransactionsModule = {
             return false;
         }
     
-        if (!documentationFile || !documentationFile.files || documentationFile.files.length === 0) {
-            console.error('No documentation file provided.');
-            this.showFlashMessage('Please attach supporting documentation for the transaction.', 'error');
-            return false;
-        }
         // Add other validation checks here
         return true;
     },

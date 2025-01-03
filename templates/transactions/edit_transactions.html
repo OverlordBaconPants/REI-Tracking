@@ -9,6 +9,8 @@
     <h2 class="mb-4">Edit Transaction</h2>
 
     <form id="edit-transaction-form" method="POST" enctype="multipart/form-data" data-filters="{{ filters|tojson|safe }}" action="{{ url_for('transactions.edit_transactions', transaction_id=transaction.id) }}">
+        <input type="hidden" id="remove_transaction_documentation" name="remove_transaction_documentation" value="false">
+        <input type="hidden" id="remove_reimbursement_documentation" name="remove_reimbursement_documentation" value="false">
         <div class="row">
             <div class="col-md-6">
                 <div class="form-group mb-3">
@@ -79,10 +81,23 @@
                     <label for="documentation_file">Documentation:</label>
                     {% if transaction.documentation_file %}
                         <div class="current-file mb-2">
-                            Current file: <a href="{{ url_for('transactions.get_artifact', filename=transaction.documentation_file) }}" target="_blank">{{ transaction.documentation_file }}</a>
+                            <div class="d-flex align-items-center gap-2">
+                                <a href="{{ url_for('transactions.get_artifact', filename=transaction.documentation_file) }}" 
+                                   target="_blank" 
+                                   class="btn btn-sm btn-primary">
+                                    View Current Document
+                                </a>
+                                <button type="button" 
+                                    class="btn btn-sm btn-danger document-remove-btn" 
+                                    data-document-type="transaction"
+                                    onclick="console.log('Button clicked directly');">
+                                Remove Document
+                            </button>
+                            </div>
                         </div>
                     {% endif %}
                     <input type="file" class="form-control" id="documentation_file" name="documentation_file">
+                    <input type="hidden" id="remove_transaction_documentation" name="remove_transaction_documentation" value="false">
                 </div>
             </div>
         </div>
@@ -130,12 +145,23 @@
                                 <label for="reimbursement_documentation">Reimbursement Documentation:</label>
                                 {% if transaction.reimbursement and transaction.reimbursement.documentation %}
                                     <div class="current-file mb-2">
-                                        Current file: <a href="{{ url_for('transactions.get_artifact', filename=transaction.reimbursement.documentation) }}" target="_blank">
-                                            {{ transaction.reimbursement.documentation }}
-                                        </a>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <a href="{{ url_for('transactions.get_artifact', filename=transaction.reimbursement.documentation) }}" 
+                                               target="_blank"
+                                               class="btn btn-sm btn-primary">
+                                                View Current Document
+                                            </a>
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-danger document-remove-btn" 
+                                                    data-document-type="reimbursement"
+                                                    onclick="console.log('Button clicked directly');">
+                                                Remove Document
+                                            </button>
+                                        </div>
                                     </div>
                                 {% endif %}
                                 <input type="file" class="form-control" id="reimbursement_documentation" name="reimbursement_documentation">
+                                <input type="hidden" id="remove_reimbursement_documentation" name="remove_reimbursement_documentation" value="false">
                             </div>
                         </div>
                     </div>
@@ -143,23 +169,95 @@
             </div>
         </div>
 
-        <!-- Add hidden fields for single-owner cases -->
-        <input type="hidden" id="date_shared" name="date_shared" value="">
-        <input type="hidden" id="reimbursement_status" name="reimbursement_status" value="">
-
         <div class="mt-3">
             <button type="submit" id="updateTransactionButton" class="btn btn-primary">Update Transaction</button>
             <a href="{{ url_for('transactions.view_transactions') }}?filters={{ filters }}&message=Transaction edit cancelled&message_type=info" 
                class="btn btn-secondary ms-2">Cancel</a>
         </div>
     </form>
+
+    <!-- Document Removal Confirmation Modal -->
+    <div class="modal fade" id="documentRemovalModal" tabindex="-1" aria-labelledby="documentRemovalModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="documentRemovalModalLabel">Confirm Document Removal</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Are you sure you want to remove this document?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmDocumentRemoval">Remove</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 {% endblock %}
 
 {% block extra_js %}
-<script type="module">
-    import editTransactionsModule from '/static/js/edit_transactions.js';
+<!-- First add console log to verify scripts are running -->
+<script>
+    console.log('Basic script test');
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('DOM loaded');
+        const removeButtons = document.querySelectorAll('.document-remove-btn');
+        console.log('Found remove buttons:', removeButtons.length);
+    });
+</script>
 
+<!-- Main module script -->
+<script type="module">
+    import editTransactionsModule from '/static/js/modules/edit_transactions.js';
+    
+    function initializeDocumentRemoval() {
+        console.log('Initializing document removal system');
+        
+        // Get all remove buttons
+        const removeButtons = document.querySelectorAll('.document-remove-btn');
+        console.log('Found remove buttons:', removeButtons);
+        
+        removeButtons.forEach(button => {
+            console.log('Setting up button:', button);
+            button.addEventListener('click', function(event) {
+                event.preventDefault();
+                event.stopPropagation();
+                const documentType = this.getAttribute('data-document-type');
+                console.log('Button clicked for document type:', documentType);
+                if (editTransactionsModule.handleDocumentRemoval) {
+                    editTransactionsModule.handleDocumentRemoval(documentType);
+                } else {
+                    console.error('handleDocumentRemoval not found on module');
+                }
+            });
+        });
+    }
+
+    // Wait for both DOM and Bootstrap to be ready
+    const initializeWhenReady = () => {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                // Ensure Bootstrap is loaded
+                if (typeof bootstrap !== 'undefined') {
+                    initializeDocumentRemoval();
+                } else {
+                    console.error('Bootstrap not loaded');
+                }
+            });
+        } else {
+            // Ensure Bootstrap is loaded
+            if (typeof bootstrap !== 'undefined') {
+                initializeDocumentRemoval();
+            } else {
+                console.error('Bootstrap not loaded');
+            }
+        }
+    };
+    
+    initializeWhenReady();
 </script>
 {% endblock %}

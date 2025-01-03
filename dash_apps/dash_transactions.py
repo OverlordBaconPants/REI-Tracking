@@ -4,6 +4,7 @@ from dash import dcc, html, dash_table, Input, Output, State
 import dash_bootstrap_components as dbc
 
 # Data handling imports
+import requests
 import pandas as pd
 import json
 import urllib.parse
@@ -11,7 +12,7 @@ from datetime import datetime, timedelta
 
 # Flask imports
 from flask_login import current_user
-from flask import current_app, url_for
+from flask import current_app, url_for, session
 
 # PDF Report imports
 import io
@@ -179,6 +180,7 @@ def create_transactions_dash(flask_app):
             'https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css'
         ],
         external_scripts=[
+            'https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js',  # Add jQuery first
             'https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js'
         ]
     )
@@ -188,23 +190,41 @@ def create_transactions_dash(flask_app):
         # Add FilterManager at the top
         html.Div(id='filter-manager'),
 
-        # State management stores
-        dcc.Store(id='refresh-trigger', storage_type='memory'),
+        # State management stores - consolidated
+        dcc.Store(id='refresh-trigger', storage_type='memory', data=datetime.now().isoformat()),
+        dcc.Store(id='delete-transaction-id', storage_type='memory'),
         dcc.Store(id='filter-options', storage_type='session'),
+        
+        # Delete Modal
+        dbc.Modal([
+            dbc.ModalHeader("Delete Transaction"),
+            dbc.ModalBody("Are you sure you want to delete this transaction?"),
+            dbc.ModalFooter([
+                dbc.Button("Cancel", id="delete-cancel", className="ms-auto"),
+                dbc.Button("Delete", id="delete-confirm", color="danger"),
+            ]),
+        ], id="delete-modal", is_open=False),
         
         # Initialize toastr
         html.Script("""
             window.addEventListener('load', function() {
-                if (window.toastr) {
-                    toastr.options = {
-                        closeButton: true,
-                        newestOnTop: false,
-                        progressBar: true,
-                        positionClass: "toast-bottom-right",
-                        preventDuplicates: false,
-                        timeOut: 5000
-                    };
-                }
+                toastr.options = {
+                    "closeButton": true,
+                    "debug": false,
+                    "newestOnTop": false,
+                    "progressBar": true,
+                    "positionClass": "toast-bottom-right",
+                    "preventDuplicates": true,
+                    "onclick": null,
+                    "showDuration": "300",
+                    "hideDuration": "1000",
+                    "timeOut": "5000",
+                    "extendedTimeOut": "1000",
+                    "showEasing": "swing",
+                    "hideEasing": "linear",
+                    "showMethod": "fadeIn",
+                    "hideMethod": "fadeOut"
+                };
             });
         """),
         
@@ -440,20 +460,21 @@ def create_transactions_dash(flask_app):
     # Register callbacks
     @dash_app.callback(
         [Output('transactions-table', 'data'),
-         Output('transactions-header', 'children'),
-         Output('property-filter', 'options'),
-         Output('transactions-table', 'columns'),
-         Output('reimbursement-info', 'children')],
+        Output('transactions-header', 'children'),
+        Output('property-filter', 'options'),
+        Output('transactions-table', 'columns'),
+        Output('reimbursement-info', 'children')],
         [Input('refresh-trigger', 'data'),
-         Input('property-filter', 'value'),
-         Input('type-filter', 'value'),
-         Input('reimbursement-filter', 'value'),
-         Input('date-range', 'start_date'),
-         Input('date-range', 'end_date'),
-         Input('description-search', 'value')]
+        Input('property-filter', 'value'),
+        Input('type-filter', 'value'),
+        Input('reimbursement-filter', 'value'),
+        Input('date-range', 'start_date'),
+        Input('date-range', 'end_date'),
+        Input('description-search', 'value')]
     )
     def update_table(refresh_trigger, property_id, transaction_type, reimbursement_status, 
                     start_date, end_date, description_search):
+        current_app.logger.debug(f"Table refresh triggered. Refresh value: {refresh_trigger}")
         try:
             logger.debug(f"Updating table with filters: property={property_id}, "
                         f"type={transaction_type}, status={reimbursement_status}, "
@@ -653,6 +674,21 @@ def create_transactions_dash(flask_app):
                     )
                     columns.append({'name': 'Edit', 'id': 'edit', 'presentation': 'markdown'})
 
+                    # Update the columns definition to include delete button for property managers
+                    df['delete'] = df.apply(
+                        lambda row: (
+                            f'<a href="#" class="btn btn-sm btn-danger" '
+                            f'data-action="delete-transaction" '
+                            f'data-id="{str(row["id"])}" '
+                            f'data-description="{row["description"]}">'
+                            f'Delete</a>'
+                            if property_manager_status.get(row['property_id'], False)
+                            else '<span class="text-muted">Delete Restricted</span>'
+                        ),
+                        axis=1
+                    )
+                    columns.append({'name': 'Delete', 'id': 'delete', 'presentation': 'markdown'})
+
                 # Create header
                 header = create_header(
                     'Income' if transaction_type == 'income' else 'Expense' if transaction_type == 'expense' else 'All',
@@ -695,6 +731,125 @@ def create_transactions_dash(flask_app):
             'description_search': description_search  # Add this new field
         }
     
+    @dash_app.callback(
+        [Output("delete-modal", "is_open"),
+        Output("delete-transaction-id", "data"),
+        Output("refresh-trigger", "data")],
+        [Input("transactions-table", "active_cell"),
+        Input("delete-cancel", "n_clicks"),
+        Input("delete-confirm", "n_clicks")],
+        [State("transactions-table", "data"),
+        State("delete-modal", "is_open"),
+        State("delete-transaction-id", "data"),
+        State("refresh-trigger", "data")],
+        prevent_initial_call=True
+    )
+    def manage_delete_modal(active_cell, cancel_clicks, confirm_clicks, 
+                        table_data, is_open, transaction_id, current_refresh):
+        ctx = dash.callback_context
+        if not ctx.triggered:
+            return False, None, dash.no_update
+        
+        trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+        
+        if trigger_id == "transactions-table":
+            if active_cell:
+                row = table_data[active_cell["row"]]
+                if (active_cell["column_id"] == "delete" and 
+                    'data-action="delete-transaction"' in row["delete"]):
+                    import re
+                    match = re.search(r'data-id="([^"]+)"', row["delete"])
+                    if match:
+                        return True, match.group(1), dash.no_update
+        
+        elif trigger_id == "delete-confirm" and confirm_clicks:
+            if transaction_id:
+                try:
+                    with current_app.test_client() as client:
+                        with client.session_transaction() as sess:
+                            for key in session:
+                                sess[key] = session[key]
+                            sess['_user_id'] = current_user.get_id()
+                            sess['_fresh'] = True
+                        
+                        response = client.delete(f'/transactions/delete/{transaction_id}')
+                        
+                        if response.status_code == 200:
+                            response_data = response.get_json()
+                            if response_data and response_data.get('success'):
+                                return False, 'deleted', datetime.now().isoformat()
+                        
+                        return True, transaction_id, dash.no_update
+                            
+                except Exception as e:
+                    current_app.logger.error(f"Error in delete process: {str(e)}")
+                    return True, transaction_id, dash.no_update
+        
+        elif trigger_id == "delete-cancel":
+            return False, None, dash.no_update
+            
+        return is_open, transaction_id, dash.no_update
+
+    # Add clientside callback for showing toastr messages
+    dash_app.clientside_callback(
+        """
+        function(data, columns, header) {
+            if (window.delete_transaction_id === 'deleted') {
+                setTimeout(() => {
+                    try {
+                        if (typeof jQuery !== 'undefined' && typeof toastr !== 'undefined') {
+                            jQuery(document).ready(function($) {
+                                toastr.options = {
+                                    "closeButton": true,
+                                    "debug": false,
+                                    "newestOnTop": false,
+                                    "progressBar": true,
+                                    "positionClass": "toast-bottom-right",
+                                    "preventDuplicates": true,
+                                    "onclick": null,
+                                    "showDuration": "300",
+                                    "hideDuration": "1000",
+                                    "timeOut": "5000",
+                                    "extendedTimeOut": "1000",
+                                    "showEasing": "swing",
+                                    "hideEasing": "linear",
+                                    "showMethod": "fadeIn",
+                                    "hideMethod": "fadeOut"
+                                };
+                                toastr.success('Transaction deleted successfully');
+                            });
+                        } else {
+                            console.log('jQuery or toastr not loaded yet');
+                        }
+                    } catch (e) {
+                        console.error('Error showing toastr notification:', e);
+                    }
+                }, 500); // Increased delay to ensure libraries are loaded
+                window.delete_transaction_id = null;
+            }
+            return window.dash_clientside.no_update;
+        }
+        """,
+        Output('transactions-table', 'data', allow_duplicate=True),
+        [Input('transactions-table', 'data'),
+        Input('transactions-table', 'columns'),
+        Input('transactions-header', 'children')],
+        prevent_initial_call=True
+    )
+
+    # Add store for delete status
+    dash_app.clientside_callback(
+        """
+        function(delete_transaction_id) {
+            window.delete_transaction_id = delete_transaction_id;
+            return window.dash_clientside.no_update;
+        }
+        """,
+        Output('delete-transaction-id', 'data', allow_duplicate=True),
+        Input('delete-transaction-id', 'data'),
+        prevent_initial_call=True
+    )
+
     @dash_app.callback(
         Output("download-pdf", "data"),
         Output("download-status", "children", allow_duplicate=True),
@@ -841,19 +996,6 @@ def create_transactions_dash(flask_app):
         except Exception as e:
             current_app.logger.error(f"Error generating ZIP: {str(e)}")
             return None, html.Div("Error generating ZIP archive", className="text-danger")
-
-
-    # Initial data load clientside callback
-    dash_app.clientside_callback(
-        """
-        function(n) {
-            return '';
-        }
-        """,
-        Output('refresh-trigger', 'data'),
-        Input('refresh-trigger', 'data'),
-        prevent_initial_call=False
-    )
 
     @dash_app.callback(
         [Output('property-filter', 'value'),

@@ -283,7 +283,9 @@ def edit_transactions(transaction_id):
             try:
                 current_app.logger.info(f"Processing POST request to edit transaction ID: {transaction_id}")
                 form_data = request.form.to_dict()
+                current_app.logger.debug(f"Form data received: {form_data}")
                 
+                # Create updated transaction dict
                 updated_transaction = {
                     'id': transaction_id,
                     'property_id': form_data.get('property_id'),
@@ -293,16 +295,58 @@ def edit_transactions(transaction_id):
                     'amount': float(form_data.get('amount')),
                     'date': form_data.get('date'),
                     'collector_payer': form_data.get('collector_payer'),
-                    'documentation_file': transaction.get('documentation_file'),
                     'reimbursement': {
                         'date_shared': form_data.get('date_shared'),
                         'share_description': form_data.get('share_description'),
                         'reimbursement_status': form_data.get('reimbursement_status'),
-                        'documentation': transaction.get('reimbursement', {}).get('documentation')
+                        'documentation': None
                     }
                 }
 
-                # Handle file uploads
+                # Check for document removal flags
+                remove_transaction_doc = form_data.get('remove_transaction_documentation') == 'true'
+                remove_reimbursement_doc = form_data.get('remove_reimbursement_documentation') == 'true'
+                
+                current_app.logger.debug(f"Document removal flags: transaction={remove_transaction_doc}, reimbursement={remove_reimbursement_doc}")
+
+                # Handle transaction documentation
+                if remove_transaction_doc:
+                    current_app.logger.info("Removing transaction documentation")
+                    updated_transaction['documentation_file'] = None
+                    # Delete the actual file if it exists
+                    if transaction.get('documentation_file'):
+                        try:
+                            file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], transaction['documentation_file'])
+                            if os.path.exists(file_path):
+                                os.remove(file_path)
+                                current_app.logger.info(f"Deleted file: {file_path}")
+                        except Exception as e:
+                            current_app.logger.error(f"Error deleting file: {str(e)}")
+                else:
+                    # Keep existing documentation unless new file uploaded
+                    updated_transaction['documentation_file'] = transaction.get('documentation_file')
+
+                # Handle reimbursement documentation
+                if remove_reimbursement_doc:
+                    current_app.logger.info("Removing reimbursement documentation")
+                    updated_transaction['reimbursement']['documentation'] = None
+                    # Delete the actual file if it exists
+                    if transaction.get('reimbursement', {}).get('documentation'):
+                        try:
+                            file_path = os.path.join(current_app.config['REIMBURSEMENTS_DIR'], 
+                                                   transaction['reimbursement']['documentation'])
+                            if os.path.exists(file_path):
+                                os.remove(file_path)
+                                current_app.logger.info(f"Deleted reimbursement file: {file_path}")
+                        except Exception as e:
+                            current_app.logger.error(f"Error deleting reimbursement file: {str(e)}")
+                else:
+                    # Keep existing documentation unless new file uploaded
+                    updated_transaction['reimbursement']['documentation'] = (
+                        transaction.get('reimbursement', {}).get('documentation')
+                    )
+
+                # Handle new file uploads if present
                 if 'documentation_file' in request.files:
                     file = request.files['documentation_file']
                     if file and file.filename:
@@ -312,7 +356,6 @@ def edit_transactions(transaction_id):
                             file.save(file_path)
                             updated_transaction['documentation_file'] = filename
 
-                # When handling reimbursement file uploads
                 if 'reimbursement_documentation' in request.files:
                     file = request.files['reimbursement_documentation']
                     if file and file.filename:
@@ -322,6 +365,7 @@ def edit_transactions(transaction_id):
                             file.save(file_path)
                             updated_transaction['reimbursement']['documentation'] = filename
 
+                current_app.logger.debug(f"Updating transaction with data: {json.dumps(updated_transaction, indent=2)}")
                 update_transaction(updated_transaction)
                 
                 # Redirect with filters and success message
@@ -330,13 +374,13 @@ def edit_transactions(transaction_id):
 
             except Exception as e:
                 current_app.logger.error(f"Error updating transaction: {str(e)}")
+                current_app.logger.error(f"Traceback: {traceback.format_exc()}")
                 flash_message(f'Error updating transaction: {str(e)}', 'error')
                 return redirect(url_for('transactions.edit_transactions', 
                     transaction_id=transaction_id, 
                     filters=filters))
 
         # GET request: render the edit form
-        properties = get_properties_for_user(current_user.id, current_user.name, current_user.role == 'Admin')
         return render_template(
             'transactions/edit_transactions.html',
             transaction=transaction,
@@ -346,6 +390,7 @@ def edit_transactions(transaction_id):
 
     except Exception as e:
         current_app.logger.error(f"Error in edit_transactions: {str(e)}")
+        current_app.logger.error(f"Traceback: {traceback.format_exc()}")
         flash_message(f'Error: {str(e)}', 'error')
         return redirect(url_for('transactions.view_transactions'))
 
@@ -453,41 +498,88 @@ def debug_api_test():
 @login_required
 def delete_transaction(transaction_id):
     try:
-        # Get the property ID from the request body
-        data = request.get_json()
-        property_id = data.get('property_id')
+        current_app.logger.debug(f"Delete endpoint called for transaction {transaction_id}")
+        current_app.logger.debug(f"Current user: {current_user.name} (ID: {current_user.id})")
         
-        if not property_id:
-            return jsonify({'success': False, 'message': 'Property ID is required'}), 400
-            
         # Get the transaction
         transaction = get_transaction_by_id(transaction_id)
         if not transaction:
+            current_app.logger.error(f"Transaction {transaction_id} not found")
             return jsonify({'success': False, 'message': 'Transaction not found'}), 404
             
+        current_app.logger.debug(f"Found transaction: {json.dumps(transaction, indent=2)}")
+        
+        # Get properties to verify property manager status
+        properties = get_properties_for_user(current_user.id, current_user.name, current_user.role == 'Admin')
+        
         # Check if user is property manager for this property
-        properties = get_properties_for_user(current_user.id, current_user.name)
-        property_data = next((p for p in properties if p['address'] == property_id), None)
+        property_data = next(
+            (prop for prop in properties if prop['address'] == transaction['property_id']),
+            None
+        )
         
         if not property_data:
+            current_app.logger.error(f"Property not found for transaction {transaction_id}")
             return jsonify({'success': False, 'message': 'Property not found'}), 404
             
-        is_manager = any(
+        current_app.logger.debug(f"Found property data: {json.dumps(property_data, indent=2)}")
+        
+        is_property_manager = any(
             partner['name'] == current_user.name and 
             partner.get('is_property_manager', False)
             for partner in property_data.get('partners', [])
         )
         
-        if not is_manager:
-            return jsonify({'success': False, 'message': 'Not authorized to delete transactions'}), 403
+        current_app.logger.debug(f"Is property manager: {is_property_manager}")
+        current_app.logger.debug(f"Is admin: {current_user.role == 'Admin'}")
+        
+        if not is_property_manager and current_user.role != 'Admin':
+            current_app.logger.error("User not authorized to delete transaction")
+            return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+        
+        # Delete the transaction from the JSON file
+        data_file = os.path.join(current_app.config['DATA_DIR'], 'transactions.json')
+        current_app.logger.debug(f"Reading transactions from: {data_file}")
+        
+        with open(data_file, 'r') as f:
+            transactions = json.load(f)
             
-        # Delete the transaction
-        transactions = read_json(current_app.config['TRANSACTIONS_FILE'])
-        transactions = [t for t in transactions if t['id'] != str(transaction_id)]
-        write_json(current_app.config['TRANSACTIONS_FILE'], transactions)
+        current_app.logger.debug(f"Found {len(transactions)} transactions")
+        original_count = len(transactions)
         
-        return jsonify({'success': True})
+        # Filter out the transaction to delete - ensure IDs are compared as integers
+        transactions = [t for t in transactions if int(t['id']) != int(transaction_id)]
         
+        current_app.logger.debug(f"After filtering: {len(transactions)} transactions")
+        if len(transactions) == original_count:
+            current_app.logger.error(f"Transaction {transaction_id} was not filtered out")
+            return jsonify({'success': False, 'message': 'Transaction not removed'}), 500
+            
+        # Write back to the file
+        with open(data_file, 'w') as f:
+            json.dump(transactions, f, indent=2)
+            
+        current_app.logger.info(f"Successfully deleted transaction {transaction_id}")
+        
+        # Delete associated files if they exist
+        if transaction.get('documentation_file'):
+            file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], transaction['documentation_file'])
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                current_app.logger.debug(f"Deleted documentation file: {file_path}")
+                
+        if transaction.get('reimbursement', {}).get('documentation'):
+            reimb_file_path = os.path.join(
+                current_app.config['REIMBURSEMENTS_DIR'], 
+                transaction['reimbursement']['documentation']
+            )
+            if os.path.exists(reimb_file_path):
+                os.remove(reimb_file_path)
+                current_app.logger.debug(f"Deleted reimbursement file: {reimb_file_path}")
+            
+        return jsonify({'success': True, 'message': 'Transaction deleted successfully'}), 200
+            
     except Exception as e:
         current_app.logger.error(f"Error deleting transaction: {str(e)}")
-        return jsonify({'success': False, 'message': str(e)}), 500
+        current_app.logger.error(f"Full traceback: {traceback.format_exc()}")
+        return jsonify({'success': False, 'message': f'Error deleting transaction: {str(e)}'}), 500

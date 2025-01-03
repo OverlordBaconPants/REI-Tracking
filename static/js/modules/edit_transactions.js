@@ -2,14 +2,26 @@ const editTransactionsModule = {
     form: null,
     elements: {},
     initialValues: {},
+    documentRemovalModal: null,
+    pendingDocumentRemoval: null,
 
     init: async function() {
         console.log('Form found, initializing components');
         this.form = document.getElementById('edit-transaction-form');
         
+        // Initialize Bootstrap modal first
+        const modalElement = document.getElementById('documentRemovalModal');
+        if (modalElement) {
+            this.documentRemovalModal = new bootstrap.Modal(modalElement);
+            console.log('Modal initialized successfully');
+        } else {
+            console.error('Modal element not found');
+        }
+        
         if (this.form) {
             console.log('Starting module initialization');
             await this.initializeModule();
+            this.initDocumentRemovalHandlers();
         } else {
             console.error('Edit transaction form not found');
         }
@@ -24,8 +36,23 @@ const editTransactionsModule = {
             collectorPayer: document.getElementById('collector_payer'),
             type: document.querySelector('input[name="type"]:checked'),
             collectorPayerLabel: document.querySelector('label[for="collector_payer"]'),
-            typeRadios: document.querySelectorAll('input[name="type"]')
+            typeRadios: document.querySelectorAll('input[name="type"]'),
+            removeButtons: document.querySelectorAll('.document-remove-btn'),
+            confirmDocumentRemoval: document.getElementById('confirmDocumentRemoval')
         };
+    
+        console.log('Found remove buttons:', this.elements.removeButtons);
+    
+        // Add click handlers for remove buttons
+        this.elements.removeButtons.forEach(button => {
+            console.log('Adding click handler to button:', button);
+            button.addEventListener('click', (e) => {
+                e.preventDefault();
+                const documentType = button.dataset.documentType;
+                console.log('Remove button clicked for:', documentType);
+                this.handleDocumentRemoval(documentType);
+            });
+        });
 
         console.log('Initial elements:', this.elements);
 
@@ -56,8 +83,6 @@ const editTransactionsModule = {
         const initialType = this.initialValues.typeValue || 'expense';
         await this.populateCategories(initialType);
         this.updateCollectorPayerLabel(initialType);
-        console.log('Categories populated');
-
         await this.updateCollectorPayerOptions();
         
         // Set initial collector/payer value if it exists
@@ -65,10 +90,7 @@ const editTransactionsModule = {
             this.elements.collectorPayer.value = this.initialValues.collectorPayerDataset;
         }
         
-        // Now that everything is initialized, update reimbursement details
         this.updateReimbursementDetails();
-        
-        // Initialize other event listeners
         this.initEventListeners();
     },
 
@@ -456,22 +478,7 @@ const editTransactionsModule = {
         let isValid = true;
         let firstInvalidField = null;
 
-        // Validate radio button group for type
-        const typeRadios = this.form.querySelectorAll('input[name="type"]');
-        const typeSelected = Array.from(typeRadios).some(radio => radio.checked);
-        
-        if (!typeSelected) {
-            isValid = false;
-            toastr.error('Transaction type is required');
-            if (!firstInvalidField) {
-                firstInvalidField = typeRadios[0];
-            }
-            typeRadios.forEach(radio => {
-                radio.closest('.form-check').classList.add('is-invalid');
-            });
-        }
-
-        // Validate other required fields
+        // Validate required fields
         const requiredFields = [
             'property_id',
             'category',
@@ -510,6 +517,17 @@ const editTransactionsModule = {
             }
         });
 
+        // Validate type selection
+        const typeRadios = document.querySelectorAll('input[name="type"]');
+        const typeSelected = Array.from(typeRadios).some(radio => radio.checked);
+        if (!typeSelected) {
+            isValid = false;
+            toastr.error('Transaction type is required');
+            typeRadios.forEach(radio => {
+                radio.closest('.form-check').classList.add('is-invalid');
+            });
+        }
+
         // Amount validation
         const amountElement = document.getElementById('amount');
         if (amountElement && amountElement.value.trim()) {
@@ -531,14 +549,171 @@ const editTransactionsModule = {
         return isValid;
     },
 
+    initDocumentRemovalHandlers: function() {
+        console.log('Initializing document removal handlers');
+        
+        // Clean up existing event listeners first
+        const oldConfirmButton = document.getElementById('confirmDocumentRemoval');
+        const newConfirmButton = oldConfirmButton.cloneNode(true);
+        oldConfirmButton.parentNode.replaceChild(newConfirmButton, oldConfirmButton);
+        
+        // Add new click listener to confirm button
+        newConfirmButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Confirm button clicked');
+            this.confirmDocumentRemoval();
+        });
+        console.log('Added click listener to confirm button');
+
+        // Clean up and reinitialize remove buttons
+        document.querySelectorAll('.document-remove-btn').forEach(button => {
+            const newButton = button.cloneNode(true);
+            button.parentNode.replaceChild(newButton, button);
+            
+            newButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const documentType = newButton.getAttribute('data-document-type');
+                console.log('Remove button clicked for:', documentType);
+                this.handleDocumentRemoval(documentType);
+            });
+
+            // Remove the inline onclick attribute
+            newButton.removeAttribute('onclick');
+        });
+    },
+
+    handleDocumentRemoval: function(documentType) {
+        console.log(`handleDocumentRemoval called for ${documentType}`);
+        
+        // Validate document type
+        if (!['transaction', 'reimbursement'].includes(documentType)) {
+            console.error('Invalid document type:', documentType);
+            return;
+        }
+
+        if (!this.documentRemovalModal) {
+            console.error('Modal not initialized');
+            // Try to initialize modal if it wasn't done earlier
+            const modalElement = document.getElementById('documentRemovalModal');
+            if (modalElement) {
+                this.documentRemovalModal = new bootstrap.Modal(modalElement);
+                console.log('Modal initialized on demand');
+            } else {
+                console.error('Modal element still not found');
+                return;
+            }
+        }
+
+        // Store the document type for later use
+        this.pendingDocumentRemoval = documentType;
+        
+        // Update modal text to be more specific
+        const modalBody = document.querySelector('#documentRemovalModal .modal-body');
+        if (modalBody) {
+            modalBody.textContent = `Are you sure you want to remove this ${documentType} document?`;
+        }
+
+        console.log('Showing modal');
+        this.documentRemovalModal.show();
+    },
+
+    confirmDocumentRemoval: function() {
+        console.log('confirmDocumentRemoval called');
+        console.log('Pending document removal:', this.pendingDocumentRemoval);
+        
+        if (!this.pendingDocumentRemoval) {
+            console.warn('No pending document removal');
+            return;
+        }
+    
+        const documentType = this.pendingDocumentRemoval;
+        console.log('Processing removal for:', documentType);
+        
+        // Get the hidden input field
+        let removeField = document.querySelector(`input[name="remove_${documentType}_documentation"]`);
+        if (!removeField) {
+            removeField = document.createElement('input');
+            removeField.type = 'hidden';
+            removeField.name = `remove_${documentType}_documentation`;
+            removeField.id = `remove_${documentType}_documentation`;
+            this.form.appendChild(removeField);
+            console.log('Created missing remove field:', removeField);
+        }
+        console.log('Remove field found/created:', removeField);
+        
+        // Set the value and verify
+        removeField.value = 'true';
+        removeField.defaultValue = 'true'; // Set default value as well
+        console.log(`Set remove_${documentType}_documentation to:`, removeField.value);
+        
+        // Log all hidden fields
+        const allFields = {
+            transaction: document.querySelector('input[name="remove_transaction_documentation"]')?.value,
+            reimbursement: document.querySelector('input[name="remove_reimbursement_documentation"]')?.value
+        };
+        console.log('All remove field values:', allFields);
+
+        // Find and hide the document container
+        const documentContainer = document.querySelector(`.current-file:has(button[data-document-type="${documentType}"])`);
+        if (documentContainer) {
+            documentContainer.style.display = 'none';
+            console.log('Hidden document container:', documentType);
+
+            // Clear associated file input
+            const fileInput = document.getElementById(documentType === 'transaction' ? 'documentation_file' : 'reimbursement_documentation');
+            if (fileInput) {
+                fileInput.value = '';
+                console.log(`Cleared ${documentType} file input:`, fileInput.id);
+            }
+        } else {
+            console.warn(`${documentType} document container not found`);
+        }
+
+        // Debug form state
+        const formData = new FormData(this.form);
+        console.log('Form field names:', [...formData.keys()]);
+        console.log('Form field values:', Object.fromEntries(formData));
+    
+        // Update reimbursement status if needed
+        if (documentType === 'reimbursement') {
+            const statusSelect = document.getElementById('reimbursement_status');
+            if (statusSelect && statusSelect.value === 'completed') {
+                statusSelect.value = 'pending';
+                console.log('Updated reimbursement status to pending');
+            }
+        }
+    
+        // Show success message
+        toastr.success(`${documentType.charAt(0).toUpperCase() + documentType.slice(1)} document marked for removal`);
+        
+        // Hide modal and log final state
+        this.documentRemovalModal.hide();
+        console.log('Final form state:', {
+            formFields: [...new FormData(this.form).keys()],
+            removeFields: {
+                transaction: document.querySelector('input[name="remove_transaction_documentation"]')?.value,
+                reimbursement: document.querySelector('input[name="remove_reimbursement_documentation"]')?.value
+            }
+        });
+        
+        this.pendingDocumentRemoval = null;
+        console.log('Document removal process completed for:', documentType);
+    },
+
     validateReimbursementStatus: function(formData) {
         const reimbursementStatus = formData.get('reimbursement_status');
         const reimbursementDoc = formData.get('reimbursement_documentation');
         const existingDoc = document.querySelector('[data-existing-reimbursement-doc]')?.dataset.existingReimbursementDoc;
-
-        if (reimbursementStatus === 'completed' && !reimbursementDoc && !existingDoc) {
-            toastr.error('Supporting documentation required for completed reimbursement');
-            return false;
+        const removeReimbDoc = formData.get('remove_reimbursement_documentation');
+    
+        // Only validate if status is 'completed' and document is being required
+        if (reimbursementStatus === 'completed' && !removeReimbDoc) {
+            if (!reimbursementDoc && !existingDoc) {
+                toastr.error('Supporting reimbursement documentation required to mark this as Complete');
+                return false;
+            }
         }
         return true;
     },
@@ -566,7 +741,6 @@ const editTransactionsModule = {
                 throw new Error('Network response was not ok');
             }
     
-            // Get the current filters from the form's data attribute
             const filters = document.querySelector('form').dataset.filters || '{}';
     
             toastr.success('Transaction Successfully Edited', '', {
@@ -636,11 +810,31 @@ toastr.options = {
 
 // Initialize the module when the DOM is loaded
 if (typeof document !== 'undefined') {
-    document.addEventListener('DOMContentLoaded', () => {
-        if (document.getElementById('edit-transaction-form')) {
-            editTransactionsModule.init();
+    const initializeWhenReady = () => {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                // Ensure Bootstrap is loaded
+                if (typeof bootstrap !== 'undefined') {
+                    if (document.getElementById('edit-transaction-form')) {
+                        editTransactionsModule.init();
+                    }
+                } else {
+                    console.error('Bootstrap not loaded');
+                }
+            });
+        } else {
+            // Ensure Bootstrap is loaded
+            if (typeof bootstrap !== 'undefined') {
+                if (document.getElementById('edit-transaction-form')) {
+                    editTransactionsModule.init();
+                }
+            } else {
+                console.error('Bootstrap not loaded');
+            }
         }
-    });
+    };
+    
+    initializeWhenReady();
 }
 
 export default editTransactionsModule;
