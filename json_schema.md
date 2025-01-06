@@ -11,6 +11,8 @@
 - square_footage: integer
 - lot_size: integer
 - year_built: integer
+- bedrooms: integer
+- bathrooms: float
 
 - purchase_price: integer
 - after_repair_value: integer

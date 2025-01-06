@@ -30,6 +30,18 @@ class AnalysisService:
         'square_footage': {'type': 'integer'},
         'lot_size': {'type': 'integer'},
         'year_built': {'type': 'integer'},
+        'bedrooms': {'type': 'integer'},
+        'bathrooms': {'type': 'float'},
+
+        # Ballon Options
+        'has_balloon_payment': {'type': 'boolean'},
+        'balloon_due_date': {'type': 'string', 'format': 'date'},  # ISO format date
+        'balloon_refinance_ltv_percentage': {'type': 'float'},
+        'balloon_refinance_loan_amount': {'type': 'integer'},
+        'balloon_refinance_loan_interest_rate': {'type': 'float'},
+        'balloon_refinance_loan_term': {'type': 'integer'},
+        'balloon_refinance_loan_down_payment': {'type': 'integer'},
+        'balloon_refinance_loan_closing_costs': {'type': 'integer'},
 
         # Purchase details
         'purchase_price': {'type': 'integer'},

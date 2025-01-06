@@ -41,36 +41,37 @@ class ReportGenerator:
         ))
         
     def _create_page_template(self, doc):
-        """Create page template with header area and two columns."""
+        """Create page template with header and two columns."""
         # Header frame at top of page
         header_frame = Frame(
             doc.leftMargin,
-            doc.height - 0.75*inch,  # Move header up slightly
+            doc.height - 0.75*inch,
             doc.width,
             1*inch,
             id='header',
             showBoundary=0
         )
-        
-        # Two columns below header
+
+        # Left column for property and loan details
         left_column = Frame(
             doc.leftMargin,
             doc.bottomMargin,
-            (doc.width/2) - 6,  # Subtract 6 points for gutter
-            doc.height - 1.5*inch,  # Leave room for header plus small gap
+            (doc.width/2) - 6,
+            doc.height - 1.5*inch,
             id='left',
             showBoundary=0
         )
-        
+
+        # Right column for financial overview and operating expenses
         right_column = Frame(
-            doc.leftMargin + (doc.width/2) + 6,  # Add 6 points for gutter
+            doc.leftMargin + (doc.width/2) + 6,
             doc.bottomMargin,
             (doc.width/2) - 6,
-            doc.height - 2*inch,  # Same height as left column
+            doc.height - 1.5*inch,
             id='right',
             showBoundary=0
         )
-        
+
         return PageTemplate(
             id='TwoColumn',
             frames=[header_frame, left_column, right_column],
@@ -100,36 +101,32 @@ class ReportGenerator:
                 topMargin=0.5*inch,
                 bottomMargin=0.5*inch
             )
-            
+
             # Add page template
             doc.addPageTemplates([self._create_page_template(doc)])
-            
+
             # Build story (content) for the PDF
             story = []
-            
-            # Add header with logo
+
+            # Add header
             story.extend(self._create_header(data, doc))
-            
+
             # Left column content
             story.extend(self._create_property_section(data))
             story.extend(self._create_loan_section(data))
-            
-            # Force column break
+
+            # Force switch to right column
             story.append(FrameBreak())
-            
+
             # Right column content
             story.extend(self._create_financial_section(data))
             story.extend(self._create_expenses_section(data))
-            
-            # Add BRRRR section if applicable
-            if 'BRRRR' in data.get('analysis_type', ''):
-                story.extend(self._create_brrrr_section(data))
-            
+
             # Build the PDF
             doc.build(story)
             buffer.seek(0)
             return buffer
-            
+
         except Exception as e:
             logger.error(f"Error generating report: {str(e)}")
             raise
@@ -186,7 +183,9 @@ class ReportGenerator:
         property_data = [
             ["Purchase Price:", f"${data.get('purchase_price', 0):,.2f}"],
             ["After Repair Value:", f"${data.get('after_repair_value', 0):,.2f}"],
-            ["Renovation Costs:", f"${data.get('renovation_costs', 0):,.2f}"]
+            ["Renovation Costs:", f"${data.get('renovation_costs', 0):,.2f}"],
+            ["Bedrooms:", str(data.get('bedrooms', 0))],
+            ["Bathrooms:", f"{data.get('bathrooms', 0):.1f}"]
         ]
         
         table = Table(
@@ -210,40 +209,104 @@ class ReportGenerator:
     def _create_financial_section(self, data: Dict) -> list:
         """Create compact financial overview section."""
         elements = []
-        
-        elements.append(Paragraph("Financial Overview", self.styles['SectionHeader']))
-        
         metrics = data.get('calculated_metrics', {})
-        financial_data = [
-            ["Monthly Rent:", f"${data.get('monthly_rent', 0):,.2f}"],
-            ["Monthly Cash Flow:", metrics.get('monthly_cash_flow', '$0.00')],
-            ["Annual Cash Flow:", metrics.get('annual_cash_flow', '$0.00')],
-            ["Cash on Cash Return:", metrics.get('cash_on_cash_return', '0%')],
-            ["Total Cash Invested:", metrics.get('total_cash_invested', '$0.00')]
-        ]
-        
-        if 'BRRRR' in data.get('analysis_type', ''):
-            financial_data.extend([
-                ["Equity Captured:", metrics.get('equity_captured', '$0.00')],
-                ["Cash Recouped:", metrics.get('cash_recouped', '$0.00')]
-            ])
-        
-        table = Table(
-            financial_data,
-            colWidths=[1.2*inch, 2.3*inch],
-            style=TableStyle([
-                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-                ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
-                ('TEXTCOLOR', (0, 0), (-1, -1), self.BRAND_NAVY),
-                ('FONTSIZE', (0, 0), (-1, -1), 8),
-                ('PADDING', (0, 0), (-1, -1), 4),
-                ('ALIGN', (1, 0), (1, -1), 'RIGHT')
-            ])
+
+        elements.append(Paragraph("Financial Overview", self.styles['SectionHeader']))
+
+        # Check if we have balloon payment
+        has_balloon = data.get('has_balloon_payment') or (
+            data.get('balloon_refinance_loan_amount', 0) > 0 and
+            data.get('balloon_due_date') and
+            data.get('balloon_refinance_ltv_percentage', 0) > 0
         )
-        
-        elements.append(table)
+
+        if 'BRRRR' in data.get('analysis_type', ''):
+            # Purchase Details
+            purchase_data = [
+                ["Purchase Overview", ""],
+                ["Purchase Price:", f"${data.get('purchase_price', 0):,.2f}"],
+                ["Renovation Costs:", f"${data.get('renovation_costs', 0):,.2f}"],
+                ["After Repair Value:", f"${data.get('after_repair_value', 0):,.2f}"],
+                ["Equity Captured:", metrics.get('equity_captured', '$0.00')],
+                ["Cash Recouped:", metrics.get('cash_recouped', '$0.00')],
+                ["Total Project Costs:", metrics.get('total_project_costs', '$0.00')]
+            ]
+
+            table = self._create_metrics_table(purchase_data)
+            elements.append(table)
+            elements.append(Spacer(1, 0.1*inch))
+
+            # Income & Returns for BRRRR
+            income_data = [
+                ["Income & Returns", ""],
+                ["Monthly Rent:", f"${data.get('monthly_rent', 0):,.2f}"],
+                ["Monthly Cash Flow:", metrics.get('monthly_cash_flow', '$0.00')],
+                ["Annual Cash Flow:", metrics.get('annual_cash_flow', '$0.00')],
+                ["Cash on Cash Return:", metrics.get('cash_on_cash_return', '0%')],
+                ["Total Cash Invested:", metrics.get('total_cash_invested', '$0.00')],
+                ["ROI:", metrics.get('roi', '0%')]
+            ]
+
+            table = self._create_metrics_table(income_data)
+            elements.append(table)
+
+        else:  # LTR Analysis
+            if has_balloon:
+                # Pre-Balloon Financial Overview
+                pre_balloon_data = [
+                    ["Pre-Balloon Financial Overview", ""],
+                    ["Monthly Rent:", f"${data.get('monthly_rent', 0):,.2f}"],
+                    ["Monthly Cash Flow:", metrics.get('pre_balloon_monthly_cash_flow', '$0.00')],
+                    ["Annual Cash Flow:", metrics.get('pre_balloon_annual_cash_flow', '$0.00')],
+                    ["Cash on Cash Return:", metrics.get('cash_on_cash_return', '0%')],
+                    ["Total Cash Invested:", metrics.get('total_cash_invested', '$0.00')],
+                    ["Balloon Due Date:", datetime.fromisoformat(data['balloon_due_date']).strftime('%Y-%m-%d')]
+                ]
+
+                table = self._create_metrics_table(pre_balloon_data)
+                elements.append(table)
+                elements.append(Spacer(1, 0.1*inch))
+
+                # Post-Balloon Financial Overview
+                post_balloon_data = [
+                    ["Post-Balloon Financial Overview", ""],
+                    ["Monthly Rent:", f"${data.get('monthly_rent', 0):,.2f}"],
+                    ["Monthly Cash Flow:", metrics.get('post_balloon_monthly_cash_flow', '$0.00')],
+                    ["Annual Cash Flow:", metrics.get('post_balloon_annual_cash_flow', '$0.00')],
+                    ["Refinance Amount:", f"${data.get('balloon_refinance_loan_amount', 0):,.2f}"],
+                    ["Refinance LTV:", f"{data.get('balloon_refinance_ltv_percentage', 0)}%"],
+                    ["Monthly Payment Change:", metrics.get('monthly_payment_difference', '$0.00')],
+                    ["Refinance Closing Costs:", f"${data.get('balloon_refinance_loan_closing_costs', 0):,.2f}"]
+                ]
+
+                table = self._create_metrics_table(post_balloon_data)
+                elements.append(table)
+
+            else:
+                # Regular Financial Overview (no balloon payment)
+                financial_data = [
+                    ["Monthly Rent:", f"${data.get('monthly_rent', 0):,.2f}"],
+                    ["Monthly Cash Flow:", metrics.get('monthly_cash_flow', '$0.00')],
+                    ["Annual Cash Flow:", metrics.get('annual_cash_flow', '$0.00')],
+                    ["Cash on Cash Return:", metrics.get('cash_on_cash_return', '0%')],
+                    ["Total Cash Invested:", metrics.get('total_cash_invested', '$0.00')]
+                ]
+
+                table = Table(
+                    financial_data,
+                    colWidths=[1.2*inch, 2.3*inch],
+                    style=TableStyle([
+                        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                        ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
+                        ('TEXTCOLOR', (0, 0), (-1, -1), self.BRAND_NAVY),
+                        ('FONTSIZE', (0, 0), (-1, -1), 8),
+                        ('PADDING', (0, 0), (-1, -1), 4),
+                        ('ALIGN', (1, 0), (1, -1), 'RIGHT')
+                    ])
+                )
+                elements.append(table)
+
         elements.append(Spacer(1, 6))
-        
         return elements
 
     def _create_loan_section(self, data: Dict) -> list:
@@ -356,21 +419,29 @@ class ReportGenerator:
         
         elements.append(Paragraph("Operating Expenses", self.styles['SectionHeader']))
         
+        # Calculate dollar amounts based on monthly rent
+        monthly_rent = float(data.get('monthly_rent', 0))
+        management_dollars = monthly_rent * (float(data.get('management_fee_percentage', 0)) / 100)
+        capex_dollars = monthly_rent * (float(data.get('capex_percentage', 0)) / 100)
+        vacancy_dollars = monthly_rent * (float(data.get('vacancy_percentage', 0)) / 100)
+        repairs_dollars = monthly_rent * (float(data.get('repairs_percentage', 0)) / 100)
+        
         # Fixed expenses
         expense_data = [
             ["Property Taxes:", f"${data.get('property_taxes', 0):,.2f}"],
             ["Insurance:", f"${data.get('insurance', 0):,.2f}"],
             ["HOA/COA/COOP:", f"${data.get('hoa_coa_coop', 0):,.2f}"],
-            ["Management:", f"{data.get('management_fee_percentage', 0)}%"],
-            ["CapEx:", f"{data.get('capex_percentage', 0)}%"],
-            ["Vacancy:", f"{data.get('vacancy_percentage', 0)}%"],
-            ["Repairs:", f"{data.get('repairs_percentage', 0)}%"]
+            ["Management:", f"({data.get('management_fee_percentage', 0)}%) ${management_dollars:,.2f}"],
+            ["CapEx:", f"({data.get('capex_percentage', 0)}%) ${capex_dollars:,.2f}"],
+            ["Vacancy:", f"({data.get('vacancy_percentage', 0)}%) ${vacancy_dollars:,.2f}"],
+            ["Repairs:", f"({data.get('repairs_percentage', 0)}%) ${repairs_dollars:,.2f}"]
         ]
         
         # Add PadSplit-specific expenses if applicable
         if 'PadSplit' in data.get('analysis_type', ''):
+            platform_dollars = monthly_rent * (float(data.get('padsplit_platform_percentage', 0)) / 100)
             expense_data.extend([
-                ["Platform Fee:", f"{data.get('padsplit_platform_percentage', 0)}%"],
+                ["Platform Fee:", f"({data.get('padsplit_platform_percentage', 0)}%) ${platform_dollars:,.2f}"],
                 ["Utilities:", f"${data.get('utilities', 0):,.2f}"],
                 ["Internet:", f"${data.get('internet', 0):,.2f}"],
                 ["Cleaning:", f"${data.get('cleaning', 0):,.2f}"],
@@ -395,6 +466,25 @@ class ReportGenerator:
         elements.append(Spacer(1, 6))
         
         return elements
+
+    def _create_metrics_table(self, data: List[List[str]]) -> Table:
+        """Helper method to create consistently styled metrics tables."""
+        return Table(
+            data,
+            colWidths=[1.2*inch, 2.3*inch],
+            style=TableStyle([
+                ('GRID', (0, 1), (-1, -1), 0.5, colors.grey),
+                ('BACKGROUND', (0, 1), (0, -1), colors.lightgrey),
+                ('SPAN', (0, 0), (1, 0)),
+                ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+                ('BACKGROUND', (0, 0), (-1, 0), self.BRAND_NAVY),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('TEXTCOLOR', (0, 1), (-1, -1), self.BRAND_NAVY),
+                ('FONTSIZE', (0, 0), (-1, -1), 8),
+                ('PADDING', (0, 0), (-1, -1), 4),
+                ('ALIGN', (1, 1), (1, -1), 'RIGHT')
+            ])
+    )
 
     def _create_brrrr_section(self, data: Dict) -> list:
         """Create compact BRRRR strategy section."""
