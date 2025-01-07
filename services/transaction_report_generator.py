@@ -45,6 +45,16 @@ class TransactionReportGenerator:
             textColor=colors.HexColor('#000080')
         ))
 
+        # Add new style for description cell
+        self.styles.add(ParagraphStyle(
+            name='DescriptionCell',
+            parent=self.styles['Normal'],
+            fontSize=9,
+            leading=11,
+            wordWrap='CJK',
+            alignment=0  # Left alignment
+        ))
+
     def _truncate_address(self, address):
         """Truncate address to show only house number, street, and city"""
         if not address or address == 'All Properties':
@@ -277,12 +287,18 @@ class TransactionReportGenerator:
             amount = t.get('amount', '$0.00')
             if not isinstance(amount, str):
                 amount = f"${float(amount):,.2f}"
+
+            # Wrap the description in a Paragraph object
+            description = Paragraph(
+                t.get('description', ''),
+                self.styles['DescriptionCell']
+            )
             
             row = [
                 t.get('date', ''),
                 t.get('type', ''),
                 t.get('category', ''),
-                t.get('description', ''),
+                description,  # Now using Paragraph object
                 amount,
                 t.get('collector_payer', ''),
                 t.get('reimbursement', {}).get('reimbursement_status', '')
