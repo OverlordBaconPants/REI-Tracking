@@ -1572,53 +1572,59 @@ window.analysisModule = {
     
     // Updated populateReportsTab function - applies formatting for display
     populateReportsTab: function(data) {
-        console.log('Populating reports tab with:', data);
+        console.log('Starting populateReportsTab:', data);
         
         const reportsContent = document.querySelector('#reports');
         if (!reportsContent) {
             console.error('Reports content element not found');
             return;
         }
-    
-        // Store ID
+        
         this.currentAnalysisId = data.id || null;
     
-        // Get the appropriate report content based on analysis type
-        let reportContent = '';
-        if (data.analysis_type.includes('BRRRR')) {
-            reportContent = this.getBRRRRReportContent(data);
-        } else if (data.analysis_type.includes('LTR')) {
-            reportContent = this.getLTRReportContent(data);
-        }
+        try {
+            let reportContent = '';
+            if (data.analysis_type.includes('BRRRR')) {
+                console.log('Generating BRRRR report content');
+                reportContent = this.getBRRRRReportContent.call(this, data);
+                console.log('Generated report content:', reportContent);
+            } else {
+                reportContent = this.getLTRReportContent.call(this, data);
+            }
     
-        // Create the header with action buttons
-        reportsContent.innerHTML = `
-            <div class="row align-items-center mb-4">
-                <div class="col">
-                    <h4 class="mb-0">${data.analysis_type || 'Analysis'}: ${data.analysis_name || 'Untitled'}</h4>
-                </div>
-                <div class="col-auto">
-                    <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-secondary" id="downloadPdfBtn" onclick="analysisModule.downloadPdf('${data.id}')">
-                            <i class="bi bi-file-earmark-pdf me-1"></i>Download PDF
-                        </button>
-                        <button type="button" class="btn btn-primary" id="reEditButton">
-                            <i class="bi bi-pencil me-1"></i>Re-Edit Analysis
-                        </button>
+            const finalContent = `
+                <div class="row align-items-center mb-4">
+                    <div class="col">
+                        <h4 class="mb-0">${data.analysis_type || 'Analysis'}: ${data.analysis_name || 'Untitled'}</h4>
+                    </div>
+                    <div class="col-auto">
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-secondary" onclick="analysisModule.downloadPdf('${data.id}')">
+                                <i class="bi bi-file-earmark-pdf me-1"></i>Download PDF
+                            </button>
+                            <button type="button" class="btn btn-primary" id="reEditButton">
+                                <i class="bi bi-pencil me-1"></i>Re-Edit Analysis
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
-            ${reportContent}`;
+                ${reportContent}`;
     
-        // Add click handler for re-edit button
-        const reEditButton = document.getElementById('reEditButton');
-        if (reEditButton) {
-            reEditButton.addEventListener('click', () => {
-                const financialTab = document.getElementById('financial-tab');
-                if (financialTab) {
-                    financialTab.click();
-                }
-            });
+            console.log('Setting innerHTML with content:', finalContent);
+            reportsContent.innerHTML = finalContent;
+    
+            const reEditButton = document.getElementById('reEditButton');
+            if (reEditButton) {
+                reEditButton.addEventListener('click', () => {
+                    const financialTab = document.getElementById('financial-tab');
+                    if (financialTab) {
+                        financialTab.click();
+                    }
+                });
+            }
+        } catch (error) {
+            console.error('Error in populateReportsTab:', error);
+            reportsContent.innerHTML = '<div class="alert alert-danger">Error generating report content</div>';
         }
     },
 
@@ -1864,79 +1870,89 @@ window.analysisModule = {
             annualCashFlow: analysis.calculated_metrics?.annual_cash_flow,
             fullMetrics: analysis.calculated_metrics
         });
+
+        // Check for required data
+        if (!analysis || !analysis.calculated_metrics) {
+            console.error('Missing required data for BRRRR report');
+            return '';
+        }
     
         return `
-            <div class="card mb-4">
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-4">
-                            <h5 class="mb-3">Purchase Details</h5>
-                            <div class="card bg-light">
-                                <div class="card-body">
-                                    <p class="mb-2"><strong>Purchase Price:</strong> ${this.formatDisplayValue(analysis.purchase_price)}</p>
-                                    <p class="mb-2"><strong>Renovation Costs:</strong> ${this.formatDisplayValue(analysis.renovation_costs)}</p>
-                                    <p class="mb-2"><strong>After Repair Value:</strong> ${this.formatDisplayValue(analysis.after_repair_value)}</p>
+            <div class="row">
+                <div class="col-12">
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h5 class="mb-3">Income & Returns</h5>
+                                    <div class="card bg-light">
+                                        <div class="card-body">
+                                            <p class="mb-2"><strong>Monthly Rent:</strong> ${this.formatDisplayValue(analysis.monthly_rent)}</p>
+                                            <p class="mb-2"><strong>Monthly Cash Flow:</strong> ${analysis.calculated_metrics.monthly_cash_flow}</p>
+                                            <p class="mb-2"><strong>Annual Cash Flow:</strong> ${analysis.calculated_metrics.annual_cash_flow}</p>
+                                            <p class="mb-2"><strong>Cash-on-Cash Return:</strong> ${analysis.calculated_metrics.cash_on_cash_return}</p>
+                                            <p class="mb-2"><strong>ROI:</strong> ${analysis.calculated_metrics.roi}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5 class="mb-3">Financing Details</h5>
+                                    <div class="card bg-light">
+                                        <div class="card-body">
+                                            <div class="mb-3">
+                                                <h6 class="fw-bold">Initial Loan:</h6>
+                                                <ul class="list-unstyled ms-3">
+                                                    <li>Monthly Payment: ${analysis.calculated_metrics.initial_loan_payment}</li>
+                                                    <li>Interest Rate: ${this.formatDisplayValue(analysis.initial_loan_interest_rate, 'percentage')}</li>
+                                                    <li>Term: ${analysis.initial_loan_term} months</li>
+                                                    <li>Down Payment: ${this.formatDisplayValue(analysis.initial_loan_down_payment)}</li>
+                                                </ul>
+                                            </div>
+                                            <div>
+                                                <h6 class="fw-bold">Refinance Loan:</h6>
+                                                <ul class="list-unstyled ms-3">
+                                                    <li>Monthly Payment: ${analysis.calculated_metrics.refinance_loan_payment}</li>
+                                                    <li>Interest Rate: ${this.formatDisplayValue(analysis.refinance_loan_interest_rate, 'percentage')}</li>
+                                                    <li>Term: ${analysis.refinance_loan_term} months</li>
+                                                    <li>Down Payment: ${this.formatDisplayValue(analysis.refinance_loan_down_payment)}</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="col-md-6 mb-4">
-                            <h5 class="mb-3">Investment Summary</h5>
-                            <div class="card bg-light">
-                                <div class="card-body">
-                                    <p class="mb-2">
-                                        <strong>Total Project Costs:</strong> ${this.formatDisplayValue(analysis.calculated_metrics?.total_project_costs)}
-                                        <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" data-bs-html="true" 
-                                        title="Purchase Price + Renovation Costs + All Closing Costs - Cash Out from Refi"></i>
-                                    </p>
-                                    <p class="mb-2">
-                                        <strong>Refinance Loan Amount:</strong> ${this.formatDisplayValue(analysis.refinance_loan_amount)}
-                                        <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" data-bs-html="true" 
-                                        title="New loan based on ARV × LTV%"></i>
-                                    </p>
-                                    <p class="mb-2">
-                                        <strong>Total Cash Invested:</strong> ${this.formatDisplayValue(analysis.calculated_metrics?.total_cash_invested)}
-                                        <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" data-bs-html="true" 
-                                        title="Total Project Costs - Refinance Loan Amount"></i>
-                                    </p>
-                                    <p class="mb-2">
-                                        <strong>Equity Captured:</strong> ${this.formatDisplayValue(analysis.calculated_metrics?.equity_captured)}
-                                        <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" data-bs-html="true" 
-                                        title="After Repair Value - Total Project Costs"></i>
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card mb-4">
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-4">
-                            <h5 class="mb-3">Income & Returns</h5>
-                            <div class="card bg-light">
-                                <div class="card-body">
-                                    <!-- Income & Returns content -->
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6 mb-4">
-                            <h5 class="mb-3">Financing Details</h5>
-                            <div class="card bg-light">
-                                <div class="card-body">
-                                    <!-- Financing Details content -->
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="row mt-4">
-                        <div class="col-12">
-                            <h5 class="mb-3">Operating Expenses</h5>
-                            <div class="card bg-light">
-                                <div class="card-body">
-                                    <!-- Operating Expenses content -->
+                            <div class="row mt-4">
+                                <div class="col-12">
+                                    <h5 class="mb-3">Operating Expenses</h5>
+                                    <div class="card bg-light">
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col-lg-6">
+                                                    <p class="mb-2"><strong>Property Taxes:</strong> ${this.formatDisplayValue(analysis.property_taxes)}</p>
+                                                    <p class="mb-2"><strong>Insurance:</strong> ${this.formatDisplayValue(analysis.insurance)}</p>
+                                                    <p class="mb-2"><strong>HOA/COA/COOP:</strong> ${this.formatDisplayValue(analysis.hoa_coa_coop)}</p>
+                                                    <p class="mb-2">
+                                                        <strong>Management:</strong> 
+                                                        (${this.formatDisplayValue(analysis.management_fee_percentage, 'percentage')})
+                                                    </p>
+                                                </div>
+                                                <div class="col-lg-6">
+                                                    <p class="mb-2">
+                                                        <strong>CapEx:</strong> 
+                                                        (${this.formatDisplayValue(analysis.capex_percentage, 'percentage')})
+                                                    </p>
+                                                    <p class="mb-2">
+                                                        <strong>Vacancy:</strong> 
+                                                        (${this.formatDisplayValue(analysis.vacancy_percentage, 'percentage')})
+                                                    </p>
+                                                    <p class="mb-2">
+                                                        <strong>Repairs:</strong> 
+                                                        (${this.formatDisplayValue(analysis.repairs_percentage, 'percentage')})
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

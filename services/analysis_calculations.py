@@ -378,21 +378,21 @@ class Analysis(ABC):
                     self._get_money(f'{prefix}_loan_closing_costs')
                 ], Money(0))
             
-            # For BRRRR deals, handle initial and refinance costs
+            # For BRRRR deals, calculate net cash position
             if 'BRRRR' in self.data.get('analysis_type', ''):
-                # Add initial loan costs
-                total_cash += sum([
-                    self._get_money('initial_loan_down_payment'),
+                # Add initial costs
+                initial_costs = sum([
+                    self._get_money('initial_loan_amount'),
                     self._get_money('initial_loan_closing_costs')
                 ], Money(0))
+                logger.debug(f"Initial costs: ${initial_costs.dollars}")
                 
-                # Add refinance costs
-                total_cash += self._get_money('refinance_loan_closing_costs')
+                # Add refinance costs and subtract loan amount
+                refinance_costs = self._get_money('refinance_loan_closing_costs')
+                refinance_loan = self._get_money('refinance_loan_amount')
+                total_cash = initial_costs + refinance_costs - refinance_loan
+                logger.debug(f"Final total cash invested: ${total_cash.dollars}")
                 
-                # Subtract cash out refinance amount (cash recouped)
-                total_cash -= self._get_money('refinance_loan_amount')
-            
-            logger.debug(f"Final total cash invested: ${total_cash.dollars}")
             return Money(max(0, float(total_cash.dollars)))
             
         except Exception as e:
@@ -406,28 +406,23 @@ class Analysis(ABC):
         return self.calculate_monthly_cash_flow() * 12
 
     @property
-    def cash_on_cash_return(self) -> Union[str, Percentage]:
+    def cash_on_cash_return(self) -> Percentage:
         """Calculate Cash on Cash return."""
         cash_invested = self.calculate_total_cash_invested()
-        if cash_invested.dollars <= 0:
-            return "Infinite"
-            
-        return Percentage(
-            (float(self.annual_cash_flow.dollars) / float(cash_invested.dollars)) * 100
-        )
+        annual_cf = float(self.annual_cash_flow.dollars)
+        
+        return Percentage((annual_cf / float(cash_invested.dollars)) * 100) if cash_invested.dollars > 0 else Percentage(0)
 
     @property
-    def roi(self) -> Union[str, Percentage]:
+    def roi(self) -> Percentage:
         """Calculate ROI including equity and cash flow."""
         try:
             cash_invested = self.calculate_total_cash_invested()
             if cash_invested.dollars <= 0:
-                return "Infinite"
+                return Percentage(0)
             
-            # Calculate total return
             annual_cf = float(self.annual_cash_flow.dollars)
             
-            # Add equity captured for BRRRR analysis
             equity_captured = 0
             if 'BRRRR' in self.data.get('analysis_type', ''):
                 arv = self._get_money('after_repair_value')
@@ -438,12 +433,11 @@ class Analysis(ABC):
                 equity_captured = float((arv - total_costs).dollars)
             
             total_return = annual_cf + equity_captured
-            
             return Percentage((total_return / float(cash_invested.dollars)) * 100)
             
         except Exception as e:
             logger.error(f"Error calculating ROI: {str(e)}")
-            raise
+            return Percentage(0)
 
     def get_report_data(self) -> Dict:
         """Get analysis report data with calculated metrics."""

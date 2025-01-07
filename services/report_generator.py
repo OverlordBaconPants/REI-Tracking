@@ -206,6 +206,23 @@ class ReportGenerator:
         
         return elements
 
+    def _calculate_total_cash_invested(self, data: Dict) -> float:
+        """Calculate total cash invested for BRRRR deals."""
+        if 'BRRRR' in data.get('analysis_type', ''):
+            # Initial costs
+            initial_costs = sum([
+                float(data.get('initial_loan_amount', 0)),
+                float(data.get('initial_loan_closing_costs', 0))
+            ])
+            
+            # Refinance impact
+            refinance_costs = float(data.get('refinance_loan_closing_costs', 0))
+            refinance_amount = float(data.get('refinance_loan_amount', 0))
+            
+            total_cash = initial_costs + refinance_costs - refinance_amount
+            return max(0, total_cash)
+        return 0.0
+
     def _create_financial_section(self, data: Dict) -> list:
         """Create compact financial overview section."""
         elements = []
@@ -243,7 +260,7 @@ class ReportGenerator:
                 ["Monthly Cash Flow:", metrics.get('monthly_cash_flow', '$0.00')],
                 ["Annual Cash Flow:", metrics.get('annual_cash_flow', '$0.00')],
                 ["Cash on Cash Return:", metrics.get('cash_on_cash_return', '0%')],
-                ["Total Cash Invested:", metrics.get('total_cash_invested', '$0.00')],
+                ["Total Cash Invested:", f"${self._calculate_total_cash_invested(data):,.2f}"],
                 ["ROI:", metrics.get('roi', '0%')]
             ]
 
