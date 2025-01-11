@@ -13,6 +13,7 @@ const addTransactionsModule = {
                 console.log('Add Transaction form found');
                 await this.fetchCategories();
                 this.initEventListeners();
+                this.initNotesCounter();
                 
                 // Check if we're editing a transaction by looking for a hidden input
                 const transactionType = document.querySelector('input[name="type"]:checked');
@@ -35,6 +36,41 @@ const addTransactionsModule = {
         } catch (error) {
             console.error('Error initializing Add Transactions module:', error);
             window.showNotification('Error loading Add Transactions module: ' + error.message, 'error');
+        }
+    },
+
+    initNotesCounter: function() {
+        const notesField = document.getElementById('notes');
+        const notesCounter = document.getElementById('notesCounter');
+        
+        if (notesField && notesCounter) {
+            // Initial count
+            const updateCount = () => {
+                const remaining = 150 - notesField.value.length;
+                notesCounter.textContent = `${remaining} characters remaining`;
+                
+                // Update color based on remaining characters
+                if (remaining < 20) {
+                    notesCounter.classList.add('text-danger');
+                } else {
+                    notesCounter.classList.remove('text-danger');
+                }
+            };
+            
+            // Add event listeners
+            notesField.addEventListener('input', updateCount);
+            notesField.addEventListener('paste', (e) => {
+                // Allow paste event to complete, then truncate if necessary
+                setTimeout(() => {
+                    if (notesField.value.length > 150) {
+                        notesField.value = notesField.value.substring(0, 150);
+                    }
+                    updateCount();
+                }, 0);
+            });
+            
+            // Initial count
+            updateCount();
         }
     },
 
@@ -399,15 +435,54 @@ const addTransactionsModule = {
 
     validateForm: function() {
         const propertySelect = document.getElementById('property_id');
-        const documentationFile = document.getElementById('documentation_file');
-    
+        
         if (!propertySelect || !propertySelect.value) {
             console.error('Property not selected. propertySelect:', propertySelect);
             this.showFlashMessage('Please select a property.', 'error');
             return false;
         }
     
-        // Add other validation checks here
+        // Ensure required fields are present
+        const requiredFields = {
+            'type': 'Transaction type',
+            'category': 'Category',
+            'description': 'Description',
+            'amount': 'Amount',
+            'date': 'Date',
+            'collector_payer': 'Collector/Payer'
+        };
+
+        // Validate notes field
+        const notesField = document.getElementById('notes');
+        if (notesField) {
+            const notes = notesField.value.trim();
+            if (notes.length > 150) {
+                isValid = false;
+                notesField.classList.add('is-invalid');
+                toastr.error('Notes must be 150 characters or less');
+                if (!firstInvalidField) {
+                    firstInvalidField = notesField;
+                }
+            } else {
+                notesField.classList.remove('is-invalid');
+            }
+        }
+    
+        for (const [fieldId, fieldName] of Object.entries(requiredFields)) {
+            const element = document.getElementById(fieldId);
+            if (!element || !element.value) {
+                this.showFlashMessage(`Please enter a ${fieldName.toLowerCase()}.`, 'error');
+                return false;
+            }
+        }
+    
+        // Validate amount is a positive number
+        const amountInput = document.getElementById('amount');
+        if (amountInput && (isNaN(amountInput.value) || parseFloat(amountInput.value) <= 0)) {
+            this.showFlashMessage('Please enter a valid positive amount.', 'error');
+            return false;
+        }
+    
         return true;
     },
     

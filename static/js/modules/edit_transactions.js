@@ -22,8 +22,44 @@ const editTransactionsModule = {
             console.log('Starting module initialization');
             await this.initializeModule();
             this.initDocumentRemovalHandlers();
+            this.initNotesCounter();
         } else {
             console.error('Edit transaction form not found');
+        }
+    },
+
+    initNotesCounter: function() {
+        const notesField = document.getElementById('notes');
+        const notesCounter = document.getElementById('notesCounter');
+        
+        if (notesField && notesCounter) {
+            // Initial count
+            const updateCount = () => {
+                const remaining = 150 - notesField.value.length;
+                notesCounter.textContent = `${remaining} characters remaining`;
+                
+                // Update color based on remaining characters
+                if (remaining < 20) {
+                    notesCounter.classList.add('text-danger');
+                } else {
+                    notesCounter.classList.remove('text-danger');
+                }
+            };
+            
+            // Add event listeners
+            notesField.addEventListener('input', updateCount);
+            notesField.addEventListener('paste', (e) => {
+                // Allow paste event to complete, then truncate if necessary
+                setTimeout(() => {
+                    if (notesField.value.length > 150) {
+                        notesField.value = notesField.value.substring(0, 150);
+                    }
+                    updateCount();
+                }, 0);
+            });
+            
+            // Initial count
+            updateCount();
         }
     },
 
@@ -516,6 +552,22 @@ const editTransactionsModule = {
                 }
             }
         });
+
+        // Validate notes field
+        const notesField = document.getElementById('notes');
+        if (notesField) {
+            const notes = notesField.value.trim();
+            if (notes.length > 150) {
+                isValid = false;
+                notesField.classList.add('is-invalid');
+                toastr.error('Notes must be 150 characters or less');
+                if (!firstInvalidField) {
+                    firstInvalidField = notesField;
+                }
+            } else {
+                notesField.classList.remove('is-invalid');
+            }
+        }
 
         // Validate type selection
         const typeRadios = document.querySelectorAll('input[name="type"]');

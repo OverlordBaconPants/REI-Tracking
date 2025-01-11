@@ -175,6 +175,7 @@ def update_transaction(updated_transaction):
                 "amount": float(updated_transaction['amount']),
                 "date": updated_transaction['date'],
                 "collector_payer": updated_transaction['collector_payer'],
+                "notes": updated_transaction.get('notes', ''),  # Add notes handling
                 "documentation_file": updated_transaction.get('documentation_file', transaction.get('documentation_file')),
                 "id": str(updated_transaction['id']),
                 "reimbursement": {

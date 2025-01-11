@@ -23,34 +23,41 @@ class TransactionReportGenerator:
         self.styles.add(ParagraphStyle(
             name='CustomTitle',
             parent=self.styles['Heading1'],
-            fontSize=24,
-            spaceAfter=30,
+            fontSize=20,  # Reduced from 24
+            spaceAfter=10,  # Reduced from 30
             textColor=colors.HexColor('#000080'),
             alignment=1  # Center alignment
         ))
         
         self.styles.add(ParagraphStyle(
+            name='Metadata',
+            parent=self.styles['Normal'],
+            fontSize=9,
+            spaceAfter=0,
+            textColor=colors.black
+        ))
+        
+        self.styles.add(ParagraphStyle(
             name='SubTitle',
             parent=self.styles['Heading1'],
-            fontSize=14,
-            spaceAfter=20,
+            fontSize=12,  # Reduced from 14
+            spaceAfter=6,  # Reduced from 20
             textColor=colors.HexColor('#000080')
         ))
 
         self.styles.add(ParagraphStyle(
             name='PropertyHeader',
             parent=self.styles['Heading1'],
-            fontSize=12,
+            fontSize=11,
             spaceAfter=6,
             textColor=colors.HexColor('#000080')
         ))
 
-        # Add new style for description cell
         self.styles.add(ParagraphStyle(
             name='DescriptionCell',
             parent=self.styles['Normal'],
-            fontSize=9,
-            leading=11,
+            fontSize=8,  # Reduced from 9
+            leading=10,
             wordWrap='CJK',
             alignment=0  # Left alignment
         ))
@@ -85,31 +92,34 @@ class TransactionReportGenerator:
     def _build_story(self, transactions, metadata):
         """Build the content (story) for the PDF"""
         story = []
+
+        # Sort transactions by date in descending order
+        sorted_transactions = sorted(
+            transactions,
+            key=lambda x: x.get('date', ''),
+            reverse=True
+        )
         
-        # Add logo
+        # Create a table for logo and title with minimal spacing
         try:
             logo_path = os.path.join(current_app.root_path, 'static', 'images', 'logo-blue.png')
-            self.logger.debug(f"Looking for logo at: {logo_path}")
-            
             if os.path.exists(logo_path):
                 img = Image(logo_path, width=0.75*inch, height=0.75*inch)
-                # Create a table to position the logo on the right
-                logo_table = Table([[img]], colWidths=[7*inch])
-                logo_table.setStyle(TableStyle([
-                    ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
+                title = Paragraph("Transaction Report", self.styles['CustomTitle'])
+                header_table = Table([[img, title]], colWidths=[1*inch, 6*inch])
+                header_table.setStyle(TableStyle([
+                    ('ALIGN', (1, 0), (1, 0), 'CENTER'),
                     ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                    ('TOPPADDING', (0, 0), (-1, -1), 0),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
                 ]))
-                story.append(logo_table)
-            else:
-                self.logger.warning(f"Logo file not found at {logo_path}")
+                story.append(header_table)
         except Exception as e:
             self.logger.error(f"Error adding logo to report: {str(e)}")
+            # Fallback to just title if logo fails
+            story.append(Paragraph("Transaction Report", self.styles['CustomTitle']))
         
-        # Add title
-        title = Paragraph("Transaction Report", self.styles['CustomTitle'])
-        story.append(title)
-        
-        # Add metadata if provided
+        # Create a table for metadata and summary
         if metadata:
             metadata_text = []
             if metadata.get('user'):
@@ -120,34 +130,36 @@ class TransactionReportGenerator:
                 truncated_address = self._truncate_address(metadata['property'])
                 metadata_text.append(f"Property: {truncated_address}")
             
-            meta = Paragraph(
-                "<br/>".join(metadata_text),
-                self.styles['SubTitle']
+            meta_paragraphs = [Paragraph(text, self.styles['Metadata']) for text in metadata_text]
+            
+            # Get property transactions for summary
+            property_id = metadata.get('property')
+            if property_id and property_id != 'All Properties':
+                summary_table = self._build_property_summary_table(transactions)
+            else:
+                summary_table = self._build_grand_summary_table(transactions)
+            
+            # Create table with metadata on left and summary on right
+            meta_summary_table = Table(
+                [[meta_paragraphs, summary_table[1]]],  # summary_table[1] is the actual table
+                colWidths=[3.5*inch, 3.5*inch]
             )
-            story.append(meta)
+            meta_summary_table.setStyle(TableStyle([
+                ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+                ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ]))
+            story.append(meta_summary_table)
         
         story.append(Spacer(1, 20))
-
-        # Sort transactions by date in descending order
-        sorted_transactions = sorted(
-            transactions,
-            key=lambda x: x.get('date', ''),
-            reverse=True
-        )
 
         property_id = metadata.get('property') if metadata else None
         
         if property_id and property_id != 'All Properties':
-            # Single property report
-            story.extend(self._build_property_summary_table(sorted_transactions))
-            story.append(Spacer(1, 20))
+            # Single property report - just add transactions table
             story.extend(self._build_transactions_table(sorted_transactions))
         else:
             # All properties report
-            # First, add grand summary
-            story.extend(self._build_grand_summary_table(sorted_transactions))
-            story.append(Spacer(1, 20))
-
             # Group transactions by property
             grouped_transactions = groupby(
                 sorted(sorted_transactions, key=lambda x: x.get('property_id', '')),
@@ -166,11 +178,7 @@ class TransactionReportGenerator:
                 truncated_address = self._truncate_address(property_id)
                 story.append(Paragraph(truncated_address, self.styles['PropertyHeader']))
                 
-                # Add property summary
-                story.extend(self._build_property_summary_table(property_transactions))
-                story.append(Spacer(1, 10))
-                
-                # Add property transactions
+                # Add property transactions directly (no summary table)
                 story.extend(self._build_transactions_table(property_transactions))
 
         return story
@@ -276,6 +284,7 @@ class TransactionReportGenerator:
             'Type',
             'Category',
             'Description',
+            'Notes',  # Added Notes column
             'Amount',
             'Collector/Payer',
             'Status'
@@ -288,9 +297,13 @@ class TransactionReportGenerator:
             if not isinstance(amount, str):
                 amount = f"${float(amount):,.2f}"
 
-            # Wrap the description in a Paragraph object
+            # Wrap both description and notes in Paragraph objects
             description = Paragraph(
                 t.get('description', ''),
+                self.styles['DescriptionCell']
+            )
+            notes = Paragraph(
+                t.get('notes', ''),
                 self.styles['DescriptionCell']
             )
             
@@ -298,7 +311,8 @@ class TransactionReportGenerator:
                 t.get('date', ''),
                 t.get('type', ''),
                 t.get('category', ''),
-                description,  # Now using Paragraph object
+                description,
+                notes,  # Added notes
                 amount,
                 t.get('collector_payer', ''),
                 t.get('reimbursement', {}).get('reimbursement_status', '')
@@ -306,46 +320,46 @@ class TransactionReportGenerator:
             table_data.append(row)
         
         col_widths = [
-            1.0*inch,  # Date
-            0.8*inch,  # Type
-            1.2*inch,  # Category
-            2.0*inch,  # Description
-            1.0*inch,  # Amount
-            1.2*inch,  # Collector/Payer
-            0.8*inch,  # Status
+            0.8*inch,   # Date
+            0.7*inch,   # Type
+            1.0*inch,   # Category
+            1.5*inch,   # Description
+            1.5*inch,   # Notes
+            0.8*inch,   # Amount
+            1.0*inch,   # Collector/Payer
+            0.7*inch,   # Status
         ]
         
         # Create table with repeating header
         table = Table(table_data, colWidths=col_widths, repeatRows=1)
         
-        # Create base style
         style = [
             # Header style
             ('BACKGROUND', (0, 0), (-1, 0), colors.navy),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
             ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('FONTSIZE', (0, 0), (-1, 0), 8),  # Reduced from 10
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 8),  # Reduced from 12
             
             # Data style
             ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 1), (-1, -1), 9),
+            ('FONTSIZE', (0, 1), (-1, -1), 8),  # Reduced from 9
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('ALIGN', (4, 1), (4, -1), 'RIGHT'),  # Right-align amounts
+            ('ALIGN', (5, 1), (5, -1), 'RIGHT'),  # Right-align amounts (adjusted column index)
             ('GRID', (0, 0), (-1, -1), 1, colors.black),
             ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('TOPPADDING', (0, 1), (-1, -1), 6),
-            ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
+            ('TOPPADDING', (0, 1), (-1, -1), 4),  # Reduced from 6
+            ('BOTTOMPADDING', (0, 1), (-1, -1), 4),  # Reduced from 6
         ]
         
-        # Add color coding for income/expense amounts
+        # Add color coding for income/expense amounts (adjusted column index)
         for i, row in enumerate(table_data[1:], 1):
             if row[1].lower() == 'income':
-                style.append(('TEXTCOLOR', (4, i), (4, i), colors.green))
+                style.append(('TEXTCOLOR', (5, i), (5, i), colors.green))
             else:
-                style.append(('TEXTCOLOR', (4, i), (4, i), colors.red))
+                style.append(('TEXTCOLOR', (5, i), (5, i), colors.red))
         
         table.setStyle(TableStyle(style))
         

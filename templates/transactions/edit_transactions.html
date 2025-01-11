@@ -100,6 +100,25 @@
                     <input type="hidden" id="remove_transaction_documentation" name="remove_transaction_documentation" value="false">
                 </div>
             </div>
+
+            <div class="mb-3">
+                <label for="notes" class="form-label">Notes (Optional)</label>
+                <div class="position-relative">
+                    <textarea 
+                        class="form-control" 
+                        id="notes" 
+                        name="notes" 
+                        rows="2" 
+                        maxlength="150"
+                        aria-describedby="notesHelp">{{ transaction.notes if transaction else '' }}</textarea>
+                    <div id="notesCounter" class="form-text text-muted position-absolute end-0 bottom-0 pe-2">
+                        150 characters remaining
+                    </div>
+                </div>
+                <div id="notesHelp" class="form-text">
+                    Add any additional notes about this transaction (max 150 characters)
+                </div>
+            </div>
         </div>
 
         <div id="reimbursement-section">

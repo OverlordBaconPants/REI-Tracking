@@ -387,8 +387,7 @@ def login():
                 try:
                     user_properties = get_properties_for_user(
                         user_id=user.email,
-                        user_name=user.name,
-                        is_admin=user.role.lower() == 'admin'
+                        user_name=user.name
                     )
                     
                     logger.debug(f"Found {len(user_properties)} properties for user {user.name}")

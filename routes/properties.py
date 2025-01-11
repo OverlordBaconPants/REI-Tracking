@@ -371,12 +371,19 @@ def add_properties():
         
 @properties_bp.route('/remove_properties', methods=['GET', 'POST'])
 @login_required
-@admin_required
 def remove_properties():
     """Handle property removal"""
-    logger.info(f"Remove properties route accessed by admin user: {current_user.email}")
+    logger.info(f"Remove properties route accessed by user: {current_user.email}")
     
     try:
+        # Check if user is property manager
+        if not is_property_manager(current_user.email, property_data):
+            logger.warning(f"Non-property manager attempted access: {current_user.email}")
+            return jsonify({
+                'success': False,
+                'message': 'Property manager access required'
+            }), 403
+
         # Load existing properties
         with open(current_app.config['PROPERTIES_FILE'], 'r') as f:
             properties = json.load(f)

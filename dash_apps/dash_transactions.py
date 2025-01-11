@@ -1,3 +1,5 @@
+import html
+
 # Dash and UI imports
 import dash
 from dash import dcc, html, dash_table, Input, Output, State
@@ -46,18 +48,19 @@ MAX_FUTURE_DAYS = 30     # Maximum days into future for datesr
 
 # Base columns definition for the transactions table
 base_columns = [
-        {'name': 'ID', 'id': 'id', 'hidden': True},
-        {'name': 'Property', 'id': 'property_id'},  # Add Property column
-        {'name': 'Category', 'id': 'category'},
-        {'name': 'Description', 'id': 'description'},
-        {'name': 'Amount', 'id': 'amount'},
-        {'name': 'Date Incurred', 'id': 'date'},
-        {'name': 'Collector/Payer', 'id': 'collector_payer'},
-        {'name': 'Transaction Doc', 'id': 'documentation_file', 'presentation': 'markdown'},
-        {'name': 'Reimb. Date', 'id': 'date_shared'},
-        {'name': 'Reimb. Description', 'id': 'share_description'},
-        {'name': 'Reimb. Doc', 'id': 'reimbursement_documentation', 'presentation': 'markdown'},
-    ]
+    {'name': 'ID', 'id': 'id', 'hidden': True},
+    {'name': 'Property', 'id': 'property_id', 'width': '15%'},
+    {'name': 'Category', 'id': 'category', 'width': '10%'},
+    {'name': 'Description', 'id': 'description', 'width': '15%'},
+    {'name': 'Amount', 'id': 'amount', 'width': '8%'},
+    {'name': 'Date Incurred', 'id': 'date', 'width': '8%'},
+    {'name': 'Collector/Payer', 'id': 'collector_payer', 'width': '10%'},
+    {'name': 'Notes', 'id': 'notes', 'width': '15%'},  # Add Notes column
+    {'name': 'Transaction Doc', 'id': 'documentation_file', 'presentation': 'markdown', 'width': '8%'},
+    {'name': 'Reimb. Date', 'id': 'date_shared', 'width': '8%'},
+    {'name': 'Reimb. Description', 'id': 'share_description', 'width': '15%'},
+    {'name': 'Reimb. Doc', 'id': 'reimbursement_documentation', 'presentation': 'markdown', 'width': '8%'},
+]
 
 def truncate_address(address):
     """
@@ -373,42 +376,56 @@ def create_transactions_dash(flask_app):
         dash_table.DataTable(
             id='transactions-table',
             columns=base_columns,
+            style_table={
+                'overflowX': 'auto',  # Enable horizontal scroll if needed
+                'minWidth': '100%',
+                'maxWidth': '1800px',  # Increased max width
+                'margin': '0 auto'     # Center the table
+            },
             style_cell={
                 'textAlign': 'left',
                 'padding': '10px',
                 'font-family': 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif',
                 'font-size': '14px',
-                'whiteSpace': 'normal',
+                'whiteSpace': 'normal',  # Enable word wrap
                 'height': 'auto',
                 'minWidth': '100px',
                 'maxWidth': '180px',
                 'textOverflow': 'ellipsis',
+                'overflow': 'hidden'
             },
             style_header={
                 'backgroundColor': 'navy',
                 'fontWeight': 'bold',
                 'color': 'white',
                 'border': '1px solid #dee2e6',
-                'whiteSpace': 'nowrap',
-                'height': '40px',
-                'lineHeight': '40px',
-                'padding': '0 10px',
-                'textOverflow': 'ellipsis',
-                'overflow': 'hidden'
+                'whiteSpace': 'normal',  # Enable word wrap in headers
+                'height': 'auto',
+                'padding': '10px',
+                'textOverflow': 'ellipsis'
             },
             style_data={
                 'border': '1px solid #dee2e6',
-                'whiteSpace': 'normal',
-                'height': 'auto',
+                'whiteSpace': 'normal',  # Enable word wrap in cells
+                'height': 'auto'
             },
             style_cell_conditional=[
                 {
-                    'if': {'column_id': ['documentation_file', 'reimbursement_documentation']},
-                    'width': '130px',
-                    'minWidth': '130px',
-                    'maxWidth': '130px',
-                    'overflow': 'hidden',
+                    'if': {'column_id': 'notes'},
+                    'width': '15%',
+                    'minWidth': '150px',
+                    'maxWidth': '300px',
+                    'whiteSpace': 'pre-line',  # Preserve line breaks in notes
+                    'height': 'auto',
                     'textOverflow': 'ellipsis',
+                    'overflow': 'hidden'
+                },
+                {
+                    'if': {'column_id': ['documentation_file', 'reimbursement_documentation']},
+                    'width': '8%',
+                    'minWidth': '100px',
+                    'maxWidth': '120px',
+                    'textAlign': 'center'
                 }
             ],
             style_data_conditional=[
@@ -429,10 +446,6 @@ def create_transactions_dash(flask_app):
                         'filter_query': '{type} eq "expense"'
                     },
                     'color': 'red'
-                },
-                {
-                    'if': {'column_id': ['documentation_file', 'reimbursement_documentation']},
-                    'textAlign': 'center',
                 }
             ],
             tooltip_duration=None,
@@ -443,8 +456,8 @@ def create_transactions_dash(flask_app):
             sort_action='native',
             sort_mode='multi',
             filter_action='none'
-        ),
-    ], fluid=True)
+        )
+    ], fluid=True, style={'maxWidth': '1800px', 'margin': '0 auto', 'padding': '0 20px'})
 
     def create_header(type_str, property_str, start_str, end_str):
         """Helper function to create header with truncated address"""
@@ -475,6 +488,8 @@ def create_transactions_dash(flask_app):
     def update_table(refresh_trigger, property_id, transaction_type, reimbursement_status, 
                     start_date, end_date, description_search):
         current_app.logger.debug(f"Table refresh triggered. Refresh value: {refresh_trigger}")
+        logger.setLevel(logging.DEBUG)
+
         try:
             logger.debug(f"Updating table with filters: property={property_id}, "
                         f"type={transaction_type}, status={reimbursement_status}, "
@@ -545,6 +560,9 @@ def create_transactions_dash(flask_app):
             # Process transactions
             try:
                 df = pd.DataFrame(transactions)
+                logger.debug(f"Initial DataFrame columns: {df.columns.tolist()}")
+                logger.debug(f"Sample of first row: {df.iloc[0].to_dict() if not df.empty else 'No data'}")
+                
                 if df.empty:
                     logger.info("No transactions found matching criteria")
                     return [], "No transactions found", property_options, base_columns, None
@@ -560,6 +578,22 @@ def create_transactions_dash(flask_app):
                     if df.empty:
                         logger.info(f"No transactions found matching description: {description_search}")
                         return [], f"No transactions found matching '{description_search}'", property_options, base_columns, None
+
+                # Debug log before notes processing
+                logger.debug("Before notes processing")
+                logger.debug(f"Notes column present: {'notes' in df.columns}")
+                if 'notes' in df.columns:
+                    logger.debug(f"Sample of notes before processing: {df['notes'].head().tolist()}")
+
+                # Unescape HTML entities in notes with detailed error handling
+                if 'notes' in df.columns:
+                    df['notes'] = df['notes'].apply(lambda x: str(x) if pd.notnull(x) else '')
+                    logger.debug(f"Processed notes sample: {df['notes'].head().tolist()}")
+
+                # Format amounts with validation
+                df['amount'] = df['amount'].apply(
+                    lambda x: f"${abs(float(x)):.2f}" if pd.notnull(x) and isinstance(x, (int, float)) else ''
+                )
 
                 # Define columns based on property filter and ownership
                 columns = base_columns.copy()
@@ -603,7 +637,7 @@ def create_transactions_dash(flask_app):
                     # Show property column with truncated address for 'all' or no selection
                     df['property_id'] = df['property_id'].apply(lambda x: ', '.join(x.split(',')[:2]).strip() if x else '')
 
-                # Add the documentation columns with markdown presentation
+                # Add documentation columns
                 doc_columns = []
                 doc_columns.append({
                     'name': 'Transaction Doc',
@@ -619,14 +653,9 @@ def create_transactions_dash(flask_app):
                         'presentation': 'markdown',
                         'type': 'text'
                     })
-                
+
                 columns = [col for col in columns if col['id'] not in ['documentation_file', 'reimbursement_documentation']]
                 columns.extend(doc_columns)
-
-                # Format amounts with validation
-                df['amount'] = df['amount'].apply(
-                    lambda x: f"${abs(float(x)):.2f}" if pd.notnull(x) and isinstance(x, (int, float)) else ''
-                )
 
                 # Format documentation links
                 df['documentation_file'] = df['documentation_file'].apply(
@@ -642,7 +671,7 @@ def create_transactions_dash(flask_app):
                         axis=1
                     )
 
-                # Add edit column based on property manager status
+                # Add edit and delete columns based on property manager status
                 if current_user.is_authenticated:
                     filter_options = {
                         'property_id': property_id,
@@ -668,13 +697,12 @@ def create_transactions_dash(flask_app):
                             f'<a href="/transactions/edit/{str(row["id"])}?filters={encoded_filter_options}" '
                             f'target="_parent" class="btn btn-sm btn-primary">Edit</a>'
                             if property_manager_status.get(row['property_id'], False)
-                            else '<span class="text-muted">Edit Restricted for Property Manager</span>'
+                            else '<span class="text-muted">Edit Restricted</span>'
                         ),
                         axis=1
                     )
                     columns.append({'name': 'Edit', 'id': 'edit', 'presentation': 'markdown'})
 
-                    # Update the columns definition to include delete button for property managers
                     df['delete'] = df.apply(
                         lambda row: (
                             f'<a href="#" class="btn btn-sm btn-danger" '
@@ -704,6 +732,7 @@ def create_transactions_dash(flask_app):
 
             except Exception as e:
                 logger.error(f"Error processing transactions: {str(e)}")
+                logger.error(f"Full traceback: {traceback.format_exc()}")
                 return [], "Error processing data", property_options, base_columns, None
 
         except Exception as e:

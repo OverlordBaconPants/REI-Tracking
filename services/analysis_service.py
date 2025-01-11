@@ -65,6 +65,13 @@ class AnalysisService:
         'vacancy_percentage': {'type': 'float'},
         'repairs_percentage': {'type': 'float'},
 
+        # Notes
+        'notes': {
+            'type': 'string',
+            'maxLength': 1000,  # Limit to 1,000 characters
+            'description': 'User notes about the analysis'
+        },
+
         # PadSplit specific
         'utilities': {'type': 'integer'},
         'internet': {'type': 'integer'},

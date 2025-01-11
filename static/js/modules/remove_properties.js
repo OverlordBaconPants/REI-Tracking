@@ -4,6 +4,7 @@ const removePropertiesModule = {
             console.log('RemovePropertiesModule initialized');
             const form = document.querySelector('.remove-properties-container form');
             if (form) {
+                await this.checkPropertyManagerAccess();
                 this.initializeForm(form);
                 window.showNotification('Remove Properties module loaded', 'success', 'both');
             } else {
@@ -13,6 +14,16 @@ const removePropertiesModule = {
         } catch (error) {
             console.error('Error initializing Remove Properties module:', error);
             window.showNotification('Error loading Remove Properties module: ' + error.message, 'error', 'both');
+        }
+    },
+
+    checkPropertyManagerAccess: async function() {
+        const response = await fetch('/properties/get_property_details?address=' + encodeURIComponent(propertySelect.value));
+        const data = await response.json();
+        
+        if (!data.success || !data.property.is_property_manager) {
+            window.location.href = '/403';
+            throw new Error('Property manager access required');
         }
     },
 

@@ -6,6 +6,8 @@ from services.transaction_import_service import TransactionImportService
 from services.transaction_service import add_transaction, is_duplicate_transaction, get_properties_for_user, get_transaction_by_id, update_transaction, get_categories, get_partners_for_property
 from utils.utils import admin_required
 import os
+import re
+import html
 import logging
 import json
 import traceback
@@ -24,47 +26,13 @@ def add_transactions():
     logging.info(f"Add transaction route accessed by user: {current_user.name} (ID: {current_user.id})")
 
     properties = get_properties_for_user(current_user.id, current_user.name)
-
-    # Debug log the properties data
-    logging.debug(f"Properties data: {json.dumps(properties, indent=2)}")
     
     if request.method == 'POST':
         logging.info("Processing POST request for add_transaction")
         try:
-            # Check if a file is present in the request
-            if 'documentation_file' not in request.files:
-                flash_message('No file provided. Please attach supporting documentation.', 'error')
-                return redirect(url_for('transactions.add_transactions'))
+            # Get and sanitize notes
+            notes = sanitize_notes(request.form.get('notes', ''))
             
-            file = request.files['documentation_file']
-            if file.filename == '':
-                flash_message('No file selected. Please attach supporting documentation.', 'error')
-                return redirect(url_for('transactions.add_transactions'))
-
-            if file and allowed_file(file.filename, file_type='documentation'):
-                filename = secure_filename(file.filename)
-                file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
-                file.save(file_path)
-            else:
-                flash_message('Invalid file type. Allowed types are: ' + ', '.join(current_app.config['ALLOWED_DOCUMENTATION_EXTENSIONS']), 'error')
-                return redirect(url_for('transactions.add_transactions'))
-
-            # Handle reimbursement documentation if present
-            reimbursement_documentation = None
-            if 'reimbursement_documentation' in request.files:
-                reimb_file = request.files['reimbursement_documentation']
-                if reimb_file and reimb_file.filename:
-                    if allowed_file(reimb_file.filename, file_type='documentation'):
-                        reimb_filename = f"reimb_{secure_filename(reimb_file.filename)}"
-                        reimb_file_path = os.path.join(current_app.config['REIMBURSEMENTS_DIR'], reimb_filename)
-                        reimb_file.save(reimb_file_path)
-                        reimbursement_documentation = reimb_filename
-                    else:
-                        flash_message('Invalid reimbursement documentation file type. Allowed types are: ' + 
-                                    ', '.join(current_app.config['ALLOWED_DOCUMENTATION_EXTENSIONS']), 'error')
-                        return redirect(url_for('transactions.add_transactions'))
-
-            # Get form data
             transaction_data = {
                 'property_id': request.form.get('property_id'),
                 'type': request.form.get('type'),
@@ -73,25 +41,55 @@ def add_transactions():
                 'amount': float(request.form.get('amount')),
                 'date': request.form.get('date'),
                 'collector_payer': request.form.get('collector_payer'),
-                'documentation_file': filename,
+                'notes': notes,  # Add notes field
+                'documentation_file': '',  # Default to empty string
                 'reimbursement': {
                     'date_shared': request.form.get('date_shared'),
                     'share_description': request.form.get('share_description'),
                     'reimbursement_status': request.form.get('reimbursement_status'),
-                    'documentation': reimbursement_documentation
+                    'documentation': None
                 }
             }
+
+            # Handle optional documentation file
+            if 'documentation_file' in request.files:
+                file = request.files['documentation_file']
+                if file and file.filename:
+                    if allowed_file(file.filename, file_type='documentation'):
+                        filename = secure_filename(file.filename)
+                        file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                        file.save(file_path)
+                        transaction_data['documentation_file'] = filename
+                    else:
+                        flash_message('Invalid file type. Allowed types are: ' + 
+                                    ', '.join(current_app.config['ALLOWED_DOCUMENTATION_EXTENSIONS']), 'error')
+                        return redirect(url_for('transactions.add_transactions'))
+
+            # Handle optional reimbursement documentation
+            if 'reimbursement_documentation' in request.files:
+                reimb_file = request.files['reimbursement_documentation']
+                if reimb_file and reimb_file.filename:
+                    if allowed_file(reimb_file.filename, file_type='documentation'):
+                        reimb_filename = f"reimb_{secure_filename(reimb_file.filename)}"
+                        reimb_file_path = os.path.join(current_app.config['REIMBURSEMENTS_DIR'], reimb_filename)
+                        reimb_file.save(reimb_file_path)
+                        transaction_data['reimbursement']['documentation'] = reimb_filename
+                    else:
+                        flash_message('Invalid reimbursement documentation file type. Allowed types are: ' + 
+                                    ', '.join(current_app.config['ALLOWED_DOCUMENTATION_EXTENSIONS']), 'error')
+                        return redirect(url_for('transactions.add_transactions'))
 
             # Check for duplicate transaction
             if is_duplicate_transaction(transaction_data):
                 flash_message("This transaction appears to be a duplicate and was not added.", "warning")
                 return redirect(url_for('transactions.add_transactions'))
 
-            # Process the transaction data
+            # Add the transaction
             add_transaction(transaction_data)
             
             flash_message('Transaction added successfully!', 'success')
             return redirect(url_for('transactions.add_transactions'))
+
         except Exception as e:
             logging.error(f"Error adding transaction: {str(e)}")
             flash_message(f"Error adding transaction: {str(e)}", "error")
@@ -101,6 +99,30 @@ def add_transactions():
     return render_template(
         'transactions/add_transactions.html', 
         properties=properties)
+
+def sanitize_notes(notes):
+    """
+    Sanitize notes input to prevent XSS and other injection attacks while preserving natural language.
+    
+    Args:
+        notes (str): Raw notes input
+        
+    Returns:
+        str: Sanitized notes string
+    """
+    if not notes:
+        return ""
+        
+    # Strip any HTML tags
+    notes = re.sub(r'<[^>]*?>', '', notes)
+    
+    # Don't escape special characters, but remove potentially dangerous characters
+    notes = re.sub(r'[^\w\s\-_.,!?\'\"@#$%^&*()+=\[\]{};:\/|\\<>]', '', notes)
+    
+    # Limit to 150 characters
+    notes = notes[:150]
+    
+    return notes.strip()
 
 @transactions_bp.route('/uploads/<filename>')
 @login_required
@@ -273,17 +295,16 @@ def edit_transactions(transaction_id):
             flash_message('Transaction not found', 'error')
             return redirect(url_for('transactions.view_transactions'))
         
-        # Get properties and ensure proper partner data
         properties = get_properties_for_user(current_user.id, current_user.name, current_user.role == 'Admin')
         
-        # Debug log the properties data
-        logging.debug(f"Properties data for edit: {json.dumps(properties, indent=2)}")
-
         if request.method == 'POST':
             try:
                 current_app.logger.info(f"Processing POST request to edit transaction ID: {transaction_id}")
                 form_data = request.form.to_dict()
                 current_app.logger.debug(f"Form data received: {form_data}")
+                
+                # Sanitize notes
+                notes = sanitize_notes(form_data.get('notes', ''))
                 
                 # Create updated transaction dict
                 updated_transaction = {
@@ -295,6 +316,7 @@ def edit_transactions(transaction_id):
                     'amount': float(form_data.get('amount')),
                     'date': form_data.get('date'),
                     'collector_payer': form_data.get('collector_payer'),
+                    'notes': notes,  # Add notes field
                     'reimbursement': {
                         'date_shared': form_data.get('date_shared'),
                         'share_description': form_data.get('share_description'),
@@ -307,46 +329,20 @@ def edit_transactions(transaction_id):
                 remove_transaction_doc = form_data.get('remove_transaction_documentation') == 'true'
                 remove_reimbursement_doc = form_data.get('remove_reimbursement_documentation') == 'true'
                 
-                current_app.logger.debug(f"Document removal flags: transaction={remove_transaction_doc}, reimbursement={remove_reimbursement_doc}")
-
-                # Handle transaction documentation
+                # Handle document removals and updates
                 if remove_transaction_doc:
-                    current_app.logger.info("Removing transaction documentation")
                     updated_transaction['documentation_file'] = None
-                    # Delete the actual file if it exists
-                    if transaction.get('documentation_file'):
-                        try:
-                            file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], transaction['documentation_file'])
-                            if os.path.exists(file_path):
-                                os.remove(file_path)
-                                current_app.logger.info(f"Deleted file: {file_path}")
-                        except Exception as e:
-                            current_app.logger.error(f"Error deleting file: {str(e)}")
                 else:
-                    # Keep existing documentation unless new file uploaded
                     updated_transaction['documentation_file'] = transaction.get('documentation_file')
 
-                # Handle reimbursement documentation
                 if remove_reimbursement_doc:
-                    current_app.logger.info("Removing reimbursement documentation")
                     updated_transaction['reimbursement']['documentation'] = None
-                    # Delete the actual file if it exists
-                    if transaction.get('reimbursement', {}).get('documentation'):
-                        try:
-                            file_path = os.path.join(current_app.config['REIMBURSEMENTS_DIR'], 
-                                                   transaction['reimbursement']['documentation'])
-                            if os.path.exists(file_path):
-                                os.remove(file_path)
-                                current_app.logger.info(f"Deleted reimbursement file: {file_path}")
-                        except Exception as e:
-                            current_app.logger.error(f"Error deleting reimbursement file: {str(e)}")
                 else:
-                    # Keep existing documentation unless new file uploaded
                     updated_transaction['reimbursement']['documentation'] = (
                         transaction.get('reimbursement', {}).get('documentation')
                     )
 
-                # Handle new file uploads if present
+                # Handle new file uploads
                 if 'documentation_file' in request.files:
                     file = request.files['documentation_file']
                     if file and file.filename:
@@ -365,10 +361,8 @@ def edit_transactions(transaction_id):
                             file.save(file_path)
                             updated_transaction['reimbursement']['documentation'] = filename
 
-                current_app.logger.debug(f"Updating transaction with data: {json.dumps(updated_transaction, indent=2)}")
                 update_transaction(updated_transaction)
                 
-                # Redirect with filters and success message
                 return redirect(url_for('transactions.view_transactions') + 
                     f'?filters={filters}&message=Transaction updated successfully&message_type=success')
 
