@@ -1,22 +1,33 @@
 # config.py
 
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 class Config:
     """Base configuration with common settings"""
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'you-will-never-guess'
+    # Load secret key from environment variable with no default
+    SECRET_KEY = os.environ.get('SECRET_KEY')
+    if not SECRET_KEY:
+        raise ValueError("No SECRET_KEY set in environment variables")
     
     # Base directory defaults to current directory for development
     BASE_DIR = os.path.abspath(os.path.dirname(__file__))
     
     # File upload settings
-    ALLOWED_EXTENSIONS = {'png', 'svg', 'pdf', 'jpg', 'csv', 'xls', 'xlsx'}
+    ALLOWED_EXTENSIONS = {'png', 'svg', 'pdf', 'jpg', 'jpeg', 'csv', 'xls', 'xlsx'}
     ALLOWED_DOCUMENTATION_EXTENSIONS = {'png', 'svg', 'pdf', 'jpg'}
     ALLOWED_IMPORT_EXTENSIONS = {'csv', 'xls', 'xlsx'}
-    MAX_CONTENT_LENGTH = 5 * 1024 * 1024  # 5 MB limit
     
-    # API Keys
-    GEOAPIFY_API_KEY = os.environ.get('GEOAPIFY_API_KEY') or 'f9577704874047cd8fc962b020db0d20'
+    # Load max content length from environment variable
+    MAX_CONTENT_LENGTH = int(os.environ.get('MAX_CONTENT_LENGTH', 5 * 1024 * 1024))  # Default 5MB
+    
+    # Load API key from environment variable with no default
+    GEOAPIFY_API_KEY = os.environ.get('GEOAPIFY_API_KEY')
+    if not GEOAPIFY_API_KEY:
+        raise ValueError("No GEOAPIFY_API_KEY set in environment variables")
     
     def __init__(self):
         # Directory structure
@@ -58,10 +69,10 @@ class ProductionConfig(Config):
     
     def __init__(self):
         # For Render.com, use the correct mounted volume path
-        self.BASE_DIR = '/opt/render/project/src'                   # Application root
-        self.DATA_DIR = '/opt/render/project/src/data'             # Data directory in mounted volume
-        self.ANALYSES_DIR = '/opt/render/project/src/data/analyses' # Analyses subdirectory
-        self.UPLOAD_FOLDER = '/opt/render/project/src/data/uploads' # Upload directory in mounted volume
+        self.BASE_DIR = '/opt/render/project/src'
+        self.DATA_DIR = '/opt/render/project/src/data'
+        self.ANALYSES_DIR = '/opt/render/project/src/data/analyses'
+        self.UPLOAD_FOLDER = '/opt/render/project/src/data/uploads'
         self.REIMBURSEMENTS_DIR = os.path.join(self.UPLOAD_FOLDER, 'reimbursements')
         
         # JSON file paths
@@ -71,10 +82,6 @@ class ProductionConfig(Config):
         self.CATEGORIES_FILE = os.path.join(self.DATA_DIR, 'categories.json')
         
         print(f"Running in production mode on Render.com")
-        print(f"Base directory: {self.BASE_DIR}")
-        print(f"Data directory: {self.DATA_DIR}")
-        print(f"Upload folder: {self.UPLOAD_FOLDER}")
-        print(f"Reimbursements directory: {self.REIMBURSEMENTS_DIR}")
 
 class TestingConfig(Config):
     """Testing configuration"""
