@@ -29,11 +29,11 @@ class AnalysisService:
 
         # Property details
         'address': {'type': 'string'},
-        'square_footage': {'type': 'integer'},
-        'lot_size': {'type': 'integer'},
-        'year_built': {'type': 'integer'},
-        'bedrooms': {'type': 'integer'},
-        'bathrooms': {'type': 'float'},
+        'square_footage': {'type': 'integer', 'optional': True},  # Add optional flag
+        'lot_size': {'type': 'integer', 'optional': True},
+        'year_built': {'type': 'integer', 'optional': True},
+        'bedrooms': {'type': 'integer', 'optional': True},
+        'bathrooms': {'type': 'float', 'optional': True},
 
         # Ballon Options
         'has_balloon_payment': {'type': 'boolean'},
@@ -138,28 +138,28 @@ class AnalysisService:
     def normalize_data(self, data: Dict, is_mobile: bool = False) -> Dict:
         """
         Normalize data to match flat schema with appropriate types and mobile optimization.
-        
-        Args:
-            data (Dict): Raw input data to normalize
-            is_mobile (bool): Flag indicating if request is from mobile device
-            
-        Returns:
-            Dict: Normalized data conforming to schema
-            
-        Raises:
-            ValueError: If data normalization fails
+        Handles nullable balloon payment fields.
         """
         try:
             logger.debug("=== Starting Data Normalization ===")
-            logger.debug(f"Mobile optimization: {is_mobile}")
-            
             normalized = {}
+            
+            # First check if balloon payments are enabled
+            has_balloon = data.get('has_balloon_payment', False)
             
             # Process each field according to schema
             for field, field_def in self.ANALYSIS_SCHEMA.items():
                 field_type = field_def['type']
                 value = data.get(field)
                 
+                # Handle balloon payment fields
+                if field.startswith('balloon_') and not has_balloon:
+                    if field == 'balloon_due_date':
+                        normalized[field] = None
+                    else:
+                        normalized[field] = 0
+                    continue
+                    
                 # Skip empty mobile-optional fields on mobile
                 if is_mobile and not value and field in self.MOBILE_OPTIONAL_FIELDS:
                     continue
@@ -168,38 +168,25 @@ class AnalysisService:
                 if field_type == 'integer':
                     normalized[field] = self._convert_to_int(value)
                     
-                    # Round large numbers on mobile for display
-                    if is_mobile and normalized[field] and abs(normalized[field]) > 1000000:
-                        normalized[field] = round(normalized[field], -3)  # Round to thousands
-                        
                 elif field_type == 'float':
                     normalized[field] = self._convert_to_float(value)
                     
-                    # Reduce precision on mobile
-                    if is_mobile and normalized[field] is not None:
-                        if field.endswith('_percentage'):
-                            normalized[field] = round(normalized[field], 1)  # One decimal for percentages
-                        else:
-                            normalized[field] = round(normalized[field], 2)  # Two decimals for other floats
-                            
                 elif field_type == 'string':
                     if value is not None:
-                        # Handle string fields
-                        if field == 'notes' and is_mobile:
-                            # Truncate long notes on mobile
-                            normalized[field] = str(value)[:500]  # Limit to 500 chars on mobile
-                        else:
-                            normalized[field] = str(value)
+                        normalized[field] = str(value)
                     else:
                         normalized[field] = ''
                         
                 elif field_type == 'boolean':
-                    # Handle various boolean-like values
-                    if isinstance(value, str):
-                        normalized[field] = value.lower() in ('true', '1', 'yes', 'on')
-                    else:
+                    if field == 'has_balloon_payment':
                         normalized[field] = bool(value)
-                        
+                    else:
+                        # Handle other boolean fields
+                        if isinstance(value, str):
+                            normalized[field] = value.lower() in ('true', '1', 'yes', 'on')
+                        else:
+                            normalized[field] = bool(value)
+                
                 # Handle special formats
                 if field_def.get('format') == 'uuid' and not value:
                     normalized[field] = str(uuid.uuid4())
@@ -209,36 +196,15 @@ class AnalysisService:
                     
                 elif field_def.get('format') == 'date' and value:
                     try:
-                        # Ensure consistent date format
-                        parsed_date = datetime.strptime(value, "%Y-%m-%d")
-                        normalized[field] = parsed_date.strftime("%Y-%m-%d")
+                        if has_balloon or not field.startswith('balloon_'):
+                            parsed_date = datetime.strptime(value, "%Y-%m-%d")
+                            normalized[field] = parsed_date.strftime("%Y-%m-%d")
+                        else:
+                            normalized[field] = None
                     except ValueError:
-                        # Handle invalid dates
                         normalized[field] = None
                         logger.warning(f"Invalid date format for field {field}: {value}")
             
-            # Mobile-specific optimizations
-            if is_mobile:
-                # Optimize calculated fields for mobile display
-                if normalized.get('calculated_metrics'):
-                    normalized['calculated_metrics'] = self._optimize_metrics_for_mobile(
-                        normalized['calculated_metrics']
-                    )
-                    
-                # Remove unnecessary whitespace
-                for field, value in normalized.items():
-                    if isinstance(value, str):
-                        normalized[field] = value.strip()
-            
-            # Validate required fields are present
-            missing_fields = []
-            for field, field_def in self.ANALYSIS_SCHEMA.items():
-                if field_def.get('required', False) and not normalized.get(field):
-                    missing_fields.append(field)
-                    
-            if missing_fields:
-                raise ValueError(f"Missing required fields: {', '.join(missing_fields)}")
-                
             logger.debug("=== Data Normalization Complete ===")
             return normalized
             
@@ -300,7 +266,6 @@ class AnalysisService:
             required_fields = {
                 'analysis_type': str,
                 'analysis_name': str,
-                'address': str,
                 'monthly_rent': int
             }
             
@@ -317,11 +282,15 @@ class AnalysisService:
                     except (ValueError, TypeError):
                         raise ValueError(f"Field {field} must be of type {expected_type.__name__}")
             
-            # Validate field types according to schema
+            # Validate field types for non-required fields
             for field, value in data.items():
                 if field in self.ANALYSIS_SCHEMA and value is not None:
+                    field_def = self.ANALYSIS_SCHEMA[field]
+                    # Skip validation for optional fields that are empty
+                    if field_def.get('optional') and (value is None or value == ''):
+                        continue
                     self._validate_field_type(field, value)
-                    
+                        
             logger.debug("Analysis data validation complete")
             
         except ValueError as e:
@@ -363,9 +332,9 @@ class AnalysisService:
             raise ValueError(f"Invalid {field_type} value for field {field}: {str(e)}")
 
     def _convert_to_int(self, value: Any) -> int:
-        """Convert value to integer, handling various formats."""
-        if value is None:
-            return 0
+        """Convert value to integer, handling empty values for optional fields."""
+        if value is None or value == '':
+            return None  # Return None for empty optional fields
         try:
             if isinstance(value, str):
                 clean_value = value.replace('$', '').replace(',', '').strip()
@@ -375,9 +344,9 @@ class AnalysisService:
             raise ValueError(f"Cannot convert {value} to integer")
 
     def _convert_to_float(self, value: Any) -> float:
-        """Convert value to float, handling various formats."""
-        if value is None:
-            return 0.0
+        """Convert value to float, handling empty values for optional fields."""
+        if value is None or value == '':
+            return None  # Return None for empty optional fields
         try:
             if isinstance(value, str):
                 clean_value = value.replace('$', '').replace('%', '').replace(',', '').strip()

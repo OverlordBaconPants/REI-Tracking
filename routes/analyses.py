@@ -178,8 +178,19 @@ def generate_pdf(analysis_id):
         if not user_id:
             return jsonify({'error': 'User not authenticated'}), 401
 
-        # Generate PDF
-        buffer = analysis_service.generate_pdf_report(analysis_id, user_id)
+        # First, get the analysis data
+        analysis_data = analysis_service.get_analysis(analysis_id, user_id)
+        if not analysis_data:
+            return jsonify({'error': 'Analysis not found'}), 404
+
+        # Generate PDF using the report generator directly
+        try:
+            # Import at route level to avoid circular imports
+            from services.report_generator import generate_report
+            buffer = generate_report(analysis_data)
+        except Exception as e:
+            current_app.logger.error(f"PDF Generation error: {str(e)}")
+            return jsonify({'error': f'Error generating PDF: {str(e)}'}), 500
         
         # Return the PDF file
         return send_file(
@@ -190,8 +201,8 @@ def generate_pdf(analysis_id):
         )
         
     except Exception as e:
-        current_app.logger.error(f"Error generating PDF: {str(e)}")
-        return jsonify({'error': f'Error generating PDF: {str(e)}'}), 500
+        current_app.logger.error(f"Route error: {str(e)}")
+        return jsonify({'error': f'Error processing request: {str(e)}'}), 500
     
 @analyses_bp.route('/mao-calculator')
 @login_required

@@ -45,6 +45,7 @@ const addPropertiesModule = {
                     const query = this.value;
                     if (query.length > 2) {
                         console.log('Making API call for:', query);
+                        resultsList.innerHTML = '<li class="list-group-item text-muted">Loading...</li>';
                         fetch(`/api/autocomplete?query=${encodeURIComponent(query)}`)
                             .then(response => {
                                 if (!response.ok) {

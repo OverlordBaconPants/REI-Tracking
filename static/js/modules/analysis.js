@@ -60,16 +60,18 @@ const padSplitExpensesHTML = `
     </div>
 `;
 
-// Balloon Payment Optional Section
+// Update the balloonPaymentHTML template
 const balloonPaymentHTML = `
     <div class="card mb-4" id="balloon-payment-section">
-        <div class="card-header">
+        <div class="card-header bg-primary">
             <div class="d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Balloon Payment</h5>
+                <h5 class="mb-0 text-white">Balloon Payment</h5>
                 <div class="form-check form-switch">
                     <input class="form-check-input" type="checkbox" id="has_balloon_payment" 
                            name="has_balloon_payment" role="switch">
-                    <label class="form-check-label" for="has_balloon_payment">Enable</label>
+                    <label class="form-check-label text-white fw-bold" for="has_balloon_payment">
+                        Enable
+                    </label>
                 </div>
             </div>
         </div>
@@ -78,13 +80,13 @@ const balloonPaymentHTML = `
                 <div class="col-12 col-md-6">
                     <label for="balloon_due_date" class="form-label">Balloon Payment Due Date</label>
                     <input type="date" class="form-control form-control-lg" id="balloon_due_date" 
-                           name="balloon_due_date" required>
+                           name="balloon_due_date">
                 </div>
                 <div class="col-12 col-md-6">
                     <label for="balloon_refinance_ltv_percentage" class="form-label">Refinance LTV (%)</label>
                     <div class="input-group">
                         <input type="number" class="form-control form-control-lg" id="balloon_refinance_ltv_percentage" 
-                               name="balloon_refinance_ltv_percentage" step="0.01" min="0" max="100" required>
+                               name="balloon_refinance_ltv_percentage" step="0.01" min="0" max="100">
                         <span class="input-group-text">%</span>
                     </div>
                 </div>
@@ -93,28 +95,28 @@ const balloonPaymentHTML = `
                     <div class="input-group">
                         <span class="input-group-text">$</span>
                         <input type="number" class="form-control form-control-lg" id="balloon_refinance_loan_amount" 
-                               name="balloon_refinance_loan_amount" required>
+                               name="balloon_refinance_loan_amount">
                     </div>
                 </div>
                 <div class="col-12 col-md-6">
                     <label for="balloon_refinance_loan_interest_rate" class="form-label">Refinance Interest Rate (%)</label>
                     <div class="input-group">
                         <input type="number" class="form-control form-control-lg" id="balloon_refinance_loan_interest_rate" 
-                               name="balloon_refinance_loan_interest_rate" step="0.025" required>
+                               name="balloon_refinance_loan_interest_rate" step="0.025">
                         <span class="input-group-text">%</span>
                     </div>
                 </div>
                 <div class="col-12 col-md-6">
                     <label for="balloon_refinance_loan_term" class="form-label">Refinance Loan Term (months)</label>
                     <input type="number" class="form-control form-control-lg" id="balloon_refinance_loan_term" 
-                           name="balloon_refinance_loan_term" required>
+                           name="balloon_refinance_loan_term">
                 </div>
                 <div class="col-12 col-md-6">
                     <label for="balloon_refinance_loan_down_payment" class="form-label">Refinance Down Payment</label>
                     <div class="input-group">
                         <span class="input-group-text">$</span>
                         <input type="number" class="form-control form-control-lg" id="balloon_refinance_loan_down_payment" 
-                               name="balloon_refinance_loan_down_payment" required>
+                               name="balloon_refinance_loan_down_payment">
                     </div>
                 </div>
                 <div class="col-12 col-md-6">
@@ -122,7 +124,7 @@ const balloonPaymentHTML = `
                     <div class="input-group">
                         <span class="input-group-text">$</span>
                         <input type="number" class="form-control form-control-lg" id="balloon_refinance_loan_closing_costs" 
-                               name="balloon_refinance_loan_closing_costs" required>
+                               name="balloon_refinance_loan_closing_costs">
                     </div>
                 </div>
             </div>
@@ -208,7 +210,7 @@ const getLongTermRentalHTML = () => `
                         <label for="square_footage" class="form-label">Square Footage</label>
                         <div class="input-group">
                             <input type="number" class="form-control form-control-lg" id="square_footage" 
-                                   name="square_footage" placeholder="Property square footage" required>
+                                name="square_footage" placeholder="Property square footage">
                             <span class="input-group-text">sq ft</span>
                         </div>
                     </div>
@@ -216,24 +218,24 @@ const getLongTermRentalHTML = () => `
                         <label for="lot_size" class="form-label">Lot Size</label>
                         <div class="input-group">
                             <input type="number" class="form-control form-control-lg" id="lot_size" 
-                                   name="lot_size" placeholder="Lot size" required>
+                                name="lot_size" placeholder="Lot size">
                             <span class="input-group-text">sq ft</span>
                         </div>
                     </div>
                     <div class="col-12 col-md-4">
                         <label for="year_built" class="form-label">Year Built</label>
                         <input type="number" class="form-control form-control-lg" id="year_built" 
-                               name="year_built" placeholder="Construction year" required>
+                            name="year_built" placeholder="Construction year">
                     </div>
                     <div class="col-12 col-md-6">
                         <label for="bedrooms" class="form-label">Bedrooms</label>
                         <input type="number" class="form-control form-control-lg" id="bedrooms" 
-                               name="bedrooms" min="0" step="1" placeholder="Number of bedrooms" required>
+                            name="bedrooms" min="0" step="1" placeholder="Number of bedrooms">
                     </div>
                     <div class="col-12 col-md-6">
                         <label for="bathrooms" class="form-label">Bathrooms</label>
                         <input type="number" class="form-control form-control-lg" id="bathrooms" 
-                               name="bathrooms" min="0" step="0.5" placeholder="Number of bathrooms" required>
+                            name="bathrooms" min="0" step="0.5" placeholder="Number of bathrooms">
                     </div>
                 </div>
             </div>
@@ -416,7 +418,7 @@ const getBRRRRHTML = () => `
                     <label for="square_footage" class="form-label">Square Footage</label>
                     <div class="input-group">
                         <input type="number" class="form-control form-control-lg" id="square_footage" 
-                               name="square_footage" placeholder="Property square footage" required>
+                            name="square_footage" placeholder="Property square footage">
                         <span class="input-group-text">sq ft</span>
                     </div>
                 </div>
@@ -424,24 +426,24 @@ const getBRRRRHTML = () => `
                     <label for="lot_size" class="form-label">Lot Size</label>
                     <div class="input-group">
                         <input type="number" class="form-control form-control-lg" id="lot_size" 
-                               name="lot_size" placeholder="Lot size" required>
+                            name="lot_size" placeholder="Lot size">
                         <span class="input-group-text">sq ft</span>
                     </div>
                 </div>
                 <div class="col-12 col-md-4">
                     <label for="year_built" class="form-label">Year Built</label>
                     <input type="number" class="form-control form-control-lg" id="year_built" 
-                           name="year_built" placeholder="Construction year" required>
+                        name="year_built" placeholder="Construction year">
                 </div>
                 <div class="col-12 col-md-6">
                     <label for="bedrooms" class="form-label">Bedrooms</label>
                     <input type="number" class="form-control form-control-lg" id="bedrooms" 
-                           name="bedrooms" min="0" step="1" placeholder="Number of bedrooms" required>
+                        name="bedrooms" min="0" step="1" placeholder="Number of bedrooms">
                 </div>
                 <div class="col-12 col-md-6">
                     <label for="bathrooms" class="form-label">Bathrooms</label>
                     <input type="number" class="form-control form-control-lg" id="bathrooms" 
-                           name="bathrooms" min="0" step="0.5" placeholder="Number of bathrooms" required>
+                        name="bathrooms" min="0" step="0.5" placeholder="Number of bathrooms">
                 </div>
             </div>
         </div>
@@ -1213,8 +1215,8 @@ window.analysisModule = {
         // If elements don't exist and this is an LTR analysis, elements might still be loading
         const analysisType = document.getElementById('analysis_type')?.value;
         if (!balloonToggle || !balloonDetails) {
-            if (!analysisType?.includes('BRRRR') && !skipToggleInit) {
-                console.log('Balloon payment elements not found for LTR - will retry once');
+            if (!analysisType?.includes('BRRRR')) {
+                console.log('Balloon payment elements not found - will retry in 100ms');
                 setTimeout(() => this.initBalloonPaymentHandlers(true), 100);
             }
             return;
@@ -1224,33 +1226,46 @@ window.analysisModule = {
         if (!balloonToggle.checked) {
             this.clearBalloonPaymentFields();
         }
-
-        // Clear any existing event listeners by cloning the element
-        const newBalloonToggle = balloonToggle.cloneNode(true);
-        balloonToggle.parentNode.replaceChild(newBalloonToggle, balloonToggle);
-
+    
+        console.log('Setting up balloon toggle event listener');
         // Add event listener to toggle
-        newBalloonToggle.addEventListener('change', (e) => {
+        balloonToggle.addEventListener('change', (e) => {
             console.log('Balloon toggle changed:', e.target.checked);
             
-            // Toggle visibility
-            balloonDetails.style.display = e.target.checked ? 'block' : 'none';
+            // Toggle visibility with animation
+            if (e.target.checked) {
+                balloonDetails.style.display = 'block';
+                // Optional: add fade-in effect
+                balloonDetails.style.opacity = '0';
+                setTimeout(() => {
+                    balloonDetails.style.opacity = '1';
+                    balloonDetails.style.transition = 'opacity 0.3s ease-in-out';
+                }, 0);
+            } else {
+                balloonDetails.style.opacity = '0';
+                setTimeout(() => {
+                    balloonDetails.style.display = 'none';
+                }, 300);
+            }
             
             // Get all inputs in the balloon details section
             const balloonInputs = balloonDetails.querySelectorAll('input:not([type="checkbox"])');
             
             // Toggle required attribute and clear fields if unchecked
             balloonInputs.forEach(input => {
-                input.required = e.target.checked;
-                if (!e.target.checked) {
+                if (e.target.checked) {
+                    input.setAttribute('required', '');
+                } else {
+                    input.removeAttribute('required');
                     input.value = '';
                 }
             });
         });
-
+    
         // Set initial state
-        const isChecked = newBalloonToggle.checked;
+        const isChecked = balloonToggle.checked;
         balloonDetails.style.display = isChecked ? 'block' : 'none';
+        balloonDetails.style.opacity = isChecked ? '1' : '0';
         
         const balloonInputs = balloonDetails.querySelectorAll('input:not([type="checkbox"])');
         balloonInputs.forEach(input => {
@@ -1377,80 +1392,107 @@ window.analysisModule = {
         }
     },
 
+    // Update initAddressAutocomplete in the analysisModule
     initAddressAutocomplete() {
         console.log('Initializing address autocomplete');
         const addressInput = document.getElementById('address');
-        const resultsList = document.getElementById('addressSuggestions');
-        let timeoutId;
+        
+        if (!addressInput) {
+            console.error('Address input not found');
+            return;
+        }
 
-        if (addressInput && resultsList) {
-            console.log('Address input and results list found');
-            addressInput.addEventListener('input', function() {
-                clearTimeout(timeoutId);
-                timeoutId = setTimeout(() => {
-                    const query = this.value;
-                    if (query.length > 2) {
-                        console.log('Making API call for:', query);
-                        fetch(`/api/autocomplete?query=${encodeURIComponent(query)}`)
-                            .then(response => {
-                                console.log('Response status:', response.status);
-                                if (!response.ok) {
-                                    return response.text().then(text => {
-                                        throw new Error(`HTTP error! status: ${response.status}, message: ${text}`);
-                                    });
-                                }
-                                return response.json();
-                            })
-                            .then(response => {
-                                console.log('API response:', response);
-                                resultsList.innerHTML = '';
-                                
-                                if (response.status === 'success' && response.data && Array.isArray(response.data)) {
-                                    response.data.forEach(result => {
-                                        const li = document.createElement('li');
-                                        li.textContent = result.formatted;
-                                        li.addEventListener('click', function() {
-                                            addressInput.value = this.textContent;
-                                            resultsList.innerHTML = '';
-                                        });
-                                        resultsList.appendChild(li);
+        // Create results list element
+        const resultsList = document.createElement('ul');
+        resultsList.className = 'autocomplete-results list-group position-absolute w-100 shadow-sm';
+        resultsList.style.zIndex = '1000';
+        
+        // Insert the results list after the input
+        addressInput.parentNode.appendChild(resultsList);
+        
+        let timeoutId;
+        
+        // Add input event listener
+        addressInput.addEventListener('input', function() {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                const query = this.value;
+                if (query.length > 2) {
+                    console.log('Making API call for:', query);
+                    fetch(`/api/autocomplete?query=${encodeURIComponent(query)}`)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            console.log('API response:', data);
+                            resultsList.innerHTML = '';
+                            
+                            if (data.status === 'success' && data.data && Array.isArray(data.data)) {
+                                data.data.forEach(result => {
+                                    const li = document.createElement('li');
+                                    li.className = 'list-group-item list-group-item-action';
+                                    li.textContent = result.formatted;
+                                    li.style.cursor = 'pointer';
+                                    
+                                    li.addEventListener('click', function() {
+                                        addressInput.value = this.textContent;
+                                        resultsList.innerHTML = '';
                                     });
                                     
-                                    if (response.data.length === 0) {
-                                        resultsList.innerHTML = '<li class="no-results">No matches found</li>';
-                                    }
-                                } else {
-                                    throw new Error('Invalid response format');
+                                    resultsList.appendChild(li);
+                                });
+                                
+                                if (data.data.length === 0) {
+                                    const li = document.createElement('li');
+                                    li.className = 'list-group-item disabled';
+                                    li.textContent = 'No matches found';
+                                    resultsList.appendChild(li);
                                 }
-                            })
-                            .catch(error => {
-                                console.error('Error:', error);
-                                resultsList.innerHTML = `<li class="error">Error fetching results: ${error.message}</li>`;
-                            });
-                    } else {
-                        resultsList.innerHTML = '';
-                    }
-                }, 300);
-            });
-
-            // Close suggestions when clicking outside
-            document.addEventListener('click', function(e) {
-                if (e.target !== addressInput && e.target !== resultsList) {
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            resultsList.innerHTML = `
+                                <li class="list-group-item text-danger">
+                                    Error fetching results: ${error.message}
+                                </li>
+                            `;
+                        });
+                } else {
                     resultsList.innerHTML = '';
                 }
-            });
+            }, 300);
+        });
 
-            // Prevent form submission when selecting from dropdown
-            resultsList.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-            });
-        } else {
-            console.error('Address input or results list not found', {
-                addressInput: !!addressInput,
-                resultsList: !!resultsList
-            });
-        }
+        // Close suggestions when clicking outside
+        document.addEventListener('click', function(e) {
+            if (e.target !== addressInput && e.target !== resultsList) {
+                resultsList.innerHTML = '';
+            }
+        });
+
+        // Prevent form submission when selecting from dropdown
+        resultsList.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+
+        // Add some basic styling for the autocomplete
+        const style = document.createElement('style');
+        style.textContent = `
+            .autocomplete-results {
+                max-height: 200px;
+                overflow-y: auto;
+                background: white;
+            }
+            .autocomplete-results .list-group-item:hover {
+                background-color: #f8f9fa;
+            }
+        `;
+        document.head.appendChild(style);
     },
 
     async handleTypeChange(newType) {
@@ -1825,59 +1867,45 @@ window.analysisModule = {
             return;
         }
     
-        // Get all form fields
+        // Get form data
         const formData = new FormData(form);
         const analysisData = {};
-    
-        // First, set the balloon payment flag correctly - convert checkbox value to boolean
+        
+        // First, set the balloon payment flag correctly
         const hasBalloon = form.querySelector('#has_balloon_payment')?.checked || false;
-        analysisData.has_balloon_payment = hasBalloon;  // This will be a true boolean, not 'on'
-    
-        // Process each field according to its type
+        analysisData.has_balloon_payment = hasBalloon;
+        
+        // Process each form field
         formData.forEach((value, key) => {
             if (key === 'has_balloon_payment') {
-                // Skip as we've already handled this
-                return;
-            } else if (key.endsWith('_interest_only')) {
-                // Handle checkbox fields - convert to boolean
+                return; // Skip as we've already handled this
+            }
+            
+            // Handle balloon payment fields
+            if (key.startsWith('balloon_')) {
+                if (!hasBalloon) {
+                    // If balloon payments are disabled, set all balloon fields to null
+                    analysisData[key] = null;
+                    return;
+                }
+            }
+            
+            // Normal field processing
+            if (key.endsWith('_interest_only')) {
                 const checkbox = form.querySelector(`#${key}`);
                 analysisData[key] = checkbox ? checkbox.checked : false;
-            } else if (key === 'balloon_due_date' && value) {
-                // Handle date field - only if balloon payments are enabled
-                analysisData[key] = hasBalloon ? new Date(value).toISOString().split('T')[0] : null;
+            } else if (key === 'balloon_due_date' && value && hasBalloon) {
+                analysisData[key] = new Date(value).toISOString().split('T')[0];
             } else if (key.endsWith('_percentage') || this.isNumericField(key)) {
-                // Handle all numeric fields (including percentages)
-                // Convert empty strings to 0
                 analysisData[key] = value === '' ? 0 : this.toRawNumber(value);
             } else if (key === 'bathrooms') {
-                // Handle bathrooms specifically as it can be decimal
                 analysisData[key] = this.toRawNumber(value);
             } else {
-                // Handle all other fields
-                analysisData[key] = value || null;  // Convert empty strings to null
+                analysisData[key] = value || null;
             }
         });
     
-        // If balloon payment is false, ensure all balloon-related fields are 0 or null
-        if (!hasBalloon) {
-            const balloonFields = [
-                'balloon_refinance_loan_amount',
-                'balloon_refinance_loan_closing_costs',
-                'balloon_refinance_loan_down_payment',
-                'balloon_refinance_loan_interest_rate',
-                'balloon_refinance_loan_term',
-                'balloon_refinance_ltv_percentage'
-            ];
-            balloonFields.forEach(field => {
-                analysisData[field] = 0;
-            });
-            analysisData.balloon_due_date = null;
-        }
-    
-        // Log the prepared data
-        console.log('Prepared analysis data:', analysisData);
-    
-        // Make the API call
+        // Make API call
         fetch('/analyses/create_analysis', {
             method: 'POST',
             headers: {
@@ -1892,19 +1920,9 @@ window.analysisModule = {
             return response.json();
         })
         .then(data => {
-            console.log('Server response:', data);
-            
             if (data.success) {
-                const analysisData = data.analysis.analysis || data.analysis;
-                console.log('Analysis data for reports:', analysisData);
-                
-                if (!analysisData.analysis_type) {
-                    console.error('Missing analysis type in data:', analysisData);
-                    throw new Error('Invalid analysis data structure');
-                }
-    
-                this.currentAnalysisId = analysisData.id;
-                this.populateReportsTab(analysisData);
+                this.currentAnalysisId = data.analysis.id;
+                this.populateReportsTab(data.analysis);
                 this.switchToReportsTab();
                 this.showReportActions();
                 toastr.success('Analysis created successfully');
@@ -2166,7 +2184,7 @@ window.analysisModule = {
     
     // Updated populateReportsTab function - applies formatting for display
     populateReportsTab(data) {
-        console.log('Starting populateReportsTab:', data);
+        console.log('Starting populateReportsTab with data:', data);
         
         const reportsContent = document.querySelector('#reports');
         if (!reportsContent) {
@@ -2174,26 +2192,31 @@ window.analysisModule = {
             return;
         }
         
-        this.currentAnalysisId = data.id || null;
+        // Ensure we have the correct data structure
+        const analysisData = data.analysis || data;
+        this.currentAnalysisId = analysisData.id || null;
     
         try {
             let reportContent = '';
-            if (data.analysis_type.includes('BRRRR')) {
+            
+            // Safely check analysis type
+            const analysisType = analysisData.analysis_type || '';
+            
+            if (analysisType.includes('BRRRR')) {
                 console.log('Generating BRRRR report content');
-                reportContent = this.getBRRRRReportContent.call(this, data);
-                console.log('Generated report content:', reportContent);
+                reportContent = this.getBRRRRReportContent.call(this, analysisData);
             } else {
-                reportContent = this.getLTRReportContent.call(this, data);
+                reportContent = this.getLTRReportContent.call(this, analysisData);
             }
     
             const finalContent = `
                 <div class="row align-items-center mb-4">
                     <div class="col">
-                        <h4 class="mb-0">${data.analysis_type || 'Analysis'}: ${data.analysis_name || 'Untitled'}</h4>
+                        <h4 class="mb-0">${analysisType || 'Analysis'}: ${analysisData.analysis_name || 'Untitled'}</h4>
                     </div>
                     <div class="col-auto">
                         <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-secondary" onclick="analysisModule.downloadPdf('${data.id}')">
+                            <button type="button" class="btn btn-secondary" onclick="analysisModule.downloadPdf('${analysisData.id}')">
                                 <i class="bi bi-file-earmark-pdf me-1"></i>Download PDF
                             </button>
                             <button type="button" class="btn btn-primary" id="reEditButton">
@@ -2204,21 +2227,20 @@ window.analysisModule = {
                 </div>
                 ${reportContent}`;
     
-            console.log('Setting innerHTML with content:', finalContent);
             reportsContent.innerHTML = finalContent;
     
             const reEditButton = document.getElementById('reEditButton');
             if (reEditButton) {
                 reEditButton.addEventListener('click', () => {
-                    const financialTab = document.getElementById('financial-tab');
-                    if (financialTab) {
-                        financialTab.click();
-                    }
+                    this.switchToFinancialTab();
                 });
             }
         } catch (error) {
             console.error('Error in populateReportsTab:', error);
-            reportsContent.innerHTML = '<div class="alert alert-danger">Error generating report content</div>';
+            reportsContent.innerHTML = `
+                <div class="alert alert-danger">
+                    Error generating report content: ${error.message}
+                </div>`;
         }
     },
 
@@ -2232,246 +2254,141 @@ window.analysisModule = {
         });
     
         return `
-        <div class="card mb-4">
-            <div class="card-body p-3 p-md-4">
-                <!-- Financial Overview Section -->
-                <div class="row g-4">
-                    <div class="col-12 col-lg-6">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="mb-0 fs-6 fs-md-5">
-                                ${this.hasBalloonData(analysis) ? 'Pre-Balloon Financial Overview' : 'Income & Returns'}
-                            </h5>
-                            ${this.hasBalloonData(analysis) ? `
-                                <span class="badge bg-primary">Balloon Due: ${new Date(analysis.balloon_due_date).toLocaleDateString()}</span>
-                            ` : ''}
-                        </div>
-                        <div class="card bg-light h-100">
-                            <div class="list-group list-group-flush">
-                                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                    <span>Monthly Rent</span>
-                                    <strong>${this.formatDisplayValue(analysis.monthly_rent)}</strong>
-                                </div>
-                                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                    <span class="d-flex align-items-center">
-                                        Monthly Cash Flow
-                                        <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" data-bs-html="true" 
-                                           title="Monthly income after all operating expenses and ${this.hasBalloonData(analysis) ? 'initial ' : ''}loan payments">
-                                        </i>
-                                    </span>
-                                    <strong>${this.hasBalloonData(analysis) ? 
-                                        analysis.calculated_metrics?.pre_balloon_monthly_cash_flow :
-                                        analysis.calculated_metrics?.monthly_cash_flow}</strong>
-                                </div>
-                                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                    <span class="d-flex align-items-center">
-                                        Annual Cash Flow
-                                        <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" data-bs-html="true" 
-                                           title="Monthly cash flow × 12 months">
-                                        </i>
-                                    </span>
-                                    <strong>${this.hasBalloonData(analysis) ? 
-                                        analysis.calculated_metrics?.pre_balloon_annual_cash_flow :
-                                        analysis.calculated_metrics?.annual_cash_flow}</strong>
-                                </div>
-                                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                    <span class="d-flex align-items-center">
-                                        Cash-on-Cash Return
-                                        <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" data-bs-html="true" 
-                                           title="${this.hasBalloonData(analysis) ? 
-                                               'Based on initial investment before balloon refinance' : 
-                                               '(Annual Cash Flow ÷ Total Cash Invested) × 100'}">
-                                        </i>
-                                    </span>
-                                    <strong>${analysis.calculated_metrics?.cash_on_cash_return}</strong>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-    
-                    <!-- Financing Section -->
-                    <div class="col-12 col-lg-6">
-                        <h5 class="mb-3 fs-6 fs-md-5">Financing Details</h5>
-                        <div class="card bg-light h-100">
-                            ${this.getLoanDetailsContent(analysis)}
-                        </div>
-                    </div>
-    
-                    <!-- Operating Expenses Section -->
-                    <div class="col-12">
-                        <h5 class="mb-3 fs-6 fs-md-5">
-                            ${this.hasBalloonData(analysis) ? 'Pre-Balloon Operating Expenses' : 'Operating Expenses'}
+            <!-- Income & Returns Card -->
+            <div class="card mb-4">
+                <div class="card-body p-3 p-md-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0 fs-6 fs-md-5">
+                            ${this.hasBalloonData(analysis) ? 'Pre-Balloon Financial Overview' : 'Income & Returns'}
                         </h5>
-                        <div class="card bg-light">
-                            <div class="list-group list-group-flush">
-                                <div class="row g-0">
-                                    <div class="col-12 col-md-6">
-                                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                            <span>Property Taxes</span>
-                                            <strong>${this.formatDisplayValue(analysis.property_taxes)}</strong>
-                                        </div>
-                                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                            <span>Insurance</span>
-                                            <strong>${this.formatDisplayValue(analysis.insurance)}</strong>
-                                        </div>
-                                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                            <span>HOA/COA/COOP</span>
-                                            <strong>${this.formatDisplayValue(analysis.hoa_coa_coop)}</strong>
-                                        </div>
-                                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                            <span>Management</span>
-                                            <div class="text-end">
-                                                <div class="small text-muted">
-                                                    ${this.formatDisplayValue(analysis.management_fee_percentage, 'percentage')}
-                                                </div>
-                                                <strong>
-                                                    ${this.formatDisplayValue(analysis.monthly_rent * (analysis.management_fee_percentage / 100))}
-                                                </strong>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-12 col-md-6">
-                                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                            <span>CapEx</span>
-                                            <div class="text-end">
-                                                <div class="small text-muted">
-                                                    ${this.formatDisplayValue(analysis.capex_percentage, 'percentage')}
-                                                </div>
-                                                <strong>
-                                                    ${this.formatDisplayValue(analysis.monthly_rent * (analysis.capex_percentage / 100))}
-                                                </strong>
-                                            </div>
-                                        </div>
-                                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                            <span>Vacancy</span>
-                                            <div class="text-end">
-                                                <div class="small text-muted">
-                                                    ${this.formatDisplayValue(analysis.vacancy_percentage, 'percentage')}
-                                                </div>
-                                                <strong>
-                                                    ${this.formatDisplayValue(analysis.monthly_rent * (analysis.vacancy_percentage / 100))}
-                                                </strong>
-                                            </div>
-                                        </div>
-                                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                            <span>Repairs</span>
-                                            <div class="text-end">
-                                                <div class="small text-muted">
-                                                    ${this.formatDisplayValue(analysis.repairs_percentage, 'percentage')}
-                                                </div>
-                                                <strong>
-                                                    ${this.formatDisplayValue(analysis.monthly_rent * (analysis.repairs_percentage / 100))}
-                                                </strong>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                        ${this.hasBalloonData(analysis) ? `
+                            <span class="badge bg-primary">Balloon Due: ${new Date(analysis.balloon_due_date).toLocaleDateString()}</span>
+                        ` : ''}
+                    </div>
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Monthly Rent</span>
+                            <strong>${this.formatDisplayValue(analysis.monthly_rent)}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span class="d-flex align-items-center">
+                                Monthly Cash Flow
+                                <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" data-bs-html="true" 
+                                   title="Monthly income after all operating expenses and ${this.hasBalloonData(analysis) ? 'initial ' : ''}loan payments">
+                                </i>
+                            </span>
+                            <strong>${this.hasBalloonData(analysis) ? 
+                                analysis.calculated_metrics?.pre_balloon_monthly_cash_flow :
+                                analysis.calculated_metrics?.monthly_cash_flow}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span class="d-flex align-items-center">
+                                Annual Cash Flow
+                                <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" data-bs-html="true" 
+                                   title="Monthly cash flow × 12 months">
+                                </i>
+                            </span>
+                            <strong>${this.hasBalloonData(analysis) ? 
+                                analysis.calculated_metrics?.pre_balloon_annual_cash_flow :
+                                analysis.calculated_metrics?.annual_cash_flow}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span class="d-flex align-items-center">
+                                Cash-on-Cash Return
+                                <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" data-bs-html="true" 
+                                   title="${this.hasBalloonData(analysis) ? 
+                                       'Based on initial investment before balloon refinance' : 
+                                       '(Annual Cash Flow ÷ Total Cash Invested) × 100'}">
+                                </i>
+                            </span>
+                            <strong>${analysis.calculated_metrics?.cash_on_cash_return}</strong>
                         </div>
                     </div>
-    
-                    ${this.hasBalloonData(analysis) ? `
-                    <!-- Post-Balloon Section -->
-                    <div class="col-12">
-                        <h5 class="mb-3 fs-6 fs-md-5">Post-Balloon Overview</h5>
-                        <div class="accordion" id="postBalloonAccordion">
-                            <!-- Financial Details -->
-                            <div class="accordion-item">
-                                <h6 class="accordion-header">
-                                    <button class="accordion-button" type="button" data-bs-toggle="collapse" 
-                                            data-bs-target="#financialCollapse">
-                                        Financial Details
-                                    </button>
-                                </h6>
-                                <div id="financialCollapse" class="accordion-collapse collapse show" 
-                                     data-bs-parent="#postBalloonAccordion">
-                                    <div class="accordion-body p-0">
-                                        <div class="list-group list-group-flush">
-                                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                                <span>Monthly Rent</span>
-                                                <div class="text-end">
-                                                    <strong>${analysis.calculated_metrics?.post_balloon_monthly_rent}</strong>
-                                                    <div class="small text-primary">+2.5% annual increase</div>
-                                                </div>
-                                            </div>
-                                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                                <span class="d-flex align-items-center">
-                                                    Monthly Cash Flow
-                                                    <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" 
-                                                       title="After expenses & refinanced loan payment">
-                                                    </i>
-                                                </span>
-                                                <strong>${analysis.calculated_metrics?.post_balloon_monthly_cash_flow}</strong>
-                                            </div>
-                                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                                <span>Annual Cash Flow</span>
-                                                <strong>${analysis.calculated_metrics?.post_balloon_annual_cash_flow}</strong>
-                                            </div>
-                                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                                <span>Cash-on-Cash Return</span>
-                                                <strong>${analysis.calculated_metrics?.post_balloon_cash_on_cash_return}</strong>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-    
-                            <!-- Operating Expenses -->
-                            <div class="accordion-item">
-                                <h6 class="accordion-header">
-                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
-                                            data-bs-target="#expensesCollapse">
-                                        Operating Expenses
-                                    </button>
-                                </h6>
-                                <div id="expensesCollapse" class="accordion-collapse collapse" 
-                                     data-bs-parent="#postBalloonAccordion">
-                                    <div class="accordion-body p-0">
-                                        <div class="list-group list-group-flush">
-                                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                                <span>Property Taxes</span>
-                                                <div class="text-end">
-                                                    <strong>${analysis.calculated_metrics?.post_balloon_property_taxes}</strong>
-                                                    <div class="small text-primary">+2.5% annual increase</div>
-                                                </div>
-                                            </div>
-                                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                                <span>Insurance</span>
-                                                <div class="text-end">
-                                                    <strong>${analysis.calculated_metrics?.post_balloon_insurance}</strong>
-                                                    <div class="small text-primary">+2.5% annual increase</div>
-                                                </div>
-                                            </div>
-                                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                                <span>HOA/COA/COOP</span>
-                                                <strong>${this.formatDisplayValue(analysis.hoa_coa_coop)}</strong>
-                                            </div>
-                                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                                <span>Management Fee</span>
-                                                <strong>${analysis.calculated_metrics?.post_balloon_management_fee}</strong>
-                                            </div>
-                                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                                <span>CapEx</span>
-                                                <strong>${analysis.calculated_metrics?.post_balloon_capex}</strong>
-                                            </div>
-                                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                                <span>Vacancy</span>
-                                                <strong>${analysis.calculated_metrics?.post_balloon_vacancy}</strong>
-                                            </div>
-                                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                                <span>Repairs</span>
-                                                <strong>${analysis.calculated_metrics?.post_balloon_repairs}</strong>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    ` : ''}
                 </div>
             </div>
-        </div>
-        ${this.createNotesSection(analysis.notes)}`;
+    
+            <!-- Financing Details Card -->
+            <div class="card mb-4">
+                <div class="card-body p-3 p-md-4">
+                    <h5 class="mb-3 fs-6 fs-md-5">Financing Details</h5>
+                    ${this.getLoanDetailsContent(analysis)}
+                </div>
+            </div>
+    
+            <!-- Operating Expenses Card -->
+            <div class="card mb-4">
+                <div class="card-body p-3 p-md-4">
+                    <h5 class="mb-3 fs-6 fs-md-5">
+                        ${this.hasBalloonData(analysis) ? 'Pre-Balloon Operating Expenses' : 'Operating Expenses'}
+                    </h5>
+                    <div class="list-group list-group-flush">
+                        <div class="row g-0">
+                            <div class="col-12 col-md-6">
+                                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                    <span>Property Taxes</span>
+                                    <strong>${this.formatDisplayValue(analysis.property_taxes)}</strong>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                    <span>Insurance</span>
+                                    <strong>${this.formatDisplayValue(analysis.insurance)}</strong>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                    <span>HOA/COA/COOP</span>
+                                    <strong>${this.formatDisplayValue(analysis.hoa_coa_coop)}</strong>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                    <span>Management</span>
+                                    <div class="text-end">
+                                        <div class="small text-muted">
+                                            ${this.formatDisplayValue(analysis.management_fee_percentage, 'percentage')}
+                                        </div>
+                                        <strong>
+                                            ${this.formatDisplayValue(analysis.monthly_rent * (analysis.management_fee_percentage / 100))}
+                                        </strong>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                    <span>CapEx</span>
+                                    <div class="text-end">
+                                        <div class="small text-muted">
+                                            ${this.formatDisplayValue(analysis.capex_percentage, 'percentage')}
+                                        </div>
+                                        <strong>
+                                            ${this.formatDisplayValue(analysis.monthly_rent * (analysis.capex_percentage / 100))}
+                                        </strong>
+                                    </div>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                    <span>Vacancy</span>
+                                    <div class="text-end">
+                                        <div class="small text-muted">
+                                            ${this.formatDisplayValue(analysis.vacancy_percentage, 'percentage')}
+                                        </div>
+                                        <strong>
+                                            ${this.formatDisplayValue(analysis.monthly_rent * (analysis.vacancy_percentage / 100))}
+                                        </strong>
+                                    </div>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                    <span>Repairs</span>
+                                    <div class="text-end">
+                                        <div class="small text-muted">
+                                            ${this.formatDisplayValue(analysis.repairs_percentage, 'percentage')}
+                                        </div>
+                                        <strong>
+                                            ${this.formatDisplayValue(analysis.monthly_rent * (analysis.repairs_percentage / 100))}
+                                        </strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+    
+            ${this.createNotesSection(analysis.notes)}`;
     },
     
     // Shared loan details component
@@ -3311,13 +3228,14 @@ window.analysisModule = {
     // Updated validation function for flat schema
     validateForm(form) {
         let isValid = true;
-
+        const hasBalloon = form.querySelector('#has_balloon_payment')?.checked || false;
+    
         // Helper to validate numeric range
         const validateNumericRange = (value, min, max = Infinity) => {
             const num = parseFloat(value);
             return !isNaN(num) && num >= min && num <= max;
         };
-
+    
         // Validate required fields
         const requiredFields = form.querySelectorAll('[required]');
         requiredFields.forEach(field => {
@@ -3328,94 +3246,38 @@ window.analysisModule = {
                 field.classList.remove('is-invalid');
             }
         });
-
-        // Validate percentage fields
-        const percentageFields = [
-            'management_fee_percentage',
-            'capex_percentage',
-            'vacancy_percentage',
-            'repairs_percentage',
-            'padsplit_platform_percentage'
-        ];
-        
-        percentageFields.forEach(fieldName => {
-            const field = form.querySelector(`#${fieldName}`);
-            if (field && !validateNumericRange(field.value, 0, 100)) {
-                isValid = false;
-                field.classList.add('is-invalid');
-            }
-        });
-
-        // Validate money fields (must be non-negative)
-        const moneyFields = [
-            'purchase_price',
-            'after_repair_value',
-            'renovation_costs',
-            'cash_to_seller',
-            'closing_costs',
-            'assignment_fee',
-            'marketing_costs',
-            'monthly_rent',
-            'property_taxes',
-            'insurance',
-            'hoa_coa_coop',
-            'utilities',
-            'internet',
-            'cleaning',
-            'pest_control',
-            'landscaping'
-        ];
-
-        moneyFields.forEach(fieldName => {
-            const field = form.querySelector(`#${fieldName}`);
-            if (field && !validateNumericRange(field.value, 0)) {
-                isValid = false;
-                field.classList.add('is-invalid');
-            }
-        });
-
-        // Validate balloon payment fields if enabled
-        const hasBalloon = form.querySelector('#has_balloon_payment')?.checked;
+    
+        // Validate balloon payment fields only if enabled
         if (hasBalloon) {
-            // Get balloon fields
             const balloonFields = {
                 'balloon_due_date': {
                     validate: (value) => {
                         if (!value) return false;
                         const dueDate = new Date(value);
                         const today = new Date();
-                        today.setHours(0, 0, 0, 0); // Reset time portion for date-only comparison
+                        today.setHours(0, 0, 0, 0);
                         return dueDate >= today;
                     },
                     message: "Balloon due date must be in the future"
                 },
                 'balloon_refinance_ltv_percentage': {
-                    validate: (value) => this.validateNumericRange(value, 0, 100),
+                    validate: (value) => validateNumericRange(value, 0, 100),
                     message: "LTV percentage must be between 0 and 100"
                 },
                 'balloon_refinance_loan_amount': {
-                    validate: (value) => this.validateNumericRange(value, 0),
+                    validate: (value) => validateNumericRange(value, 0),
                     message: "Refinance loan amount must be greater than 0"
                 },
                 'balloon_refinance_loan_interest_rate': {
-                    validate: (value) => this.validateNumericRange(value, 0, 30),
+                    validate: (value) => validateNumericRange(value, 0, 30),
                     message: "Interest rate must be between 0 and 30"
                 },
                 'balloon_refinance_loan_term': {
-                    validate: (value) => this.validateNumericRange(value, 1, 360),
+                    validate: (value) => validateNumericRange(value, 1, 360),
                     message: "Loan term must be between 1 and 360 months"
-                },
-                'balloon_refinance_loan_down_payment': {
-                    validate: (value) => this.validateNumericRange(value, 0),
-                    message: "Down payment must be greater than or equal to 0"
-                },
-                'balloon_refinance_loan_closing_costs': {
-                    validate: (value) => this.validateNumericRange(value, 0),
-                    message: "Closing costs must be greater than or equal to 0"
                 }
             };
     
-            // Validate each balloon field
             Object.entries(balloonFields).forEach(([fieldName, config]) => {
                 const field = form.querySelector(`#${fieldName}`);
                 if (field) {
@@ -3424,7 +3286,6 @@ window.analysisModule = {
                         isValid = false;
                         field.classList.add('is-invalid');
                         
-                        // Add error message
                         let errorDiv = field.nextElementSibling;
                         if (!errorDiv || !errorDiv.classList.contains('invalid-feedback')) {
                             errorDiv = document.createElement('div');
