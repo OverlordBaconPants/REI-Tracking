@@ -100,7 +100,7 @@ const balloonPaymentHTML = `
                     <label for="balloon_refinance_loan_interest_rate" class="form-label">Refinance Interest Rate (%)</label>
                     <div class="input-group">
                         <input type="number" class="form-control form-control-lg" id="balloon_refinance_loan_interest_rate" 
-                               name="balloon_refinance_loan_interest_rate" step="0.125" required>
+                               name="balloon_refinance_loan_interest_rate" step="0.025" required>
                         <span class="input-group-text">%</span>
                     </div>
                 </div>
@@ -166,7 +166,7 @@ const getLoanFieldsHTML = (loanNumber) => `
                     <div class="col-md-6 mb-3">
                         <label for="loan${loanNumber}_loan_interest_rate" class="form-label">Interest Rate (%)</label>
                         <input type="number" class="form-control" id="loan${loanNumber}_loan_interest_rate" 
-                            name="loan${loanNumber}_loan_interest_rate" step="0.125" min="0" max="100" 
+                            name="loan${loanNumber}_loan_interest_rate" step="0.025" min="0" max="100" 
                             placeholder="Enter interest rate" required>
                         <div class="form-check mt-2">
                             <input class="form-check-input" type="checkbox" id="loan${loanNumber}_interest_only" 
@@ -472,7 +472,7 @@ const getBRRRRHTML = () => `
                 <div class="col-md-6 mb-3">
                     <label for="initial_loan_interest_rate" class="form-label">Initial Interest Rate (%)</label>
                     <input type="number" class="form-control" id="initial_loan_interest_rate" 
-                           name="initial_loan_interest_rate" placeholder="Interest rate" step="0.125" required>
+                           name="initial_loan_interest_rate" placeholder="Interest rate" step="0.025" required>
                     <div class="form-check mt-2">
                         <input class="form-check-input" type="checkbox" id="initial_interest_only" 
                                name="initial_interest_only">
@@ -511,7 +511,7 @@ const getBRRRRHTML = () => `
                     <label for="refinance_loan_interest_rate" class="form-label">Refinance Rate</label>
                     <div class="input-group">
                         <input type="number" class="form-control form-control-lg" id="refinance_loan_interest_rate" 
-                               name="refinance_loan_interest_rate" step="0.125" placeholder="Interest rate" required>
+                               name="refinance_loan_interest_rate" step="0.025" placeholder="Interest rate" required>
                         <span class="input-group-text">%</span>
                     </div>
                 </div>
