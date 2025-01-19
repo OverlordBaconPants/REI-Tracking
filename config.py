@@ -1,10 +1,51 @@
-# config.py
-
 import os
 from dotenv import load_dotenv
+import logging
+from logging.handlers import RotatingFileHandler
+import tempfile
 
 # Load environment variables from .env file
 load_dotenv()
+
+def setup_logging(config_name):
+    """Configure logging based on the configuration"""
+    # Use temp directory for log files in development
+    if config_name == 'development':
+        log_dir = os.path.join(tempfile.gettempdir(), 'transactions_app_logs')
+    else:
+        # In production, use the app's data directory
+        log_dir = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'data', 'logs')
+    
+    os.makedirs(log_dir, exist_ok=True)
+    log_file = os.path.join(log_dir, 'transactions.log')
+    
+    # Create handlers
+    file_handler = RotatingFileHandler(
+        log_file,
+        maxBytes=1024 * 1024,  # 1MB
+        backupCount=5
+    )
+    console_handler = logging.StreamHandler()
+    
+    # Create formatter
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    file_handler.setFormatter(formatter)
+    console_handler.setFormatter(formatter)
+    
+    # Configure root logger
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.DEBUG if config_name == 'development' else logging.INFO)
+    
+    # Remove existing handlers to avoid duplicates
+    root_logger.handlers = []
+    
+    # Add handlers
+    root_logger.addHandler(file_handler)
+    root_logger.addHandler(console_handler)
+    
+    return root_logger
 
 class Config:
     """Base configuration with common settings"""
@@ -16,9 +57,9 @@ class Config:
     # Base directory defaults to current directory for development
     BASE_DIR = os.path.abspath(os.path.dirname(__file__))
     
-    # File upload settings
+    # File upload settings with documentation
     ALLOWED_EXTENSIONS = {'png', 'svg', 'pdf', 'jpg', 'jpeg', 'csv', 'xls', 'xlsx'}
-    ALLOWED_DOCUMENTATION_EXTENSIONS = {'png', 'svg', 'pdf', 'jpg'}
+    ALLOWED_DOCUMENTATION_EXTENSIONS = {'png', 'svg', 'pdf', 'jpg', 'jpeg'}  # Added jpeg
     ALLOWED_IMPORT_EXTENSIONS = {'csv', 'xls', 'xlsx'}
     
     # Load max content length from environment variable
@@ -30,11 +71,10 @@ class Config:
         raise ValueError("No GEOAPIFY_API_KEY set in environment variables")
     
     def __init__(self):
-        # Directory structure
+        # Directory structure - simplified to one uploads directory
         self.DATA_DIR = os.path.join(self.BASE_DIR, 'data')
         self.ANALYSES_DIR = os.path.join(self.DATA_DIR, 'analyses')
-        self.UPLOAD_FOLDER = os.path.join(self.DATA_DIR, 'uploads')
-        self.REIMBURSEMENTS_DIR = os.path.join(self.UPLOAD_FOLDER, 'reimbursements')
+        self.UPLOAD_FOLDER = os.path.join(self.DATA_DIR, 'uploads')  # Single uploads directory
         
         # JSON file paths
         self.USERS_FILE = os.path.join(self.DATA_DIR, 'users.json')
@@ -51,7 +91,6 @@ class Config:
         os.makedirs(self.DATA_DIR, exist_ok=True)
         os.makedirs(self.ANALYSES_DIR, exist_ok=True)
         os.makedirs(self.UPLOAD_FOLDER, exist_ok=True)
-        os.makedirs(self.REIMBURSEMENTS_DIR, exist_ok=True)
 
 class DevelopmentConfig(Config):
     """Development configuration"""
@@ -72,8 +111,7 @@ class ProductionConfig(Config):
         self.BASE_DIR = '/opt/render/project/src'
         self.DATA_DIR = '/opt/render/project/src/data'
         self.ANALYSES_DIR = '/opt/render/project/src/data/analyses'
-        self.UPLOAD_FOLDER = '/opt/render/project/src/data/uploads'
-        self.REIMBURSEMENTS_DIR = os.path.join(self.UPLOAD_FOLDER, 'reimbursements')
+        self.UPLOAD_FOLDER = '/opt/render/project/src/data/uploads'  # Single uploads directory
         
         # JSON file paths
         self.USERS_FILE = os.path.join(self.DATA_DIR, 'users.json')

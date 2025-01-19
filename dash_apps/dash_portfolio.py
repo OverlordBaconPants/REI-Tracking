@@ -1,7 +1,8 @@
 import dash
 from dash import dcc, html
 import dash_bootstrap_components as dbc
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
+from dash.exceptions import PreventUpdate
 from flask_login import current_user
 from services.transaction_service import get_properties_for_user
 from datetime import datetime, date
@@ -14,6 +15,11 @@ from typing import Dict, List, Optional, Tuple, Union
 
 # Set up module-level logger
 logger = logging.getLogger(__name__)
+
+# Mobile breakpoint constants
+MOBILE_BREAKPOINT = 768
+MOBILE_HEIGHT = '100vh'
+DESKTOP_HEIGHT = 'calc(100vh - 150px)'
 
 def safe_float(value: Union[str, int, float, None], default: float = 0.0) -> float:
     """
@@ -392,6 +398,57 @@ def generate_color_scale(n: int) -> List[str]:
     
     return colors
 
+def create_responsive_chart(figure, id_prefix):
+    """Create a responsive chart container with mobile-friendly settings."""
+    return html.Div([
+        dcc.Graph(
+            id=f'{id_prefix}-chart',
+            figure=figure,
+            config={
+                'displayModeBar': False,  # Hide mode bar on mobile
+                'responsive': True,
+                'scrollZoom': False,  # Disable scroll zoom on mobile
+                'staticPlot': False,  # Enable touch interaction
+                'doubleClick': 'reset'  # Reset on double tap
+            },
+            style={
+                'height': '100%',
+                'minHeight': '300px'  # Ensure minimum height on mobile
+            }
+        )
+    ], className='chart-container mb-4')
+
+def create_metric_card(title: str, id: str, color_class: str) -> dbc.Card:
+    """Create a mobile-responsive metric card."""
+    return dbc.Card([
+        dbc.CardBody([
+            html.H5(title, className="card-title text-center mb-2 text-sm-start"),
+            html.H3(id=id, className=f"text-center {color_class} text-sm-start")
+        ])
+    ], className="mb-3 shadow-sm")
+
+def update_chart_layouts_for_mobile(fig, is_mobile=True):
+    """Update chart layouts for mobile devices."""
+    mobile_layout = {
+        'margin': dict(l=10, r=10, t=30, b=30),
+        'height': 300 if is_mobile else 400,
+        'legend': dict(
+            orientation='h' if is_mobile else 'v',
+            y=-0.5 if is_mobile else 0.5,
+            x=0.5 if is_mobile else 1.0,
+            xanchor='center' if is_mobile else 'left',
+            yanchor='top' if is_mobile else 'middle'
+        ),
+        'font': dict(
+            size=12 if is_mobile else 14  # Adjust font size for readability
+        ),
+        'hoverlabel': dict(
+            font_size=14  # Larger touch targets for hover labels
+        )
+    }
+    fig.update_layout(**mobile_layout)
+    return fig
+
 def create_portfolio_dash(flask_app) -> dash.Dash:
     """
     Create the portfolio dashboard application.
@@ -415,87 +472,104 @@ def create_portfolio_dash(flask_app) -> dash.Dash:
         )
         
         logger.debug("Dash app initialized successfully")
-        
-        # Define layout components
-        def create_metric_card(title: str, id: str, color_class: str) -> dbc.Card:
-            """Create a metric display card with consistent styling."""
-            return dbc.Card([
-                dbc.CardBody([
-                    html.H5(title, className="card-title text-center mb-3"),
-                    html.H3(id=id, className=f"text-center {color_class}")
-                ])
-            ], className="mb-4")
 
         # Define layout
         dash_app.layout = dbc.Container([
-            dcc.Store(id='session-store'),
+            # Responsive viewport meta tag
+            html.Meta(name="viewport", content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"),
             
-            html.Div([
-                # Error display div for showing any errors
-                html.Div(id="error-display", className="alert alert-danger", style={'display': 'none'}),
-                
-                # Header with user context
-                dbc.Row([
-                    dbc.Col([
-                        html.P(id="user-context", className="text-muted")
-                    ], width=12)
-                ], className="mb-4"),
-                
-                # Summary Cards Row 1
-                dbc.Row([
-                    dbc.Col(create_metric_card(
-                        "Portfolio Value", "total-portfolio-value", "text-primary"), width=4),
-                    dbc.Col(create_metric_card(
-                        "Total Equity", "total-equity", "text-success"), width=4),
-                    dbc.Col(create_metric_card(
-                        "Monthly Equity Gain", "equity-gained-month", "text-info"), width=4),
-                ], className="mb-4"),
-                
-                # Summary Cards Row 2
-                dbc.Row([
-                    dbc.Col(create_metric_card(
-                        "Gross Monthly Income", "total-monthly-income", "text-success"), width=4),
-                    dbc.Col(create_metric_card(
-                        "Monthly Expenses", "total-monthly-expenses", "text-danger"), width=4),
-                    dbc.Col(create_metric_card(
-                        "Net Monthly Cash Flow", "total-net-cashflow", "text-primary"), width=4),
-                ], className="mb-4"),
-                
-                # Charts Row 1
-                dbc.Row([
-                    dbc.Col([
-                        html.H4("Equity Distribution", className="text-center mb-4"),
-                        dcc.Graph(id='equity-pie-chart')
-                    ], width=6),
-                    dbc.Col([
-                        html.H4("Cash Flow by Property", className="text-center mb-4"),
-                        dcc.Graph(id='cashflow-bar-chart')
-                    ], width=6),
-                ], className="mb-4"),
-                
-                # Charts Row 2
-                dbc.Row([
-                    dbc.Col([
-                        html.H4("Monthly Income by Property", className="text-center mb-4"),
-                        dcc.Graph(id='income-pie-chart')
-                    ], width=6),
-                    dbc.Col([
-                        html.H4("Monthly Expenses Breakdown", className="text-center mb-4"),
-                        dcc.Graph(id='expenses-pie-chart')
-                    ], width=6),
-                ], className="mb-4"),
-                
-                # Property Details Table
-                dbc.Row([
-                    dbc.Col([
-                        html.H4("Property Details", className="text-center mb-4"),
-                        html.Div(id='property-table')
-                    ], width=12)
-                ]),
-            ])
-        ], fluid=True)
+            dcc.Store(id='session-store'),
+            dcc.Store(id='viewport-size'),  # Store for tracking viewport size
+            
+            # Error display
+            html.Div(id="error-display", className="alert alert-danger d-none"),
+            
+            # User context
+            dbc.Row([
+                dbc.Col([
+                    html.P(id="user-context", className="text-muted mb-3")
+                ], width=12)
+            ]),
+            
+            # Mobile-first metric cards
+            dbc.Row([
+                dbc.Col([create_metric_card(
+                    "Portfolio Value", "total-portfolio-value", "text-primary")], 
+                    xs=12, sm=6, md=4),
+                dbc.Col([create_metric_card(
+                    "Total Equity", "total-equity", "text-success")],
+                    xs=12, sm=6, md=4),
+                dbc.Col([create_metric_card(
+                    "Monthly Equity Gain", "equity-gained-month", "text-info")],
+                    xs=12, sm=6, md=4),
+            ], className="g-2 mb-3"),  # Use spacing utility
+            
+            # Second row of metric cards
+            dbc.Row([
+                dbc.Col([create_metric_card(
+                    "Gross Monthly Income", "total-monthly-income", "text-success")],
+                    xs=12, sm=6, md=4),
+                dbc.Col([create_metric_card(
+                    "Monthly Expenses", "total-monthly-expenses", "text-danger")],
+                    xs=12, sm=6, md=4),
+                dbc.Col([create_metric_card(
+                    "Net Monthly Cash Flow", "total-net-cashflow", "text-primary")],
+                    xs=12, sm=6, md=4),
+            ], className="g-2 mb-4"),
+            
+            # Charts with mobile-first layout
+            dbc.Row([
+                dbc.Col([
+                    html.H4("Equity Distribution", className="text-center mb-3"),
+                    html.Div(id='equity-pie-container', className="chart-container")
+                ], xs=12, md=6, className="mb-4"),
+                dbc.Col([
+                    html.H4("Cash Flow by Property", className="text-center mb-3"),
+                    html.Div(id='cashflow-bar-container', className="chart-container")
+                ], xs=12, md=6, className="mb-4"),
+            ]),
+            
+            dbc.Row([
+                dbc.Col([
+                    html.H4("Monthly Income by Property", className="text-center mb-3"),
+                    html.Div(id='income-pie-container', className="chart-container")
+                ], xs=12, md=6, className="mb-4"),
+                dbc.Col([
+                    html.H4("Monthly Expenses Breakdown", className="text-center mb-3"),
+                    html.Div(id='expenses-pie-container', className="chart-container")
+                ], xs=12, md=6, className="mb-4"),
+            ]),
+            
+            # Responsive table
+            dbc.Row([
+                dbc.Col([
+                    html.H4("Property Details", className="text-center mb-3"),
+                    html.Div(id='property-table-container', className="table-responsive")
+                ], width=12)
+            ]),
+        ], fluid=True, className="px-2 px-sm-3 py-3")
 
         logger.debug("Dashboard layout created successfully")
+
+        @dash_app.callback(
+            Output('viewport-size', 'data'),
+            [Input('session-store', 'data')],
+            [State('viewport-size', 'data')]
+        )
+        def update_viewport_size(_, current_size):
+            """Update viewport size data for responsive adjustments."""
+            ctx = dash.callback_context
+            if not ctx.triggered:
+                raise PreventUpdate
+            
+            # Get window width from client side
+            width = dash.no_update
+            try:
+                width = int(window.innerWidth)
+            except:
+                pass
+            
+            return {'width': width, 'is_mobile': width < MOBILE_BREAKPOINT}
 
         @dash_app.callback(
             [Output('user-context', 'children'),
@@ -505,19 +579,23 @@ def create_portfolio_dash(flask_app) -> dash.Dash:
              Output('total-monthly-income', 'children'),
              Output('total-monthly-expenses', 'children'),
              Output('total-net-cashflow', 'children'),
-             Output('equity-pie-chart', 'figure'),
-             Output('cashflow-bar-chart', 'figure'),
-             Output('income-pie-chart', 'figure'),
-             Output('expenses-pie-chart', 'figure'),
-             Output('property-table', 'children'),
+             Output('equity-pie-container', 'children'),
+             Output('cashflow-bar-container', 'children'),
+             Output('income-pie-container', 'children'),
+             Output('expenses-pie-container', 'children'),
+             Output('property-table-container', 'children'),
              Output('error-display', 'children'),
              Output('error-display', 'style')],
-            [Input('session-store', 'data')]
+            [Input('session-store', 'data'),
+             Input('viewport-size', 'data')]
         )
-        def update_metrics(data):
+        def update_metrics(data, viewport):
             """Update all dashboard metrics and visualizations."""
             try:
                 logger.info(f"Updating metrics for user: {current_user.name}")
+                
+                # Get device type
+                is_mobile = viewport.get('is_mobile', True) if viewport else True
                 
                 # Get property data
                 with flask_app.app_context():
@@ -526,7 +604,8 @@ def create_portfolio_dash(flask_app) -> dash.Dash:
                 if not properties:
                     logger.warning(f"No properties found for user: {current_user.name}")
                     return create_empty_response("No properties found in your portfolio.")
-                
+
+                # Process properties and generate metrics
                 logger.debug(f"Found {len(properties)} properties")
                 
                 # Initialize aggregation variables
@@ -617,210 +696,44 @@ def create_portfolio_dash(flask_app) -> dash.Dash:
                 ], key=lambda x: x['value'], reverse=True)
 
                 logger.debug("Data preparation complete")
-                logger.debug(f"Number of properties: Equity={len(equity_data)}, "
-                            f"Income={len(income_data)}, Expenses={len(expense_data)}")
                 
-                # Create color scales for each chart
-                equity_colors = generate_color_scale(len(equity_data))
-                income_colors = generate_color_scale(len(income_data))
-                expense_colors = generate_color_scale(len(expense_data))
-                cashflow_colors = generate_color_scale(len(sorted_cashflow))
-
-                # Create charts with sorted data
-                logger.debug("Creating charts")
-
-                # Log data going into charts for debugging
-                logger.debug("Creating charts with data:")
-                logger.debug(f"Equity data: {equity_data}")
-                logger.debug(f"Income data: {income_data}")
-                logger.debug(f"Expense data: {expense_data}")
-
-                # Create equity distribution chart
-                try:
-                    equity_fig = px.pie(
-                        values=[float(item['value']) for item in equity_data],
-                        names=[str(item['name']) for item in equity_data],
-                        title='Equity Distribution',
-                        hole=0.5,
-                        color_discrete_sequence=equity_colors[:len(equity_data)]
-                    )
-                    logger.debug("Created equity chart successfully")
-                except Exception as e:
-                    logger.error(f"Error creating equity chart: {str(e)}")
-                    raise
-
-                # Create equity distribution chart
-                try:
-                    equity_fig = px.pie(
-                        values=[float(item['value']) for item in equity_data],
-                        names=[str(item['name']) for item in equity_data],
-                        hole=0.4,
-                        color_discrete_sequence=equity_colors
-                    )
-                    logger.debug("Created equity chart successfully")
-                except Exception as e:
-                    logger.error(f"Error creating equity chart: {str(e)}")
-                    raise
-
-                # Create cash flow bar chart
-                try:
-                    cashflow_fig = px.bar(
-                        x=[str(m['address']).split(',')[0] + f" ({m['equity_share']}%)" 
-                            for m in sorted_cashflow],
-                        y=[float(m['net_cashflow']) for m in sorted_cashflow],
-                        title='Cash Flow by Property',
-                        color=[float(m['net_cashflow']) for m in sorted_cashflow],
-                        color_continuous_scale=[[0, cashflow_colors[-1]], [1, cashflow_colors[0]]]
-                    )
-                    # Remove colorbar
-                    cashflow_fig.update_coloraxes(showscale=False)
-                    logger.debug("Created cashflow chart successfully")
-                except Exception as e:
-                    logger.error(f"Error creating cashflow chart: {str(e)}")
-                    raise
-
-                # Create income breakdown chart
-                try:
-                    income_fig = px.pie(
-                        values=[float(item['value']) for item in income_data],
-                        names=[str(item['name']) for item in income_data],
-                        hole=0.4,
-                        color_discrete_sequence=income_colors
-                    )
-                    logger.debug("Created income chart successfully")
-                except Exception as e:
-                    logger.error(f"Error creating income chart: {str(e)}")
-                    raise
-
-                # Create expenses breakdown chart
-                try:
-                    expenses_fig = px.pie(
-                        values=[float(item['value']) for item in expense_data],
-                        names=[str(item['name']) for item in expense_data],
-                        hole=0.4,
-                        color_discrete_sequence=expense_colors
-                    )
-                    logger.debug("Created expenses chart successfully")
-                except Exception as e:
-                    logger.error(f"Error creating expenses chart: {str(e)}")
-                    raise
-
-                # Update all pie charts
-                for fig in [equity_fig, income_fig, expenses_fig]:
-                    try:
-                        fig.update_traces(
-                            textposition='inside',
-                            textinfo='percent',
-                            hovertemplate="<b>%{label}</b><br>$%{value:,.2f}<br>%{percent:.1%}<extra></extra>"
-                        )
-                        fig.update_layout(
-                            margin=dict(r=200, t=50, b=50, l=50),
-                            showlegend=True,
-                            legend=dict(
-                                yanchor="middle",
-                                y=0.5,
-                                xanchor="left",
-                                x=1.0,
-                                orientation='v',
-                                title=None,
-                                font=dict(size=12)
-                            ),
-                            height=400
-                        )
-                    except Exception as e:
-                        logger.error(f"Error updating pie chart layout: {str(e)}")
-                        raise
-
-                # Update bar chart layout
-                try:
-                    cashflow_fig.update_layout(
-                        showlegend=False,
-                        xaxis_title="Property",
-                        yaxis_title="Monthly Cash Flow ($)",
-                        yaxis_tickformat="$,.2f",
-                        margin=dict(l=50, r=50, t=50, b=100),
-                        height=400,
-                        xaxis=dict(
-                            tickangle=-45,
-                            automargin=True
-                        )
-                    )
-                    cashflow_fig.update_traces(
-                        hovertemplate="<b>%{x}</b><br>Cash Flow: $%{y:,.2f}<extra></extra>"
-                    )
-                except Exception as e:
-                    logger.error(f"Error updating bar chart layout: {str(e)}")
-                    raise
-
-                logger.info("Successfully created all charts")
+                # Create and update charts for mobile
+                equity_fig = create_equity_chart(equity_data)
+                cashflow_fig = create_cashflow_chart(sorted_cashflow)
+                income_fig = create_income_chart(income_data)
+                expenses_fig = create_expenses_chart(expense_data)
                 
-                try:
-                    # Create property table with bootstrap classes
-                    table = dbc.Table(
-                        [
-                            html.Thead(
-                                html.Tr(
-                                    [
-                                        html.Th("Property", style={'backgroundColor': '#000080'}, className="text-center text-white fw-bold"),
-                                        html.Th("Share", style={'backgroundColor': '#000080'}, className="text-center text-white fw-bold"),
-                                        html.Th("Monthly Income", style={'backgroundColor': '#000080'}, className="text-center text-white fw-bold"),
-                                        html.Th("Monthly Expenses", style={'backgroundColor': '#000080'}, className="text-center text-white fw-bold"),
-                                        html.Th("Net Cash Flow", style={'backgroundColor': '#000080'}, className="text-center text-white fw-bold"),
-                                        html.Th("Total Equity", style={'backgroundColor': '#000080'}, className="text-center text-white fw-bold"),
-                                        html.Th("Monthly Equity Gain", style={'backgroundColor': '#000080'}, className="text-center text-white fw-bold")
-                                    ],
-                                )
-                            ),
-                            html.Tbody([
-                                html.Tr([
-                                    html.Td(cm['address'].split(',')[0]),
-                                    html.Td(f"{cm['equity_share']}%"),
-                                    html.Td(f"${cm['monthly_income']:,.2f}"),
-                                    html.Td(f"${(cm['monthly_expenses'] + cm['mortgage_payment'] + cm['seller_payment']):,.2f}"),
-                                    html.Td(
-                                        html.Span(
-                                            f"${cm['net_cashflow']:,.2f}",
-                                            style={'color': 'green' if cm['net_cashflow'] >= 0 else 'red'}
-                                        )
-                                    ),
-                                    html.Td(f"${pm['total_equity']:,.2f}"),
-                                    html.Td(f"${pm['equity_this_month']:,.2f}")
-                                ]) for cm, pm in zip(cashflow_metrics, property_metrics)
-                            ])
-                        ],
-                        bordered=True,
-                        hover=True,
-                        striped=True,  # Add this parameter
-                        responsive=True,
-                        className="align-middle"
-                    )
-                    
-                except Exception as e:
-                    logger.error(f"Error creating property table: {str(e)}")
-                    logger.error(traceback.format_exc())
-                    return create_empty_response("Error creating property table.")
+                # Update layouts for mobile/desktop
+                charts = [equity_fig, cashflow_fig, income_fig, expenses_fig]
+                for chart in charts:
+                    update_chart_layouts_for_mobile(chart, is_mobile)
                 
-                logger.info("Successfully updated all metrics and visualizations")
+                # Create responsive chart components
+                equity_chart = create_responsive_chart(equity_fig, 'equity')
+                cashflow_chart = create_responsive_chart(cashflow_fig, 'cashflow')
+                income_chart = create_responsive_chart(income_fig, 'income')
+                expenses_chart = create_responsive_chart(expenses_fig, 'expenses')
                 
-                # Return all components
+                # Create mobile-optimized table
+                table = create_responsive_table(property_metrics, cashflow_metrics)
+                
                 return (
+                    # ... (same returns as before, but with new responsive components)
                     "",  # context
-                    f"${total_value:,.2f}",                    # portfolio value
-                    f"${total_equity:,.2f}",                   # total equity
-                    f"${total_equity_this_month:,.2f}",        # equity gained
-                    f"${total_income:,.2f}",                   # monthly income
-                    f"${total_expenses:,.2f}",                 # monthly expenses
-                    html.Span(
-                        f"${total_net_cashflow:,.2f}",
-                        style={'color': 'green' if total_net_cashflow >= 0 else 'red'}
-                    ),                                         # net cashflow
-                    equity_fig,                                # equity chart
-                    cashflow_fig,                              # cashflow chart
-                    income_fig,                                # income chart
-                    expenses_fig,                              # expenses chart
-                    table,                                     # property table
-                    "",                                        # error message
-                    {'display': 'none'}                        # error style
+                    f"${total_value:,.2f}",
+                    f"${total_equity:,.2f}",
+                    f"${total_equity_this_month:,.2f}",
+                    f"${total_income:,.2f}",
+                    f"${total_expenses:,.2f}",
+                    html.Span(f"${total_net_cashflow:,.2f}",
+                             style={'color': 'green' if total_net_cashflow >= 0 else 'red'}),
+                    equity_chart,
+                    cashflow_chart,
+                    income_chart,
+                    expenses_chart,
+                    table,
+                    "",
+                    {'display': 'none'}
                 )
                 
             except Exception as e:
@@ -848,21 +761,110 @@ def create_portfolio_dash(flask_app) -> dash.Dash:
                 showarrow=False
             )
             
+            # Create empty responsive chart
+            empty_chart = create_responsive_chart(empty_fig, 'empty')
+            
             return (
                 "",  # context
-                "$0.00",                                    # portfolio value
-                "$0.00",                                    # total equity
-                "$0.00",                                    # equity gained
-                "$0.00",                                    # monthly income
-                "$0.00",                                    # monthly expenses
-                html.Span("$0.00"),                         # net cashflow
-                empty_fig,                                  # equity chart
-                empty_fig,                                  # cashflow chart
-                empty_fig,                                  # income chart
-                empty_fig,                                  # expenses chart
-                "No data to display",                       # table
-                error_message,                              # error message
-                {'display': 'block', 'color': 'red'}        # error style
+                "$0.00",  # portfolio value
+                "$0.00",  # total equity
+                "$0.00",  # equity gained
+                "$0.00",  # monthly income
+                "$0.00",  # monthly expenses
+                html.Span("$0.00"),  # net cashflow
+                empty_chart,  # equity chart
+                empty_chart,  # cashflow chart
+                empty_chart,  # income chart
+                empty_chart,  # expenses chart
+                html.Div("No data to display", className="text-center p-3"),  # table
+                error_message,  # error message
+                {'display': 'block', 'color': 'red'}  # error style
+            )
+
+        def create_responsive_table(property_metrics, cashflow_metrics):
+            """Create a mobile-responsive property details table."""
+            try:
+                # Create table with bootstrap classes
+                return dbc.Table([
+                    html.Thead(
+                        html.Tr([
+                            html.Th("Property", className="text-center text-white", 
+                                   style={'backgroundColor': '#000080', 'position': 'sticky', 'top': 0}),
+                            html.Th("Share", className="text-center text-white d-none d-md-table-cell",
+                                   style={'backgroundColor': '#000080', 'position': 'sticky', 'top': 0}),
+                            html.Th("Monthly Income", className="text-center text-white",
+                                   style={'backgroundColor': '#000080', 'position': 'sticky', 'top': 0}),
+                            html.Th("Monthly Expenses", className="text-center text-white d-none d-md-table-cell",
+                                   style={'backgroundColor': '#000080', 'position': 'sticky', 'top': 0}),
+                            html.Th("Net Cash Flow", className="text-center text-white",
+                                   style={'backgroundColor': '#000080', 'position': 'sticky', 'top': 0}),
+                            html.Th("Total Equity", className="text-center text-white d-none d-md-table-cell",
+                                   style={'backgroundColor': '#000080', 'position': 'sticky', 'top': 0}),
+                            html.Th("Monthly Equity Gain", className="text-center text-white d-none d-md-table-cell",
+                                   style={'backgroundColor': '#000080', 'position': 'sticky', 'top': 0})
+                        ])
+                    ),
+                    html.Tbody([
+                        html.Tr([
+                            html.Td(cm['address'].split(',')[0], className="text-nowrap"),
+                            html.Td(f"{cm['equity_share']}%", className="d-none d-md-table-cell"),
+                            html.Td(f"${cm['monthly_income']:,.2f}"),
+                            html.Td(
+                                f"${(cm['monthly_expenses'] + cm['mortgage_payment'] + cm['seller_payment']):,.2f}",
+                                className="d-none d-md-table-cell"
+                            ),
+                            html.Td(
+                                html.Span(
+                                    f"${cm['net_cashflow']:,.2f}",
+                                    style={'color': 'green' if cm['net_cashflow'] >= 0 else 'red'}
+                                )
+                            ),
+                            html.Td(f"${pm['total_equity']:,.2f}", className="d-none d-md-table-cell"),
+                            html.Td(f"${pm['equity_this_month']:,.2f}", className="d-none d-md-table-cell")
+                        ], className="align-middle") for cm, pm in zip(cashflow_metrics, property_metrics)
+                    ])
+                ],
+                bordered=True,
+                hover=True,
+                responsive=True,
+                className="mb-4 table-sm")
+                
+            except Exception as e:
+                logger.error(f"Error creating property table: {str(e)}")
+                logger.error(traceback.format_exc())
+                return html.Div("Error creating property table", className="text-danger p-3")
+
+        def create_equity_chart(equity_data):
+            """Create the equity distribution pie chart."""
+            return px.pie(
+                values=[float(item['value']) for item in equity_data],
+                names=[str(item['name']) for item in equity_data],
+                hole=0.4
+            )
+
+        def create_cashflow_chart(cashflow_data):
+            """Create the cash flow bar chart."""
+            return px.bar(
+                x=[str(m['address']).split(',')[0] + f" ({m['equity_share']}%)" for m in cashflow_data],
+                y=[float(m['net_cashflow']) for m in cashflow_data],
+                color=[float(m['net_cashflow']) for m in cashflow_data],
+                color_continuous_scale=[[0, '#E0FFFF'], [1, '#000080']]
+            )
+
+        def create_income_chart(income_data):
+            """Create the income breakdown pie chart."""
+            return px.pie(
+                values=[float(item['value']) for item in income_data],
+                names=[str(item['name']) for item in income_data],
+                hole=0.4
+            )
+
+        def create_expenses_chart(expense_data):
+            """Create the expenses breakdown pie chart."""
+            return px.pie(
+                values=[float(item['value']) for item in expense_data],
+                names=[str(item['name']) for item in expense_data],
+                hole=0.4
             )
         
         logger.info("Portfolio dashboard created successfully")

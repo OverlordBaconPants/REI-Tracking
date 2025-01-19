@@ -85,6 +85,75 @@ const viewEditAnalysisModule = {
         });
     },
 
+    loadMoreAnalyses: async function(nextPage) {
+        try {
+            // Get the button and show loading state
+            const btn = document.querySelector('.load-more-btn');
+            if (btn) {
+                const spinner = btn.querySelector('.spinner-border');
+                const btnText = btn.querySelector('.btn-text');
+                spinner.classList.remove('d-none');
+                btnText.textContent = 'Loading...';
+                btn.disabled = true;
+            }
+    
+            // Fetch the next page
+            const response = await fetch(`/analyses/view_edit_analysis?page=${nextPage}`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'  // Mark as AJAX request
+                }
+            });
+    
+            if (!response.ok) {
+                throw new Error('Failed to load more analyses');
+            }
+    
+            const data = await response.text();
+    
+            // Create a temporary element to parse the HTML
+            const temp = document.createElement('div');
+            temp.innerHTML = data;
+    
+            // Get the new analyses cards
+            const newCards = temp.querySelectorAll('.d-md-none .card');
+            
+            // Get the container for the mobile cards
+            const container = document.querySelector('.d-md-none');
+            
+            // Insert the new cards before the "Load More" button container
+            const loadMoreContainer = container.querySelector('.mt-3.text-center');
+            newCards.forEach(card => {
+                loadMoreContainer.insertAdjacentElement('beforebegin', card);
+            });
+    
+            // Check if we've reached the last page
+            const totalPages = parseInt(temp.querySelector('[data-total-pages]')?.dataset.totalPages);
+            if (nextPage >= totalPages) {
+                // Remove the Load More button if we're on the last page
+                loadMoreContainer?.remove();
+            } else {
+                // Update the Load More button for the next page
+                btn.onclick = () => viewEditAnalysisModule.loadMoreAnalyses(nextPage + 1);
+                btnText.textContent = 'Load More';
+                spinner.classList.add('d-none');
+                btn.disabled = false;
+            }
+    
+        } catch (error) {
+            console.error('Error loading more analyses:', error);
+            toastr.error('Failed to load more analyses');
+            
+            // Reset button state
+            if (btn) {
+                const spinner = btn.querySelector('.spinner-border');
+                const btnText = btn.querySelector('.btn-text');
+                spinner.classList.add('d-none');
+                btnText.textContent = 'Load More';
+                btn.disabled = false;
+            }
+        }
+    },
+
     deleteAnalysis: function(analysisId, analysisName) {
         console.log('Deleting analysis:', analysisId, analysisName);
         

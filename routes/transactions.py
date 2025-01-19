@@ -5,6 +5,7 @@ from werkzeug.utils import secure_filename
 from services.transaction_import_service import TransactionImportService
 from services.transaction_service import add_transaction, is_duplicate_transaction, get_properties_for_user, get_transaction_by_id, update_transaction, get_categories, get_partners_for_property
 from utils.utils import admin_required
+import tempfile
 import os
 import re
 import html
@@ -20,6 +21,18 @@ transactions_bp = Blueprint('transactions', __name__)
 def transactions_list():
     return render_template('transactions/transactions_list.html')
 
+def generate_documentation_filename(transaction_id, original_filename):
+    """Generate a standardized filename for documentation files"""
+    if not original_filename:
+        return ''
+    
+    # Remove any existing prefix
+    if original_filename.startswith(('reimb_', 'trans_')):
+        original_filename = original_filename.split('_', 1)[1]
+    
+    # Generate new filename with transaction ID prefix
+    return f"trans_{transaction_id}_{secure_filename(original_filename)}"
+
 @transactions_bp.route('/add', methods=['GET', 'POST'])
 @login_required
 def add_transactions():
@@ -33,6 +46,7 @@ def add_transactions():
             # Get and sanitize notes
             notes = sanitize_notes(request.form.get('notes', ''))
             
+            # Create transaction data structure
             transaction_data = {
                 'property_id': request.form.get('property_id'),
                 'type': request.form.get('type'),
@@ -41,8 +55,8 @@ def add_transactions():
                 'amount': float(request.form.get('amount')),
                 'date': request.form.get('date'),
                 'collector_payer': request.form.get('collector_payer'),
-                'notes': notes,  # Add notes field
-                'documentation_file': '',  # Default to empty string
+                'notes': notes,
+                'documentation_file': '',
                 'reimbursement': {
                     'date_shared': request.form.get('date_shared'),
                     'share_description': request.form.get('share_description'),
@@ -51,12 +65,16 @@ def add_transactions():
                 }
             }
 
-            # Handle optional documentation file
+            # Add the transaction first to get an ID
+            add_transaction(transaction_data)
+            transaction_id = transaction_data['id']
+
+            # Handle documentation files after we have the transaction ID
             if 'documentation_file' in request.files:
                 file = request.files['documentation_file']
                 if file and file.filename:
                     if allowed_file(file.filename, file_type='documentation'):
-                        filename = secure_filename(file.filename)
+                        filename = generate_documentation_filename(transaction_id, file.filename)
                         file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
                         file.save(file_path)
                         transaction_data['documentation_file'] = filename
@@ -65,13 +83,13 @@ def add_transactions():
                                     ', '.join(current_app.config['ALLOWED_DOCUMENTATION_EXTENSIONS']), 'error')
                         return redirect(url_for('transactions.add_transactions'))
 
-            # Handle optional reimbursement documentation
+            # Handle reimbursement documentation
             if 'reimbursement_documentation' in request.files:
                 reimb_file = request.files['reimbursement_documentation']
                 if reimb_file and reimb_file.filename:
                     if allowed_file(reimb_file.filename, file_type='documentation'):
-                        reimb_filename = f"reimb_{secure_filename(reimb_file.filename)}"
-                        reimb_file_path = os.path.join(current_app.config['REIMBURSEMENTS_DIR'], reimb_filename)
+                        reimb_filename = generate_documentation_filename(transaction_id, reimb_file.filename)
+                        reimb_file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], reimb_filename)
                         reimb_file.save(reimb_file_path)
                         transaction_data['reimbursement']['documentation'] = reimb_filename
                     else:
@@ -79,13 +97,8 @@ def add_transactions():
                                     ', '.join(current_app.config['ALLOWED_DOCUMENTATION_EXTENSIONS']), 'error')
                         return redirect(url_for('transactions.add_transactions'))
 
-            # Check for duplicate transaction
-            if is_duplicate_transaction(transaction_data):
-                flash_message("This transaction appears to be a duplicate and was not added.", "warning")
-                return redirect(url_for('transactions.add_transactions'))
-
-            # Add the transaction
-            add_transaction(transaction_data)
+            # Update the transaction with file information
+            update_transaction(transaction_data)
             
             flash_message('Transaction added successfully!', 'success')
             return redirect(url_for('transactions.add_transactions'))
@@ -139,92 +152,65 @@ def allowed_file(filename):
 def bulk_import():
     if request.method == 'POST':
         try:
-            # Log the incoming request
-            current_app.logger.debug(f"Received bulk import request: {request.files}")
-
             if 'file' not in request.files:
-                return jsonify({
-                    'success': False,
-                    'error': 'No file uploaded'
-                }), 400, {'Content-Type': 'application/json'}
-            
+                return jsonify({'success': False, 'error': 'No file uploaded'}), 400
+
             file = request.files['file']
             if file.filename == '':
-                return jsonify({
-                    'success': False,
-                    'error': 'No selected file'
-                }), 400, {'Content-Type': 'application/json'}
-            
+                return jsonify({'success': False, 'error': 'No selected file'}), 400
+
             if not allowed_file(file.filename, file_type='import'):
                 return jsonify({
                     'success': False,
                     'error': f'Invalid file type. Allowed types are: {", ".join(current_app.config["ALLOWED_IMPORT_EXTENSIONS"])}'
-                }), 400, {'Content-Type': 'application/json'}
-            
-            filename = secure_filename(file.filename)
-            file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
-            file.save(file_path)
-            
+                }), 400
+
             try:
-                # Log the received form data
-                current_app.logger.debug(f"Column mapping data: {request.form.get('column_mapping')}")
-                
                 column_mapping = json.loads(request.form.get('column_mapping', '{}'))
                 
-                # Process the import using the service
-                import_service = TransactionImportService()
-                results = import_service.process_import_file(file_path, column_mapping)
-                
-                # Log the processing results
-                current_app.logger.debug(f"Import processing results: {results}")
-                
-                # Save all transactions (they now have invalid values replaced with None)
-                transactions_saved = 0
-                for transaction in results['successful_rows']:
-                    if any(transaction.values()):  # Only save if at least one field has a value
-                        add_transaction(transaction)
-                        transactions_saved += 1
-                
-                response_data = {
-                    'success': True,
-                    'redirect': url_for('transactions.view_transactions'),
-                    'modifications': results['modifications'],
-                    'stats': {
-                        'total_processed': results['stats']['processed_rows'],
-                        'total_saved': transactions_saved,
-                        'total_modified': results['stats']['modified_rows']
-                    }
-                }
-                
-                current_app.logger.debug(f"Sending response: {response_data}")
-                return jsonify(response_data), 200, {'Content-Type': 'application/json'}
-            
+                # Save to temporary file
+                with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+                    file.save(temp_file)
+                    temp_path = temp_file.name
+
+                try:
+                    import_service = TransactionImportService()
+                    results = import_service.process_import_file(temp_path, column_mapping, file.filename)
+
+                    transactions_saved = 0
+                    for transaction in results['successful_rows']:
+                        if any(transaction.values()):
+                            add_transaction(transaction)
+                            transactions_saved += 1
+
+                    return jsonify({
+                        'success': True,
+                        'redirect': url_for('transactions.view_transactions'),
+                        'modifications': results.get('modifications', []),
+                        'stats': {
+                            'total_processed': results['stats']['processed_rows'],
+                            'total_saved': transactions_saved,
+                            'total_modified': results['stats'].get('modified_rows', 0)
+                        }
+                    })
+
+                finally:
+                    # Clean up temporary file
+                    if os.path.exists(temp_path):
+                        os.remove(temp_path)
+
             except json.JSONDecodeError as e:
-                current_app.logger.error(f"JSON decode error: {str(e)}")
-                return jsonify({
-                    'success': False,
-                    'error': 'Invalid column mapping format'
-                }), 400, {'Content-Type': 'application/json'}
+                return jsonify({'success': False, 'error': 'Invalid column mapping format'}), 400
+
             except Exception as e:
                 current_app.logger.error(f"Error processing file: {str(e)}")
-                return jsonify({
-                    'success': False,
-                    'error': f'Error processing file: {str(e)}'
-                }), 500, {'Content-Type': 'application/json'}
-            finally:
-                # Clean up the temporary file
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-        
+                return jsonify({'success': False, 'error': f'Error processing file: {str(e)}'}), 500
+
         except Exception as e:
             current_app.logger.error(f"Unexpected error in bulk import: {str(e)}")
-            return jsonify({
-                'success': False,
-                'error': 'An unexpected error occurred'
-            }), 500, {'Content-Type': 'application/json'}
-    
-    # GET request: render the upload form
-    return render_template('transactions/bulk_import.html',body_class='bulk-import-page')
+            return jsonify({'success': False, 'error': 'An unexpected error occurred'}), 500
+
+    return render_template('transactions/bulk_import.html', body_class='bulk-import-page')
 
 def allowed_file(filename, file_type='documentation'):
     allowed_extensions = (current_app.config['ALLOWED_DOCUMENTATION_EXTENSIONS'] 
@@ -246,41 +232,49 @@ def flash_import_results(results):
 @transactions_bp.route('/get_columns', methods=['POST'])
 @login_required
 def get_columns():
-    current_app.logger.info("get_columns route accessed")
     if 'file' not in request.files:
-        current_app.logger.error("No file part in the request")
+        current_app.logger.error("No file part in request")
         return jsonify({'error': 'No file part'}), 400
+
     file = request.files['file']
     if file.filename == '':
         current_app.logger.error("No selected file")
         return jsonify({'error': 'No selected file'}), 400
-    
-    current_app.logger.info(f"File received: {file.filename}")
-    if file and allowed_file(file.filename, file_type='import'):
-        current_app.logger.info(f"File {file.filename} is allowed")
-        filename = secure_filename(file.filename)
-        file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
-        file.save(file_path)
-        
-        try:
-            if filename.endswith(('.xlsx', '.xls')):
-                df = pd.read_excel(file_path)
-            elif filename.endswith('.csv'):
-                df = pd.read_csv(file_path)
-            else:
-                current_app.logger.error(f"Unsupported file type: {filename}")
-                return jsonify({'error': 'Unsupported file type'}), 400
-            
-            columns = df.columns.tolist()
-            os.remove(file_path)  # Remove the temporary file
-            current_app.logger.info(f"Successfully extracted columns: {columns}")
-            return jsonify({'columns': columns})
-        except Exception as e:
-            current_app.logger.error(f"Error processing file: {str(e)}")
-            return jsonify({'error': str(e)}), 500
-    else:
+
+    if not allowed_file(file.filename, file_type='import'):
         current_app.logger.error(f"File type not allowed: {file.filename}")
         return jsonify({'error': 'File type not allowed'}), 400
+
+    try:
+        # Create temporary file with correct extension
+        file_extension = file.filename.lower().split('.')[-1]
+        
+        with tempfile.NamedTemporaryFile(suffix=f'.{file_extension}', delete=False) as temp_file:
+            file.save(temp_file.name)
+            temp_path = temp_file.name
+            
+        try:
+            # Use the service to read the file
+            import_service = TransactionImportService()
+            df = import_service.read_file(temp_path, file.filename)
+            
+            if df.empty:
+                return jsonify({'error': 'No data found in file'}), 400
+                
+            columns = df.columns.tolist()
+            return jsonify({'columns': columns})
+
+        finally:
+            # Clean up temporary file
+            if os.path.exists(temp_path):
+                try:
+                    os.remove(temp_path)
+                except Exception as e:
+                    current_app.logger.warning(f"Failed to remove temporary file {temp_path}: {str(e)}")
+
+    except Exception as e:
+        current_app.logger.error(f"Error processing file: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 @transactions_bp.route('/edit/<int:transaction_id>', methods=['GET', 'POST'])
 @login_required
@@ -426,13 +420,9 @@ def get_artifact(filename):
     current_app.logger.debug(f"Attempting to serve artifact: {filename}")
     
     try:
-        # Check if it's a reimbursement document
-        if filename.startswith('reimb_'):
-            artifact_dir = current_app.config['REIMBURSEMENTS_DIR']
-            current_app.logger.debug(f"Reimbursement document detected, looking in: {artifact_dir}")
-        else:
-            artifact_dir = current_app.config['UPLOAD_FOLDER']
-            current_app.logger.debug(f"Regular document, looking in: {artifact_dir}")
+        # All files are now in one directory
+        artifact_dir = current_app.config['UPLOAD_FOLDER']
+        current_app.logger.debug(f"Looking for file in: {artifact_dir}")
 
         # Log the full path being attempted
         full_path = os.path.join(artifact_dir, filename)

@@ -12,7 +12,7 @@
       "share_description": "Wire to Wayne to Rebalance to 50/50 Partnership",
       "reimbursement_status": "completed"
     },
-    "documentation_file": "trans_1_2024.07.01_Dunrobin_HOA.png",
+    "documentation_file": "2024.07.01_Dunrobin_HOA.png",
     "id": "1"
   },
   {
@@ -28,7 +28,7 @@
       "share_description": "Wire to Wayne to Rebalance to 50/50 Partnership",
       "reimbursement_status": "completed"
     },
-    "documentation_file": "trans_2_2024.07.01_Dunrobin_Mortgage_Paid.pdf",
+    "documentation_file": "2024.07.01_Dunrobin_Mortgage_Paid.pdf",
     "id": "2"
   },
   {
@@ -44,7 +44,7 @@
       "share_description": "Wire to Wayne to Rebalance to 50/50 Partnership",
       "reimbursement_status": "completed"
     },
-    "documentation_file": "trans_3_2024.06.23_Dunrobin_Mountaineering_Gas.jpg",
+    "documentation_file": "2024.06.23_Dunrobin_Mountaineering_Gas.jpg",
     "id": "3"
   },
   {
@@ -60,7 +60,7 @@
       "share_description": "Wire to Wayne to Rebalance to 50/50 Partnership",
       "reimbursement_status": "completed"
     },
-    "documentation_file": "trans_4_2024.07.12_Dunrobin_-_HVAC_Replacement.pdf",
+    "documentation_file": "2024.07.12_Dunrobin_-_HVAC_Replacement.pdf",
     "id": "4"
   },
   {
@@ -156,7 +156,7 @@
       "share_description": "Wayne Said to Withhold for Now",
       "reimbursement_status": "pending"
     },
-    "documentation_file": "trans_10_2024.09_Dunrobin_Payment.png",
+    "documentation_file": "2024.09_Dunrobin_Payment.png",
     "id": "10"
   },
   {
@@ -188,7 +188,7 @@
       "share_description": "Wired to Wayne to Rebalance Equity",
       "reimbursement_status": "completed"
     },
-    "documentation_file": "trans_12_2024.06-07_Dunrobin_Rent.png",
+    "documentation_file": "2024.06-07_Dunrobin_Rent.png",
     "id": "12"
   },
   {
@@ -204,7 +204,7 @@
       "share_description": "Wired to Wayne to Rebalance Equity",
       "reimbursement_status": "completed"
     },
-    "documentation_file": "trans_13_2024.06-07_Dunrobin_Rent.png",
+    "documentation_file": "2024.06-07_Dunrobin_Rent.png",
     "id": "13"
   },
   {
@@ -231,13 +231,13 @@
     "amount": 36.57,
     "date": "2024-06-07",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_16_2024.06.15_Logan_-_Trash_and_Water_Bill_Payment.png",
+    "documentation_file": "2024.06.15_Logan_-_Trash_and_Water_Bill_Payment.png",
     "id": "16",
     "reimbursement": {
       "date_shared": "2024-06-18",
       "share_description": "Tenant Reimbursed",
       "reimbursement_status": "completed",
-      "documentation": "reimb_16_reimb_2024.06.18_Logan_Trash_Reimbursement.png"
+      "documentation": "reimb_2024.06.18_Logan_Trash_Reimbursement.png"
     }
   },
   {
@@ -248,13 +248,13 @@
     "amount": 157.58,
     "date": "2024-06-07",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_17_2024.06.15_Logan_-_Trash_and_Water_Bill_Payment.png",
+    "documentation_file": "2024.06.15_Logan_-_Trash_and_Water_Bill_Payment.png",
     "id": "17",
     "reimbursement": {
       "date_shared": "2024-06-18",
       "share_description": "Shared via Zelle",
       "reimbursement_status": "completed",
-      "documentation": "reimb_17_reimb_2024.06.18_Logan_Water_Bill_Reimbursement.png"
+      "documentation": "reimb_2024.06.18_Logan_Water_Bill_Reimbursement.png"
     }
   },
   {
@@ -265,13 +265,13 @@
     "amount": 830.2,
     "date": "2024-07-01",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_18_2024.07.01_Logan_St_Mortgage_Payment.png",
+    "documentation_file": "2024.07.01_Logan_St_Mortgage_Payment.png",
     "id": "18",
     "reimbursement": {
       "date_shared": "2024-07-03",
       "share_description": "Shared via Zelle",
       "reimbursement_status": "completed",
-      "documentation": "reimb_18_reimb_2024.07_Logan_Rent-Mortgage_Payment_to_Brian.png"
+      "documentation": "reimb_2024.07_Logan_Rent-Mortgage_Payment_to_Brian.png"
     }
   },
   {
@@ -282,13 +282,13 @@
     "amount": 35.57,
     "date": "2024-07-06",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_19_2024.07_Logan_Rent_and_Utilities.png",
+    "documentation_file": "2024.07_Logan_Rent_and_Utilities.png",
     "id": "19",
     "reimbursement": {
       "date_shared": "2024-07-24",
       "share_description": "Tenant Reimbursed",
       "reimbursement_status": "completed",
-      "documentation": "reimb_19_reimb_2024.07.24_Logan_Trash_Reimbursement.png"
+      "documentation": "reimb_2024.07.24_Logan_Trash_Reimbursement.png"
     }
   },
   {
@@ -299,13 +299,13 @@
     "amount": 76.83,
     "date": "2024-07-06",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_20_2024.07_Logan_Rent_and_Utilities.png",
+    "documentation_file": "2024.07_Logan_Rent_and_Utilities.png",
     "id": "20",
     "reimbursement": {
       "date_shared": "2024-07-08",
       "share_description": "Shared via Zelle",
       "reimbursement_status": "completed",
-      "documentation": "reimb_20_reimb_2024.07.08_Logan_Water_Bill_Reimbursement.png"
+      "documentation": "reimb_2024.07.08_Logan_Water_Bill_Reimbursement.png"
     }
   },
   {
@@ -316,13 +316,13 @@
     "amount": 830.2,
     "date": "2024-08-01",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_21_2024.08_Logan_Mortgage_Payment.PNG",
+    "documentation_file": "2024.08_Logan_Mortgage_Payment.PNG",
     "id": "21",
     "reimbursement": {
       "date_shared": "2024-08-08",
       "share_description": "Shared via Zelle",
       "reimbursement_status": "completed",
-      "documentation": "reimb_21_reimb_2024.08_Logan_Rent-Mortgage_Reimbursement_to_Brian.png"
+      "documentation": "reimb_2024.08_Logan_Rent-Mortgage_Reimbursement_to_Brian.png"
     }
   },
   {
@@ -333,13 +333,13 @@
     "amount": 35.57,
     "date": "2024-08-15",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_22_2024.09.15_Logan_Trash.png",
+    "documentation_file": "2024.09.15_Logan_Trash.png",
     "id": "22",
     "reimbursement": {
       "date_shared": "2024-08-23",
       "share_description": "Tenant Reimbursed",
       "reimbursement_status": "completed",
-      "documentation": "reimb_22_reimb_2024.08.15_Logan_Trash_Reimbursement.png"
+      "documentation": "reimb_2024.08.15_Logan_Trash_Reimbursement.png"
     }
   },
   {
@@ -350,13 +350,13 @@
     "amount": 153.66,
     "date": "2024-08-10",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_23_2024.08.15_Logan_Water_Bill.png",
+    "documentation_file": "2024.08.15_Logan_Water_Bill.png",
     "id": "23",
     "reimbursement": {
       "date_shared": "2024-08-12",
       "share_description": "Shared via Zelle",
       "reimbursement_status": "completed",
-      "documentation": "reimb_23_reimb_2024.08.12_Logan_Water_Bill_Reimbursement.png"
+      "documentation": "reimb_2024.08.12_Logan_Water_Bill_Reimbursement.png"
     }
   },
   {
@@ -367,13 +367,13 @@
     "amount": 76.83,
     "date": "2024-08-22",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_24_2024.08.22_Logan_Water_Bill.pdf",
+    "documentation_file": "2024.08.22_Logan_Water_Bill.pdf",
     "id": "24",
     "reimbursement": {
       "date_shared": "2024-08-24",
       "share_description": "Shared via Zelle",
       "reimbursement_status": "completed",
-      "documentation": "reimb_24_reimb_2024.08.22_Logan_Water_Reimbursement.png"
+      "documentation": "reimb_2024.08.22_Logan_Water_Reimbursement.png"
     }
   },
   {
@@ -384,13 +384,13 @@
     "amount": 317.5,
     "date": "2024-08-30",
     "collector_payer": "Brian Poole",
-    "documentation_file": "trans_25_2024.08.17_Guilford_Vent_Wiring_Killz_Paint.pdf",
+    "documentation_file": "2024.08.17_Guilford_Vent_Wiring_Killz_Paint.pdf",
     "id": "25",
     "reimbursement": {
       "date_shared": "2024-08-30",
       "share_description": "We Both Paid Jose Montano",
       "reimbursement_status": "completed",
-      "documentation": "reimb_25_reimb_2024.08.30_Logan_Payment_to_Jose.png"
+      "documentation": "reimb_2024.08.30_Logan_Payment_to_Jose.png"
     }
   },
   {
@@ -401,13 +401,13 @@
     "amount": 830.2,
     "date": "2024-09-10",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_26_2024.09_Logan_Mortgage.pdf",
+    "documentation_file": "2024.09_Logan_Mortgage.pdf",
     "id": "26",
     "reimbursement": {
       "date_shared": "2024-09-04",
       "share_description": "Shared via Zelle",
       "reimbursement_status": "completed",
-      "documentation": "reimb_26_reimb_2024.09.04_Logan_Rent_Reimbursement.png"
+      "documentation": "reimb_2024.09.04_Logan_Rent_Reimbursement.png"
     }
   },
   {
@@ -418,13 +418,13 @@
     "amount": 35.57,
     "date": "2024-09-11",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_27_2024.08_Logan_Rent_and_Utilities.png",
+    "documentation_file": "2024.08_Logan_Rent_and_Utilities.png",
     "id": "27",
     "reimbursement": {
       "date_shared": "2024-08-21",
       "share_description": "Tenant Reimbursed",
       "reimbursement_status": "completed",
-      "documentation": "reimb_27_reimb_2024.08.15_Logan_Trash_Reimbursement.png"
+      "documentation": "reimb_2024.08.15_Logan_Trash_Reimbursement.png"
     }
   },
   {
@@ -435,13 +435,13 @@
     "amount": 830.2,
     "date": "2024-09-30",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_28_2024.10.01_Logan_Mortgage_Payment.png",
+    "documentation_file": "2024.10.01_Logan_Mortgage_Payment.png",
     "id": "28",
     "reimbursement": {
       "date_shared": "2024-10-03",
       "share_description": "Shared via Zelle",
       "reimbursement_status": "completed",
-      "documentation": "reimb_28_reimb_2024.10_Logan_Rent-Mortgage_Payment_to_Brian.png"
+      "documentation": "reimb_2024.10_Logan_Rent-Mortgage_Payment_to_Brian.png"
     }
   },
   {
@@ -452,13 +452,13 @@
     "amount": 83.64,
     "date": "2024-10-02",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_29_2024.09.28_Logan_Water.jpg",
+    "documentation_file": "2024.09.28_Logan_Water.jpg",
     "id": "29",
     "reimbursement": {
       "date_shared": "2024-10-08",
       "share_description": "Shared via Zelle",
       "reimbursement_status": "completed",
-      "documentation": "reimb_29_reimb_2024.10.08_Logan_Water_Bill_Reimbursement.png"
+      "documentation": "reimb_2024.10.08_Logan_Water_Bill_Reimbursement.png"
     }
   },
   {
@@ -469,13 +469,13 @@
     "amount": 195.0,
     "date": "2024-06-03",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_30_2024.06_Logan_Rent_and_Utilities.png",
+    "documentation_file": "2024.06_Logan_Rent_and_Utilities.png",
     "id": "30",
     "reimbursement": {
       "date_shared": "2024-06-18",
       "share_description": "Shared via Zelle",
       "reimbursement_status": "completed",
-      "documentation": "reimb_30_reimb_2024.06.18_Logan_Mortgage_Reimbursement.png"
+      "documentation": "reimb_2024.06.18_Logan_Mortgage_Reimbursement.png"
     }
   },
   {
@@ -486,13 +486,13 @@
     "amount": 1205.0,
     "date": "2024-06-03",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_31_2024.06_Logan_HAP_Portion_of_Payment.png",
+    "documentation_file": "2024.06_Logan_HAP_Portion_of_Payment.png",
     "id": "31",
     "reimbursement": {
       "date_shared": "2024-06-18",
       "share_description": "Shared via Zelle",
       "reimbursement_status": "completed",
-      "documentation": "reimb_31_reimb_2024.06.18_Logan_Mortgage_Reimbursement.png"
+      "documentation": "reimb_2024.06.18_Logan_Mortgage_Reimbursement.png"
     }
   },
   {
@@ -503,13 +503,13 @@
     "amount": 1205.0,
     "date": "2024-07-01",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_32_2024.07.01_Logan_HAP_Rent_Portion.png",
+    "documentation_file": "2024.07.01_Logan_HAP_Rent_Portion.png",
     "id": "32",
     "reimbursement": {
       "date_shared": "2024-07-03",
       "share_description": "Shared via Zelle",
       "reimbursement_status": "completed",
-      "documentation": "reimb_32_reimb_2024.07_Logan_Rent-Mortgage_Payment_to_Brian.png"
+      "documentation": "reimb_2024.07_Logan_Rent-Mortgage_Payment_to_Brian.png"
     }
   },
   {
@@ -520,13 +520,13 @@
     "amount": 195.0,
     "date": "2024-07-03",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_33_2024.07.03_Logan_Tenant_Portion_of_Rent.PNG",
+    "documentation_file": "2024.07.03_Logan_Tenant_Portion_of_Rent.PNG",
     "id": "33",
     "reimbursement": {
       "date_shared": "2024-07-03",
       "share_description": "Shared via Zelle",
       "reimbursement_status": "completed",
-      "documentation": "reimb_33_reimb_2024.07_Logan_Rent-Mortgage_Payment_to_Brian.png"
+      "documentation": "reimb_2024.07_Logan_Rent-Mortgage_Payment_to_Brian.png"
     }
   },
   {
@@ -537,13 +537,13 @@
     "amount": 195.0,
     "date": "2024-08-01",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_34_2024.08_Logan_Rent_and_Utilities.png",
+    "documentation_file": "2024.08_Logan_Rent_and_Utilities.png",
     "id": "34",
     "reimbursement": {
       "date_shared": "2024-08-07",
       "share_description": "Shared via Zelle",
       "reimbursement_status": "completed",
-      "documentation": "reimb_34_reimb_2024.08.30_Logan_Rent_Reimbursement.png"
+      "documentation": "reimb_2024.08.30_Logan_Rent_Reimbursement.png"
     }
   },
   {
@@ -554,13 +554,13 @@
     "amount": 1205.0,
     "date": "2024-08-01",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_35_2024.08.01_Logan_HAP_Rent_Portion.png",
+    "documentation_file": "2024.08.01_Logan_HAP_Rent_Portion.png",
     "id": "35",
     "reimbursement": {
       "date_shared": "2024-08-07",
       "share_description": "Shared via Zelle",
       "reimbursement_status": "completed",
-      "documentation": "reimb_35_reimb_2024.08.30_Logan_Rent_Reimbursement.png"
+      "documentation": "reimb_2024.08.30_Logan_Rent_Reimbursement.png"
     }
   },
   {
@@ -571,13 +571,13 @@
     "amount": 1424.52,
     "date": "2024-09-01",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_36_2024.09.03_Logan_Rent_Payment.PNG",
+    "documentation_file": "2024.09.03_Logan_Rent_Payment.PNG",
     "id": "36",
     "reimbursement": {
       "date_shared": "2024-09-03",
       "share_description": "Shared via Zelle",
       "reimbursement_status": "completed",
-      "documentation": "reimb_36_reimb_2024.09.04_Logan_Rent_Reimbursement.png"
+      "documentation": "reimb_2024.09.04_Logan_Rent_Reimbursement.png"
     }
   },
   {
@@ -588,13 +588,13 @@
     "amount": 1400.0,
     "date": "2024-09-10",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_37_2024.09.03_Logan_HAP_Rent_Portion.png",
+    "documentation_file": "2024.09.03_Logan_HAP_Rent_Portion.png",
     "id": "37",
     "reimbursement": {
       "date_shared": "2024-09-03",
       "share_description": "Shared via Zelle",
       "reimbursement_status": "completed",
-      "documentation": "reimb_37_reimb_2024.09.04_Logan_Rent_Reimbursement.png"
+      "documentation": "reimb_2024.09.04_Logan_Rent_Reimbursement.png"
     }
   },
   {
@@ -605,13 +605,13 @@
     "amount": 1500.0,
     "date": "2024-10-02",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_38_2024.10.01_Logan_Rent.png",
+    "documentation_file": "2024.10.01_Logan_Rent.png",
     "id": "38",
     "reimbursement": {
       "date_shared": "2024-10-01",
       "share_description": "Shared via Zelle",
       "reimbursement_status": "completed",
-      "documentation": "reimb_38_reimb_2024.10_Logan_Rent-Mortgage_Payment_to_Brian.png"
+      "documentation": "reimb_2024.10_Logan_Rent-Mortgage_Payment_to_Brian.png"
     }
   },
   {
@@ -622,13 +622,13 @@
     "amount": 19665.04,
     "date": "2024-05-30",
     "collector_payer": "Brian Poole",
-    "documentation_file": "trans_39_2024.06.17_Guilford_Invoice_from_Sugarloaf_Painters_and_Estate_Improvements.pdf",
+    "documentation_file": "2024.06.17_Guilford_Invoice_from_Sugarloaf_Painters_and_Estate_Improvements.pdf",
     "id": "39",
     "reimbursement": {
       "date_shared": "2024-05-30",
       "share_description": "Sent Two Wires",
       "reimbursement_status": "completed",
-      "documentation": "reimb_39_reimb_2024.05.30_Guilford_Reno_Reimbursement_BJ_to_Brian.png"
+      "documentation": "reimb_2024.05.30_Guilford_Reno_Reimbursement_BJ_to_Brian.png"
     }
   },
   {
@@ -639,13 +639,13 @@
     "amount": 114.0,
     "date": "2024-07-01",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_40_2024.07.01_Guilford_Seller_Finance_Payment.png",
+    "documentation_file": "2024.07.01_Guilford_Seller_Finance_Payment.png",
     "id": "40",
     "reimbursement": {
       "date_shared": "2024-07-01",
       "share_description": "Automatic Monthly Zelle Payments",
       "reimbursement_status": "completed",
-      "documentation": "reimb_40_reimb_2024.10.01_Logan_Rent.png"
+      "documentation": "reimb_2024.10.01_Logan_Rent.png"
     }
   },
   {
@@ -662,7 +662,7 @@
       "date_shared": "2024-07-23",
       "share_description": "Tenant Reimbursed",
       "reimbursement_status": "completed",
-      "documentation": "reimb_42_reimb_2024.07.03_Guilford_Gas_Reimbursement.png"
+      "documentation": "reimb_2024.07.03_Guilford_Gas_Reimbursement.png"
     }
   },
   {
@@ -673,7 +673,7 @@
     "amount": 1742.73,
     "date": "2024-08-09",
     "collector_payer": "Brian Poole",
-    "documentation_file": "trans_44_2024.07.29_Guilford_Lead_Abatement.pdf",
+    "documentation_file": "2024.07.29_Guilford_Lead_Abatement.pdf",
     "id": "44",
     "reimbursement": {
       "date_shared": "2024-08-09",
@@ -690,7 +690,7 @@
     "amount": 75.0,
     "date": "2024-06-30",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_45_2024.06.30_Guilford_Rental_License.pdf",
+    "documentation_file": "2024.06.30_Guilford_Rental_License.pdf",
     "id": "45",
     "reimbursement": {
       "date_shared": "2024-08-22",
@@ -707,7 +707,7 @@
     "amount": 446.5,
     "date": "2024-08-21",
     "collector_payer": "Brian Poole",
-    "documentation_file": "trans_46_2024.08.21_Guilford_Lead_Inspection_Payment.jpg",
+    "documentation_file": "2024.08.21_Guilford_Lead_Inspection_Payment.jpg",
     "id": "46",
     "reimbursement": {
       "date_shared": "2024-08-21",
@@ -724,7 +724,7 @@
     "amount": 2581.35,
     "date": "2024-08-20",
     "collector_payer": "Brian Poole",
-    "documentation_file": "trans_47_2024.08.17_Guilford_Vent_Wiring_Killz_Paint.pdf",
+    "documentation_file": "2024.08.17_Guilford_Vent_Wiring_Killz_Paint.pdf",
     "id": "47",
     "reimbursement": {
       "date_shared": "2024-08-26",
@@ -741,13 +741,13 @@
     "amount": 24.32,
     "date": "2024-09-05",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_48_2024.09.17_Guilford_-_Columbia_Gas.pdf",
+    "documentation_file": "2024.09.17_Guilford_-_Columbia_Gas.pdf",
     "id": "48",
     "reimbursement": {
       "date_shared": "2024-09-07",
       "share_description": "Tenant Reimbursed",
       "reimbursement_status": "completed",
-      "documentation": "reimb_48_reimb_2024.09.07_Guilford_Rent_Payment_and_Utility_Payment.png"
+      "documentation": "reimb_2024.09.07_Guilford_Rent_Payment_and_Utility_Payment.png"
     }
   },
   {
@@ -758,13 +758,13 @@
     "amount": 1049.39,
     "date": "2024-09-05",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_49_2024.09.01_Guilford_Mortgage.pdf",
+    "documentation_file": "2024.09.01_Guilford_Mortgage.pdf",
     "id": "49",
     "reimbursement": {
       "date_shared": "2024-09-06",
       "share_description": "Sent via Zelle",
       "reimbursement_status": "completed",
-      "documentation": "reimb_49_reimb_2024.09_Zelle_Transactions_with_Brian.png"
+      "documentation": "reimb_2024.09_Zelle_Transactions_with_Brian.png"
     }
   },
   {
@@ -775,13 +775,13 @@
     "amount": 111.4,
     "date": "2024-09-29",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_50_2024.10.02_Guiford_Water_Bill_2024.06.06-2024.09.04.pdf",
+    "documentation_file": "2024.10.02_Guiford_Water_Bill_2024.06.06-2024.09.04.pdf",
     "id": "50",
     "reimbursement": {
       "date_shared": "2024-09-29",
       "share_description": "Tenant Reimbursed",
       "reimbursement_status": "completed",
-      "documentation": "reimb_50_reimb_2024.10.07_Guilford_Rent_Payment_and_Utility_Payment.png"
+      "documentation": "reimb_2024.10.07_Guilford_Rent_Payment_and_Utility_Payment.png"
     }
   },
   {
@@ -792,13 +792,13 @@
     "amount": 3800.0,
     "date": "2024-07-24",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_51_2024.07.24_Guilford_-_Rent_and_Security_Deposit.png",
+    "documentation_file": "2024.07.24_Guilford_-_Rent_and_Security_Deposit.png",
     "id": "51",
     "reimbursement": {
       "date_shared": "2024-07-29",
       "share_description": "Sent via Zelle",
       "reimbursement_status": "completed",
-      "documentation": "reimb_51_reimb_2024.07_Zelle_Transactions_with_Brian.png"
+      "documentation": "reimb_2024.07_Zelle_Transactions_with_Brian.png"
     }
   },
   {
@@ -809,13 +809,13 @@
     "amount": 1900.0,
     "date": "2024-09-05",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_52_2024.09.05_Guilford_Rent.PNG",
+    "documentation_file": "2024.09.05_Guilford_Rent.PNG",
     "id": "52",
     "reimbursement": {
       "date_shared": "2024-09-06",
       "share_description": "Sent via Zelle",
       "reimbursement_status": "completed",
-      "documentation": "reimb_52_reimb_2024.09_Zelle_Transactions_with_Brian.png"
+      "documentation": "reimb_2024.09_Zelle_Transactions_with_Brian.png"
     }
   },
   {
@@ -826,13 +826,13 @@
     "amount": 1012.41,
     "date": "2024-10-03",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_53_2024.10.03_Guilford_Mortgage.png",
+    "documentation_file": "2024.10.03_Guilford_Mortgage.png",
     "id": "53",
     "reimbursement": {
       "date_shared": "2024-10-03",
       "share_description": "Shared via Zelle",
       "reimbursement_status": "completed",
-      "documentation": "reimb_53_reimb_2024.10_Zelle_Transactions_with_Brian.png"
+      "documentation": "reimb_2024.10_Zelle_Transactions_with_Brian.png"
     }
   },
   {
@@ -843,7 +843,7 @@
     "amount": 509.61,
     "date": "2024-10-03",
     "collector_payer": "Brian Poole",
-    "documentation_file": "trans_54_2024.09.15_Guilford_Lock_Replacement.pdf",
+    "documentation_file": "2024.09.15_Guilford_Lock_Replacement.pdf",
     "id": "54",
     "reimbursement": {
       "date_shared": "2024-10-08",
@@ -860,13 +860,13 @@
     "amount": 1955.0,
     "date": "2024-10-02",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_55_2024.10_Guilford_Rent_and_Utilities.png",
+    "documentation_file": "2024.10_Guilford_Rent_and_Utilities.png",
     "id": "55",
     "reimbursement": {
       "date_shared": "2024-10-08",
       "share_description": "Shared via Zelle deducting Lock Replacement Cost",
       "reimbursement_status": "completed",
-      "documentation": "reimb_55_reimb_2024.10_Zelle_Transactions_with_Brian.png"
+      "documentation": "reimb_2024.10_Zelle_Transactions_with_Brian.png"
     }
   },
   {
@@ -877,13 +877,13 @@
     "amount": 1500.0,
     "date": "2024-10-31",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_56_2024.11_Logan_HAP_Rent_Portion.pdf",
+    "documentation_file": "2024.11_Logan_HAP_Rent_Portion.pdf",
     "id": "56",
     "reimbursement": {
       "date_shared": "2024-11-01",
       "share_description": "Shared via Zelle",
       "reimbursement_status": "completed",
-      "documentation": "reimb_56_reimb_2024.11_Logan_Rent-Mortgage_Balance_to_Brian.png"
+      "documentation": "reimb_2024.11_Logan_Rent-Mortgage_Balance_to_Brian.png"
     }
   },
   {
@@ -894,7 +894,7 @@
     "amount": 362.81,
     "date": "2024-11-01",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_57_2024.11_Watch_Chain_COA.pdf",
+    "documentation_file": "2024.11_Watch_Chain_COA.pdf",
     "id": "57",
     "reimbursement": {
       "date_shared": "2024-11-01",
@@ -911,7 +911,7 @@
     "amount": 2325.0,
     "date": "2024-11-01",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_58_2024.11_El_Camino_Rent.png",
+    "documentation_file": "2024.11_El_Camino_Rent.png",
     "reimbursement": {
       "date_shared": "2024-11-01",
       "share_description": "Auto-completed - Single owner property",
@@ -927,13 +927,13 @@
     "amount": 1900.0,
     "date": "2024-11-06",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_59_2024.11_Guilford_Rent_and_Utilities.png",
+    "documentation_file": "2024.11_Guilford_Rent_and_Utilities.png",
     "id": "59",
     "reimbursement": {
       "date_shared": "2024-11-04",
       "share_description": "Shared via Zelle",
       "reimbursement_status": "completed",
-      "documentation": "reimb_59_reimb_2024.11_Guilford_Rent_and_Utilities.png"
+      "documentation": "reimb_2024.11_Guilford_Rent_and_Utilities.png"
     }
   },
   {
@@ -944,7 +944,7 @@
     "amount": 155.0,
     "date": "2024-11-07",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_60_2024.11.07_Grinnalds_Rental_License_Fee.pdf",
+    "documentation_file": "2024.11.07_Grinnalds_Rental_License_Fee.pdf",
     "reimbursement": {
       "date_shared": "2024-11-07",
       "share_description": "Auto-completed - Single owner property",
@@ -960,13 +960,13 @@
     "amount": 1012.41,
     "date": "2024-11-01",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_61_2024.11.03_Guilford_Mortgage_Payment.png",
+    "documentation_file": "2024.11.03_Guilford_Mortgage_Payment.png",
     "id": "61",
     "reimbursement": {
       "date_shared": "2024-12-15",
       "share_description": "Shared via Zelle",
       "reimbursement_status": "completed",
-      "documentation": "reimb_61_reimb_2024.11.01_Guilford_Rent_Balance_to_Brian.png"
+      "documentation": "reimb_2024.11.01_Guilford_Rent_Balance_to_Brian.png"
     }
   },
   {
@@ -978,13 +978,13 @@
     "date": "2024-12-14",
     "collector_payer": "BJ Marshall",
     "notes": "",
-    "documentation_file": "trans_62_2024.12.05_Guiford_Water_Bill.png",
+    "documentation_file": "2024.12.05_Guiford_Water_Bill.png",
     "id": "62",
     "reimbursement": {
       "date_shared": "2025-01-02",
       "share_description": "Tenant Pays",
       "reimbursement_status": "completed",
-      "documentation": "reimb_62_reimb_2025.01.02_Guilford_Water_Bill_Paid.png"
+      "documentation": "reimb_2025.01.02_Guilford_Water_Bill_Paid.png"
     }
   },
   {
@@ -995,13 +995,13 @@
     "amount": 1900.0,
     "date": "2024-12-03",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_63_2024.12.01_Guilford_Rent.png",
+    "documentation_file": "2024.12.01_Guilford_Rent.png",
     "id": "63",
     "reimbursement": {
       "date_shared": "2024-12-03",
       "share_description": "Reimbursement via Zelle",
       "reimbursement_status": "completed",
-      "documentation": "reimb_63_reimb_2024.11-12_Zelle_Transactions_with_Brian.png"
+      "documentation": "reimb_2024.11-12_Zelle_Transactions_with_Brian.png"
     }
   },
   {
@@ -1012,13 +1012,13 @@
     "amount": 1012.41,
     "date": "2024-12-03",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_64_2024.12.03_Guilford_Mortgage_Payment.png",
+    "documentation_file": "2024.12.03_Guilford_Mortgage_Payment.png",
     "id": "64",
     "reimbursement": {
       "date_shared": "2024-12-03",
       "share_description": "Shared via Zelle",
       "reimbursement_status": "completed",
-      "documentation": "reimb_64_reimb_2024.11-12_Zelle_Transactions_with_Brian.png"
+      "documentation": "reimb_2024.11-12_Zelle_Transactions_with_Brian.png"
     }
   },
   {
@@ -1029,13 +1029,13 @@
     "amount": 830.2,
     "date": "2024-12-02",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_65_2024_Logan_Mortgage_Payments_June-Dec.png",
+    "documentation_file": "2024_Logan_Mortgage_Payments_June-Dec.png",
     "id": "65",
     "reimbursement": {
       "date_shared": "2024-12-03",
       "share_description": "Shared via Zelle",
       "reimbursement_status": "completed",
-      "documentation": "reimb_65_reimb_2024.12.03_Logan_Brian_Share_of_Cash_Flow.png"
+      "documentation": "reimb_2024.12.03_Logan_Brian_Share_of_Cash_Flow.png"
     }
   },
   {
@@ -1046,13 +1046,13 @@
     "amount": 830.2,
     "date": "2024-11-01",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_66_2024_Logan_Mortgage_Payments_June-Dec.png",
+    "documentation_file": "2024_Logan_Mortgage_Payments_June-Dec.png",
     "id": "66",
     "reimbursement": {
       "date_shared": "2024-11-01",
       "share_description": "Shared via Zelle",
       "reimbursement_status": "completed",
-      "documentation": "reimb_66_reimb_2024.11.04_Guilford_Rent-Mortgage_Zelle.png"
+      "documentation": "reimb_2024.11.04_Guilford_Rent-Mortgage_Zelle.png"
     }
   },
   {
@@ -1063,13 +1063,13 @@
     "amount": 1500.0,
     "date": "2024-12-02",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_67_2024.12_Logan_HAP_Rent.png",
+    "documentation_file": "2024.12_Logan_HAP_Rent.png",
     "id": "67",
     "reimbursement": {
       "date_shared": "2024-12-03",
       "share_description": "Shared via Zelle",
       "reimbursement_status": "completed",
-      "documentation": "reimb_67_reimb_2024.12.03_Logan_Brian_Share_of_Cash_Flow.png"
+      "documentation": "reimb_2024.12.03_Logan_Brian_Share_of_Cash_Flow.png"
     }
   },
   {
@@ -1080,13 +1080,13 @@
     "amount": 114.0,
     "date": "2024-12-01",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_68_2024.12.02_Guilford_Seller_Finance_Payment.png",
+    "documentation_file": "2024.12.02_Guilford_Seller_Finance_Payment.png",
     "id": "68",
     "reimbursement": {
       "date_shared": "2024-12-03",
       "share_description": "Shared via Zelle",
       "reimbursement_status": "completed",
-      "documentation": "reimb_68_reimb_2024.11-12_Zelle_Transactions_with_Brian.png"
+      "documentation": "reimb_2024.11-12_Zelle_Transactions_with_Brian.png"
     }
   },
   {
@@ -1097,13 +1097,13 @@
     "amount": 114.0,
     "date": "2024-11-01",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_69_2024.11_Guilford_Seller_Finance_Payment.png",
+    "documentation_file": "2024.11_Guilford_Seller_Finance_Payment.png",
     "id": "69",
     "reimbursement": {
       "date_shared": "2024-11-03",
       "share_description": "Shared via Zelle",
       "reimbursement_status": "completed",
-      "documentation": "reimb_69_reimb_2024.11-12_Zelle_Transactions_with_Brian.png"
+      "documentation": "reimb_2024.11-12_Zelle_Transactions_with_Brian.png"
     }
   },
   {
@@ -1115,13 +1115,13 @@
     "date": "2024-10-01",
     "collector_payer": "BJ Marshall",
     "notes": "",
-    "documentation_file": "trans_70_2024.10.01_Guilford_Seller_Finance_Payment.png",
+    "documentation_file": "2024.10.01_Guilford_Seller_Finance_Payment.png",
     "id": "70",
     "reimbursement": {
       "date_shared": "2024-10-01",
       "share_description": "Shared via Zelle",
       "reimbursement_status": "completed",
-      "documentation": "reimb_70_reimb_2024.10_Zelle_Transactions_with_Brian.png"
+      "documentation": "reimb_2024.10_Zelle_Transactions_with_Brian.png"
     }
   },
   {
@@ -1133,13 +1133,13 @@
     "date": "2024-09-03",
     "collector_payer": "BJ Marshall",
     "notes": "",
-    "documentation_file": "trans_71_2024.09.03_Guilford_Seller_Finance_Payment.png",
+    "documentation_file": "2024.09.03_Guilford_Seller_Finance_Payment.png",
     "id": "71",
     "reimbursement": {
       "date_shared": "2024-09-03",
       "share_description": "Shared via Zelle",
       "reimbursement_status": "completed",
-      "documentation": "reimb_71_reimb_2024.09_Zelle_Transactions_with_Brian.png"
+      "documentation": "reimb_2024.09_Zelle_Transactions_with_Brian.png"
     }
   },
   {
@@ -1151,13 +1151,13 @@
     "date": "2024-08-01",
     "collector_payer": "BJ Marshall",
     "notes": "",
-    "documentation_file": "trans_72_2024.08.01_Guilford_Seller_Finance_Payment.png",
+    "documentation_file": "2024.08.01_Guilford_Seller_Finance_Payment.png",
     "id": "72",
     "reimbursement": {
       "date_shared": "2024-08-01",
       "share_description": "Shared via Zelle",
       "reimbursement_status": "completed",
-      "documentation": "reimb_72_reimb_2024.08.01_Guilford_Seller_Finance_Payment.png"
+      "documentation": "reimb_2024.08.01_Guilford_Seller_Finance_Payment.png"
     }
   },
   {
@@ -1168,7 +1168,7 @@
     "amount": 40647.89,
     "date": "2024-01-16",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_73_ALTA.pdf",
+    "documentation_file": "ALTA.pdf",
     "reimbursement": {
       "date_shared": "2024-01-16",
       "share_description": "Auto-completed - Single owner property",
@@ -1184,7 +1184,7 @@
     "amount": 25000.0,
     "date": "2024-12-18",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_74_2024.12.18_Miller_BJ_Wire_1_of_2.png",
+    "documentation_file": "2024.12.18_Miller_BJ_Wire_1_of_2.png",
     "id": "74",
     "reimbursement": {
       "date_shared": "2024-12-18",
@@ -1201,7 +1201,7 @@
     "amount": 9991.98,
     "date": "2024-12-19",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_75_2024.12.19_Miller_BJ_Wire_2_of_2.png",
+    "documentation_file": "2024.12.19_Miller_BJ_Wire_2_of_2.png",
     "reimbursement": {
       "date_shared": "2024-12-19",
       "share_description": "No reimbursement needed - split costs 50/50",
@@ -1217,7 +1217,7 @@
     "amount": 593.48,
     "date": "2024-02-01",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_76_2024_Grinnalds_Shellpoint_Mortgage_Payments.png",
+    "documentation_file": "2024_Grinnalds_Shellpoint_Mortgage_Payments.png",
     "reimbursement": {
       "date_shared": "2024-02-01",
       "share_description": "Auto-completed - Single owner property",
@@ -1233,7 +1233,7 @@
     "amount": 593.48,
     "date": "2024-03-01",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_77_2024_Grinnalds_Shellpoint_Mortgage_Payments.png",
+    "documentation_file": "2024_Grinnalds_Shellpoint_Mortgage_Payments.png",
     "reimbursement": {
       "date_shared": "2024-03-01",
       "share_description": "Auto-completed - Single owner property",
@@ -1249,7 +1249,7 @@
     "amount": 603.32,
     "date": "2024-04-01",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_78_2024_Grinnalds_Shellpoint_Mortgage_Payments.png",
+    "documentation_file": "2024_Grinnalds_Shellpoint_Mortgage_Payments.png",
     "reimbursement": {
       "date_shared": "2024-04-01",
       "share_description": "Auto-completed - Single owner property",
@@ -1265,7 +1265,7 @@
     "amount": 603.32,
     "date": "2024-05-01",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_79_2024_Grinnalds_Shellpoint_Mortgage_Payments.png",
+    "documentation_file": "2024_Grinnalds_Shellpoint_Mortgage_Payments.png",
     "reimbursement": {
       "date_shared": "2024-05-01",
       "share_description": "Auto-completed - Single owner property",
@@ -1281,7 +1281,7 @@
     "amount": 603.32,
     "date": "2024-06-01",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_80_2024_Grinnalds_Shellpoint_Mortgage_Payments.png",
+    "documentation_file": "2024_Grinnalds_Shellpoint_Mortgage_Payments.png",
     "reimbursement": {
       "date_shared": "2024-06-01",
       "share_description": "Auto-completed - Single owner property",
@@ -1297,7 +1297,7 @@
     "amount": 603.32,
     "date": "2024-07-01",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_81_2024_Grinnalds_Shellpoint_Mortgage_Payments.png",
+    "documentation_file": "2024_Grinnalds_Shellpoint_Mortgage_Payments.png",
     "reimbursement": {
       "date_shared": "2024-07-01",
       "share_description": "Auto-completed - Single owner property",
@@ -1313,7 +1313,7 @@
     "amount": 603.32,
     "date": "2024-08-01",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_82_2024_Grinnalds_Shellpoint_Mortgage_Payments.png",
+    "documentation_file": "2024_Grinnalds_Shellpoint_Mortgage_Payments.png",
     "reimbursement": {
       "date_shared": "2024-08-01",
       "share_description": "Auto-completed - Single owner property",
@@ -1329,7 +1329,7 @@
     "amount": 603.32,
     "date": "2024-09-01",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_83_2024_Grinnalds_Shellpoint_Mortgage_Payments.png",
+    "documentation_file": "2024_Grinnalds_Shellpoint_Mortgage_Payments.png",
     "reimbursement": {
       "date_shared": "2024-09-01",
       "share_description": "Auto-completed - Single owner property",
@@ -1345,7 +1345,7 @@
     "amount": 603.32,
     "date": "2024-10-01",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_84_2024_Grinnalds_Shellpoint_Mortgage_Payments.png",
+    "documentation_file": "2024_Grinnalds_Shellpoint_Mortgage_Payments.png",
     "reimbursement": {
       "date_shared": "2024-10-01",
       "share_description": "Auto-completed - Single owner property",
@@ -1361,7 +1361,7 @@
     "amount": 603.32,
     "date": "2024-11-01",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_85_2024_Grinnalds_Shellpoint_Mortgage_Payments.png",
+    "documentation_file": "2024_Grinnalds_Shellpoint_Mortgage_Payments.png",
     "reimbursement": {
       "date_shared": "2024-11-01",
       "share_description": "Auto-completed - Single owner property",
@@ -1377,7 +1377,7 @@
     "amount": 603.32,
     "date": "2024-12-01",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_86_2024_Grinnalds_Shellpoint_Mortgage_Payments.png",
+    "documentation_file": "2024_Grinnalds_Shellpoint_Mortgage_Payments.png",
     "reimbursement": {
       "date_shared": "2024-12-01",
       "share_description": "Auto-completed - Single owner property",
@@ -1393,7 +1393,7 @@
     "amount": 42.0,
     "date": "2024-02-01",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_87_Seller_Financing_-_240_Installments_-_Zelle_to_Zoheb.png",
+    "documentation_file": "Seller_Financing_-_240_Installments_-_Zelle_to_Zoheb.png",
     "reimbursement": {
       "date_shared": "2024-02-01",
       "share_description": "Auto-completed - Single owner property",
@@ -1409,7 +1409,7 @@
     "amount": 42.0,
     "date": "2024-03-01",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_88_Seller_Financing_-_240_Installments_-_Zelle_to_Zoheb.png",
+    "documentation_file": "Seller_Financing_-_240_Installments_-_Zelle_to_Zoheb.png",
     "reimbursement": {
       "date_shared": "2024-03-01",
       "share_description": "Auto-completed - Single owner property",
@@ -1425,7 +1425,7 @@
     "amount": 42.0,
     "date": "2024-04-01",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_89_Seller_Financing_-_240_Installments_-_Zelle_to_Zoheb.png",
+    "documentation_file": "Seller_Financing_-_240_Installments_-_Zelle_to_Zoheb.png",
     "reimbursement": {
       "date_shared": "2024-04-01",
       "share_description": "Auto-completed - Single owner property",
@@ -1441,7 +1441,7 @@
     "amount": 42.0,
     "date": "2024-05-01",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_90_Seller_Financing_-_240_Installments_-_Zelle_to_Zoheb.png",
+    "documentation_file": "Seller_Financing_-_240_Installments_-_Zelle_to_Zoheb.png",
     "reimbursement": {
       "date_shared": "2024-05-01",
       "share_description": "Auto-completed - Single owner property",
@@ -1457,7 +1457,7 @@
     "amount": 42.0,
     "date": "2024-06-01",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_91_Seller_Financing_-_240_Installments_-_Zelle_to_Zoheb.png",
+    "documentation_file": "Seller_Financing_-_240_Installments_-_Zelle_to_Zoheb.png",
     "reimbursement": {
       "date_shared": "2024-06-01",
       "share_description": "Auto-completed - Single owner property",
@@ -1473,7 +1473,7 @@
     "amount": 42.0,
     "date": "2024-07-01",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_92_Seller_Financing_-_240_Installments_-_Zelle_to_Zoheb.png",
+    "documentation_file": "Seller_Financing_-_240_Installments_-_Zelle_to_Zoheb.png",
     "reimbursement": {
       "date_shared": "2024-07-01",
       "share_description": "Auto-completed - Single owner property",
@@ -1489,7 +1489,7 @@
     "amount": 42.0,
     "date": "2024-08-01",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_93_Seller_Financing_-_240_Installments_-_Zelle_to_Zoheb.png",
+    "documentation_file": "Seller_Financing_-_240_Installments_-_Zelle_to_Zoheb.png",
     "reimbursement": {
       "date_shared": "2024-08-01",
       "share_description": "Auto-completed - Single owner property",
@@ -1505,7 +1505,7 @@
     "amount": 42.0,
     "date": "2024-09-01",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_94_Seller_Financing_-_240_Installments_-_Zelle_to_Zoheb.png",
+    "documentation_file": "Seller_Financing_-_240_Installments_-_Zelle_to_Zoheb.png",
     "reimbursement": {
       "date_shared": "2024-09-01",
       "share_description": "Auto-completed - Single owner property",
@@ -1521,7 +1521,7 @@
     "amount": 42.0,
     "date": "2024-10-01",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_95_Seller_Financing_-_240_Installments_-_Zelle_to_Zoheb.png",
+    "documentation_file": "Seller_Financing_-_240_Installments_-_Zelle_to_Zoheb.png",
     "reimbursement": {
       "date_shared": "2024-10-01",
       "share_description": "Auto-completed - Single owner property",
@@ -1537,7 +1537,7 @@
     "amount": 42.0,
     "date": "2024-11-01",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_96_Seller_Financing_-_240_Installments_-_Zelle_to_Zoheb.png",
+    "documentation_file": "Seller_Financing_-_240_Installments_-_Zelle_to_Zoheb.png",
     "reimbursement": {
       "date_shared": "2024-11-01",
       "share_description": "Auto-completed - Single owner property",
@@ -1553,7 +1553,7 @@
     "amount": 42.0,
     "date": "2024-12-01",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_97_Seller_Financing_-_240_Installments_-_Zelle_to_Zoheb.png",
+    "documentation_file": "Seller_Financing_-_240_Installments_-_Zelle_to_Zoheb.png",
     "reimbursement": {
       "date_shared": "2024-12-01",
       "share_description": "Auto-completed - Single owner property",
@@ -1569,7 +1569,7 @@
     "amount": 699.01,
     "date": "2024-01-18",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_98_2024.02-11_Water_Bill.png",
+    "documentation_file": "2024.02-11_Water_Bill.png",
     "reimbursement": {
       "date_shared": "2024-01-18",
       "share_description": "Auto-completed - Single owner property",
@@ -1585,7 +1585,7 @@
     "amount": 402.0,
     "date": "2024-03-15",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_99_BGE_Grinnalds_2024.03.15.png",
+    "documentation_file": "BGE_Grinnalds_2024.03.15.png",
     "reimbursement": {
       "date_shared": "2024-03-15",
       "share_description": "Auto-completed - Single owner property",
@@ -1601,7 +1601,7 @@
     "amount": 465.75,
     "date": "2024-03-15",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_100_BGE_Grinnalds_2024.03.25.png",
+    "documentation_file": "BGE_Grinnalds_2024.03.25.png",
     "reimbursement": {
       "date_shared": "2024-03-15",
       "share_description": "Auto-completed - Single owner property",
@@ -1617,7 +1617,7 @@
     "amount": 43.35,
     "date": "2024-10-21",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_101_BGE_Grinnalds_2024.10.21.png",
+    "documentation_file": "BGE_Grinnalds_2024.10.21.png",
     "reimbursement": {
       "date_shared": "2024-10-21",
       "share_description": "Auto-completed - Single owner property",
@@ -1633,7 +1633,7 @@
     "amount": 50.23,
     "date": "2024-11-21",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_102_BGE_Grinnalds_2024.11.21.png",
+    "documentation_file": "BGE_Grinnalds_2024.11.21.png",
     "reimbursement": {
       "date_shared": "2024-11-21",
       "share_description": "Auto-completed - Single owner property",
@@ -1649,7 +1649,7 @@
     "amount": 120.9,
     "date": "2024-12-16",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_103_Xfinity_Grinnalds_2024.12.16.png",
+    "documentation_file": "Xfinity_Grinnalds_2024.12.16.png",
     "reimbursement": {
       "date_shared": "2024-12-16",
       "share_description": "Auto-completed - Single owner property",
@@ -1665,7 +1665,7 @@
     "amount": 120.9,
     "date": "2024-11-16",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_104_Xfinity_Grinnalds_2024.11.16.png",
+    "documentation_file": "Xfinity_Grinnalds_2024.11.16.png",
     "reimbursement": {
       "date_shared": "2024-11-16",
       "share_description": "Auto-completed - Single owner property",
@@ -1681,7 +1681,7 @@
     "amount": 120.9,
     "date": "2024-10-16",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_105_Xfinity_Grinnalds_2024.10.16.png",
+    "documentation_file": "Xfinity_Grinnalds_2024.10.16.png",
     "reimbursement": {
       "date_shared": "2024-10-16",
       "share_description": "Auto-completed - Single owner property",
@@ -1697,7 +1697,7 @@
     "amount": 120.9,
     "date": "2024-09-16",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_106_Xfinity_Grinnalds_2024.09.16.png",
+    "documentation_file": "Xfinity_Grinnalds_2024.09.16.png",
     "reimbursement": {
       "date_shared": "2024-09-16",
       "share_description": "Auto-completed - Single owner property",
@@ -1713,7 +1713,7 @@
     "amount": 120.9,
     "date": "2024-08-16",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_107_Xfinity_Grinnalds_2024.08.16.png",
+    "documentation_file": "Xfinity_Grinnalds_2024.08.16.png",
     "reimbursement": {
       "date_shared": "2024-08-16",
       "share_description": "Auto-completed - Single owner property",
@@ -1729,7 +1729,7 @@
     "amount": 120.9,
     "date": "2024-06-16",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_108_Xfinity_Grinnalds_2024.06.16.png",
+    "documentation_file": "Xfinity_Grinnalds_2024.06.16.png",
     "reimbursement": {
       "date_shared": "2024-06-16",
       "share_description": "Auto-completed - Single owner property",
@@ -1745,7 +1745,7 @@
     "amount": 80.0,
     "date": "2024-05-16",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_109_Xfinity_Grinnalds_2024.05.16.png",
+    "documentation_file": "Xfinity_Grinnalds_2024.05.16.png",
     "reimbursement": {
       "date_shared": "2024-05-16",
       "share_description": "Auto-completed - Single owner property",
@@ -1761,7 +1761,7 @@
     "amount": 25.0,
     "date": "2024-04-10",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_110_Xfinity_Grinnalds_2024.04.10.png",
+    "documentation_file": "Xfinity_Grinnalds_2024.04.10.png",
     "reimbursement": {
       "date_shared": "2024-04-10",
       "share_description": "Auto-completed - Single owner property",
@@ -1778,13 +1778,13 @@
     "date": "2024-12-12",
     "collector_payer": "BJ Marshall",
     "notes": "",
-    "documentation_file": "trans_112_2024.12.05_Guilford_Water_Bill.png",
+    "documentation_file": "2024.12.05_Guilford_Water_Bill.png",
     "id": "112",
     "reimbursement": {
       "date_shared": "2025-01-02",
       "share_description": "Tenant Will Reimburse",
       "reimbursement_status": "completed",
-      "documentation": "reimb_112_reimb_2025.01.02_Guilford_Water_Bill_Reimb.png"
+      "documentation": "reimb_2025.01.02_Guilford_Water_Bill_Reimb.png"
     }
   },
   {
@@ -1795,7 +1795,7 @@
     "amount": 474.46,
     "date": "2024-12-23",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_113_2024.12.23_Logan_Plumbing.jpg",
+    "documentation_file": "2024.12.23_Logan_Plumbing.jpg",
     "id": "113",
     "reimbursement": {
       "date_shared": "2024-12-23",
@@ -1812,7 +1812,7 @@
     "amount": 474.46,
     "date": "2024-12-27",
     "collector_payer": "Brian Poole",
-    "documentation_file": "trans_116_IMG_20241227_131915.jpg",
+    "documentation_file": "IMG_20241227_131915.jpg",
     "id": "116",
     "reimbursement": {
       "date_shared": "2024-12-27",
@@ -1829,7 +1829,7 @@
     "amount": 173.29,
     "date": "2024-11-12",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_117_2024.11-12_Grinnalds_Griffith_Oil.png",
+    "documentation_file": "2024.11-12_Grinnalds_Griffith_Oil.png",
     "reimbursement": {
       "date_shared": "2024-11-12",
       "share_description": "Auto-completed - Single owner property",
@@ -1846,7 +1846,7 @@
     "amount": 299.95,
     "date": "2024-11-29",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_118_2024.11-12_Grinnalds_Griffith_Oil.png",
+    "documentation_file": "2024.11-12_Grinnalds_Griffith_Oil.png",
     "reimbursement": {
       "date_shared": "2024-11-29",
       "share_description": "Auto-completed - Single owner property",
@@ -1863,7 +1863,7 @@
     "amount": 231.99,
     "date": "2024-12-22",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_119_2024.11-12_Grinnalds_Griffith_Oil.png",
+    "documentation_file": "2024.11-12_Grinnalds_Griffith_Oil.png",
     "reimbursement": {
       "date_shared": "2024-12-22",
       "share_description": "Auto-completed - Single owner property",
@@ -1880,13 +1880,13 @@
     "amount": 719.71,
     "date": "2024-12-31",
     "collector_payer": "Brian Poole",
-    "documentation_file": "trans_120_2024.12.31_Miller_Reno_-_Bathroom_Stuff_-_Primer_-_Paint.png",
+    "documentation_file": "2024.12.31_Miller_Reno_-_Bathroom_Stuff_-_Primer_-_Paint.png",
     "id": "120",
     "reimbursement": {
       "date_shared": "2025-01-04",
       "share_description": "Shared via Zelle",
       "reimbursement_status": "completed",
-      "documentation": "reimb_120_reimb_2025.01.04_Miller_Reno_Supplies_Reimbursement.png"
+      "documentation": "reimb_2025.01.04_Miller_Reno_Supplies_Reimbursement.png"
     }
   },
   {
@@ -1898,7 +1898,7 @@
     "date": "2025-01-03",
     "collector_payer": "BJ Marshall",
     "notes": "Reimbursing cash flow = (Rent - Mortgage - Seller Financing) / 2",
-    "documentation_file": "trans_121_2025.01.03_Guilford_Seller_Financing.png",
+    "documentation_file": "2025.01.03_Guilford_Seller_Financing.png",
     "id": "121",
     "reimbursement": {
       "date_shared": "2025-01-03",
@@ -1915,7 +1915,7 @@
     "amount": 2325.0,
     "date": "2025-01-02",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_122_2025.01.02_El_Camino_Rent.png",
+    "documentation_file": "2025.01.02_El_Camino_Rent.png",
     "reimbursement": {
       "date_shared": "2025-01-02",
       "share_description": "Auto-completed - Single owner property",
@@ -1932,7 +1932,7 @@
     "amount": 362.81,
     "date": "2025-01-01",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_123_2025.01.01_Watch_Chain_COA.png",
+    "documentation_file": "2025.01.01_Watch_Chain_COA.png",
     "reimbursement": {
       "date_shared": "2025-01-01",
       "share_description": "Auto-completed - Single owner property",
@@ -1949,7 +1949,7 @@
     "amount": 1192.07,
     "date": "2025-01-01",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_124_2025.01.01_El_Camino_Mortgage_Payment.png",
+    "documentation_file": "2025.01.01_El_Camino_Mortgage_Payment.png",
     "reimbursement": {
       "date_shared": "2025-01-01",
       "share_description": "Auto-completed - Single owner property",
@@ -1966,7 +1966,7 @@
     "amount": 1130.98,
     "date": "2025-01-01",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_125_2025.01.01_Watch_Chain_Mortgage_Payment.png",
+    "documentation_file": "2025.01.01_Watch_Chain_Mortgage_Payment.png",
     "reimbursement": {
       "date_shared": "2025-01-01",
       "share_description": "Auto-completed - Single owner property",
@@ -1983,13 +1983,13 @@
     "amount": 4534.26,
     "date": "2025-01-03",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_126_2025.01.03_Miller_Reno_Part_2.jpg",
+    "documentation_file": "2025.01.03_Miller_Reno_Part_2.jpg",
     "id": "126",
     "reimbursement": {
       "date_shared": "2025-01-04",
       "share_description": "Shared via Zelle",
       "reimbursement_status": "completed",
-      "documentation": "reimb_126_reimb_2025.01.04_Miller_Reno_Reimbursement_to_Jose.png"
+      "documentation": "reimb_2025.01.04_Miller_Reno_Reimbursement_to_Jose.png"
     }
   },
   {
@@ -2000,7 +2000,7 @@
     "amount": 35.57,
     "date": "2025-01-04",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_127_2025.01.15_Logan_Trash_Bill.png",
+    "documentation_file": "2025.01.15_Logan_Trash_Bill.png",
     "reimbursement": {
       "date_shared": "2025-01-04",
       "share_description": "Tenant Will Reimburse",
@@ -2018,13 +2018,13 @@
     "date": "2025-01-04",
     "collector_payer": "Brian Poole",
     "notes": "Bathroom exhaust fan, paint/primer, all-purpose cleaner, drywall",
-    "documentation_file": "trans_128_2025.01.04_Miller_Reno_Home_Depot_Paints.pdf",
+    "documentation_file": "2025.01.04_Miller_Reno_Home_Depot_Paints.pdf",
     "id": "128",
     "reimbursement": {
       "date_shared": "2025-01-05",
       "share_description": "Shared via Zelle",
       "reimbursement_status": "completed",
-      "documentation": "reimb_128_reimb_2025.01.04_Miller_Home_Depot_Paints_Reimb.png"
+      "documentation": "reimb_2025.01.04_Miller_Home_Depot_Paints_Reimb.png"
     }
   },
   {
@@ -2036,13 +2036,13 @@
     "date": "2025-01-04",
     "collector_payer": "Brian Poole",
     "notes": "Toe molding, cabinet hinges, base cabinet",
-    "documentation_file": "trans_129_2025.01.04_Miller_Kitchen_Remodel.pdf",
+    "documentation_file": "2025.01.04_Miller_Kitchen_Remodel.pdf",
     "id": "129",
     "reimbursement": {
       "date_shared": "2025-01-05",
       "share_description": "Shared via Zelle",
       "reimbursement_status": "completed",
-      "documentation": "reimb_129_reimb_2025.01.06_Miller_Home_Depot_Run_1_Reimb.png"
+      "documentation": "reimb_2025.01.06_Miller_Home_Depot_Run_1_Reimb.png"
     }
   },
   {
@@ -2053,7 +2053,7 @@
     "amount": 500.71,
     "date": "2024-04-11",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_130_2024.04.11_Grinnalds_IKEA_Furnishings.png",
+    "documentation_file": "2024.04.11_Grinnalds_IKEA_Furnishings.png",
     "reimbursement": {
       "date_shared": "2024-04-11",
       "share_description": "Auto-completed - Single owner property",
@@ -2070,7 +2070,7 @@
     "amount": 933.76,
     "date": "2024-03-10",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_131_2024.03.10_-_Grinnalds_Wayfair_Furnishings.png",
+    "documentation_file": "2024.03.10_-_Grinnalds_Wayfair_Furnishings.png",
     "reimbursement": {
       "date_shared": "2024-03-10",
       "share_description": "Auto-completed - Single owner property",
@@ -2088,13 +2088,13 @@
     "date": "2025-01-01",
     "collector_payer": "BJ Marshall",
     "notes": "",
-    "documentation_file": "trans_132_2025.01.01_Guilford_Rent.png",
+    "documentation_file": "2025.01.01_Guilford_Rent.png",
     "id": "132",
     "reimbursement": {
       "date_shared": "2025-01-01",
       "share_description": "Sent via PNC Bank e-Check",
       "reimbursement_status": "pending",
-      "documentation": "reimb_132_reimb_2025.01.02_Guilford_Water_Bill_Paid.png"
+      "documentation": "reimb_2025.01.02_Guilford_Water_Bill_Paid.png"
     }
   },
   {
@@ -2106,7 +2106,7 @@
     "date": "2025-01-03",
     "collector_payer": "BJ Marshall",
     "notes": "We double paid Tom's insurance premium before switching over to our own, so this is our reimbursement.",
-    "documentation_file": "trans_133_2025.01.03_Guilford_Mortgage_Payment.png",
+    "documentation_file": "2025.01.03_Guilford_Mortgage_Payment.png",
     "id": "133",
     "reimbursement": {
       "date_shared": "2025-01-03",
@@ -2123,7 +2123,7 @@
     "amount": 1500.0,
     "date": "2025-01-02",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_134_2025.01.02_Logan_Rent.png",
+    "documentation_file": "2025.01.02_Logan_Rent.png",
     "reimbursement": {
       "date_shared": "2025-01-02",
       "share_description": "",
@@ -2140,7 +2140,7 @@
     "amount": 830.2,
     "date": "2025-01-02",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_135_2025.01.02_Logan_Mortgage_Payment.png",
+    "documentation_file": "2025.01.02_Logan_Mortgage_Payment.png",
     "reimbursement": {
       "date_shared": "2025-01-02",
       "share_description": "",
@@ -2157,13 +2157,13 @@
     "amount": 6253.0,
     "date": "2025-01-10",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_136_2025.01.02_Miller_Reno_Scope_of_Work.pdf",
+    "documentation_file": "2025.01.02_Miller_Reno_Scope_of_Work.pdf",
     "id": "136",
     "reimbursement": {
       "date_shared": "2025-01-07",
       "share_description": "Brian Paid Jose His Half",
       "reimbursement_status": "completed",
-      "documentation": "reimb_136_reimb_2027.01.07_Miller_Reno_Draw_Brian_Paid_His_Half.jpg"
+      "documentation": "reimb_2027.01.07_Miller_Reno_Draw_Brian_Paid_His_Half.jpg"
     }
   },
   {
@@ -2174,7 +2174,7 @@
     "amount": 57.76,
     "date": "2025-01-03",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_137_2024.11-2025.01_El_Camino_COA_Payments.png",
+    "documentation_file": "2024.11-2025.01_El_Camino_COA_Payments.png",
     "reimbursement": {
       "date_shared": "2025-01-03",
       "share_description": "Auto-completed - Single owner property",
@@ -2191,7 +2191,7 @@
     "amount": 57.76,
     "date": "2024-12-05",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_138_2024.11-2025.01_El_Camino_COA_Payments.png",
+    "documentation_file": "2024.11-2025.01_El_Camino_COA_Payments.png",
     "reimbursement": {
       "date_shared": "2024-12-05",
       "share_description": "Auto-completed - Single owner property",
@@ -2208,7 +2208,7 @@
     "amount": 321.61,
     "date": "2024-11-03",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_139_2024.11-2025.01_El_Camino_COA_Payments.png",
+    "documentation_file": "2024.11-2025.01_El_Camino_COA_Payments.png",
     "reimbursement": {
       "date_shared": "2024-11-03",
       "share_description": "Auto-completed - Single owner property",
@@ -2225,7 +2225,7 @@
     "amount": 359.47,
     "date": "2024-12-17",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_140_2024.12.17_El_Camino_Level_1_Chimney_Inspection.pdf",
+    "documentation_file": "2024.12.17_El_Camino_Level_1_Chimney_Inspection.pdf",
     "reimbursement": {
       "date_shared": "2024-12-17",
       "share_description": "Auto-completed - Single owner property",
@@ -2242,7 +2242,7 @@
     "amount": 1950.0,
     "date": "2025-01-05",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_141_2025.01.05_Watch_Chain_Rent.png",
+    "documentation_file": "2025.01.05_Watch_Chain_Rent.png",
     "reimbursement": {
       "date_shared": "2025-01-05",
       "share_description": "Auto-completed - Single owner property",
@@ -2259,7 +2259,7 @@
     "amount": 772.5,
     "date": "2024-10-08",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_142_2024.10.08_Grinnalds_BP_PM_On-Boarding_and_Reserve_Fund.pdf",
+    "documentation_file": "2024.10.08_Grinnalds_BP_PM_On-Boarding_and_Reserve_Fund.pdf",
     "reimbursement": {
       "date_shared": "2024-10-08",
       "share_description": "Auto-completed - Single owner property",
@@ -2276,7 +2276,7 @@
     "amount": 3064.25,
     "date": "2024-10-09",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_143_2024.10.09_Grinnalds_BP_Move-In_Repairs.pdf",
+    "documentation_file": "2024.10.09_Grinnalds_BP_Move-In_Repairs.pdf",
     "reimbursement": {
       "date_shared": "2024-10-09",
       "share_description": "Auto-completed - Single owner property",
@@ -2293,7 +2293,7 @@
     "amount": 195.7,
     "date": "2024-11-24",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_144_2024.11.24_Grinnalds_Rental_Inspection_and_Light.pdf",
+    "documentation_file": "2024.11.24_Grinnalds_Rental_Inspection_and_Light.pdf",
     "reimbursement": {
       "date_shared": "2024-11-24",
       "share_description": "Auto-completed - Single owner property",
@@ -2310,7 +2310,7 @@
     "amount": 6390.0,
     "date": "2024-11-22",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_145_2024_Grinnalds_Colossal_PM_Year-End_Statement.pdf",
+    "documentation_file": "2024_Grinnalds_Colossal_PM_Year-End_Statement.pdf",
     "reimbursement": {
       "date_shared": "2024-11-22",
       "share_description": "Auto-completed - Single owner property",
@@ -2327,7 +2327,7 @@
     "amount": 20357.74,
     "date": "2024-05-29",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_146_2024_Grinnalds_Renovation.png",
+    "documentation_file": "2024_Grinnalds_Renovation.png",
     "reimbursement": {
       "date_shared": "2024-05-29",
       "share_description": "Auto-completed - Single owner property",
@@ -2344,7 +2344,7 @@
     "amount": 277.23,
     "date": "2024-12-05",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_147_2024.11_Grinnalds_PM_Maintenance.png",
+    "documentation_file": "2024.11_Grinnalds_PM_Maintenance.png",
     "reimbursement": {
       "date_shared": "2024-12-05",
       "share_description": "Auto-completed - Single owner property",
@@ -2361,7 +2361,7 @@
     "amount": 874.0,
     "date": "2025-01-08",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_148_2024.12_Grinnalds_PM_Maintenance.png",
+    "documentation_file": "2024.12_Grinnalds_PM_Maintenance.png",
     "reimbursement": {
       "date_shared": "2025-01-08",
       "share_description": "Auto-completed - Single owner property",
@@ -2378,7 +2378,7 @@
     "amount": 1001.95,
     "date": "2024-12-05",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_149_2024.11_Grinnalds_PadSplit_Income_and_Expenses.png",
+    "documentation_file": "2024.11_Grinnalds_PadSplit_Income_and_Expenses.png",
     "reimbursement": {
       "date_shared": "2024-12-05",
       "share_description": "Auto-completed - Single owner property",
@@ -2395,7 +2395,7 @@
     "amount": 60.12,
     "date": "2024-12-05",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_150_2024.11_Grinnalds_PadSplit_Income_and_Expenses.png",
+    "documentation_file": "2024.11_Grinnalds_PadSplit_Income_and_Expenses.png",
     "reimbursement": {
       "date_shared": "2024-12-05",
       "share_description": "Auto-completed - Single owner property",
@@ -2412,7 +2412,7 @@
     "amount": 619.27,
     "date": "2024-12-05",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_151_2024.11_Grinnalds_PadSplit_Income_and_Expenses.png",
+    "documentation_file": "2024.11_Grinnalds_PadSplit_Income_and_Expenses.png",
     "reimbursement": {
       "date_shared": "2024-12-05",
       "share_description": "Auto-completed - Single owner property",
@@ -2429,7 +2429,7 @@
     "amount": 30.62,
     "date": "2024-12-05",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_152_2024.11_Grinnalds_PadSplit_Income_and_Expenses.png",
+    "documentation_file": "2024.11_Grinnalds_PadSplit_Income_and_Expenses.png",
     "reimbursement": {
       "date_shared": "2024-12-05",
       "share_description": "Auto-completed - Single owner property",
@@ -2446,7 +2446,7 @@
     "amount": 2583.88,
     "date": "2025-01-08",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_153_2024.11_Grinnalds_PadSplit_Income_and_Expenses.png",
+    "documentation_file": "2024.11_Grinnalds_PadSplit_Income_and_Expenses.png",
     "reimbursement": {
       "date_shared": "2025-01-08",
       "share_description": "Auto-completed - Single owner property",
@@ -2463,7 +2463,7 @@
     "amount": 206.71,
     "date": "2025-01-08",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_154_2024.11_Grinnalds_PadSplit_Income_and_Expenses.png",
+    "documentation_file": "2024.11_Grinnalds_PadSplit_Income_and_Expenses.png",
     "reimbursement": {
       "date_shared": "2025-01-08",
       "share_description": "Auto-completed - Single owner property",
@@ -2480,7 +2480,7 @@
     "amount": 335.03,
     "date": "2025-01-08",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_155_2024.11_Grinnalds_PadSplit_Income_and_Expenses.png",
+    "documentation_file": "2024.11_Grinnalds_PadSplit_Income_and_Expenses.png",
     "reimbursement": {
       "date_shared": "2025-01-08",
       "share_description": "Auto-completed - Single owner property",
@@ -2497,7 +2497,7 @@
     "amount": 179.91,
     "date": "2025-01-08",
     "collector_payer": "BJ Marshall",
-    "documentation_file": "trans_156_2024.11_Grinnalds_PadSplit_Income_and_Expenses.png",
+    "documentation_file": "2024.11_Grinnalds_PadSplit_Income_and_Expenses.png",
     "reimbursement": {
       "date_shared": "2025-01-08",
       "share_description": "Auto-completed - Single owner property",
@@ -2515,7 +2515,7 @@
     "date": "2025-01-10",
     "collector_payer": "Brian Poole",
     "notes": "Joint Compound, PT Pine, Drywall, Ceiling Stuff, Backsplash, Grout",
-    "documentation_file": "trans_157_2025.01.10_Miller_Home_Depot_Run_2.pdf",
+    "documentation_file": "2025.01.10_Miller_Home_Depot_Run_2.pdf",
     "id": "157",
     "reimbursement": {
       "date_shared": "2025-01-10",
@@ -2533,12 +2533,12 @@
     "date": "2025-01-03",
     "collector_payer": "Brian Poole",
     "notes": "Wood, drywall, PEX, other plumbing stuff, joint compound",
-    "documentation_file": "trans_159_2025.01.03_Miller_Supplies.pdf",
+    "documentation_file": "2025.01.03_Miller_Supplies.pdf",
     "reimbursement": {
       "date_shared": "2025-01-03",
       "share_description": "Sent via PNC Bank e-Check",
       "reimbursement_status": "pending",
-      "documentation": "reimb_159_reimb_2025.01.03_Miller_HD_Supplies_Reimb.png"
+      "documentation": "reimb_2025.01.03_Miller_HD_Supplies_Reimb.png"
     },
     "id": "159"
   },
@@ -2551,13 +2551,13 @@
     "date": "2025-01-08",
     "collector_payer": "Brian Poole",
     "notes": "Adhesive, Tile leveling system, grout, mortar, sealant, tub alcove surround, windows.",
-    "documentation_file": "trans_160_2025.01.08_Miller_Supplies.pdf",
+    "documentation_file": "2025.01.08_Miller_Supplies.pdf",
     "id": "160",
     "reimbursement": {
       "date_shared": "2025-01-08",
       "share_description": "Sent via PNC Bank e-Check",
       "reimbursement_status": "pending",
-      "documentation": "reimb_160_reimb_2025.01.08_Miller_Supplies_Reimb.png"
+      "documentation": "reimb_2025.01.08_Miller_Supplies_Reimb.png"
     }
   },
   {
@@ -2569,12 +2569,12 @@
     "date": "2025-01-10",
     "collector_payer": "Brian Poole",
     "notes": "Dishwasher",
-    "documentation_file": "trans_161_2025.01.09_Miller_Dishwasher.pdf",
+    "documentation_file": "2025.01.09_Miller_Dishwasher.pdf",
     "reimbursement": {
       "date_shared": "2025-01-10",
       "share_description": "Sent via PNC Bank e-Check",
       "reimbursement_status": "pending",
-      "documentation": "reimb_161_reimb_2025.01.10_Miller_Dishwasher_Reimb.png"
+      "documentation": "reimb_2025.01.10_Miller_Dishwasher_Reimb.png"
     },
     "id": "161"
   },
@@ -2587,12 +2587,12 @@
     "date": "2025-01-13",
     "collector_payer": "Brian Poole",
     "notes": "Paint and supplies",
-    "documentation_file": "trans_162_2025.01.13_Miller_Home_Depot_Paints.pdf",
+    "documentation_file": "2025.01.13_Miller_Home_Depot_Paints.pdf",
     "reimbursement": {
       "date_shared": "2025-01-13",
       "share_description": "PNC eCheck",
       "reimbursement_status": "pending",
-      "documentation": "reimb_162_reimb_2025.01.13_Miller_Home_Depot_Paints_Reimb.png"
+      "documentation": "reimb_2025.01.13_Miller_Home_Depot_Paints_Reimb.png"
     },
     "id": "162"
   },
@@ -2605,12 +2605,12 @@
     "date": "2025-01-13",
     "collector_payer": "Brian Poole",
     "notes": "Bathtub - should expect refund of other one soon",
-    "documentation_file": "trans_163_2025.01.13_Miller_Bathtub_Round_2.pdf",
+    "documentation_file": "2025.01.13_Miller_Bathtub_Round_2.pdf",
     "reimbursement": {
       "date_shared": "2025-01-13",
       "share_description": "PNC eCheck",
       "reimbursement_status": "pending",
-      "documentation": "reimb_163_reimb_2025.01.13_Miller_Bathtub_Round_2_Reimb.png"
+      "documentation": "reimb_2025.01.13_Miller_Bathtub_Round_2_Reimb.png"
     },
     "id": "163"
   },
@@ -2623,7 +2623,7 @@
     "date": "2025-01-16",
     "collector_payer": "BJ Marshall",
     "notes": "",
-    "documentation_file": "trans_164_2025.01.16_Grinnalds_Xfinity.png",
+    "documentation_file": "2025.01.16_Grinnalds_Xfinity.png",
     "reimbursement": {
       "date_shared": "2025-01-16",
       "share_description": "Auto-completed - Single owner property",
@@ -2641,7 +2641,7 @@
     "date": "2025-01-17",
     "collector_payer": "BJ Marshall",
     "notes": "",
-    "documentation_file": "trans_165_2025.01.17_Watch_Chain_COA_Shortgage_Payment.png",
+    "documentation_file": "2025.01.17_Watch_Chain_COA_Shortgage_Payment.png",
     "reimbursement": {
       "date_shared": "2025-01-17",
       "share_description": "Auto-completed - Single owner property",
@@ -2664,7 +2664,7 @@
       "date_shared": "2025-01-16",
       "share_description": "Sent via PNC Bank e-Check",
       "reimbursement_status": "pending",
-      "documentation": "reimb_166_reimb_2025.01.16_Miller_Home_Depot_More_Supplies_Reimb.png"
+      "documentation": "reimb_2025.01.16_Miller_Home_Depot_More_Supplies_Reimb.png"
     },
     "id": "166"
   },
@@ -2677,12 +2677,12 @@
     "date": "2025-01-16",
     "collector_payer": "BJ Marshall",
     "notes": "",
-    "documentation_file": "trans_167_2025.01.16_Guilford_Insurance_Reimb_from_Tom.png",
+    "documentation_file": "2025.01.16_Guilford_Insurance_Reimb_from_Tom.png",
     "reimbursement": {
       "date_shared": "2025-01-16",
       "share_description": "PNC eCheck",
       "reimbursement_status": "pending",
-      "documentation": "reimb_167_reimb_2025.01.16_Guilford_Insurance_Reimb_from_Tom_to_Brian.png"
+      "documentation": "reimb_2025.01.16_Guilford_Insurance_Reimb_from_Tom_to_Brian.png"
     },
     "id": "167"
   },
@@ -2695,12 +2695,12 @@
     "date": "2025-01-15",
     "collector_payer": "Brian Poole",
     "notes": "General Labor ($3,000), JEM Management ($3,150), Electrical/HVAC ($2,003)",
-    "documentation_file": "trans_168_2025.01.11_Miller_HVAC_and_Labor.png",
+    "documentation_file": "2025.01.11_Miller_HVAC_and_Labor.png",
     "reimbursement": {
       "date_shared": "2025-01-15",
       "share_description": "PNC eCheck",
       "reimbursement_status": "pending",
-      "documentation": "reimb_168_reimb_2025.01.11_Miller_HVAC_and_Labor_Reimb.png"
+      "documentation": "reimb_2025.01.11_Miller_HVAC_and_Labor_Reimb.png"
     },
     "id": "168"
   }

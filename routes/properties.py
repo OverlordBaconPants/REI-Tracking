@@ -1,10 +1,11 @@
 import os
 import json
 import logging
+import traceback
 from flask import Blueprint, render_template, request, current_app, jsonify
 from flask_login import login_required, current_user
 from utils.utils import admin_required
-from services.transaction_service import get_partners_for_property
+from services.transaction_service import get_partners_for_property, get_properties_for_user
 from typing import Dict, List, Any, Optional, Tuple, Set
 from datetime import datetime
 from decimal import Decimal
@@ -222,22 +223,45 @@ def sanitize_property_data(property_data: Dict[str, Any]) -> Dict[str, Any]:
         logger.error(f"Error sanitizing property data: {str(e)}")
         raise ValueError(f"Error sanitizing property data: {str(e)}")
 
-def is_property_manager(user_email: str, property_data: Dict[str, Any]) -> bool:
-    """
-    Check if a user is the Property Manager for a property
-    """
+@properties_bp.route('/get_manageable_properties')
+@login_required
+def get_manageable_properties():
+    """Get properties where the current user is a property manager."""
     try:
-        user = get_user_by_email(user_email)
-        if not user:
-            return False
-            
-        for partner in property_data.get('partners', []):
-            if partner.get('name') == user.get('name') and partner.get('is_property_manager', False):
-                return True
-                
-        return False
+        properties = get_properties_for_user(current_user.id, current_user.name)
+        
+        return jsonify({
+            'success': True,
+            'properties': properties
+        })
+        
     except Exception as e:
-        logger.error(f"Error checking Property Manager status: {str(e)}")
+        logging.error(f"Error getting manageable properties: {str(e)}")
+        logging.error(traceback.format_exc())
+        return jsonify({
+            'success': False,
+            'message': 'Error loading properties'
+        }), 500
+
+def is_property_manager(user_email, property_data):
+    """Check if user is a property manager for given property."""
+    try:
+        logging.debug(f"Checking property manager status for user {user_email}")
+        logging.debug(f"Property data: {property_data}")
+        
+        from flask_login import current_user  # Add this import if not already present
+        
+        is_manager = any(
+            partner.get('name') == current_user.name and 
+            partner.get('is_property_manager', False)
+            for partner in property_data.get('partners', [])
+        )
+        
+        logging.debug(f"Is property manager result: {is_manager}")
+        return is_manager
+
+    except Exception as e:
+        logging.error(f"Error checking property manager status: {str(e)}")
         return False
     
 @properties_bp.route('/add_properties', methods=['GET', 'POST'])
@@ -372,95 +396,105 @@ def add_properties():
 @properties_bp.route('/remove_properties', methods=['GET', 'POST'])
 @login_required
 def remove_properties():
-    """Handle property removal"""
-    logger.info(f"Remove properties route accessed by user: {current_user.email}")
+    """Handle property removal for property managers."""
+    logging.info(f"Remove properties route accessed by user: {current_user.name} (ID: {current_user.id})")
     
     try:
-        # Check if user is property manager
-        if not is_property_manager(current_user.email, property_data):
-            logger.warning(f"Non-property manager attempted access: {current_user.email}")
-            return jsonify({
-                'success': False,
-                'message': 'Property manager access required'
-            }), 403
+        # Get user's properties
+        properties = get_properties_for_user(current_user.id, current_user.name)
+        logging.debug(f"Retrieved {len(properties)} properties for user")
 
-        # Load existing properties
-        with open(current_app.config['PROPERTIES_FILE'], 'r') as f:
-            properties = json.load(f)
-            logger.debug(f"Loaded {len(properties)} properties for removal consideration")
-    except Exception as e:
-        logger.error(f"Error loading properties for removal: {str(e)}")
-        flash_message('Error loading properties database', 'error')
-        return jsonify({'success': False, 'message': 'Error loading properties'}), 500
+        if request.method == 'GET':
+            return render_template(
+                'properties/remove_properties.html', 
+                properties=properties
+            )
 
-    if request.method == 'POST':
-        logger.debug("Processing POST request for remove_properties")
-        
-        # Validate request data
-        property_to_remove = request.form.get('property_select')
-        confirm_input = request.form.get('confirm_input')
-
-        logger.info(f"Request to remove property: {property_to_remove}")
-        logger.debug(f"Confirmation phrase provided: {confirm_input}")
-
-        # Validation checks
-        if not property_to_remove:
-            logger.warning("No property selected for removal")
-            return jsonify({
-                'success': False, 
-                'message': 'No property selected for removal'
-            }), 400
-
-        expected_confirm_phrase = "I am sure I want to do this."
-        if confirm_input != expected_confirm_phrase:
-            logger.warning(f"Incorrect confirmation phrase provided. Expected: '{expected_confirm_phrase}', Got: '{confirm_input}'")
-            return jsonify({
-                'success': False,
-                'message': 'Incorrect confirmation phrase. Property not removed'
-            }), 400
-
-        try:
-            # Find and remove the property
-            original_count = len(properties)
-            properties = [p for p in properties if p['address'] != property_to_remove]
+        # Handle POST request
+        if request.method == 'POST':
+            property_address = request.form.get('property_select')
+            confirmation = request.form.get('confirm_input')
             
-            if len(properties) == original_count:
-                logger.warning(f"Property not found for removal: {property_to_remove}")
+            logging.debug(f"Processing removal request for property: {property_address}")
+            logging.debug(f"Current user: {current_user.name} (ID: {current_user.id})")
+            
+            if not property_address:
                 return jsonify({
                     'success': False,
-                    'message': 'Property not found'
+                    'message': 'Please select a property'
+                }), 400
+
+            # Find selected property data
+            property_data = next(
+                (prop for prop in properties if prop['address'] == property_address),
+                None
+            )
+
+            if not property_data:
+                return jsonify({
+                    'success': False,
+                    'message': 'Selected property not found'
                 }), 404
 
-            # Save updated properties with atomic write
-            temp_file = current_app.config['PROPERTIES_FILE'] + '.tmp'
+            # Verify property manager status with debug logging
+            logging.debug(f"Checking property manager status...")
+            logging.debug(f"Property data: {property_data}")
+            if not is_property_manager(current_user.id, property_data):
+                logging.error(f"User {current_user.name} (ID: {current_user.id}) " +
+                            f"is not a property manager for {property_address}")
+                return jsonify({
+                    'success': False,
+                    'message': 'You must be a property manager to remove properties'
+                }), 403
+
             try:
-                with open(temp_file, 'w') as f:
-                    json.dump(properties, f, indent=2)
-                import os
-                os.replace(temp_file, current_app.config['PROPERTIES_FILE'])
-                logger.info(f"Property successfully removed: {property_to_remove}")
+                # Load properties data
+                properties_file = os.path.join(current_app.config['DATA_DIR'], 'properties.json')
+                with open(properties_file, 'r') as f:
+                    all_properties = json.load(f)
+
+                # Remove the property
+                all_properties = [p for p in all_properties if p['address'] != property_address]
+
+                # Save updated properties
+                with open(properties_file, 'w') as f:
+                    json.dump(all_properties, f, indent=2)
+
+                logging.info(f"Successfully removed property: {property_address}")
+                return jsonify({
+                    'success': True,
+                    'message': 'Property successfully removed'
+                })
+
             except Exception as e:
-                logger.error(f"Error saving properties after removal: {str(e)}")
-                if os.path.exists(temp_file):
-                    try:
-                        os.remove(temp_file)
-                    except Exception as e2:
-                        logger.error(f"Error removing temporary file: {str(e2)}")
-                raise
+                logging.error(f"Error removing property: {str(e)}")
+                logging.error(traceback.format_exc())
+                return jsonify({
+                    'success': False,
+                    'message': 'Error removing property from database'
+                }), 500
 
-            flash_message('Property successfully removed', 'success')
-            return jsonify({'success': True, 'message': 'Property successfully removed'})
+    except Exception as e:
+        logging.error(f"Error in remove_properties route: {str(e)}")
+        logging.error(traceback.format_exc())
+        
+        if request.method == 'GET':
+            return render_template(
+                'properties/remove_properties.html',
+                properties=[],
+                error_message="Unable to load properties. Please try again later."
+            )
+        
+        return jsonify({
+            'success': False,
+            'message': 'Error loading properties database'
+        }), 500
 
-        except Exception as e:
-            logger.error(f"Error during property removal: {str(e)}", exc_info=True)
-            return jsonify({
-                'success': False,
-                'message': f'Error removing property: {str(e)}'
-            }), 500
-
-    # For GET requests, render the template
-    logger.debug(f"Rendering remove_properties template with {len(properties)} properties")
-    return render_template('properties/remove_properties.html', properties=properties)
+    # This line should never be reached but included for completeness
+    return render_template(
+        'properties/remove_properties.html',
+        properties=properties
+    )
 
 @properties_bp.route('/edit_properties', methods=['GET', 'POST'])
 @login_required

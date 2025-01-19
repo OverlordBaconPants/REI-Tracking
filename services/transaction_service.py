@@ -7,6 +7,25 @@ import pandas as pd
 from fuzzywuzzy import process
 import re
 
+def format_property_address(address):
+    """
+    Truncates a property address to display only the part before the first comma.
+    Returns both the truncated display version and the full address.
+    
+    Args:
+        address (str): Full property address
+        
+    Returns:
+        tuple: (display_address, full_address)
+    """
+    if not address:
+        return "", ""
+        
+    # Get the part before the first comma
+    display_address = address.split(',')[0].strip()
+    
+    return display_address, address
+
 def get_properties_for_user(user_id, user_name, is_admin=False):
     logging.debug(f"Getting properties for user: {user_name} (ID: {user_id}), is_admin: {is_admin}")
     try:
@@ -15,6 +34,11 @@ def get_properties_for_user(user_id, user_name, is_admin=False):
         
         if is_admin:
             logging.info(f"Admin user, returning all {len(properties)} properties")
+            # Format addresses for display
+            for prop in properties:
+                display_address, full_address = format_property_address(prop['address'])
+                prop['display_address'] = display_address
+                prop['full_address'] = full_address
             return properties
         
         user_properties = [
@@ -22,8 +46,14 @@ def get_properties_for_user(user_id, user_name, is_admin=False):
             if any(partner.get('name', '').lower() == user_name.lower() for partner in prop.get('partners', []))
         ]
         
+        # Format addresses for display
+        for prop in user_properties:
+            display_address, full_address = format_property_address(prop['address'])
+            prop['display_address'] = display_address
+            prop['full_address'] = full_address
+        
         logging.debug(f"Found {len(user_properties)} properties for user {user_name}")
-        logging.debug(f"User properties: {user_properties}")
+        logging.debug(f"Formatted properties: {user_properties}")
         return user_properties
         
     except Exception as e:

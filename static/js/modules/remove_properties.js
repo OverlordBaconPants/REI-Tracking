@@ -2,11 +2,16 @@ const removePropertiesModule = {
     init: async function() {
         try {
             console.log('RemovePropertiesModule initialized');
-            const form = document.querySelector('.remove-properties-container form');
+            
+            // Get current user info
+            this.currentUser = window.currentUser;
+            if (!this.currentUser) {
+                throw new Error('User information not available');
+            }
+            
+            const form = document.querySelector('#remove-property-form');
             if (form) {
-                await this.checkPropertyManagerAccess();
-                this.initializeForm(form);
-                window.showNotification('Remove Properties module loaded', 'success', 'both');
+                await this.initializeForm(form);
             } else {
                 console.error('Remove properties form not found');
                 window.showNotification('Form not found', 'error', 'both');
@@ -17,29 +22,98 @@ const removePropertiesModule = {
         }
     },
 
-    checkPropertyManagerAccess: async function() {
-        const response = await fetch('/properties/get_property_details?address=' + encodeURIComponent(propertySelect.value));
-        const data = await response.json();
+    initializeForm: async function(form) {
+        const propertySelect = form.querySelector('#property_select');
+        const confirmInput = form.querySelector('#confirm_input');
+        const submitButton = form.querySelector('button[type="submit"]');
         
-        if (!data.success || !data.property.is_property_manager) {
-            window.location.href = '/403';
-            throw new Error('Property manager access required');
+        if (propertySelect && confirmInput && submitButton) {
+            propertySelect.addEventListener('change', async () => {
+                try {
+                    confirmInput.disabled = true;
+                    submitButton.disabled = true;
+                    
+                    if (!propertySelect.value) {
+                        return;
+                    }
+
+                    const selectedOption = propertySelect.options[propertySelect.selectedIndex];
+                    const propertyData = JSON.parse(selectedOption.dataset.property);
+
+                    const isManager = propertyData.partners?.some(partner => 
+                        partner.name === this.currentUser.name && 
+                        partner.is_property_manager
+                    );
+
+                    if (!isManager) {
+                        window.showNotification('You must be a property manager to remove this property', 'error', 'both');
+                        propertySelect.value = '';
+                        return;
+                    }
+
+                    confirmInput.disabled = false;
+                    submitButton.disabled = false;
+
+                } catch (error) {
+                    console.error('Error in property select change:', error);
+                    window.showNotification(error.message, 'error', 'both');
+                    propertySelect.value = '';
+                }
+            });
+
+            form.addEventListener('submit', (event) => this.handleSubmit(event, propertySelect, confirmInput));
+            await this.loadProperties(propertySelect);
         }
     },
 
-    initializeForm: function(form) {
-        const propertySelect = form.querySelector('select[name="property_select"]');
-        const confirmInput = form.querySelector('input[name="confirm_input"]');
-        
-        if (propertySelect && confirmInput) {
-            // Add change listener to property select
-            propertySelect.addEventListener('change', () => {
-                confirmInput.disabled = !propertySelect.value;
-                confirmInput.value = '';
+    loadProperties: async function(propertySelect) {
+        try {
+            const response = await fetch('/properties/get_manageable_properties');
+            const data = await response.json();
+            
+            if (!data.success) {
+                throw new Error(data.message || 'Failed to load properties');
+            }
+
+            // Clear existing options except first
+            while (propertySelect.options.length > 1) {
+                propertySelect.remove(1);
+            }
+
+            // Add only properties where user is manager
+            data.properties.forEach(property => {
+                if (property.partners?.some(p => 
+                    p.name === this.currentUser.name && 
+                    p.is_property_manager
+                )) {
+                    const option = new Option(property.address, property.address);
+                    option.dataset.property = JSON.stringify(property);
+                    propertySelect.add(option);
+                }
             });
 
-            // Add form submit handler
-            form.addEventListener('submit', (event) => this.handleSubmit(event, propertySelect, confirmInput));
+            if (propertySelect.options.length === 1) {
+                window.showNotification('No properties available for removal', 'info', 'both');
+            }
+
+        } catch (error) {
+            console.error('Error loading properties:', error);
+            window.showNotification('Error loading properties: ' + error.message, 'error', 'both');
+        }
+    },
+
+    checkPropertyManagerAccess: async function(propertyAddress) {
+        try {
+            const response = await fetch('/properties/get_property_details?address=' + encodeURIComponent(propertyAddress));
+            const data = await response.json();
+            
+            if (!data.success || !data.property.is_property_manager) {
+                window.location.href = '/403';
+                throw new Error('Property manager access required');
+            }
+        } catch (error) {
+            console.error('Error checking property manager access:', error);
+            throw new Error('Error checking access: ' + error.message);
         }
     },
 
@@ -63,6 +137,10 @@ const removePropertiesModule = {
             return;
         }
 
+        // Show loading modal
+        const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+        loadingModal.show();
+
         // Create FormData object and properly append data
         const formData = new FormData();
         formData.append('property_select', propertySelect.value);
@@ -77,20 +155,9 @@ const removePropertiesModule = {
             body: formData
         })
         .then(async response => {
-            const contentType = response.headers.get('content-type');
-            if (!response.ok) {
-                // Try to get JSON error message if available
-                if (contentType && contentType.includes('application/json')) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || 'Server error occurred');
-                }
-                throw new Error(`Server error: ${response.status}`);
-            }
-            // Parse JSON response
             const data = await response.json();
-            // Check for specific error messages in the response
-            if (!data.success) {
-                throw new Error(data.message || 'Operation failed');
+            if (!response.ok) {
+                throw new Error(data.message || 'Server error occurred');
             }
             return data;
         })
@@ -103,16 +170,12 @@ const removePropertiesModule = {
         })
         .catch(error => {
             console.error('Error:', error);
-            window.showNotification(
-                'Error removing property: ' + (error.message || 'An unexpected error occurred'),
-                'error', 
-                'both'
-            );
+            window.showNotification(error.message || 'An unexpected error occurred', 'error', 'both');
         })
         .finally(() => {
-            // Re-enable form elements
+            loadingModal.hide();
             propertySelect.disabled = false;
-            confirmInput.disabled = false;
+            confirmInput.disabled = true;
         });
     }
 };

@@ -4,6 +4,7 @@
 const addTransactionsModule = {
     categories: {},
     currentUser: '',
+    reimbursementSection: null,
 
     init: async function() {
         try {
@@ -37,6 +38,83 @@ const addTransactionsModule = {
             console.error('Error initializing Add Transactions module:', error);
             window.showNotification('Error loading Add Transactions module: ' + error.message, 'error');
         }
+    },
+
+    createReimbursementSection: function() {
+        // Find the form first
+        if (!this.form) {
+            console.error('Form not found when creating reimbursement section');
+            return;
+        }
+
+        // Try different possible parent containers
+        let parentContainer = this.form.querySelector('.form-groups') || 
+                            this.form.querySelector('.form-group').parentElement ||
+                            this.form;
+
+        console.log('Parent container found:', parentContainer);
+
+        // Create the reimbursement section
+        this.reimbursementSection = document.createElement('div');
+        this.reimbursementSection.id = 'reimbursement-section';
+        this.reimbursementSection.className = 'form-group mt-4';
+
+        // Create the content
+        const content = `
+            <h4>Reimbursement Details</h4>
+            <div class="reimbursement-fields">
+                <div class="mb-3">
+                    <label for="reimbursement_status" class="form-label">Status</label>
+                    <select class="form-select" id="reimbursement_status" name="reimbursement_status">
+                        <option value="pending">Pending</option>
+                        <option value="completed">Completed</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="date_shared" class="form-label">Date Shared</label>
+                    <input type="date" class="form-control" id="date_shared" name="date_shared">
+                </div>
+                <div class="mb-3">
+                    <label for="share_description" class="form-label">Share Description</label>
+                    <input type="text" class="form-control" id="share_description" name="share_description">
+                </div>
+                <div class="mb-3">
+                    <label for="reimbursement_documentation" class="form-label">Documentation</label>
+                    <input type="file" class="form-control" id="reimbursement_documentation" name="reimbursement_documentation">
+                </div>
+                <div id="reimbursement-details" class="alert alert-info mt-3"></div>
+            </div>
+        `;
+
+        this.reimbursementSection.innerHTML = content;
+
+        // Find the submit button or another reference point
+        const submitButton = this.form.querySelector('button[type="submit"]');
+        if (submitButton) {
+            // Insert before the submit button's parent container
+            submitButton.parentElement.parentElement.insertBefore(
+                this.reimbursementSection,
+                submitButton.parentElement
+            );
+            console.log('Reimbursement section created and inserted');
+        } else {
+            // Fallback to appending to the parent container
+            parentContainer.appendChild(this.reimbursementSection);
+            console.log('Reimbursement section created and appended');
+        }
+
+        // Initialize any needed event listeners
+        const reimbursementStatus = document.getElementById('reimbursement_status');
+        if (reimbursementStatus) {
+            reimbursementStatus.addEventListener('change', (event) => {
+                if (event.target.value === 'completed') {
+                    const formData = new FormData(this.form);
+                    this.validateReimbursementStatus(formData);
+                }
+            });
+        }
+
+        return this.reimbursementSection;
     },
 
     initNotesCounter: function() {
@@ -179,11 +257,23 @@ const addTransactionsModule = {
                 console.log('Selected index:', event.target.selectedIndex);
                 console.log('Selected value:', event.target.value);
                 console.log('Selected option:', event.target.options[event.target.selectedIndex].text);
-                this.updateCollectorPayerOptions();
-                this.updateReimbursementDetails();
+                
+                try {
+                    const selectedOption = event.target.options[event.target.selectedIndex];
+                    const propertyData = JSON.parse(selectedOption.dataset.property);
+                    
+                    // First create/update collector payer options
+                    this.updateCollectorPayerOptions();
+                    
+                    // Then toggle reimbursement section
+                    this.toggleReimbursementSection(propertyData);
+                    
+                    // Finally update reimbursement details
+                    this.updateReimbursementDetails();
+                } catch (error) {
+                    console.error('Error handling property change:', error);
+                }
             });
-        } else {
-            console.error('Property select element not found');
         }
 
         if (elements.amountInput) {
@@ -218,6 +308,33 @@ const addTransactionsModule = {
                     this.validateReimbursementStatus(formData);
                 }
             });
+        }
+
+        const propertySelect = document.getElementById('property_id');
+        if (propertySelect) {
+            propertySelect.addEventListener('change', (event) => {
+                console.log('Property selection changed');
+                const selectedOption = event.target.options[event.target.selectedIndex];
+                try {
+                    const propertyData = JSON.parse(selectedOption.dataset.property);
+                    this.toggleReimbursementSection(propertyData);
+                    this.updateCollectorPayerOptions();
+                    this.updateReimbursementDetails();
+                } catch (error) {
+                    console.error('Error handling property change:', error);
+                }
+            });
+
+            // Also trigger initial state if property is already selected
+            if (propertySelect.value) {
+                const selectedOption = propertySelect.options[propertySelect.selectedIndex];
+                try {
+                    const propertyData = JSON.parse(selectedOption.dataset.property);
+                    this.toggleReimbursementSection(propertyData);
+                } catch (error) {
+                    console.error('Error handling initial property state:', error);
+                }
+            }
         }
     },
 
@@ -266,17 +383,22 @@ const addTransactionsModule = {
     toggleReimbursementSection: function(propertyData) {
         console.log('Toggling reimbursement section with property data:', JSON.stringify(propertyData, null, 2));
         
-        const reimbursementSection = document.getElementById('reimbursement-section');
+        // Find or create reimbursement section
+        let reimbursementSection = document.getElementById('reimbursement-section');
         if (!reimbursementSection) {
-            console.error('Reimbursement section not found');
-            return;
+            console.log('Reimbursement section not found, creating it');
+            reimbursementSection = this.createReimbursementSection();
+            if (!reimbursementSection) {
+                console.error('Failed to create reimbursement section');
+                return;
+            }
         }
     
         let hasOnlyOwner = false;
         if (propertyData?.partners) {
             // Check if there's only one partner with 100% equity
             hasOnlyOwner = propertyData.partners.length === 1 && 
-                           propertyData.partners[0].equity_share === 100;
+                          Math.abs(propertyData.partners[0].equity_share - 100) < 0.01;
             console.log('Property has only one owner:', hasOnlyOwner);
         }
     
@@ -290,6 +412,9 @@ const addTransactionsModule = {
             const reimbursementStatusInput = document.getElementById('reimbursement_status');
             const shareDescriptionInput = document.getElementById('share_description');
             
+            // Preserve existing doc info
+            const existingReimbursementDoc = document.querySelector('[data-existing-reimbursement-doc]')?.dataset.existingReimbursementDoc;
+            
             if (dateSharedInput && dateInput) {
                 dateSharedInput.value = dateInput.value;
                 console.log('Set date_shared to:', dateInput.value);
@@ -299,13 +424,54 @@ const addTransactionsModule = {
                 console.log('Set reimbursement_status to: completed');
             }
             if (shareDescriptionInput) {
-                shareDescriptionInput.value = 'Auto-completed - Single owner property';
+                shareDescriptionInput.value = existingReimbursementDoc 
+                    ? shareDescriptionInput.value 
+                    : 'Auto-completed - Single owner property';
                 console.log('Set share_description');
             }
+    
+            // Hide reimbursement details as well
+            const reimbursementDetails = document.getElementById('reimbursement-details');
+            if (reimbursementDetails) {
+                reimbursementDetails.style.display = 'none';
+            }
+    
+            // If there's a reimbursement alert, show it
+            const reimbursementAlert = document.createElement('div');
+            reimbursementAlert.className = 'alert alert-info mt-3';
+            reimbursementAlert.textContent = 'Reimbursement details are hidden because this property is wholly owned by one partner.';
+            reimbursementSection.appendChild(reimbursementAlert);
         } else {
             console.log('Multiple owners or no owner data - showing reimbursement section');
-            reimbursementSection.style.display = '';
+            reimbursementSection.style.display = 'block';
+            
+            // Remove any existing alerts
+            const existingAlerts = reimbursementSection.querySelectorAll('.alert');
+            existingAlerts.forEach(alert => alert.remove());
+            
+            // Reset fields for multiple owners
+            const reimbursementStatusInput = document.getElementById('reimbursement_status');
+            const shareDescriptionInput = document.getElementById('share_description');
+            const dateSharedInput = document.getElementById('date_shared');
+            
+            if (reimbursementStatusInput) {
+                reimbursementStatusInput.value = 'pending';
+            }
+            if (shareDescriptionInput) {
+                shareDescriptionInput.value = '';
+            }
+            if (dateSharedInput) {
+                dateSharedInput.value = '';
+            }
+    
+            // Show reimbursement details
+            const reimbursementDetails = document.getElementById('reimbursement-details');
+            if (reimbursementDetails) {
+                reimbursementDetails.style.display = 'block';
+            }
         }
+    
+        return reimbursementSection;
     },
 
     updateCollectorPayerLabel: function(type) {
@@ -434,17 +600,59 @@ const addTransactionsModule = {
     },
 
     validateForm: function() {
-        const propertySelect = document.getElementById('property_id');
+        console.log('=== Starting Form Validation ===');
+        let isValid = true;
+        let validationErrors = [];
+
+        // 1. Transaction Type Validation
+        console.log('\nChecking Transaction Type:');
+        const typeRadios = document.querySelectorAll('input[type="radio"][name="type"]');
         
-        if (!propertySelect || !propertySelect.value) {
-            console.error('Property not selected. propertySelect:', propertySelect);
-            this.showFlashMessage('Please select a property.', 'error');
-            return false;
+        console.log(`Found ${typeRadios.length} radio buttons`);
+        typeRadios.forEach(radio => {
+            console.log({
+                id: radio.id,
+                value: radio.value,
+                checked: radio.checked,
+                disabled: radio.disabled,
+                inForm: radio.form === this.form
+            });
+        });
+
+        const selectedType = Array.from(typeRadios).find(radio => radio.checked);
+        console.log('Selected type:', selectedType?.value);
+
+        if (!selectedType) {
+            validationErrors.push('Transaction type is required');
+            isValid = false;
+            
+            // Visual feedback for type selection
+            const typeGroup = document.querySelector('.btn-group');
+            if (typeGroup) {
+                typeGroup.classList.add('is-invalid');
+                // Add red outline to buttons
+                const labels = typeGroup.querySelectorAll('label');
+                labels.forEach(label => {
+                    if (label.classList.contains('btn-outline-success')) {
+                        label.classList.remove('btn-outline-success');
+                        label.classList.add('btn-outline-danger');
+                    }
+                });
+            }
         }
-    
-        // Ensure required fields are present
+
+        // 2. Property Validation
+        console.log('\nChecking Property:');
+        const propertySelect = document.getElementById('property_id');
+        if (!propertySelect?.value) {
+            validationErrors.push('Property is required');
+            isValid = false;
+            if (propertySelect) propertySelect.classList.add('is-invalid');
+        }
+
+        // 3. Required Fields Validation
+        console.log('\nChecking Required Fields:');
         const requiredFields = {
-            'type': 'Transaction type',
             'category': 'Category',
             'description': 'Description',
             'amount': 'Amount',
@@ -452,80 +660,105 @@ const addTransactionsModule = {
             'collector_payer': 'Collector/Payer'
         };
 
-        // Validate notes field
-        const notesField = document.getElementById('notes');
-        if (notesField) {
-            const notes = notesField.value.trim();
-            if (notes.length > 150) {
-                isValid = false;
-                notesField.classList.add('is-invalid');
-                toastr.error('Notes must be 150 characters or less');
-                if (!firstInvalidField) {
-                    firstInvalidField = notesField;
-                }
-            } else {
-                notesField.classList.remove('is-invalid');
-            }
-        }
-    
         for (const [fieldId, fieldName] of Object.entries(requiredFields)) {
             const element = document.getElementById(fieldId);
-            if (!element || !element.value) {
-                this.showFlashMessage(`Please enter a ${fieldName.toLowerCase()}.`, 'error');
-                return false;
+            if (!element?.value) {
+                validationErrors.push(`${fieldName} is required`);
+                isValid = false;
+                if (element) element.classList.add('is-invalid');
             }
         }
-    
-        // Validate amount is a positive number
+
+        // 4. Amount Validation
+        console.log('\nChecking Amount:');
         const amountInput = document.getElementById('amount');
-        if (amountInput && (isNaN(amountInput.value) || parseFloat(amountInput.value) <= 0)) {
-            this.showFlashMessage('Please enter a valid positive amount.', 'error');
-            return false;
+        if (amountInput?.value) {
+            const amount = parseFloat(amountInput.value);
+            if (isNaN(amount) || amount <= 0) {
+                validationErrors.push('Amount must be a positive number');
+                isValid = false;
+                amountInput.classList.add('is-invalid');
+            }
         }
-    
-        return true;
+
+        // 5. Notes Length Validation
+        console.log('\nChecking Notes:');
+        const notesField = document.getElementById('notes');
+        if (notesField?.value.length > 150) {
+            validationErrors.push('Notes must not exceed 150 characters');
+            isValid = false;
+            notesField.classList.add('is-invalid');
+        }
+
+        // Log validation results
+        console.log('\n=== Validation Results ===');
+        console.log('Valid:', isValid);
+        if (!isValid) {
+            console.log('Validation errors:', validationErrors);
+            // Show first error to user
+            this.showFlashMessage(validationErrors[0], 'error');
+        }
+
+        return isValid;
     },
     
     handleSubmit: function(event) {
         event.preventDefault();
-        console.log('Form submission started');
+        console.log('=== Form Submission Started ===');
+        
+        // Log the initial form data
+        const formData = new FormData(this.form);
+        console.log('Initial form data:');
+        for (let [key, value] of formData.entries()) {
+            console.log(`${key}: ${value}`);
+        }
+
+        // Log the state of the radio buttons specifically
+        const typeRadios = document.querySelectorAll('input[type="radio"][name="type"]');
+        console.log('\nRadio button states:');
+        typeRadios.forEach(radio => {
+            console.log({
+                id: radio.id,
+                value: radio.value,
+                checked: radio.checked,
+                defaultChecked: radio.defaultChecked,
+                label: document.querySelector(`label[for="${radio.id}"]`)?.textContent.trim()
+            });
+        });
 
         if (!this.validateForm()) {
-            console.error('Form validation failed');
+            console.error('Form validation failed - see details above');
             return;
         }
 
-        const formData = new FormData(this.form);
-        if (!this.validateReimbursementStatus(formData)) {
-            return;
+        // Log form data after validation
+        console.log('\nForm data after validation:');
+        const finalFormData = new FormData(this.form);
+        for (let [key, value] of finalFormData.entries()) {
+            console.log(`${key}: ${value}`);
         }
 
-        // Disable the submit button to prevent multiple submissions
-        const submitButton = event.target.querySelector('button[type="submit"]');
-        submitButton.disabled = true;
-
-        console.log('Sending form data');
+        // Disable submit button and proceed with submission
+        const submitButton = this.form.querySelector('button[type="submit"]');
+        if (submitButton) submitButton.disabled = true;
 
         fetch('/transactions/add', {
             method: 'POST',
-            body: formData
+            body: finalFormData
         })
         .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
+            if (!response.ok) throw new Error('Network response was not ok');
             window.showNotification('Transaction added successfully', 'success');
             setTimeout(() => {
                 window.location.href = '/transactions/add';
             }, 1500);
         })
         .catch(error => {
-            console.error('Error details:', error);
+            console.error('Submission error:', error);
             window.showNotification('Error adding transaction: ' + error.message, 'error');
         })
         .finally(() => {
-            // Re-enable the submit button
-            submitButton.disabled = false;
+            if (submitButton) submitButton.disabled = false;
         });
     }
 }

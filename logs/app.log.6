@@ -1,87 +1,67 @@
-2024-11-07 13:07:11,019 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
-2024-11-07 13:07:11,047 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
-2024-11-07 13:07:11,972 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
-2024-11-07 13:07:11,999 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
-2024-11-07 13:07:18,752 INFO: Starting PDF generation for analysis ed99071a-9767-448d-b860-020ecb28ae09 [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1066]
-2024-11-07 13:08:44,073 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
-2024-11-07 13:08:44,114 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
-2024-11-07 13:08:49,095 INFO: Starting PDF generation for analysis ed99071a-9767-448d-b860-020ecb28ae09 [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1066]
-2024-11-07 13:09:07,132 INFO: Starting PDF generation for analysis 989c309b-2e2a-45c2-aa89-18e10f7b20de [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1066]
-2024-11-07 13:23:21,859 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
-2024-11-07 13:23:21,917 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
-2024-11-07 13:23:27,078 INFO: Starting PDF generation for analysis 85bc71e1-4be4-4761-b78b-9731803c5b0c [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1066]
-2024-11-07 13:23:42,825 INFO: Starting PDF generation for analysis ed99071a-9767-448d-b860-020ecb28ae09 [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1066]
-2024-11-07 13:28:27,675 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
-2024-11-07 13:28:27,725 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
-2024-11-07 13:28:33,231 INFO: Starting PDF generation for analysis 85bc71e1-4be4-4761-b78b-9731803c5b0c [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1066]
-2024-11-07 13:28:33,236 ERROR: Error in report generation: isinstance() arg 2 must be a type, a tuple of types, or a union [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1108]
-2024-11-07 13:28:33,236 ERROR: Full traceback: [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1109]
-Traceback (most recent call last):
-  File "c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py", line 1106, in generate_pdf
-    generate_lender_report(analysis_data, calculator, buffer)
-  File "c:\Users\BJ.Marshall\Documents\python\REI-Tracker\services\report_generator.py", line 536, in generate_lender_report
-    report.generate()
-  File "c:\Users\BJ.Marshall\Documents\python\REI-Tracker\services\report_generator.py", line 277, in generate
-    if isinstance(flowable, FrameBreak):
-       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-TypeError: isinstance() arg 2 must be a type, a tuple of types, or a union
-2024-11-07 13:28:37,031 INFO: Starting PDF generation for analysis ed99071a-9767-448d-b860-020ecb28ae09 [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1066]
-2024-11-07 13:28:37,044 ERROR: Error in report generation: isinstance() arg 2 must be a type, a tuple of types, or a union [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1108]
-2024-11-07 13:28:37,045 ERROR: Full traceback: [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1109]
-Traceback (most recent call last):
-  File "c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py", line 1106, in generate_pdf
-    generate_lender_report(analysis_data, calculator, buffer)
-  File "c:\Users\BJ.Marshall\Documents\python\REI-Tracker\services\report_generator.py", line 536, in generate_lender_report
-    report.generate()
-  File "c:\Users\BJ.Marshall\Documents\python\REI-Tracker\services\report_generator.py", line 277, in generate
-    if isinstance(flowable, FrameBreak):
-       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-TypeError: isinstance() arg 2 must be a type, a tuple of types, or a union
-2024-11-07 13:30:16,350 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
-2024-11-07 13:30:16,397 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
-2024-11-07 13:31:56,813 INFO: Starting PDF generation for analysis 85bc71e1-4be4-4761-b78b-9731803c5b0c [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1066]
-2024-11-07 13:31:56,818 ERROR: Error in report generation: name 'PageBreak' is not defined [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1108]
-2024-11-07 13:31:56,818 ERROR: Full traceback: [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1109]
-Traceback (most recent call last):
-  File "c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py", line 1106, in generate_pdf
-    generate_lender_report(analysis_data, calculator, buffer)
-  File "c:\Users\BJ.Marshall\Documents\python\REI-Tracker\services\report_generator.py", line 531, in generate_lender_report
-    report.generate()
-  File "c:\Users\BJ.Marshall\Documents\python\REI-Tracker\services\report_generator.py", line 272, in generate
-    if isinstance(flowable, (FrameBreak, PageBreak)):  # Check for specific flowable types
-                                         ^^^^^^^^^
-NameError: name 'PageBreak' is not defined
-2024-11-07 13:32:32,228 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
-2024-11-07 13:32:32,273 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
-2024-11-07 13:32:34,500 INFO: Starting PDF generation for analysis 85bc71e1-4be4-4761-b78b-9731803c5b0c [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1066]
-2024-11-07 13:32:34,506 ERROR: Error in report generation: isinstance() arg 2 must be a type, a tuple of types, or a union [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1108]
-2024-11-07 13:32:34,507 ERROR: Full traceback: [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1109]
-Traceback (most recent call last):
-  File "c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py", line 1106, in generate_pdf
-    generate_lender_report(analysis_data, calculator, buffer)
-  File "c:\Users\BJ.Marshall\Documents\python\REI-Tracker\services\report_generator.py", line 531, in generate_lender_report
-    report.generate()
-  File "c:\Users\BJ.Marshall\Documents\python\REI-Tracker\services\report_generator.py", line 272, in generate
-    if isinstance(flowable, (FrameBreak, PageBreak)):  # Check for specific flowable types
-       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-TypeError: isinstance() arg 2 must be a type, a tuple of types, or a union
-2024-11-07 13:35:38,216 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
-2024-11-07 13:35:38,263 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
-2024-11-07 13:35:43,112 INFO: Starting PDF generation for analysis 85bc71e1-4be4-4761-b78b-9731803c5b0c [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1066]
-2024-11-07 13:44:35,059 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
-2024-11-07 13:44:35,109 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
-2024-11-07 13:44:42,367 INFO: Starting PDF generation for analysis 85bc71e1-4be4-4761-b78b-9731803c5b0c [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1066]
-2024-11-07 13:46:31,678 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
-2024-11-07 13:46:31,726 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
-2024-11-07 13:46:39,867 INFO: Starting PDF generation for analysis 85bc71e1-4be4-4761-b78b-9731803c5b0c [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1066]
-2024-11-07 13:47:19,985 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
-2024-11-07 13:47:20,053 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
-2024-11-07 13:47:25,548 INFO: Starting PDF generation for analysis 85bc71e1-4be4-4761-b78b-9731803c5b0c [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1066]
-2024-11-07 13:48:03,903 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
-2024-11-07 13:48:03,948 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
-2024-11-07 13:48:14,874 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
-2024-11-07 13:48:14,927 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
-2024-11-07 13:48:20,073 INFO: Starting PDF generation for analysis 85bc71e1-4be4-4761-b78b-9731803c5b0c [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\analyses.py:1066]
-2024-11-07 13:50:23,338 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
-2024-11-07 13:50:23,386 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
-2024-11-07 16:01:43,387 INFO: Application startup [in /home/bj/python/REI-Tracker/__init__.py:44]
+2024-11-12 08:17:20,984 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
+2024-11-12 08:17:21,079 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
+2024-11-12 08:17:22,133 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
+2024-11-12 08:17:22,207 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
+2024-11-12 09:19:58,436 INFO: View transactions accessed by user: {'id': 'bjmar867@gmail.com', 'name': 'BJ Marshall', 'role': 'Admin', 'is_authenticated': True} [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\transactions.py:359]
+2024-11-12 09:23:48,021 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
+2024-11-12 09:23:48,049 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
+2024-11-12 09:23:51,254 INFO: View transactions accessed by user: {'id': 'bjmar867@gmail.com', 'name': 'BJ Marshall', 'role': 'Admin', 'is_authenticated': True} [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\transactions.py:359]
+2024-11-12 09:31:16,856 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
+2024-11-12 09:31:16,888 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
+2024-11-12 09:31:19,398 INFO: View transactions accessed by user: {'id': 'bjmar867@gmail.com', 'name': 'BJ Marshall', 'role': 'Admin', 'is_authenticated': True} [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\transactions.py:359]
+2024-11-12 09:42:34,310 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
+2024-11-12 09:42:34,339 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
+2024-11-12 09:42:39,615 INFO: View transactions accessed by user: {'id': 'bjmar867@gmail.com', 'name': 'BJ Marshall', 'role': 'Admin', 'is_authenticated': True} [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\transactions.py:359]
+2024-11-12 10:06:28,187 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
+2024-11-12 10:06:28,216 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
+2024-11-12 10:29:04,434 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
+2024-11-12 10:29:04,488 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
+2024-11-12 10:29:05,468 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
+2024-11-12 10:29:05,534 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
+2024-11-12 10:37:17,239 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
+2024-11-12 10:37:17,289 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
+2024-11-12 10:38:12,915 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
+2024-11-12 10:38:12,980 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
+2024-11-12 10:42:37,745 INFO: View transactions accessed by user: {'id': 'bjmar867@gmail.com', 'name': 'BJ Marshall', 'role': 'Admin', 'is_authenticated': True} [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\transactions.py:359]
+2024-11-12 10:43:36,943 INFO: View transactions accessed by user: {'id': 'bjmar867@gmail.com', 'name': 'BJ Marshall', 'role': 'Admin', 'is_authenticated': True} [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\transactions.py:359]
+2024-11-12 11:05:57,736 INFO: View transactions accessed by user: {'id': 'bjmar867@gmail.com', 'name': 'BJ Marshall', 'role': 'Admin', 'is_authenticated': True} [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\transactions.py:359]
+2024-11-12 11:09:54,453 INFO: View transactions accessed by user: {'id': 'bjmar867@gmail.com', 'name': 'BJ Marshall', 'role': 'Admin', 'is_authenticated': True} [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\transactions.py:359]
+2024-11-12 11:22:52,721 INFO: View transactions accessed by user: {'id': 'bjmar867@gmail.com', 'name': 'BJ Marshall', 'role': 'Admin', 'is_authenticated': True} [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\transactions.py:359]
+2024-11-12 12:22:09,688 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
+2024-11-12 12:22:09,726 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
+2024-11-12 12:22:10,653 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
+2024-11-12 12:22:10,691 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
+2024-11-12 12:22:16,258 INFO: View transactions accessed by user: {'id': 'bjmar867@gmail.com', 'name': 'BJ Marshall', 'role': 'Admin', 'is_authenticated': True} [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\transactions.py:359]
+2024-11-12 13:14:24,114 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
+2024-11-12 13:14:24,167 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
+2024-11-12 13:17:21,192 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
+2024-11-12 13:17:21,238 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
+2024-11-12 13:21:31,627 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:44]
+2024-11-12 13:21:31,689 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:119]
+2024-11-12 13:22:56,836 INFO: View transactions accessed by user: {'id': 'bjmar867@gmail.com', 'name': 'BJ Marshall', 'role': 'Admin', 'is_authenticated': True} [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\transactions.py:359]
+2024-11-12 13:31:08,681 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:81]
+2024-11-12 13:37:29,949 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:84]
+2024-11-12 13:37:30,249 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:159]
+2024-11-12 13:37:30,936 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:84]
+2024-11-12 13:37:31,281 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:159]
+2024-11-12 13:50:53,183 INFO: View transactions accessed by user: {'id': 'bjmar867@gmail.com', 'name': 'BJ Marshall', 'role': 'Admin', 'is_authenticated': True} [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\transactions.py:357]
+2024-11-13 07:04:38,274 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:84]
+2024-11-13 07:04:39,156 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:159]
+2024-11-13 07:04:40,019 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:84]
+2024-11-13 07:04:40,360 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:159]
+2024-11-13 07:22:06,738 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:84]
+2024-11-13 07:22:07,440 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:159]
+2024-11-13 07:22:21,909 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:84]
+2024-11-13 07:22:22,244 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:159]
+2024-11-13 07:26:10,959 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:84]
+2024-11-13 07:26:11,273 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:159]
+2024-11-13 07:28:12,006 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:84]
+2024-11-13 07:28:12,300 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:159]
+2024-11-13 07:32:44,603 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:84]
+2024-11-13 07:32:44,925 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:159]
+2024-11-13 07:56:24,210 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:84]
+2024-11-13 07:56:24,539 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:159]
+2024-11-13 08:03:27,795 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:84]
+2024-11-13 08:03:28,135 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:159]
+2024-11-13 08:04:40,882 INFO: Application startup [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:84]
+2024-11-13 08:04:41,190 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:159]

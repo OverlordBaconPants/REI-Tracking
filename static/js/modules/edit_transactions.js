@@ -1,13 +1,16 @@
 const editTransactionsModule = {
+    // Add reimbursementSection property
     form: null,
     elements: {},
     initialValues: {},
     documentRemovalModal: null,
     pendingDocumentRemoval: null,
+    reimbursementSection: null,
 
     init: async function() {
         console.log('Form found, initializing components');
         this.form = document.getElementById('edit-transaction-form');
+        this.reimbursementSection = document.getElementById('reimbursement-section');
         
         // Initialize Bootstrap modal first
         const modalElement = document.getElementById('documentRemovalModal');
@@ -155,13 +158,32 @@ const editTransactionsModule = {
             amountInput.addEventListener('input', () => this.updateReimbursementDetails());
         }
 
-        // Property change
+        // Add property change handler for reimbursement toggling
         const propertySelect = document.getElementById('property_id');
         if (propertySelect) {
-            propertySelect.addEventListener('change', () => {
-                this.populatePartners();
-                this.updateReimbursementDetails();
+            propertySelect.addEventListener('change', (event) => {
+                console.log('Property selection changed');
+                const selectedOption = event.target.options[event.target.selectedIndex];
+                try {
+                    const propertyData = JSON.parse(selectedOption.dataset.property);
+                    this.toggleReimbursementSection(propertyData);
+                    this.updateCollectorPayerOptions();
+                    this.updateReimbursementDetails();
+                } catch (error) {
+                    console.error('Error handling property change:', error);
+                }
             });
+
+            // Also trigger initial state if property is already selected
+            if (propertySelect.value) {
+                const selectedOption = propertySelect.options[propertySelect.selectedIndex];
+                try {
+                    const propertyData = JSON.parse(selectedOption.dataset.property);
+                    this.toggleReimbursementSection(propertyData);
+                } catch (error) {
+                    console.error('Error handling initial property state:', error);
+                }
+            }
         }
 
         // Reimbursement status change
@@ -248,20 +270,87 @@ const editTransactionsModule = {
         }
     },
 
+    createReimbursementSection: function() {
+        // Check if section already exists
+        let section = document.getElementById('reimbursement-section');
+        if (section) {
+            console.log('Found existing reimbursement section');
+            return section;
+        }
+    
+        // In edit mode, we should always find an existing section
+        if (document.getElementById('edit-transaction-form')) {
+            console.warn('Reimbursement section not found in edit mode - this should not happen');
+            return null;
+        }
+        
+        // Create new section for add mode
+        console.log('Creating new reimbursement section for add mode');
+        section = document.createElement('div');
+        section.id = 'reimbursement-section';
+        section.className = 'mb-3';
+    
+        // Create the HTML structure for reimbursement section
+        section.innerHTML = `
+            <h4 class="mb-3">Reimbursement Details</h4>
+            <div class="row g-3">
+                <div class="col-12 col-md-6">
+                    <label for="date_shared" class="form-label">Date Shared</label>
+                    <input type="date" class="form-control" id="date_shared" name="date_shared">
+                </div>
+                <div class="col-12 col-md-6">
+                    <label for="reimbursement_status" class="form-label">Status</label>
+                    <select class="form-select" id="reimbursement_status" name="reimbursement_status">
+                        <option value="pending">Pending</option>
+                        <option value="completed">Completed</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label for="share_description" class="form-label">Share Description</label>
+                    <textarea class="form-control" id="share_description" name="share_description" rows="2"></textarea>
+                </div>
+                <div class="col-12">
+                    <label for="reimbursement_documentation" class="form-label">Documentation</label>
+                    <input type="file" class="form-control" id="reimbursement_documentation" name="reimbursement_documentation">
+                </div>
+                <div class="col-12">
+                    <div id="reimbursement-details" class="border rounded p-3 mt-2">
+                        <!-- Reimbursement breakdown will be populated here -->
+                    </div>
+                </div>
+            </div>
+        `;
+    
+        // Find the appropriate place to insert the section (after the main transaction form fields)
+        const formGroup = document.querySelector('.form-group') || document.querySelector('form > div');
+        if (formGroup) {
+            formGroup.parentNode.insertBefore(section, formGroup.nextSibling);
+        } else {
+            this.form.appendChild(section);
+        }
+    
+        return section;
+    },
+
     toggleReimbursementSection: function(propertyData) {
         console.log('Toggling reimbursement section with property data:', JSON.stringify(propertyData, null, 2));
         
-        const reimbursementSection = document.getElementById('reimbursement-section');
+        // Find or create reimbursement section
+        let reimbursementSection = document.getElementById('reimbursement-section');
         if (!reimbursementSection) {
-            console.error('Reimbursement section not found');
-            return;
+            console.log('Reimbursement section not found, creating it');
+            reimbursementSection = this.createReimbursementSection();
+            if (!reimbursementSection) {
+                console.error('Failed to create reimbursement section');
+                return;
+            }
         }
     
         let hasOnlyOwner = false;
         if (propertyData?.partners) {
             // Check if there's only one partner with 100% equity
             hasOnlyOwner = propertyData.partners.length === 1 && 
-                           propertyData.partners[0].equity_share === 100;
+                          Math.abs(propertyData.partners[0].equity_share - 100) < 0.01;
             console.log('Property has only one owner:', hasOnlyOwner);
         }
     
@@ -275,6 +364,9 @@ const editTransactionsModule = {
             const reimbursementStatusInput = document.getElementById('reimbursement_status');
             const shareDescriptionInput = document.getElementById('share_description');
             
+            // Preserve existing doc info
+            const existingReimbursementDoc = document.querySelector('[data-existing-reimbursement-doc]')?.dataset.existingReimbursementDoc;
+            
             if (dateSharedInput && dateInput) {
                 dateSharedInput.value = dateInput.value;
                 console.log('Set date_shared to:', dateInput.value);
@@ -284,13 +376,54 @@ const editTransactionsModule = {
                 console.log('Set reimbursement_status to: completed');
             }
             if (shareDescriptionInput) {
-                shareDescriptionInput.value = 'Auto-completed - Single owner property';
+                shareDescriptionInput.value = existingReimbursementDoc 
+                    ? shareDescriptionInput.value 
+                    : 'Auto-completed - Single owner property';
                 console.log('Set share_description');
             }
+    
+            // Hide reimbursement details as well
+            const reimbursementDetails = document.getElementById('reimbursement-details');
+            if (reimbursementDetails) {
+                reimbursementDetails.style.display = 'none';
+            }
+    
+            // If there's a reimbursement alert, show it
+            const reimbursementAlert = document.createElement('div');
+            reimbursementAlert.className = 'alert alert-info mt-3';
+            reimbursementAlert.textContent = 'Reimbursement details are hidden because this property is wholly owned by one partner.';
+            reimbursementSection.appendChild(reimbursementAlert);
         } else {
             console.log('Multiple owners or no owner data - showing reimbursement section');
-            reimbursementSection.style.display = '';
+            reimbursementSection.style.display = 'block';
+            
+            // Remove any existing alerts
+            const existingAlerts = reimbursementSection.querySelectorAll('.alert');
+            existingAlerts.forEach(alert => alert.remove());
+            
+            // Reset fields for multiple owners
+            const reimbursementStatusInput = document.getElementById('reimbursement_status');
+            const shareDescriptionInput = document.getElementById('share_description');
+            const dateSharedInput = document.getElementById('date_shared');
+            
+            if (reimbursementStatusInput) {
+                reimbursementStatusInput.value = 'pending';
+            }
+            if (shareDescriptionInput) {
+                shareDescriptionInput.value = '';
+            }
+            if (dateSharedInput) {
+                dateSharedInput.value = '';
+            }
+    
+            // Show reimbursement details
+            const reimbursementDetails = document.getElementById('reimbursement-details');
+            if (reimbursementDetails) {
+                reimbursementDetails.style.display = 'block';
+            }
         }
+    
+        return reimbursementSection;
     },
 
     updateCollectorPayerOptions: function() {

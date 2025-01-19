@@ -3,17 +3,31 @@
 {% block body_class %}bulk-import-page{% endblock %}
 
 {% block content %}
-<h1>Bulk Import Transactions</h1>
-<form method="POST" enctype="multipart/form-data" id="bulk-import-form">
-    <div class="mb-3">
-        <label for="file" class="form-label">Select XLS or CSV file</label>
-        <input type="file" class="form-control" id="file" name="file" accept=".xls,.xlsx,.csv" required>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card mt-3">
+                <div class="card-header bg-navy">
+                    <h4 class="mb-0">Bulk Import Transactions</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data" id="bulk-import-form">
+                        <div class="mb-3">
+                            <label for="file" class="form-label">Select XLS or CSV file</label>
+                            <input type="file" class="form-control" id="file" name="file" accept=".xls,.xlsx,.csv" required>
+                        </div>
+                        <div id="column-mapping" class="mb-3">
+                            <!-- Column mapping will be dynamically populated here -->
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">Import</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
-    <div id="column-mapping" class="mb-3">
-        <!-- Column mapping will be dynamically populated here -->
-    </div>
-    <button type="submit" class="btn btn-primary">Import</button>
-</form>
+</div>
 {% endblock %}
 
 {% block extra_js %}

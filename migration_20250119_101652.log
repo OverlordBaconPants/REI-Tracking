@@ -1,0 +1,27 @@
+2025-01-19 10:16:52,685 - INFO - Starting documentation migration
+2025-01-19 10:16:52,686 - INFO - Created backup at /home/bj/python/REI-Tracker/data/transactions.json.bak
+2025-01-19 10:16:52,687 - WARNING - Source file not found: 2024.08_Dunrobin_Mortgage_Payment.PNG
+2025-01-19 10:16:52,692 - WARNING - Source file not found: 2024.07.02_Guilford_-_ColumbiaGasMD.pdf
+2025-01-19 10:16:52,692 - WARNING - Source file not found: reimb_2024.08_Zelle_Transactions_with_Brian.png
+2025-01-19 10:16:52,692 - WARNING - Source file not found: reimb_2024.08_Zelle_Transactions_with_Brian.png
+2025-01-19 10:16:52,692 - WARNING - Source file not found: reimb_2024.08_Zelle_Transactions_with_Brian.png
+2025-01-19 10:16:52,692 - WARNING - Source file not found: reimb_2024.08_Zelle_Transactions_with_Brian.png
+2025-01-19 10:16:52,699 - WARNING - Source file not found: reimb_2025.01_Brian_Reimbursements.png
+2025-01-19 10:16:52,700 - WARNING - Source file not found: reimb_2025.01_Brian_Reimbursements.png
+2025-01-19 10:16:52,702 - WARNING - Source file not found: reimb_2025.01_Brian_Reimbursements.png
+2025-01-19 10:16:52,704 - INFO - 
+Migration Report:
+2025-01-19 10:16:52,704 - INFO - Successfully migrated: 214 files
+2025-01-19 10:16:52,704 - INFO - Failed to migrate: 9 files
+2025-01-19 10:16:52,704 - INFO - Skipped files: 0 files
+2025-01-19 10:16:52,704 - WARNING - 
+Failed files:
+2025-01-19 10:16:52,704 - WARNING - - 2024.08_Dunrobin_Mortgage_Payment.PNG
+2025-01-19 10:16:52,704 - WARNING - - 2024.07.02_Guilford_-_ColumbiaGasMD.pdf
+2025-01-19 10:16:52,704 - WARNING - - reimb_2024.08_Zelle_Transactions_with_Brian.png
+2025-01-19 10:16:52,704 - WARNING - - reimb_2024.08_Zelle_Transactions_with_Brian.png
+2025-01-19 10:16:52,704 - WARNING - - reimb_2024.08_Zelle_Transactions_with_Brian.png
+2025-01-19 10:16:52,704 - WARNING - - reimb_2024.08_Zelle_Transactions_with_Brian.png
+2025-01-19 10:16:52,704 - WARNING - - reimb_2025.01_Brian_Reimbursements.png
+2025-01-19 10:16:52,704 - WARNING - - reimb_2025.01_Brian_Reimbursements.png
+2025-01-19 10:16:52,704 - WARNING - - reimb_2025.01_Brian_Reimbursements.png

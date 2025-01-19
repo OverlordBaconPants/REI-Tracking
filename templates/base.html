@@ -18,18 +18,30 @@
         {% block styles %}{% endblock %}
     </head>
     <body class="{% block body_class %}{% endblock %}">
-    <div class="container-fluid">
-        <div class="row">
+        <!-- Mobile Navigation Bar -->
+        <nav class="navbar navbar-light d-md-none fixed-top">
+            <div class="container-fluid">
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <a class="navbar-brand" href="{{ url_for('main.main') }}">
+                    <img src="{{ url_for('static', filename='images/logo.png') }}" 
+                         alt="Your Logo" 
+                         class="mobile-logo">
+                </a>
+            </div>
+        </nav>
+
+        <div class="wrapper">
             <!-- Sidebar -->
-            <div class="col-md-2 position-sticky sidebar">
+            <div class="col-md-2 d-md-block sidebar collapse" id="sidebarMenu">
                 <div class="row">
-                    <div class="col-12 mb-3 mt-2">
+                    <div class="col-12 mb-3 mt-2 d-none d-md-block">
                         <div class="logo-container">
                             <img src="{{ url_for('static', filename='images/logo.png') }}" 
                                  alt="Your Logo" 
                                  class="img-fluid" 
-                                 style="max-height: 150px"
-                                 onerror="console.log('Error loading image:', this.src);">
+                                 style="max-height: 150px">
                         </div>
                     </div>
                 </div>
@@ -56,7 +68,7 @@
                         <div id="collapseProperties" class="accordion-collapse collapse" 
                              aria-labelledby="headingProperties" data-bs-parent="#accordionSidebar">
                             <div class="accordion-body">
-                                <ul>
+                                <ul class="nav flex-column">
                                     <li><a href="{{ url_for('properties.add_properties') }}" class="nav-link">
                                         <i class="bi bi-plus-square"></i> Add Properties
                                     </a></li>
@@ -82,7 +94,7 @@
                         <div id="collapseTransactions" class="accordion-collapse collapse" 
                              aria-labelledby="headingTransactions" data-bs-parent="#accordionSidebar">
                             <div class="accordion-body">
-                                <ul>
+                                <ul class="nav flex-column">
                                     <li><a href="{{ url_for('transactions.add_transactions') }}" class="nav-link">
                                         <i class="bi bi-plus-circle"></i> Add Transactions
                                     </a></li>
@@ -91,9 +103,6 @@
                                     </a></li>
                                     <li><a href="{{ url_for('transactions.view_transactions') }}" class="nav-link">
                                         <i class="bi bi-table"></i> View Transactions
-                                    </a></li>
-                                    <li><a href="{{ url_for('transactions.remove_transactions') }}" class="nav-link">
-                                        <i class="bi bi-trash"></i> Remove Transactions
                                     </a></li>
                                 </ul>
                             </div>
@@ -111,7 +120,7 @@
                         <div id="collapseAnalyses" class="accordion-collapse collapse" 
                              aria-labelledby="headingAnalyses" data-bs-parent="#accordionSidebar">
                             <div class="accordion-body">
-                                <ul>
+                                <ul class="nav flex-column">
                                     <li><a href="{{ url_for('analyses.create_analysis') }}" class="nav-link">
                                         <i class="bi bi-plus-circle"></i> Create Analysis
                                     </a></li>
@@ -182,29 +191,29 @@
             </div>
 
             <!-- Main Content -->
-            <main class="col-md-10 ms-sm-auto px-md-4">
-                {% block content %}{% endblock %}
+            <main class="col-12 col-md-10">
+                <div class="container-fluid">
+                    {% block content %}{% endblock %}
+                </div>
             </main>
         </div>
-    </div>
 
-    <!-- Flash messages container -->
-    <div id="flask-messages" 
-        style="display: none;" 
-        data-messages='{{ get_flashed_messages(with_categories=true) | tojson if get_flashed_messages(with_categories=true) else "[]" }}'>
-    </div>
+        <!-- Flash messages container -->
+        <div id="flask-messages" 
+            style="display: none;" 
+            data-messages='{{ get_flashed_messages(with_categories=true) | tojson if get_flashed_messages(with_categories=true) else "[]" }}'>
+        </div>
 
-    <!-- JavaScript Dependencies -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-    <script src="/static/js/notifications.js"></script>
-    <script type="module" src="/static/js/main.js"></script>
-    
-    <!-- Your custom JavaScript -->
-    <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/base.js') }}"></script>
-    <script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
-    {% block extra_js %}{% endblock %}
-</body>
+        <!-- JavaScript Dependencies -->
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+        
+        <!-- Your custom JavaScript (order is important) -->
+        <script src="{{ url_for('static', filename='js/base.js') }}"></script>
+        <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
+        <script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
+        {% block extra_js %}{% endblock %}
+    </body>
 </html>

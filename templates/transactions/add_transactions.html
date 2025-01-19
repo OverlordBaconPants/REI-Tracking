@@ -1,161 +1,263 @@
 {% extends "base.html" %}
-
 {% block body_class %}add-transactions-page{% endblock %}
-
 {% block title %}Add Transaction{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <h2 id="add-transaction" class="mb-4">Add Transaction</h2>
-
-    <form id="add-transaction-form" enctype="multipart/form-data">
-        <div class="row">
-            <div class="col-md-6">
-                <div class="form-group mb-3">
-                    <label for="property_id">Select Property:</label>
-                    <select id="property_id" name="property_id" class="form-select">
-                        <option value="">Select a property</option>
-                        {% for property in properties %}
-                            {% set address_parts = property.address.split(',') %}
-                            {% set display_address = ', '.join(address_parts[:2]).strip() if address_parts|length >= 2 else property.address %}
-                            <option value="{{ property.address }}" 
-                                    data-property='{{ property|tojson|safe }}'>
-                                {{ display_address }}
-                            </option>
-                        {% endfor %}
-                    </select>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card mt-3">
+                <div class="card-header bg-navy">
+                    <h4 class="mb-0">Add Transaction</h4>
                 </div>
+                <div class="card-body p-3">
+                    <form id="add-transaction-form" enctype="multipart/form-data">
+                        <!-- Basic Transaction Information -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-navy">
+                                <h5 class="mb-0">Transaction Details</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <div class="form-group">
+                                            <label for="property_id" class="form-label">Select Property</label>
+                                            <select id="property_id" 
+                                                    name="property_id" 
+                                                    class="form-select" 
+                                                    required>
+                                                <option value="">Choose a property...</option>
+                                                {% for property in properties %}
+                                                    {% set address_parts = property.address.split(',') %}
+                                                    {% set display_address = ', '.join(address_parts[:2]).strip() if address_parts|length >= 2 else property.address %}
+                                                    <option value="{{ property.address }}" 
+                                                            data-property='{{ property|tojson|safe }}'>
+                                                        {{ display_address }}
+                                                    </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
 
-                <div class="form-group mb-3">
-                    <label>Type:</label>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="type" id="type" value="income" checked>
-                        <label class="form-check-label" for="type">Income</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="type" id="type" value="expense">
-                        <label class="form-check-label" for="type">Expense</label>
-                    </div>
-                </div>
+                                    <div class="col-12">
+                                        <div class="form-group">
+                                            <label class="form-label d-block">Transaction Type</label>
+                                            <div class="btn-group w-100" role="group">
+                                                <input type="radio" 
+                                                       class="btn-check" 
+                                                       name="type" 
+                                                       id="type-income" 
+                                                       value="income" 
+                                                       checked>
+                                                <label class="btn btn-outline-success" for="type-income">
+                                                    <i class="bi bi-plus-circle me-2"></i>Income
+                                                </label>
 
-                <div class="form-group mb-3">
-                    <label for="category">Category:</label>
-                    <select id="category" name="category" class="form-control" required>
-                        <option value="">Select a category</option>
-                    </select>
-                </div>
+                                                <input type="radio" 
+                                                       class="btn-check" 
+                                                       name="type" 
+                                                       id="type-expense" 
+                                                       value="expense">
+                                                <label class="btn btn-outline-danger" for="type-expense">
+                                                    <i class="bi bi-dash-circle me-2"></i>Expense
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
 
-                <div class="form-group mb-3">
-                    <label for="description">Description: Enter at Least 10 Characters</label>
-                    <input type="text" id="description" name="description" class="form-control" required>
-                </div>
-            </div>
+                                    <div class="col-12 col-md-6">
+                                        <div class="form-group">
+                                            <label for="category" class="form-label">Category</label>
+                                            <select id="category" 
+                                                    name="category" 
+                                                    class="form-select" 
+                                                    required>
+                                                <option value="">Select a category...</option>
+                                            </select>
+                                        </div>
+                                    </div>
 
-            <div class="col-md-6">
-                <div class="form-group mb-3">
-                    <label for="amount">Amount ($):</label>
-                    <input type="number" id="amount" name="amount" class="form-control" step="0.01" required>
-                </div>
+                                    <div class="col-12 col-md-6">
+                                        <div class="form-group">
+                                            <label for="amount" class="form-label">Amount</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text">$</span>
+                                                <input type="number" 
+                                                       id="amount" 
+                                                       name="amount" 
+                                                       class="form-control" 
+                                                       step="0.01" 
+                                                       required>
+                                            </div>
+                                        </div>
+                                    </div>
 
-                <div class="form-group mb-3">
-                    <label for="date">Date:</label>
-                    <input type="date" id="date" name="date" class="form-control" required>
-                </div>
+                                    <div class="col-12">
+                                        <div class="form-group">
+                                            <label for="description" class="form-label">Description</label>
+                                            <input type="text" 
+                                                   id="description" 
+                                                   name="description" 
+                                                   class="form-control" 
+                                                   required
+                                                   placeholder="Enter at least 10 characters">
+                                            <div class="form-text">Minimum 10 characters required</div>
+                                        </div>
+                                    </div>
 
-                <div class="form-group mb-3">
-                    <label for="collector_payer">Collector/Payer:</label>
-                    <select id="collector_payer" name="collector_payer" class="form-control" required>
-                        <option value="">Select a partner</option>
-                    </select>
-                </div>
+                                    <div class="col-12 col-md-6">
+                                        <div class="form-group">
+                                            <label for="date" class="form-label">Date</label>
+                                            <input type="date" 
+                                                   id="date" 
+                                                   name="date" 
+                                                   class="form-control" 
+                                                   required>
+                                        </div>
+                                    </div>
 
-                <div class="form-group mb-3">
-                    <label for="documentation_file">Documentation:</label>
-                    <input type="file" class="form-control" id="documentation_file" name="documentation_file">
-                    {% if transaction and transaction.documentation_file %}
-                    <small class="form-text text-muted">Current file: {{ transaction.documentation_file }}</small>
-                    {% endif %}
-                </div>
-            </div>
+                                    <div class="col-12 col-md-6">
+                                        <div class="form-group">
+                                            <label for="collector_payer" class="form-label">Collector/Payer</label>
+                                            <select id="collector_payer" 
+                                                    name="collector_payer" 
+                                                    class="form-select" 
+                                                    required>
+                                                <option value="">Select a partner...</option>
+                                            </select>
+                                        </div>
+                                    </div>
 
-            <div class="mb-3">
-                <label for="notes" class="form-label">Notes (Optional)</label>
-                <div class="position-relative">
-                    <textarea 
-                        class="form-control" 
-                        id="notes" 
-                        name="notes" 
-                        rows="2" 
-                        maxlength="150"
-                        aria-describedby="notesHelp">{{ transaction.notes if transaction else '' }}</textarea>
-                    <div id="notesCounter" class="form-text text-muted position-absolute end-0 bottom-0 pe-2">
-                        150 characters remaining
-                    </div>
-                </div>
-                <div id="notesHelp" class="form-text">
-                    Add any additional notes about this transaction (max 150 characters)
+                                    <div class="col-12">
+                                        <div class="form-group">
+                                            <label for="documentation_file" class="form-label">Documentation</label>
+                                            <input type="file" 
+                                                   class="form-control" 
+                                                   id="documentation_file" 
+                                                   name="documentation_file">
+                                            {% if transaction and transaction.documentation_file %}
+                                            <div class="form-text">
+                                                Current file: {{ transaction.documentation_file }}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+
+                                    <div class="col-12">
+                                        <div class="form-group">
+                                            <label for="notes" class="form-label">Notes</label>
+                                            <div class="position-relative">
+                                                <textarea class="form-control" 
+                                                          id="notes" 
+                                                          name="notes" 
+                                                          rows="3" 
+                                                          maxlength="150"
+                                                          placeholder="Optional additional notes"
+                                                          aria-describedby="notesHelp">{{ transaction.notes if transaction else '' }}</textarea>
+                                                <div id="notesCounter" 
+                                                     class="form-text position-absolute end-0 bottom-0 pe-2">
+                                                    150 characters remaining
+                                                </div>
+                                            </div>
+                                            <div id="notesHelp" class="form-text">
+                                                Add any additional notes about this transaction (max 150 characters)
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Reimbursement Section -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-navy">
+                                <h5 class="mb-0">Reimbursement Details</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="alert alert-info mb-4">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    This section is optional. You can return later to complete reimbursement details.
+                                </div>
+
+                                <div id="reimbursement-details" class="mb-4"></div>
+
+                                <div class="row g-3">
+                                    <div class="col-12 col-md-6">
+                                        <div class="form-group">
+                                            <label for="date_shared" class="form-label">Date Shared</label>
+                                            <input type="date" 
+                                                   class="form-control" 
+                                                   id="date_shared" 
+                                                   name="date_shared" 
+                                                   value="{{ transaction.reimbursement.date_shared if transaction else '' }}">
+                                        </div>
+                                    </div>
+
+                                    <div class="col-12 col-md-6">
+                                        <div class="form-group">
+                                            <label for="share_description" class="form-label">Share Description</label>
+                                            <input type="text" 
+                                                   class="form-control" 
+                                                   id="share_description" 
+                                                   name="share_description"
+                                                   value="{{ transaction.reimbursement.share_description if transaction else '' }}"
+                                                   placeholder="Describe how this is shared">
+                                        </div>
+                                    </div>
+
+                                    <div class="col-12 col-md-6">
+                                        <div class="form-group">
+                                            <label for="reimbursement_status" class="form-label">Reimbursement Status</label>
+                                            <select class="form-select" 
+                                                    id="reimbursement_status" 
+                                                    name="reimbursement_status">
+                                                <option value="pending" {% if transaction and transaction.reimbursement.reimbursement_status == 'pending' %}selected{% endif %}>
+                                                    Pending
+                                                </option>
+                                                <option value="completed" {% if transaction and transaction.reimbursement.reimbursement_status == 'completed' %}selected{% endif %}>
+                                                    Completed
+                                                </option>
+                                                <option value="not_required" {% if transaction and transaction.reimbursement.reimbursement_status == 'not_required' %}selected{% endif %}>
+                                                    Not Required
+                                                </option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-12 col-md-6">
+                                        <div class="form-group">
+                                            <label for="reimbursement_documentation" class="form-label">
+                                                Reimbursement Documentation
+                                            </label>
+                                            <input type="file" 
+                                                   class="form-control" 
+                                                   id="reimbursement_documentation" 
+                                                   name="reimbursement_documentation">
+                                            {% if transaction and transaction.reimbursement_documentation %}
+                                            <div class="form-text">
+                                                Current file: {{ transaction.reimbursement_documentation }}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Hidden fields for single-owner cases -->
+                        <input type="hidden" id="hidden_date_shared" name="date_shared" value="">
+                        <input type="hidden" id="hidden_reimbursement_status" name="reimbursement_status" value="">
+
+                        <!-- Submit Button -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-start">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-plus-circle me-2"></i>Add Transaction
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
-
-        <div id="reimbursement-section">
-            <h3>Manage Reimbursement</h3>
-            <p>This section is optional for recording a transaction. If you haven't finished this, don't worry. You can go back to this transaction later to complete it.</p>
-
-            <div id="reimbursement-details" class="mb-4">
-            </div>
-            
-            <div class="row mb-3">
-                <!-- First Row -->
-                <div class="col-md-6">
-                    <div class="form-group mb-3">
-                        <label for="date_shared">Date Shared:</label>
-                        <input type="date" class="form-control" id="date_shared" name="date_shared" 
-                            value="{{ transaction.reimbursement.date_shared if transaction else '' }}">
-                    </div>
-                </div>
-            
-                <div class="col-md-6">
-                    <div class="form-group mb-3">
-                        <label for="share_description">Share Description:</label>
-                        <input type="text" class="form-control" id="share_description" name="share_description"
-                            value="{{ transaction.reimbursement.share_description if transaction else '' }}">
-                    </div>
-                </div>
-            </div>
-            
-            <div class="row">
-                <!-- Second Row -->
-                <div class="col-md-6">
-                    <div class="form-group mb-3">
-                        <label for="reimbursement_status">Reimbursement Status:</label>
-                        <select class="form-control" id="reimbursement_status" name="reimbursement_status">
-                            <option value="pending" {% if transaction and transaction.reimbursement.reimbursement_status == 'pending' %}selected{% endif %}>Pending</option>
-                            <option value="completed" {% if transaction and transaction.reimbursement.reimbursement_status == 'completed' %}selected{% endif %}>Completed</option>
-                            <option value="not_required" {% if transaction and transaction.reimbursement.reimbursement_status == 'not_required' %}selected{% endif %}>Not Required</option>
-                        </select>
-                    </div>
-                </div>
-            
-                <div class="col-md-6">
-                    <div class="form-group mb-3">
-                        <label for="reimbursement_documentation">Reimbursement Documentation:</label>
-                        <input type="file" class="form-control" id="reimbursement_documentation" name="reimbursement_documentation">
-                        {% if transaction and transaction.reimbursement_documentation %}
-                        <small class="form-text text-muted">Current file: {{ transaction.reimbursement_documentation }}</small>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Add hidden fields for single-owner cases -->
-        <input type="hidden" id="date_shared" name="date_shared" value="">
-        <input type="hidden" id="reimbursement_status" name="reimbursement_status" value="">
-
-        <div class="mt-3">
-            <button type="submit" class="btn btn-primary">Add Transaction</button>
-        </div>
-    </form>
+    </div>
 </div>
 {% endblock %}

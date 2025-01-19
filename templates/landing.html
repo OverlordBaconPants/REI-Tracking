@@ -12,16 +12,16 @@
     {% block title %}Welcome to REI Tracker{% endblock %}
     
     {% block content %}
-    <div class="container mt-5">
-        <div class="row justify-content-center">
-            <div class="col-md-10">
-                <div class="card shadow-lg">
-                    <div class="card-body p-5 text-center">
-                        <h1 class="display-4 mb-4">Welcome to REI Tracker</h1>
-                        <p class="lead mb-5">Your comprehensive solution for managing real estate investments, tracking transactions, and monitoring portfolio performance.</p>
-                        
-                        <div class="row mb-5">
-                            <div class="col-md-4">
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-lg mt-3">
+                <div class="card-body p-4">
+                    <h1 class="display-4 mb-4">Welcome to REI Tracker</h1>
+                    <p class="lead mb-4">Your comprehensive solution for managing real estate investments, tracking transactions, and monitoring portfolio performance.</p>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-12 col-md-4">
                                 <div class="card h-100 border-0 shadow-sm">
                                     <div class="card-body">
                                         <i class="fas fa-chart-line fa-3x mb-3 text-primary"></i>
@@ -31,7 +31,7 @@
                                 </div>
                             </div>
                             
-                            <div class="col-md-4">
+                            <div class="col-12 col-md-4">
                                 <div class="card h-100 border-0 shadow-sm">
                                     <div class="card-body">
                                         <i class="fas fa-dollar-sign fa-3x mb-3 text-success"></i>
@@ -41,7 +41,7 @@
                                 </div>
                             </div>
                             
-                            <div class="col-md-4">
+                            <div class="col-12 col-md-4">
                                 <div class="card h-100 border-0 shadow-sm">
                                     <div class="card-body">
                                         <i class="fas fa-users fa-3x mb-3 text-info"></i>
@@ -52,14 +52,14 @@
                             </div>
                         </div>
                         
-                        <div class="d-grid gap-3 d-sm-flex justify-content-sm-center">
-                            <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-lg px-5">Login</a>
-                            <a href="{{ url_for('auth.signup') }}" class="btn btn-outline-primary btn-lg px-5">Sign Up</a>
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                            <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-lg px-4">Login</a>
+                            <a href="{{ url_for('auth.signup') }}" class="btn btn-outline-primary btn-lg px-4">Sign Up</a>
                         </div>
                     </div>
                 </div>
                 
-                <div class="card mt-4 shadow-sm">
+                <div class="card mt-3 shadow-sm">
                     <div class="card-body">
                         <h4>Why Choose REI Tracker?</h4>
                         <ul class="list-unstyled">

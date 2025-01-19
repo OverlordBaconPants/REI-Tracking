@@ -1,0 +1,66 @@
+2025-01-16 10:55:45,597 - INFO - Creating backups...
+2025-01-16 10:55:45,598 - ERROR - Critical error during migration: [Errno 2] No such file or directory: 'path/to/your/data/directory\\transactions.json'
+2025-01-16 10:55:45,598 - INFO - Rolling back changes...
+2025-01-16 10:55:45,600 - ERROR - Error during rollback: [Errno 2] No such file or directory: 'path/to/your/data/directory\\backup_20250116_105545\\transactions.json'
+2025-01-16 10:55:45,600 - ERROR - Rollback failed! Manual intervention required!
+2025-01-16 10:55:45,600 - ERROR - Backup directory: path/to/your/data/directory\backup_20250116_105545
+2025-01-16 10:56:36,179 - INFO - Creating backups...
+2025-01-16 10:56:36,562 - INFO - Backups created in C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\backup_20250116_105636
+2025-01-16 10:56:36,563 - INFO - Moved: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.07.01_Dunrobin_HOA.png -> C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\trans_1_2024.07.01_Dunrobin_HOA.png
+2025-01-16 10:56:36,564 - INFO - Moved: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.07.01_Dunrobin_Mortgage_Paid.pdf -> C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\trans_2_2024.07.01_Dunrobin_Mortgage_Paid.pdf
+2025-01-16 10:56:36,564 - INFO - Moved: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.06.23_Dunrobin_Mountaineering_Gas.jpg -> C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\trans_3_2024.06.23_Dunrobin_Mountaineering_Gas.jpg
+2025-01-16 10:56:36,565 - INFO - Moved: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.07.12_Dunrobin_-_HVAC_Replacement.pdf -> C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\trans_4_2024.07.12_Dunrobin_-_HVAC_Replacement.pdf
+2025-01-16 10:56:36,565 - INFO - Moved: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.08_Dunrobin_Mortgage_Payment.PNG -> C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\trans_9_2024.08_Dunrobin_Mortgage_Payment.PNG
+2025-01-16 10:56:36,566 - INFO - Moved: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.09_Dunrobin_Payment.png -> C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\trans_10_2024.09_Dunrobin_Payment.png
+2025-01-16 10:56:36,567 - INFO - Moved: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.06-07_Dunrobin_Rent.png -> C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\trans_12_2024.06-07_Dunrobin_Rent.png
+2025-01-16 10:56:36,567 - WARNING - File not found: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.06-07_Dunrobin_Rent.png
+2025-01-16 10:56:36,568 - INFO - Moved: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.07.01_Logan_St_Mortgage_Payment.png -> C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\trans_18_2024.07.01_Logan_St_Mortgage_Payment.png
+2025-01-16 10:56:36,568 - INFO - Moved: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\reimbursements\reimb_630_Dauphin_St_Report.png -> C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\trans_18_630_Dauphin_St_Report.png
+2025-01-16 10:56:36,568 - WARNING - File not found: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.08_Logan_Rent_and_Utilities.png
+2025-01-16 10:56:36,569 - INFO - Moved: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.10.01_Logan_Mortgage_Payment.png -> C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\trans_28_2024.10.01_Logan_Mortgage_Payment.png
+2025-01-16 10:56:36,570 - INFO - Moved: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.06_Logan_Rent_and_Utilities.png -> C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\trans_30_2024.06_Logan_Rent_and_Utilities.png
+2025-01-16 10:56:36,570 - INFO - Moved: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.06_Logan_HAP_Portion_of_Payment.png -> C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\trans_31_2024.06_Logan_HAP_Portion_of_Payment.png
+2025-01-16 10:56:36,571 - INFO - Moved: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.07.01_Logan_HAP_Rent_Portion.png -> C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\trans_32_2024.07.01_Logan_HAP_Rent_Portion.png
+2025-01-16 10:56:36,572 - INFO - Moved: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.07.03_Logan_Tenant_Portion_of_Rent.PNG -> C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\trans_33_2024.07.03_Logan_Tenant_Portion_of_Rent.PNG
+2025-01-16 10:56:36,572 - INFO - Moved: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.08.01_Logan_HAP_Rent_Portion.png -> C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\trans_35_2024.08.01_Logan_HAP_Rent_Portion.png
+2025-01-16 10:56:36,573 - INFO - Moved: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.09.03_Logan_HAP_Rent_Portion.png -> C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\trans_37_2024.09.03_Logan_HAP_Rent_Portion.png
+2025-01-16 10:56:36,574 - INFO - Moved: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.06.17_Guilford_Invoice_from_Sugarloaf_Painters_and_Estate_Improvements.pdf -> C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\trans_39_2024.06.17_Guilford_Invoice_from_Sugarloaf_Painters_and_Estate_Improvements.pdf
+2025-01-16 10:56:36,574 - INFO - Moved: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.05-10_Guilford_Mortgage_Payments.png -> C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\trans_40_2024.05-10_Guilford_Mortgage_Payments.png
+2025-01-16 10:56:36,575 - INFO - Moved: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\reimbursements\reimb_2024.10.01_Logan_Rent.png -> C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\trans_40_2024.10.01_Logan_Rent.png
+2025-01-16 10:56:36,576 - WARNING - File not found: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.05-10_Guilford_Mortgage_Payments.png
+2025-01-16 10:56:36,576 - WARNING - File not found: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.07.29_Guilford_Lead_Abatement.pdf
+2025-01-16 10:56:36,576 - INFO - Moved: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.06.30_Guilford_Rental_License.pdf -> C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\trans_45_2024.06.30_Guilford_Rental_License.pdf
+2025-01-16 10:56:36,577 - WARNING - File not found: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.08.17_Guilford_Vent_Wiring_Killz_Paint.pdf
+2025-01-16 10:56:36,577 - INFO - Moved: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.09.17_Guilford_-_Columbia_Gas.pdf -> C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\trans_48_2024.09.17_Guilford_-_Columbia_Gas.pdf
+2025-01-16 10:56:36,578 - INFO - Moved: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.09.01_Guilford_Mortgage.pdf -> C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\trans_49_2024.09.01_Guilford_Mortgage.pdf
+2025-01-16 10:56:36,579 - INFO - Moved: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.10.02_Guiford_Water_Bill_2024.06.06-2024.09.04.pdf -> C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\trans_50_2024.10.02_Guiford_Water_Bill_2024.06.06-2024.09.04.pdf
+2025-01-16 10:56:36,579 - INFO - Moved: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.07.24_Guilford_-_Rent_and_Security_Deposit.png -> C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\trans_51_2024.07.24_Guilford_-_Rent_and_Security_Deposit.png
+2025-01-16 10:56:36,580 - INFO - Moved: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.09.05_Guilford_Rent.PNG -> C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\trans_52_2024.09.05_Guilford_Rent.PNG
+2025-01-16 10:56:36,581 - INFO - Moved: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.10.03_Guilford_Mortgage.png -> C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\trans_53_2024.10.03_Guilford_Mortgage.png
+2025-01-16 10:56:36,582 - INFO - Moved: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.09.15_Guilford_Lock_Replacement.pdf -> C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\trans_54_2024.09.15_Guilford_Lock_Replacement.pdf
+2025-01-16 10:56:36,582 - INFO - Moved: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.10_Guilford_Rent_and_Utilities.png -> C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\trans_55_2024.10_Guilford_Rent_and_Utilities.png
+2025-01-16 10:56:36,583 - INFO - Moved: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.11_Watch_Chain_COA.pdf -> C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\trans_57_2024.11_Watch_Chain_COA.pdf
+2025-01-16 10:56:36,584 - INFO - Moved: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.11_El_Camino_Rent.png -> C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\trans_58_2024.11_El_Camino_Rent.png
+2025-01-16 10:56:36,584 - INFO - Moved: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.11_Guilford_Rent_and_Utilities.png -> C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\trans_59_2024.11_Guilford_Rent_and_Utilities.png
+2025-01-16 10:56:36,585 - WARNING - File not found: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\reimbursements\reimb_2024.11_Guilford_Rent_and_Utilities.png
+2025-01-16 10:56:36,585 - INFO - Moved: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.11.07_Grinnalds_Rental_License_Fee.pdf -> C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\trans_60_2024.11.07_Grinnalds_Rental_License_Fee.pdf
+2025-01-16 10:56:36,586 - INFO - Moved: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.11_Guilford_Mortgage.png -> C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\trans_61_2024.11_Guilford_Mortgage.png
+2025-01-16 10:56:36,586 - INFO - Moved: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\7700_Victory_Ave.png -> C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\trans_62_7700_Victory_Ave.png
+2025-01-16 10:56:36,587 - INFO - Moved: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\reimbursements\reimb_2024.12.18_Miller_BJ_Wire_1_of_2.png -> C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\trans_62_2024.12.18_Miller_BJ_Wire_1_of_2.png
+2025-01-16 10:56:36,588 - INFO - Moved: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\947_Brooks.png -> C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\trans_65_947_Brooks.png
+2025-01-16 10:56:36,590 - INFO - Migration completed. Updated 33 transactions.
+2025-01-16 10:56:36,599 - INFO - Migration Validation Results:
+2025-01-16 10:56:36,599 - INFO - Files moved: 36
+2025-01-16 10:56:36,599 - INFO - Transactions updated: 33
+2025-01-16 10:56:36,599 - INFO - Errors encountered: 6
+2025-01-16 10:56:36,599 - WARNING - Validation failed, initiating rollback...
+2025-01-16 10:56:36,599 - INFO - Rolling back changes...
+2025-01-16 10:56:37,032 - INFO - Rollback completed successfully
+2025-01-16 10:56:37,032 - INFO - Rollback completed successfully
+2025-01-16 10:56:37,032 - WARNING - Errors encountered during migration:
+2025-01-16 10:56:37,033 - WARNING - File not found: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.06-07_Dunrobin_Rent.png
+2025-01-16 10:56:37,033 - WARNING - File not found: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.08_Logan_Rent_and_Utilities.png
+2025-01-16 10:56:37,033 - WARNING - File not found: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.05-10_Guilford_Mortgage_Payments.png
+2025-01-16 10:56:37,033 - WARNING - File not found: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.07.29_Guilford_Lead_Abatement.pdf
+2025-01-16 10:56:37,033 - WARNING - File not found: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\2024.08.17_Guilford_Vent_Wiring_Killz_Paint.pdf
+2025-01-16 10:56:37,033 - WARNING - File not found: C:\Users\BJ.Marshall\Documents\python\REI-Tracker\data\uploads\reimbursements\reimb_2024.11_Guilford_Rent_and_Utilities.png

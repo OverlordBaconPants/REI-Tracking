@@ -2,6 +2,8 @@ from datetime import datetime
 import logging
 import os
 import uuid
+import json  # Add this import
+import time  # Add this for retry delays
 from typing import Dict, List, Optional, Union, Any, Tuple
 import traceback
 from services.report_generator import generate_report
@@ -125,11 +127,31 @@ class AnalysisService:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG)
+        
+        # Add mobile-specific configuration
+        self.mobile_config = {
+            'max_image_size': 800,  # Max dimension for mobile images
+            'pagination_size': 10,   # Items per page on mobile
+            'cache_duration': 300    # Cache duration in seconds
+        }
 
-    def normalize_data(self, data: Dict) -> Dict:
-        """Normalize data to match flat schema with appropriate types."""
+    def normalize_data(self, data: Dict, is_mobile: bool = False) -> Dict:
+        """
+        Normalize data to match flat schema with appropriate types and mobile optimization.
+        
+        Args:
+            data (Dict): Raw input data to normalize
+            is_mobile (bool): Flag indicating if request is from mobile device
+            
+        Returns:
+            Dict: Normalized data conforming to schema
+            
+        Raises:
+            ValueError: If data normalization fails
+        """
         try:
             logger.debug("=== Starting Data Normalization ===")
+            logger.debug(f"Mobile optimization: {is_mobile}")
             
             normalized = {}
             
@@ -138,40 +160,136 @@ class AnalysisService:
                 field_type = field_def['type']
                 value = data.get(field)
                 
+                # Skip empty mobile-optional fields on mobile
+                if is_mobile and not value and field in self.MOBILE_OPTIONAL_FIELDS:
+                    continue
+                    
                 # Convert value based on type
                 if field_type == 'integer':
                     normalized[field] = self._convert_to_int(value)
+                    
+                    # Round large numbers on mobile for display
+                    if is_mobile and normalized[field] and abs(normalized[field]) > 1000000:
+                        normalized[field] = round(normalized[field], -3)  # Round to thousands
+                        
                 elif field_type == 'float':
                     normalized[field] = self._convert_to_float(value)
+                    
+                    # Reduce precision on mobile
+                    if is_mobile and normalized[field] is not None:
+                        if field.endswith('_percentage'):
+                            normalized[field] = round(normalized[field], 1)  # One decimal for percentages
+                        else:
+                            normalized[field] = round(normalized[field], 2)  # Two decimals for other floats
+                            
                 elif field_type == 'string':
-                    normalized[field] = str(value) if value is not None else ''
-                elif field_def.get('format') == 'datetime' and not value:
-                    # Try to parse date strings in YYYY-MM-DD format
-                    try:
-                        datetime.strptime(value, "%Y-%m-%d")
-                    except (ValueError, TypeError):
-                        value = datetime.now().strftime("%Y-%m-%d")
-                    normalized[field] = value
+                    if value is not None:
+                        # Handle string fields
+                        if field == 'notes' and is_mobile:
+                            # Truncate long notes on mobile
+                            normalized[field] = str(value)[:500]  # Limit to 500 chars on mobile
+                        else:
+                            normalized[field] = str(value)
+                    else:
+                        normalized[field] = ''
+                        
                 elif field_type == 'boolean':
                     # Handle various boolean-like values
                     if isinstance(value, str):
-                        normalized[field] = value.lower() in ('true', '1')
+                        normalized[field] = value.lower() in ('true', '1', 'yes', 'on')
                     else:
                         normalized[field] = bool(value)
-                    
+                        
                 # Handle special formats
                 if field_def.get('format') == 'uuid' and not value:
                     normalized[field] = str(uuid.uuid4())
+                    
                 elif field_def.get('format') == 'datetime' and not value:
                     normalized[field] = datetime.now().isoformat()
                     
+                elif field_def.get('format') == 'date' and value:
+                    try:
+                        # Ensure consistent date format
+                        parsed_date = datetime.strptime(value, "%Y-%m-%d")
+                        normalized[field] = parsed_date.strftime("%Y-%m-%d")
+                    except ValueError:
+                        # Handle invalid dates
+                        normalized[field] = None
+                        logger.warning(f"Invalid date format for field {field}: {value}")
+            
+            # Mobile-specific optimizations
+            if is_mobile:
+                # Optimize calculated fields for mobile display
+                if normalized.get('calculated_metrics'):
+                    normalized['calculated_metrics'] = self._optimize_metrics_for_mobile(
+                        normalized['calculated_metrics']
+                    )
+                    
+                # Remove unnecessary whitespace
+                for field, value in normalized.items():
+                    if isinstance(value, str):
+                        normalized[field] = value.strip()
+            
+            # Validate required fields are present
+            missing_fields = []
+            for field, field_def in self.ANALYSIS_SCHEMA.items():
+                if field_def.get('required', False) and not normalized.get(field):
+                    missing_fields.append(field)
+                    
+            if missing_fields:
+                raise ValueError(f"Missing required fields: {', '.join(missing_fields)}")
+                
             logger.debug("=== Data Normalization Complete ===")
             return normalized
-        
+            
         except Exception as e:
             logger.error(f"Error normalizing data: {str(e)}")
             logger.error(traceback.format_exc())
             raise ValueError(f"Data normalization failed: {str(e)}")
+
+    def _optimize_metrics_for_mobile(self, metrics: Dict) -> Dict:
+        """
+        Optimize calculated metrics for mobile display.
+        
+        Args:
+            metrics (Dict): Original metrics dictionary
+            
+        Returns:
+            Dict: Optimized metrics for mobile
+        """
+        optimized = {}
+        
+        # Define precision for different metric types
+        precision_map = {
+            'percentage': 1,  # One decimal for percentages
+            'currency': 0,    # No decimals for currency values
+            'ratio': 2       # Two decimals for ratios
+        }
+        
+        # Metric type mapping
+        metric_types = {
+            'cash_on_cash_return': 'percentage',
+            'roi': 'percentage',
+            'monthly_cash_flow': 'currency',
+            'annual_cash_flow': 'currency',
+            'vacancy_rate': 'percentage',
+            'debt_service_ratio': 'ratio'
+            # Add other metrics as needed
+        }
+        
+        for key, value in metrics.items():
+            if isinstance(value, (int, float)):
+                metric_type = metric_types.get(key, 'ratio')  # Default to ratio
+                precision = precision_map.get(metric_type, 2)  # Default to 2 decimals
+                
+                # Round according to metric type
+                if value is not None:
+                    optimized[key] = round(float(value), precision)
+            else:
+                # Keep non-numeric values as-is
+                optimized[key] = value
+                
+        return optimized
 
     def validate_analysis_data(self, data: Dict) -> None:
         """Validate analysis data against schema."""
@@ -491,22 +609,143 @@ class AnalysisService:
             logger.error(traceback.format_exc())
             raise
 
-    def _save_analysis(self, analysis_data: Dict, user_id: str) -> None:
-        """Save analysis data to storage."""
+    def _save_analysis(self, analysis_data: Dict, user_id: str, is_mobile: bool = False) -> None:
+        """
+        Save analysis data to storage with mobile optimization support.
+        """
         try:
+            logger.debug(f"Starting analysis save operation for user {user_id}")
+            logger.debug(f"Mobile optimization: {is_mobile}")
+            
+            # Get storage filepath
             filename = f"{analysis_data['id']}_{user_id}.json"
             filepath = os.path.join(current_app.config['ANALYSES_DIR'], filename)
             
             # Ensure directory exists
             os.makedirs(os.path.dirname(filepath), exist_ok=True)
             
-            # Save normalized data
-            write_json(filepath, analysis_data)
+            # Create a copy of the data for storage
+            storage_data = analysis_data.copy()
             
-        except Exception as e:
-            logger.error(f"Error saving analysis: {str(e)}")
-            logger.error(traceback.format_exc())
+            # Add metadata
+            storage_data.update({
+                'last_modified': datetime.now().isoformat(),
+                'last_accessed': datetime.now().isoformat(),
+                'storage_version': '2.0'  # Version tracking for schema changes
+            })
+            
+            # Validate data before storage
+            self._validate_storage_data(storage_data)
+            
+            # Implement retries for file operations
+            max_retries = 3
+            retry_delay = 1  # seconds
+            
+            for attempt in range(max_retries):
+                try:
+                    # Create temporary file
+                    temp_filepath = f"{filepath}.temp"
+                    
+                    # Write to temporary file first using write_json utility
+                    write_json(temp_filepath, storage_data)
+                    
+                    # Atomic rename for safe file replacement
+                    os.replace(temp_filepath, filepath)
+                    
+                    logger.debug(f"Analysis saved successfully to {filepath}")
+                    break
+                    
+                except IOError as e:
+                    if attempt < max_retries - 1:
+                        logger.warning(f"Retry {attempt + 1}/{max_retries} after IOError: {str(e)}")
+                        time.sleep(retry_delay)
+                    else:
+                        raise IOError(f"Failed to save analysis after {max_retries} attempts: {str(e)}")
+                        
+                finally:
+                    # Cleanup temporary file if it exists
+                    if os.path.exists(temp_filepath):
+                        try:
+                            os.remove(temp_filepath)
+                        except OSError:
+                            pass
+            
+        except ValueError as e:
+            logger.error(f"Validation error during save: {str(e)}")
             raise
+        except IOError as e:
+            logger.error(f"IO error during save: {str(e)}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error during save: {str(e)}")
+            logger.error(traceback.format_exc())
+            raise ValueError(f"Failed to save analysis: {str(e)}")
+
+    def _validate_storage_data(self, data: Dict) -> None:
+        """
+        Validate data before storage.
+        
+        Args:
+            data (Dict): Data to validate
+            
+        Raises:
+            ValueError: If validation fails
+        """
+        required_fields = ['id', 'user_id', 'analysis_type', 'analysis_name']
+        
+        # Check required fields
+        missing_fields = [field for field in required_fields if not data.get(field)]
+        if missing_fields:
+            raise ValueError(f"Missing required fields for storage: {', '.join(missing_fields)}")
+        
+        # Validate ID format
+        try:
+            uuid.UUID(str(data['id']))
+        except ValueError:
+            raise ValueError("Invalid analysis ID format")
+        
+        # Validate numeric fields
+        numeric_fields = {
+            'monthly_rent': int,
+            'property_taxes': int,
+            'insurance': int,
+            'management_fee_percentage': float,
+            'capex_percentage': float,
+            'vacancy_percentage': float,
+            'repairs_percentage': float
+        }
+        
+        for field, field_type in numeric_fields.items():
+            if field in data:
+                value = data[field]
+                if value is not None:
+                    if not isinstance(value, (int, float)):
+                        raise ValueError(f"Invalid type for {field}: expected {field_type.__name__}")
+                    if field_type == float and field.endswith('_percentage'):
+                        if not 0 <= value <= 100:
+                            raise ValueError(f"Invalid percentage value for {field}: {value}")
+                            
+        # Validate dates
+        if 'balloon_due_date' in data and data['balloon_due_date']:
+            try:
+                datetime.strptime(data['balloon_due_date'], "%Y-%m-%d")
+            except ValueError:
+                raise ValueError("Invalid balloon_due_date format")
+            
+    def _compress_analysis_data(self, data: Dict) -> Dict:
+        """Compress analysis data for mobile storage"""
+        compressed = data.copy()
+        
+        # Remove unnecessary precision from numeric values
+        for key, value in compressed.items():
+            if isinstance(value, float):
+                compressed[key] = round(value, 2)
+                
+        # Truncate long text fields
+        if compressed.get('notes'):
+            compressed['notes'] = compressed['notes'][:1000]
+            
+        return compressed
 
     def _get_analysis_filepath(self, analysis_id: str, user_id: str) -> str:
         """Get filepath for analysis storage."""

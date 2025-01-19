@@ -5,10 +5,21 @@
 {% block title %}404 - Page Not Found{% endblock %}
 
 {% block content %}
-<div class="container text-center mt-5">
-    <h1 class="display-1">404</h1>
-    <h2>Page Not Found</h2>
-    <p class="lead">Sorry, the page you are looking for doesn't exist or has been moved.</p>
-    <a href="{{ url_for('main.index') }}" class="btn btn-primary">Go to Homepage</a>
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-8 col-lg-6">
+            <div class="card mt-3 text-center">
+                <div class="card-body p-4">
+                    <h1 class="display-1 text-primary mb-4">404</h1>
+                    <h2 class="h3 mb-3">Page Not Found</h2>
+                    <p class="lead mb-4">Sorry, the page you are looking for doesn't exist or has been moved.</p>
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                        <a href="{{ url_for('main.index') }}" class="btn btn-primary">Go to Homepage</a>
+                        <a href="javascript:history.back()" class="btn btn-outline-secondary">Go Back</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

@@ -1,30 +1,58 @@
+<!-- _loan_section.html -->
 <div class="loan-section card mb-3" data-loan-number="{{ loan_number }}">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h6 class="mb-0">Loan {{ loan_number }}</h6>
-        <button type="button" class="btn btn-danger btn-sm remove-loan">Remove</button>
+    <div class="card-header bg-navy">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Loan {{ loan_number }}</h5>
+            <button type="button" class="btn btn-danger remove-loan">
+                <i class="bi bi-trash"></i>
+                <span class="d-none d-md-inline ms-1">Remove</span>
+            </button>
+        </div>
     </div>
-    <div class="card-body">
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label for="loan{{ loan_number }}_loan_name" class="form-label">Loan Name</label>
-                <input type="text" class="form-control" id="loan{{ loan_number }}_loan_name" name="loan{{ loan_number }}_loan_name">
-            </div>
-            <div class="col-md-6 mb-3">
-                <label for="loan{{ loan_number }}_loan_amount" class="form-label">Loan Amount</label>
-                <div class="input-group">
-                    <span class="input-group-text">$</span>
-                    <input type="text" class="form-control money-input" id="loan{{ loan_number }}_loan_amount" name="loan{{ loan_number }}_loan_amount">
+    <div class="card-body p-3">
+        <div class="row g-3">
+            <div class="col-12 col-md-6">
+                <div class="form-group">
+                    <label for="loan{{ loan_number }}_loan_name" class="form-label">Loan Name</label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="loan{{ loan_number }}_loan_name" 
+                           name="loan{{ loan_number }}_loan_name"
+                           placeholder="Enter loan name">
                 </div>
             </div>
-        </div>
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label for="loan{{ loan_number }}_loan_interest_rate" class="form-label">Interest Rate %</label>
-                <input type="text" class="form-control percentage-input" id="loan{{ loan_number }}_loan_interest_rate" name="loan{{ loan_number }}_loan_interest_rate">
+            <div class="col-12 col-md-6">
+                <div class="form-group">
+                    <label for="loan{{ loan_number }}_loan_amount" class="form-label">Loan Amount</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="text" 
+                               class="form-control money-input" 
+                               id="loan{{ loan_number }}_loan_amount" 
+                               name="loan{{ loan_number }}_loan_amount"
+                               placeholder="0.00">
+                    </div>
+                </div>
             </div>
-            <div class="col-md-6 mb-3">
-                <label for="loan{{ loan_number }}_loan_term" class="form-label">Term (months)</label>
-                <input type="text" class="form-control integer-input" id="loan{{ loan_number }}_loan_term" name="loan{{ loan_number }}_loan_term">
+            <div class="col-12 col-md-6">
+                <div class="form-group">
+                    <label for="loan{{ loan_number }}_loan_interest_rate" class="form-label">Interest Rate %</label>
+                    <input type="text" 
+                           class="form-control percentage-input" 
+                           id="loan{{ loan_number }}_loan_interest_rate" 
+                           name="loan{{ loan_number }}_loan_interest_rate"
+                           placeholder="0.00">
+                </div>
+            </div>
+            <div class="col-12 col-md-6">
+                <div class="form-group">
+                    <label for="loan{{ loan_number }}_loan_term" class="form-label">Term (months)</label>
+                    <input type="text" 
+                           class="form-control integer-input" 
+                           id="loan{{ loan_number }}_loan_term" 
+                           name="loan{{ loan_number }}_loan_term"
+                           placeholder="Enter number of months">
+                </div>
             </div>
         </div>
     </div>

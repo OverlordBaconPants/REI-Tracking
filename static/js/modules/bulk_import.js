@@ -17,6 +17,108 @@ const BulkImportModule = {
     validationErrors: [],
     categories: {},
 
+    // Add dateUtils object here
+    dateUtils: {
+        normalizeDate: function(value) {
+            if (!value) return null;
+
+            try {
+                // If already a Date object
+                if (value instanceof Date) {
+                    if (isNaN(value.getTime())) return null;
+                    return value.toISOString().split('T')[0];
+                }
+
+                // If string, try direct Date parsing first
+                if (typeof value === 'string') {
+                    value = value.trim();
+                    
+                    // Try parsing as ISO string first
+                    const isoDate = new Date(value);
+                    if (!isNaN(isoDate.getTime())) {
+                        return isoDate.toISOString().split('T')[0];
+                    }
+
+                    // Try parsing common formats
+                    const formats = [
+                        { regex: /^(\d{4})-(\d{2})-(\d{2})$/, order: [1, 2, 3] },             // YYYY-MM-DD
+                        { regex: /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/, order: [3, 1, 2] },       // MM/DD/YYYY or DD/MM/YYYY
+                        { regex: /^(\d{4})\.(\d{2})\.(\d{2})$/, order: [1, 2, 3] },           // YYYY.MM.DD
+                        { regex: /^(\d{1,2})-(\d{1,2})-(\d{4})$/, order: [3, 1, 2] },         // MM-DD-YYYY or DD-MM-YYYY
+                        { regex: /^(\d{4})\/(\d{2})\/(\d{2})$/, order: [1, 2, 3] },           // YYYY/MM/DD
+                    ];
+
+                    for (const format of formats) {
+                        const match = value.match(format.regex);
+                        if (match) {
+                            const [year, month, day] = format.order.map(i => parseInt(match[i], 10));
+                            const date = new Date(year, month - 1, day);
+                            
+                            // Validate the date is valid and components match
+                            if (!isNaN(date.getTime()) && 
+                                date.getFullYear() === year &&
+                                date.getMonth() === month - 1 &&
+                                date.getDate() === day) {
+                                return date.toISOString().split('T')[0];
+                            }
+                        }
+                    }
+
+                    // Try parsing dates with month names
+                    const monthNameFormats = [
+                        /^([A-Za-z]{3,9})\s+(\d{1,2}),?\s+(\d{4})$/,  // Month DD YYYY
+                        /^(\d{1,2})\s+([A-Za-z]{3,9})\s+(\d{4})$/     // DD Month YYYY
+                    ];
+
+                    const monthMap = {
+                        jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+                        jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
+                        january: 0, february: 1, march: 2, april: 3, june: 5,
+                        july: 6, august: 7, september: 8, october: 9, november: 10, december: 11
+                    };
+
+                    for (const format of monthNameFormats) {
+                        const match = value.match(format);
+                        if (match) {
+                            let [_, part1, part2, year] = match;
+                            year = parseInt(year, 10);
+                            
+                            // Determine if part1 is month or day
+                            let month, day;
+                            if (isNaN(parseInt(part1))) {
+                                month = monthMap[part1.toLowerCase()];
+                                day = parseInt(part2, 10);
+                            } else {
+                                day = parseInt(part1, 10);
+                                month = monthMap[part2.toLowerCase()];
+                            }
+                            
+                            if (month !== undefined && !isNaN(day) && !isNaN(year)) {
+                                const date = new Date(year, month, day);
+                                if (!isNaN(date.getTime())) {
+                                    return date.toISOString().split('T')[0];
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // If number, try Excel date number conversion
+                if (typeof value === 'number' || !isNaN(value)) {
+                    const excelDate = new Date((value - 25569) * 86400 * 1000);
+                    if (!isNaN(excelDate.getTime())) {
+                        return excelDate.toISOString().split('T')[0];
+                    }
+                }
+
+            } catch (error) {
+                console.error('Date normalization error:', error);
+            }
+
+            return null;
+        }
+    },
+
     /**
      * Initialize the module
      * Sets up event listeners and fetches required data
@@ -366,15 +468,16 @@ const BulkImportModule = {
         const mapping = {};
         this.fields.forEach(field => {
             const select = document.querySelector(`select[name="mapping_${field.name}"]`);
-            if (select) {
-                mapping[field.name] = select.value;
+            if (select && select.value) {  // Only include if there's a value
+                mapping[field.name.replace(/\s+/g, ' ')] = select.value;
             }
         });
         
         const mappingInput = document.querySelector('input[name="column_mapping"]');
         if (mappingInput) {
-            mappingInput.value = JSON.stringify(mapping);
-            this.logEvent('updateColumnMapping', 'Mapping updated');
+            const mappingJson = JSON.stringify(mapping);
+            mappingInput.value = mappingJson;
+            this.logEvent('updateColumnMapping', `Mapping updated: ${mappingJson}`);
         } else {
             this.logError('updateColumnMapping', 'Mapping input not found');
         }
@@ -394,18 +497,29 @@ const BulkImportModule = {
         
         try {
             // Validate mapping
-            if (!this.validateMapping()) {
+            const mappingInput = document.querySelector('input[name="column_mapping"]');
+            if (!mappingInput || !mappingInput.value) {
+                toastr.error('Please map at least one column');
                 return;
             }
-
+    
+            // Verify the mapping is valid JSON
+            try {
+                JSON.parse(mappingInput.value);
+            } catch (error) {
+                toastr.error('Invalid column mapping format');
+                return;
+            }
+    
             // Update UI
             submitButton.disabled = true;
             submitButton.innerHTML = 'Importing...';
             
-            // Prepare and validate form data
+            // Create FormData
             const formData = new FormData(e.target);
             this.logEvent('handleFormSubmit', 'Sending import request');
-
+            this.logEvent('handleFormSubmit', `Column mapping: ${mappingInput.value}`);
+    
             // Send request
             const response = await this.sendImportRequest(formData);
             
@@ -454,7 +568,7 @@ const BulkImportModule = {
      * @returns {Response} Server response
      */
 
-    async sendImportRequest(formData) {
+    sendImportRequest: async function(formData) {
         const response = await fetch('/transactions/bulk_import', {
             method: 'POST',
             body: formData
@@ -462,12 +576,6 @@ const BulkImportModule = {
         
         this.logEvent('sendImportRequest', `Response status: ${response.status}`);
         
-        // Validate response
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-            throw new Error(`Unexpected response type: ${contentType}. Expected JSON.`);
-        }
-
         return response;
     },
 

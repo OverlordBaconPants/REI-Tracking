@@ -1,33 +1,50 @@
 {% extends "base.html" %}
-
 {% block body_class %}dashboards-page{% endblock %}
-
 {% block content %}
-
-<div class="container mt-4">
-    <h1 class="mb-4">Dashboards</h1>
-    
+<div class="container-fluid">
     <div class="row">
-        <div class="col-md-6 mb-4">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h5 class="card-title">Portfolio Overview</h5>
-                    <p class="card-text">View aggregated metrics across your entire portfolio, including total monthly income, expenses, equity gains, and property performance comparisons.</p>
-                    <a href="{{ url_for('dashboards.portfolio_view') }}" class="btn btn-primary">View Portfolio</a>
+        <div class="col-12">
+            <div class="card mt-3">
+                <div class="card-header bg-navy">
+                    <h4 class="mb-0">Dashboards</h4>
                 </div>
-            </div>
-        </div>
-        
-        <div class="col-md-6 mb-4">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h5 class="card-title">Amortization Schedule</h5>
-                    <p class="card-text">Analyze loan amortization schedules for individual properties, track equity buildup, and monitor loan paydown progress.</p>
-                    <a href="{{ url_for('dashboards.amortization_view') }}" class="btn btn-primary">View Amortization</a>
+                <div class="card-body p-3">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">
+                                        <i class="bi bi-pie-chart me-2"></i>Portfolio Overview
+                                    </h5>
+                                    <p class="card-text">View aggregated metrics across your entire portfolio, including total monthly income, expenses, equity gains, and property performance comparisons.</p>
+                                    <div class="d-grid">
+                                        <a href="{{ url_for('dashboards.portfolio_view') }}" class="btn btn-primary">
+                                            <i class="bi bi-graph-up me-2"></i>View Portfolio
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-12 col-md-6">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">
+                                        <i class="bi bi-calendar3 me-2"></i>Amortization Schedule
+                                    </h5>
+                                    <p class="card-text">Analyze loan amortization schedules for individual properties, track equity buildup, and monitor loan paydown progress.</p>
+                                    <div class="d-grid">
+                                        <a href="{{ url_for('dashboards.amortization_view') }}" class="btn btn-primary">
+                                            <i class="bi bi-table me-2"></i>View Amortization
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
-
 {% endblock %}

@@ -105,56 +105,52 @@ def get_analysis(analysis_id: str):
 @analyses_bp.route('/view_edit_analysis')
 @login_required
 def view_edit_analysis():
-    """View/edit analysis list page"""
+    """View/edit analysis list page with mobile-friendly loading"""
     try:
-        # Add debug logging at each step
-        analyses_dir = current_app.config['ANALYSES_DIR']
-        logger.info(f"1. Using analyses directory: {analyses_dir}")
-        logger.info(f"2. Current user ID: {current_user.id}")
-        
+        # Handle pagination
         try:
             page = max(1, int(request.args.get('page', 1)))
-            logger.info(f"3. Page number: {page}")
-        except (TypeError, ValueError) as e:
-            logger.warning(f"Invalid page parameter: {str(e)}")
+        except (TypeError, ValueError):
             page = 1
-        
+            
         analyses_per_page = 10
-        logger.info(f"4. Files in analyses directory: {os.listdir(analyses_dir)}")
-            
-        try:
-            analyses, total_pages = analysis_service.get_analyses_for_user(
-                current_user.id, 
-                page, 
-                analyses_per_page
-            )
-            
-            logger.info(f"5. Found {len(analyses) if analyses else 0} analyses for user")
-            if analyses:
-                logger.info(f"6. First analysis: {analyses[0]['analysis_name']}")
-            
-            start_page = max(1, page - 2)
-            end_page = min(total_pages, page + 2)
-            page_range = list(range(start_page, end_page + 1))
-            
-            return render_template(
-                'analyses/view_edit_analysis.html', 
-                analyses=analyses, 
-                current_page=page, 
-                total_pages=total_pages,
-                page_range=page_range,
-                body_class='view-edit-analysis-page'
-            )
-            
-        except Exception as e:
-            logger.error(f"Error retrieving analyses from service: {str(e)}")
-            logger.error(traceback.format_exc())
-            raise
         
+        # Get analyses for the current page
+        analyses, total_pages = analysis_service.get_analyses_for_user(
+            current_user.id, 
+            page, 
+            analyses_per_page
+        )
+        
+        # Calculate page range for pagination
+        start_page = max(1, page - 2)
+        end_page = min(total_pages, page + 2)
+        page_range = list(range(start_page, end_page + 1))
+        
+        # For AJAX requests (mobile loading), return only the analyses cards
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return render_template(
+                'analyses/_analysis_cards.html',  # Create this partial template
+                analyses=analyses,
+                current_page=page,
+                total_pages=total_pages,
+                page_range=page_range
+            )
+            
+        # For regular requests, return the full page
+        return render_template(
+            'analyses/view_edit_analysis.html',
+            analyses=analyses,
+            current_page=page,
+            total_pages=total_pages,
+            page_range=page_range,
+            body_class='view-edit-analysis-page'
+        )
+            
     except Exception as e:
         logger.error(f"Error in view_edit_analysis: {str(e)}")
         logger.error(traceback.format_exc())
-        flash_message('Error loading analyses: ' + str(e), 'error')
+        flash_message('Error loading analyses', 'error')
         return redirect(url_for('dashboards.dashboards'))
 
 @analyses_bp.route('/view_analysis/<analysis_id>', methods=['GET'])
