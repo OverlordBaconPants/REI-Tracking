@@ -121,7 +121,34 @@ class AnalysisService:
         'loan3_loan_interest_rate': {'type': 'float'},
         'loan3_loan_term': {'type': 'integer'},
         'loan3_loan_down_payment': {'type': 'integer'},
-        'loan3_loan_closing_costs': {'type': 'integer'}
+        'loan3_loan_closing_costs': {'type': 'integer'},
+
+        # New Lease Option fields
+        'option_consideration_fee': {
+            'type': 'integer',
+            'optional': False,
+            'description': 'Non-refundable upfront fee for lease option'
+        },
+        'option_term_months': {
+            'type': 'integer',
+            'optional': False,
+            'description': 'Duration of option period in months'
+        },
+        'strike_price': {
+            'type': 'integer',
+            'optional': False,
+            'description': 'Agreed upon future purchase price'
+        },
+        'monthly_rent_credit_percentage': {
+            'type': 'float',
+            'optional': False,
+            'description': 'Percentage of monthly rent applied as credit'
+        },
+        'rent_credit_cap': {
+            'type': 'integer',
+            'optional': False,
+            'description': 'Maximum total rent credit allowed'
+        }
     }
     
     def __init__(self):
@@ -136,10 +163,6 @@ class AnalysisService:
         }
 
     def normalize_data(self, data: Dict, is_mobile: bool = False) -> Dict:
-        """
-        Normalize data to match flat schema with appropriate types and mobile optimization.
-        Handles nullable balloon payment fields.
-        """
         try:
             logger.debug("=== Starting Data Normalization ===")
             normalized = {}
@@ -147,10 +170,24 @@ class AnalysisService:
             # First check if balloon payments are enabled
             has_balloon = data.get('has_balloon_payment', False)
             
+            # Handle lease option fields
+            lease_fields = {
+                'option_consideration_fee': 0,
+                'option_term_months': 0,
+                'strike_price': 0,
+                'monthly_rent_credit_percentage': 0.0,
+                'rent_credit_cap': 0
+            }
+
             # Process each field according to schema
             for field, field_def in self.ANALYSIS_SCHEMA.items():
                 field_type = field_def['type']
                 value = data.get(field)
+                
+                # Handle lease option fields
+                if field in lease_fields and data.get('analysis_type') != 'Lease Option':
+                    normalized[field] = lease_fields[field]
+                    continue
                 
                 # Handle balloon payment fields
                 if field.startswith('balloon_') and not has_balloon:
@@ -207,7 +244,7 @@ class AnalysisService:
             
             logger.debug("=== Data Normalization Complete ===")
             return normalized
-            
+                
         except Exception as e:
             logger.error(f"Error normalizing data: {str(e)}")
             logger.error(traceback.format_exc())
@@ -256,6 +293,39 @@ class AnalysisService:
                 optimized[key] = value
                 
         return optimized
+    
+    def _get_value(self, data, field):
+        """
+        Safely get a value from the data dict, handling various formats.
+        
+        Args:
+            data (dict): The data dictionary to get the value from
+            field (str): The field name to get
+            
+        Returns:
+            The value or None if not found
+        """
+        if field not in data:
+            return None
+            
+        value = data[field]
+            
+        # Convert empty strings to None
+        if value == '':
+            return None
+            
+        # If it's already None, return it
+        if value is None:
+            return None
+            
+        # Clean up currency values
+        if isinstance(value, str):
+            value = value.replace('$', '').replace(',', '').strip()
+            # Remove % symbol if present
+            if value.endswith('%'):
+                value = value[:-1]
+                
+        return value
 
     def validate_analysis_data(self, data: Dict) -> None:
         """Validate analysis data against schema."""
@@ -270,7 +340,7 @@ class AnalysisService:
             }
             
             for field, expected_type in required_fields.items():
-                value = data.get(field)
+                value = self._get_value(data, field)
                 if value is None:
                     raise ValueError(f"Missing required field: {field}")
                 if not isinstance(value, expected_type) and value is not None:
@@ -291,6 +361,47 @@ class AnalysisService:
                         continue
                     self._validate_field_type(field, value)
                         
+            # Lease Option specific validation
+            if data.get('analysis_type') == 'Lease Option':
+                if float(self._get_value(data, 'strike_price') or 0) <= float(self._get_value(data, 'purchase_price') or 0):
+                    raise ValueError("Strike price must be greater than purchase price")
+
+                option_fields = {
+                    'option_consideration_fee': "Option fee",
+                    'option_term_months': "Option term",
+                    'strike_price': "Strike price",
+                    'monthly_rent_credit_percentage': "Monthly rent credit percentage",
+                    'rent_credit_cap': "Rent credit cap"
+                }
+
+                for field, display_name in option_fields.items():
+                    value = self._get_value(data, field)
+                    if value is None or float(value) <= 0:
+                        raise ValueError(f"{display_name} must be greater than 0")
+
+                rent_credit_pct = float(self._get_value(data, 'monthly_rent_credit_percentage') or 0)
+                if not 0 <= rent_credit_pct <= 100:
+                    raise ValueError("Monthly rent credit percentage must be between 0 and 100")
+
+                option_term = int(self._get_value(data, 'option_term_months') or 0)
+                if option_term > 120:
+                    raise ValueError("Option term cannot exceed 120 months")
+
+                # Add loan validation for Lease Options
+                loan_prefixes = ['loan1', 'loan2', 'loan3']
+                for prefix in loan_prefixes:
+                    loan_amount = self._get_value(data, f'{prefix}_loan_amount')
+                    if loan_amount and float(loan_amount) > 0:
+                        # Validate loan amount and terms
+                        interest_rate = float(self._get_value(data, f'{prefix}_loan_interest_rate') or 0)
+                        loan_term = int(self._get_value(data, f'{prefix}_loan_term') or 0)
+                        
+                        if interest_rate <= 0 or interest_rate > 30:
+                            raise ValueError(f"{prefix}: Interest rate must be between 0% and 30%")
+                        
+                        if loan_term <= 0 or loan_term > 360:
+                            raise ValueError(f"{prefix}: Loan term must be between 1 and 360 months")
+
             logger.debug("Analysis data validation complete")
             
         except ValueError as e:

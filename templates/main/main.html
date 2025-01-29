@@ -24,42 +24,42 @@
                     <!-- Equity and Transactions Cards -->
                     <div class="row g-3">
                         <!-- Equity Card -->
-                        <div class="col-12 col-lg-6">
-                            <div class="card h-100">
-                                <div class="card-header bg-navy">
-                                    <h5 class="mb-0">Equity Summary</h5>
-                                </div>
-                                <div class="card-body p-0">
-                                    <div class="table-responsive">
-                                        <table class="table table-striped mb-0">
-                                            <thead>
-                                                <tr>
-                                                    <th>Property</th>
-                                                    <th>Monthly Gain</th>
-                                                    <th>Total Gain</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {% for property in user_properties %}
-                                                <tr>
-                                                    <td>{{ truncate_address(property.address) }}</td>
-                                                    <td>${{ "{:,.2f}".format(property.last_month_equity) }}</td>
-                                                    <td>${{ "{:,.2f}".format(property.equity_gained_since_acquisition) }}</td>
-                                                </tr>
-                                                {% endfor %}
-                                            </tbody>
-                                            <tfoot class="table-active">
-                                                <tr class="fw-bold">
-                                                    <td>Total</td>
-                                                    <td>${{ "{:,.2f}".format(total_last_month_equity) }}</td>
-                                                    <td>${{ "{:,.2f}".format(total_equity_gained_since_acquisition) }}</td>
-                                                </tr>
-                                            </tfoot>
-                                        </table>
+                            <div class="col-12 col-lg-6">
+                                <div class="card h-100">
+                                    <div class="card-header bg-navy">
+                                        <h5 class="mb-0">Equity Summary</h5>
+                                    </div>
+                                    <div class="card-body p-0">
+                                        <div class="table-responsive">
+                                            <table class="table table-striped mb-0">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Property</th>
+                                                        <th>Monthly Gain</th>
+                                                        <th>Total Gain</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for property in user_properties %}
+                                                    <tr>
+                                                        <td>{{ truncate_address(property.address) }}</td>
+                                                        <td>${{ "{:,.2f}".format(property.last_month_equity) }}</td>
+                                                        <td>${{ "{:,.2f}".format(property.equity_gained_since_acquisition) }}</td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                                <tfoot class="table-active">
+                                                    <tr class="fw-bold">
+                                                        <td>Total</td>
+                                                        <td>${{ "{:,.2f}".format(total_last_month_equity) }}</td>
+                                                        <td>${{ "{:,.2f}".format(total_equity_gained_since_acquisition) }}</td>
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
                         <!-- Transactions Card -->
                         <div class="col-12 col-lg-6">

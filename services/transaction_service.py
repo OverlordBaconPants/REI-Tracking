@@ -7,54 +7,59 @@ import pandas as pd
 from fuzzywuzzy import process
 import re
 
-def format_property_address(address):
+def format_address(address: str, format_type: str = 'full') -> str | tuple[str, str]:
     """
-    Truncates a property address to display only the part before the first comma.
-    Returns both the truncated display version and the full address.
+    Multi-purpose address formatter that handles different format requirements.
     
     Args:
         address (str): Full property address
-        
+        format_type (str): Type of formatting needed:
+            - 'display': Returns just the street address (before first comma)
+            - 'base': Returns street address and city (before second comma)
+            - 'full': Returns tuple of (display_address, full_address)
+            
     Returns:
-        tuple: (display_address, full_address)
+        Union[str, tuple[str, str]]: Formatted address in requested format
     """
     if not address:
-        return "", ""
+        return ("", "") if format_type == 'full' else ""
         
-    # Get the part before the first comma
-    display_address = address.split(',')[0].strip()
+    parts = [p.strip() for p in address.split(',')]
     
-    return display_address, address
+    if format_type == 'display':
+        return parts[0]
+    elif format_type == 'base':
+        return ', '.join(parts[:2]) if len(parts) >= 2 else parts[0]
+    else:  # 'full'
+        return (parts[0], address)
 
 def get_properties_for_user(user_id, user_name, is_admin=False):
+    """Get properties for a user with formatted addresses."""
     logging.debug(f"Getting properties for user: {user_name} (ID: {user_id}), is_admin: {is_admin}")
+    
     try:
         properties = read_json(current_app.config['PROPERTIES_FILE'])
-        logging.debug(f"Read properties file, found {len(properties)} properties")
+        logging.debug(f"Read {len(properties)} properties")
         
-        if is_admin:
+        if not is_admin:
+            properties = [
+                prop for prop in properties
+                if any(partner.get('name', '').lower() == user_name.lower() 
+                      for partner in prop.get('partners', []))
+            ]
+            logging.debug(f"Found {len(properties)} properties for user {user_name}")
+        else:
             logging.info(f"Admin user, returning all {len(properties)} properties")
-            # Format addresses for display
-            for prop in properties:
-                display_address, full_address = format_property_address(prop['address'])
+        
+        # Format addresses consistently for all properties
+        for prop in properties:
+            if prop.get('address'):
+                display_address, full_address = format_address(prop['address'], 'full')
                 prop['display_address'] = display_address
                 prop['full_address'] = full_address
-            return properties
         
-        user_properties = [
-            prop for prop in properties
-            if any(partner.get('name', '').lower() == user_name.lower() for partner in prop.get('partners', []))
-        ]
-        
-        # Format addresses for display
-        for prop in user_properties:
-            display_address, full_address = format_property_address(prop['address'])
-            prop['display_address'] = display_address
-            prop['full_address'] = full_address
-        
-        logging.debug(f"Found {len(user_properties)} properties for user {user_name}")
-        logging.debug(f"Formatted properties: {user_properties}")
-        return user_properties
+        logging.debug(f"Formatted properties: {properties}")
+        return properties
         
     except Exception as e:
         logging.error(f"Error in get_properties_for_user: {str(e)}")
@@ -98,23 +103,6 @@ def add_transaction(transaction_data):
         current_app.logger.error(f"Error adding transaction: {str(e)}")
         raise
 
-def get_transactions_for_user(user_id, property_id=None, start_date=None, end_date=None):
-    transactions = read_json(current_app.config['TRANSACTIONS_FILE'])
-    properties = read_json(current_app.config['PROPERTIES_FILE'])
-    
-    user_properties = [prop for prop in properties if any(partner['name'] == user_id for partner in prop.get('partners', []))]
-    user_property_ids = [prop['address'] for prop in user_properties]
-    
-    filtered_transactions = [
-        t for t in transactions
-        if t['property_id'] in user_property_ids
-        and (property_id is None or t['property_id'] == property_id)
-        and (start_date is None or t['date'] >= start_date)
-        and (end_date is None or t['date'] <= end_date)
-    ]
-    
-    return filtered_transactions
-
 def get_unresolved_transactions():
     transactions = read_json(current_app.config['TRANSACTIONS_FILE'])
     reimbursements = read_json(current_app.config['REIMBURSEMENTS_FILE'])
@@ -135,58 +123,78 @@ def get_partners_for_property(property_id):
         return property_data.get('partners', [])
     return []
 
-def get_transactions_for_view(user_id, user_name, property_id=None, reimbursement_status=None, start_date=None, end_date=None, is_admin=False):
-    current_app.logger.debug(f"get_transactions_for_view called with: user_id={user_id}, user_name={user_name}, property_id={property_id}, reimbursement_status={reimbursement_status}, start_date={start_date}, end_date={end_date}, is_admin={is_admin}")
+def get_transactions_for_view(user_id, user_name, property_id=None, reimbursement_status=None, 
+                            start_date=None, end_date=None, is_admin=False):
+    """Get filtered transactions with consistent address handling."""
+    current_app.logger.debug(f"get_transactions_for_view called with property_id: {property_id}")
     
     transactions = read_json(current_app.config['TRANSACTIONS_FILE'])
     properties = read_json(current_app.config['PROPERTIES_FILE'])
     
-    current_app.logger.debug(f"All transactions: {transactions}")
-    
-    if is_admin:
-        user_transactions = transactions
-    else:
-        # Get properties where the user is a partner
+    # Filter by user access
+    if not is_admin:
         user_properties = [
             prop['address'] for prop in properties
-            if any(partner['name'].lower() == user_name.lower() for partner in prop.get('partners', []))
+            if any(partner['name'].lower() == user_name.lower() 
+                  for partner in prop.get('partners', []))
         ]
-        
-        current_app.logger.debug(f"User properties: {user_properties}")
-        
-        # Filter transactions based on user's properties
-        user_transactions = [t for t in transactions if t.get('property_id') in user_properties]
+        transactions = [t for t in transactions if t.get('property_id') in user_properties]
     
-    current_app.logger.debug(f"User transactions: {user_transactions}")
-    
-    # Apply additional filters
+    # Apply property filter using base address matching
     if property_id and property_id != 'all':
-        user_transactions = [t for t in user_transactions if t.get('property_id') == property_id]
+        filter_base = format_address(property_id, 'base')
+        current_app.logger.debug(f"Filtering with base address: {filter_base}")
+        
+        transactions = [
+            t for t in transactions
+            if format_address(t.get('property_id', ''), 'base') == filter_base
+        ]
+        current_app.logger.debug(f"After property filter: {len(transactions)} transactions")
     
+    # Apply remaining filters
     if reimbursement_status and reimbursement_status != 'all':
-        user_transactions = [t for t in user_transactions if t.get('reimbursement', {}).get('reimbursement_status') == reimbursement_status]
+        transactions = [
+            t for t in transactions 
+            if t.get('reimbursement', {}).get('reimbursement_status') == reimbursement_status
+        ]
     
+    # Apply date filters
+    if start_date or end_date:
+        transactions = filter_by_date_range(transactions, start_date, end_date)
+    
+    # Flatten and return transactions
+    return [flatten_transaction(t) for t in transactions]
+
+def flatten_transaction(transaction: dict) -> dict:
+    """Flatten a transaction dictionary for display."""
+    flat_t = transaction.copy()
+    flat_t.update(transaction.get('reimbursement', {}))
+    flat_t['documentation_file'] = transaction.get('documentation_file', '')
+    flat_t['reimbursement_documentation'] = (
+        transaction.get('reimbursement', {}).get('documentation', '')
+    )
+    return flat_t
+
+def filter_by_date_range(transactions, start_date=None, end_date=None):
+    """Filter transactions by date range."""
+    if not transactions:
+        return []
+        
     if start_date:
-        start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
-        user_transactions = [t for t in user_transactions if datetime.strptime(t.get('date'), '%Y-%m-%d').date() >= start_date]
+        start = datetime.strptime(start_date, '%Y-%m-%d').date()
+        transactions = [
+            t for t in transactions 
+            if datetime.strptime(t.get('date'), '%Y-%m-%d').date() >= start
+        ]
     
     if end_date:
-        end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
-        user_transactions = [t for t in user_transactions if datetime.strptime(t.get('date'), '%Y-%m-%d').date() <= end_date]
+        end = datetime.strptime(end_date, '%Y-%m-%d').date()
+        transactions = [
+            t for t in transactions 
+            if datetime.strptime(t.get('date'), '%Y-%m-%d').date() <= end
+        ]
     
-    current_app.logger.debug(f"Filtered transactions: {user_transactions}")
-    
-    # Flatten the structure for easier handling in the DataFrame
-    flattened_transactions = []
-    for t in user_transactions:
-        flat_t = t.copy()
-        flat_t.update(t.get('reimbursement', {}))
-        # Ensure both documentation fields are included
-        flat_t['documentation_file'] = t.get('documentation_file', '')
-        flat_t['reimbursement_documentation'] = t.get('reimbursement', {}).get('documentation', '')
-        flattened_transactions.append(flat_t)
-    
-    return flattened_transactions
+    return transactions
 
 def get_transaction_by_id(transaction_id):
     transactions = read_json(current_app.config['TRANSACTIONS_FILE'])
@@ -224,13 +232,29 @@ def update_transaction(updated_transaction):
     write_json(current_app.config['TRANSACTIONS_FILE'], transactions)
 
 def process_bulk_import(file_path, column_mapping, properties):
+    """Process bulk import of transactions from file."""
     df = pd.read_excel(file_path) if file_path.endswith(('.xlsx', '.xls')) else pd.read_csv(file_path)
     
     total_rows = len(df)
     skipped_rows = {'empty_date': 0, 'empty_amount': 0, 'unmatched_property': 0, 'other': 0}
     
-    df['property_id'] = df[column_mapping['Property']].apply(lambda x: match_property(x, properties))
-    df['collector_payer'] = df[column_mapping['Paid By']].apply(match_collector_payer)
+    # Use fuzzy matching for property matching instead of separate function
+    def find_matching_property(address):
+        if pd.isna(address):
+            return None
+        # Use base address format for matching
+        address_base = format_address(str(address), 'base')
+        property_bases = {format_address(p['address'], 'base'): p['address'] 
+                         for p in properties}
+        
+        # Use fuzzywuzzy for approximate matching
+        matches = process.extractOne(address_base, list(property_bases.keys()))
+        if matches and matches[1] >= 80:  # 80% match threshold
+            return property_bases[matches[0]]
+        return None
+    
+    df['property_id'] = df[column_mapping['Property']].apply(find_matching_property)
+    df['collector_payer'] = df[column_mapping['Paid By']].fillna('')
     
     mapped_data = []
     for index, row in df.iterrows():
@@ -270,6 +294,7 @@ def process_bulk_import(file_path, column_mapping, properties):
         
         except Exception as e:
             skipped_rows['other'] += 1
+            logging.error(f"Error processing row {index}: {str(e)}")
     
     imported_count = bulk_import_transactions(mapped_data)
     
@@ -283,18 +308,6 @@ def process_bulk_import(file_path, column_mapping, properties):
         'unmatched_properties': skipped_rows['unmatched_property'],
         'other_issues': skipped_rows['other']
     }
-
-def match_property(address, properties):
-    if pd.isna(address):
-        return None
-    matches = process.extractOne(address, [p['address'] for p in properties])
-    return matches[0] if matches and matches[1] >= 80 else None
-
-def match_collector_payer(name):
-    if pd.isna(name):
-        return None
-    # You might want to implement a more sophisticated matching here
-    return name
 
 def clean_amount(amount_str):
     if pd.isna(amount_str) or amount_str == '':

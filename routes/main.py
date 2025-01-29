@@ -111,19 +111,19 @@ def calculate_equity(property_address: str) -> Dict[str, float]:
             logger.warning(f"Property not found: {property_address}")
             return {'last_month_equity': 0, 'equity_gained_since_acquisition': 0}
 
-        # Validate required fields
-        required_fields = ['loan_amount', 'primary_loan_rate', 'primary_loan_term', 'loan_start_date']
+        # Validate required fields using new schema names
+        required_fields = ['primary_loan_amount', 'primary_loan_rate', 'primary_loan_term', 'primary_loan_start_date']
         for field in required_fields:
             if field not in property_data or not property_data[field]:
                 logger.error(f"Missing required field '{field}' for property {property_address}")
                 return {'last_month_equity': 0, 'equity_gained_since_acquisition': 0}
 
-        loan_amount = float(property_data['loan_amount'])
+        loan_amount = float(property_data['primary_loan_amount'])
         interest_rate = float(property_data['primary_loan_rate']) / 100
         loan_term = float(property_data['primary_loan_term']) / 12  # Convert months to years
         
         try:
-            loan_start_date = datetime.strptime(property_data['loan_start_date'], '%Y-%m-%d').date()
+            loan_start_date = datetime.strptime(property_data['primary_loan_start_date'], '%Y-%m-%d').date()
         except ValueError:
             logger.error(f"Invalid loan start date format for property {property_address}")
             return {'last_month_equity': 0, 'equity_gained_since_acquisition': 0}
@@ -168,18 +168,19 @@ def calculate_cumulative_amortization(properties: List[Dict[str, Any]]) -> List[
     
     for prop in properties:
         try:
-            # Validate required fields
-            required_fields = ['loan_amount', 'primary_loan_rate', 'primary_loan_term', 'loan_start_date', 'address']
+            # Validate required fields using new schema names
+            required_fields = ['primary_loan_amount', 'primary_loan_rate', 'primary_loan_term', 
+                             'primary_loan_start_date', 'address']
             if not all(field in prop and prop[field] for field in required_fields):
                 logger.error(f"Missing required fields for property {prop.get('address', 'Unknown')}")
                 continue
 
-            loan_amount = float(prop['loan_amount'])
+            loan_amount = float(prop['primary_loan_amount'])
             interest_rate = float(prop['primary_loan_rate']) / 100
             loan_term = float(prop['primary_loan_term']) / 12  # Convert months to years
             
             try:
-                loan_start_date = datetime.strptime(prop['loan_start_date'], '%Y-%m-%d').date()
+                loan_start_date = datetime.strptime(prop['primary_loan_start_date'], '%Y-%m-%d').date()
             except ValueError:
                 logger.error(f"Invalid loan start date for property {prop['address']}")
                 continue

@@ -1,22 +1,39 @@
 
 // add_properties.js
 
+import LoanTermToggle from './loan_term_toggle.js';
+
 const addPropertiesModule = {
+
+    getNumericValue: function(formData, fieldName, defaultValue = 0) {
+        const value = formData.get(fieldName);
+        if (value === null || value === '') {
+            console.warn(`Field ${fieldName} is missing or empty, using default value: ${defaultValue}`);
+            return defaultValue;
+        }
+        const numericValue = parseFloat(value);
+        return isNaN(numericValue) ? defaultValue : numericValue;
+    },
+
     init: async function() {
         if (this.initialized) {
             console.log('Module already initialized');
             return;
         }
-        this.initialized = true;
         
         try {
             console.log('Initializing add properties module');
             const form = document.getElementById('add-property-form');
             
             if (form) {
+                // Initialize existing functionality
                 this.initAddressAutocomplete();
                 this.initPartnersSection();
                 this.initCalculations();
+                
+                // Initialize loan term toggles
+                LoanTermToggle.init('primary_loan_term', 'secondary_loan_term');
+                
                 form.addEventListener('submit', this.handleSubmit.bind(this));
                 console.log('Add Properties form initialized');
             } else {
@@ -170,16 +187,14 @@ const addPropertiesModule = {
         if (totalIncomeElement) {
             totalIncomeElement.textContent = total.toFixed(2);
         }
-    
-        this.updateNetIncome();
     },
     
     updateTotalExpenses: function() {
         let total = 0;
         let utilityTotal = 0;
     
-        // Safely get rental income, default to 0 if element doesn't exist or has no value
-        const rentalIncomeElement = document.getElementById('rental-income');
+        // Change rental-income to monthly_income[rental_income]
+        const rentalIncomeElement = document.getElementById('monthly_income[rental_income]');
         const rentalIncome = rentalIncomeElement ? (parseFloat(rentalIncomeElement.value) || 0) : 0;
     
         // Calculate utilities (fixed amounts)
@@ -210,31 +225,6 @@ const addPropertiesModule = {
         if (totalExpensesElement) {
             totalExpensesElement.textContent = total.toFixed(2);
         }
-    
-        this.updateNetIncome();
-    },
-    
-    updateNetIncome: function() {
-        const totalIncomeElement = document.getElementById('total-monthly-income');
-        const totalExpensesElement = document.getElementById('total-monthly-expenses');
-        const netIncomeElement = document.getElementById('net-monthly-income');
-    
-        if (totalIncomeElement && totalExpensesElement && netIncomeElement) {
-            const totalIncome = parseFloat(totalIncomeElement.textContent) || 0;
-            const totalExpenses = parseFloat(totalExpensesElement.textContent) || 0;
-            const netIncome = totalIncome - totalExpenses;
-    
-            netIncomeElement.textContent = netIncome.toFixed(2);
-            
-            // Update color based on positive/negative net income
-            if (netIncome > 0) {
-                netIncomeElement.classList.remove('text-danger');
-                netIncomeElement.classList.add('text-success');
-            } else {
-                netIncomeElement.classList.remove('text-success');
-                netIncomeElement.classList.add('text-danger');
-            }
-        }
     },
 
     addPartner: function() {
@@ -255,33 +245,34 @@ const addPropertiesModule = {
         }
     
         const newPartnerHtml = `
-            <div class="partner-entry mb-3">
-                <div class="row align-items-end">
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label for="partner-select-${partnerCount}">Partner:</label>
-                            <select id="partner-select-${partnerCount}" name="partners[${partnerCount}][name]" class="form-control partner-select" required>
-                                <option value="">Select a partner</option>
-                                ${this.getPartnerOptions()}
-                                <option value="new">Add new partner</option>
-                            </select>
+            <div class="partner-entry card mt-3">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-4">
+                            <div class="form-group">
+                                <label class="form-label" for="partners[${partnerCount}][name]">Partner</label>
+                                <select class="form-select partner-select" id="partners[${partnerCount}][name]" name="partners[${partnerCount}][name]" required>
+                                    <option value="">Select a partner</option>
+                                    ${this.getPartnerOptions()}
+                                    <option value="new">Add new partner</option>
+                                </select>
                             <div class="form-group mt-2 new-partner-name" style="display: none;">
-                                <label for="new-partner-name-${partnerCount}">New Partner Name:</label>
-                                <input type="text" id="new-partner-name-${partnerCount}" name="partners[${partnerCount}][new_name]" class="form-control">
+                                <label for="partners[${partnerCount}][new_name]">New Partner Name:</label>
+                                <input type="text" id="partners[${partnerCount}][new_name]" name="partners[${partnerCount}][new_name]" class="form-control">
                             </div>
                         </div>
                     </div>
                     <div class="col-md-3">
                         <div class="form-group">
                             <label for="partner-equity-${partnerCount}">Equity Share (%):</label>
-                            <input type="number" id="partner-equity-${partnerCount}" name="partners[${partnerCount}][equity_share]" class="form-control partner-equity" step="0.01" min="0" max="100" required>
+                            <input type="number" id="partners[${partnerCount}][equity_share]" name="partners[${partnerCount}][equity_share]" class="form-control partner-equity" step="0.01" min="0" max="100" required>
                         </div>
                     </div>
                     <div class="col-md-3">
                         <div class="form-group">
                             <div class="form-check">
-                                <input type="checkbox" id="property-manager-${partnerCount}" name="partners[${partnerCount}][is_property_manager]" class="form-check-input property-manager-check">
-                                <label class="form-check-label" for="property-manager-${partnerCount}">
+                                <input type="checkbox" id="partners[${partnerCount}][equity_share]" name="partners[${partnerCount}][is_property_manager]" class="form-check-input property-manager-check">
+                                <label class="form-check-label" for="partners[${partnerCount}][equity_share]">
                                     Property Manager
                                 </label>
                             </div>
@@ -413,14 +404,13 @@ const addPropertiesModule = {
             total += parseFloat(input.value) || 0;
         });
         const totalEquityElement = document.getElementById('total-equity');
-        totalEquityElement.textContent = `Total Equity: ${total.toFixed(2)}%`;
-        totalEquityElement.className = 'mt-3 font-weight-bold';
+        totalEquityElement.textContent = `${total.toFixed(2)}%`;
+        totalEquityElement.classList.remove('text-success', 'text-danger');
         if (Math.abs(total - 100) < 0.01) {
             totalEquityElement.classList.add('text-success');
         } else {
-            totalEquityElement.classList.add('text-danger');
+            totalEquityElement.classList.add('text-danger'); 
         }
-        totalEquityElement.style.fontSize = '1.2rem';
     },
 
     handleSubmit: function(event) {
@@ -434,16 +424,7 @@ const addPropertiesModule = {
             console.log('Form validation failed');
             return;
         }
-    
-        // Helper function to safely get and parse numeric values
-        const getNumericValue = (fieldName, defaultValue = 0) => {
-            const value = formData.get(fieldName);
-            if (value === null || value === '') {
-                console.warn(`Field ${fieldName} is missing or empty, using default value: ${defaultValue}`);
-                return defaultValue;
-            }
-            return isNaN(parseFloat(value)) ? defaultValue : parseFloat(value);
-        };
+
     
         // Helper function to safely get string values
         const getStringValue = (fieldName, defaultValue = '') => {
@@ -453,60 +434,73 @@ const addPropertiesModule = {
     
         try {
             const propertyData = {
+                // Basic Property Information
                 address: getStringValue('property_address'),
-                purchase_price: getNumericValue('purchase_price'),
-                down_payment: getNumericValue('down_payment'),
-                primary_loan_rate: getNumericValue('primary_loan_rate'),
-                primary_loan_term: getNumericValue('primary_loan_term'),
                 purchase_date: getStringValue('purchase_date'),
-                loan_amount: getNumericValue('loan_amount'),  // Changed from getStringValue to getNumericValue
-                loan_start_date: getStringValue('loan_start_date'),
-                seller_financing_amount: getNumericValue('seller_financing_amount'),
-                seller_financing_rate: getNumericValue('seller_financing_rate'),
-                seller_financing_term: getNumericValue('seller_financing_term'),
-                closing_costs: getNumericValue('closing_costs'),
-                renovation_costs: getNumericValue('renovation_costs'),
-                marketing_costs: getNumericValue('marketing_costs'),
-                holding_costs: getNumericValue('holding_costs'),
+                purchase_price: this.getNumericValue(formData, 'purchase_price'),
+                down_payment: this.getNumericValue(formData, 'down_payment'),
+                closing_costs: this.getNumericValue(formData, 'closing_costs'),
+                renovation_costs: this.getNumericValue(formData, 'renovation_costs'),
+                marketing_costs: this.getNumericValue(formData, 'marketing_costs'),
+                
+                // Primary Loan Information
+                primary_loan_amount: this.getNumericValue(formData, 'primary_loan_amount'),
+                primary_loan_start_date: getStringValue('primary_loan_start_date'),
+                primary_loan_rate: this.getNumericValue(formData, 'primary_loan_rate'),
+                primary_loan_term: LoanTermToggle.getValueInMonths('primary_loan_term'),
+                
+                // Secondary Loan Information
+                secondary_loan_amount: this.getNumericValue(formData, 'secondary_loan_amount'),
+                secondary_loan_rate: this.getNumericValue(formData, 'secondary_loan_rate'),
+                secondary_loan_term: LoanTermToggle.getValueInMonths('secondary_loan_term'),
+                
+                // Monthly Income
                 monthly_income: {
-                    rental_income: getNumericValue('monthly_income[rental_income]'),
-                    parking_income: getNumericValue('monthly_income[parking_income]'),
-                    laundry_income: getNumericValue('monthly_income[laundry_income]'),
-                    other_income: getNumericValue('monthly_income[other_income]'),
+                    rental_income: this.getNumericValue(formData, 'monthly_income[rental_income]'),
+                    parking_income: this.getNumericValue(formData, 'monthly_income[parking_income]'),
+                    laundry_income: this.getNumericValue(formData, 'monthly_income[laundry_income]'),
+                    other_income: this.getNumericValue(formData, 'monthly_income[other_income]'),
                     income_notes: getStringValue('monthly_income[income_notes]')
                 },
+                
+                // Monthly Expenses
                 monthly_expenses: {
-                    property_tax: getNumericValue('monthly_expenses[property_tax]'),
-                    insurance: getNumericValue('monthly_expenses[insurance]'),
-                    repairs: getNumericValue('monthly_expenses[repairs]'),
-                    capex: getNumericValue('monthly_expenses[capex]'),
-                    property_management: getNumericValue('monthly_expenses[property_management]'),
-                    hoa_fees: getNumericValue('monthly_expenses[hoa_fees]'),
+                    // Fixed Expenses
+                    property_tax: this.getNumericValue(formData, 'monthly_expenses[property_tax]'),
+                    insurance: this.getNumericValue(formData, 'monthly_expenses[insurance]'),
+                    hoa_fees: this.getNumericValue(formData, 'monthly_expenses[hoa_fees]'),
+                    
+                    // Percentage Based Expenses
+                    repairs: this.getNumericValue(formData, 'monthly_expenses[repairs]'),
+                    capex: this.getNumericValue(formData, 'monthly_expenses[capex]'),
+                    property_management: this.getNumericValue(formData, 'monthly_expenses[property_management]'),
+                    
+                    // Utilities
                     utilities: {
-                        water: getNumericValue('monthly_expenses[utilities][water]'),
-                        electricity: getNumericValue('monthly_expenses[utilities][electricity]'),
-                        gas: getNumericValue('monthly_expenses[utilities][gas]'),
-                        trash: getNumericValue('monthly_expenses[utilities][trash]')
+                        water: this.getNumericValue(formData, 'monthly_expenses[utilities][water]'),
+                        electricity: this.getNumericValue(formData, 'monthly_expenses[utilities][electricity]'),
+                        gas: this.getNumericValue(formData, 'monthly_expenses[utilities][gas]'),
+                        trash: this.getNumericValue(formData, 'monthly_expenses[utilities][trash]')
                     },
-                    other_expenses: getNumericValue('monthly_expenses[other_expenses]'),
+                    
+                    other_expenses: this.getNumericValue(formData, 'monthly_expenses[other_expenses]'),
                     expense_notes: getStringValue('monthly_expenses[expense_notes]')
                 },
                 partners: []
             };
     
-            // Update partners collection to include property Manager status
+            // Process partners data
             const partnerEntries = form.querySelectorAll('.partner-entry');
-            propertyData.partners = [];
-            
             partnerEntries.forEach((entry, index) => {
-                const nameInput = entry.querySelector(`[name="partners[${index}][name]"]`);
+                const nameSelect = entry.querySelector(`[name="partners[${index}][name]"]`);
                 const equityInput = entry.querySelector(`[name="partners[${index}][equity_share]"]`);
                 const propertyManagerCheck = entry.querySelector(`[name="partners[${index}][is_property_manager]"]`);
                 
-                if (nameInput && equityInput) {
-                    let name = nameInput.value.trim();
-                    const equityShare = parseFloat(equityInput.value);
+                if (nameSelect && equityInput) {
+                    let name = nameSelect.value.trim();
+                    const equityShare = this.getNumericValue(formData, `partners[${index}][equity_share]`);
                     
+                    // Handle new partner case
                     if (name === 'new') {
                         const newPartnerNameInput = entry.querySelector(`[name="partners[${index}][new_name]"]`);
                         if (newPartnerNameInput) {
@@ -518,7 +512,7 @@ const addPropertiesModule = {
                         propertyData.partners.push({
                             name,
                             equity_share: equityShare,
-                            is_property_manager: propertyManagerCheck.checked
+                            is_property_manager: propertyManagerCheck ? propertyManagerCheck.checked : false
                         });
                     }
                 }
@@ -526,6 +520,7 @@ const addPropertiesModule = {
     
             console.log('Sending property data:', JSON.stringify(propertyData, null, 2));
     
+            // Submit data to server
             fetch('/properties/add_properties', {
                 method: 'POST',
                 headers: {
@@ -537,10 +532,9 @@ const addPropertiesModule = {
             .then(data => {
                 console.log('Server response:', data);
                 if (data.success) {
-                    // Show success notification
                     window.showNotification('Property successfully added!', 'success', 'both');
                     
-                    // Wait 2 seconds before redirecting
+                    // Wait briefly before redirecting
                     setTimeout(() => {
                         window.location.reload();
                     }, 2000);
@@ -562,18 +556,13 @@ const addPropertiesModule = {
                                 userMessage = 'Please enter dates in YYYY-MM-DD format';
                             } else if (error.includes('Missing required field')) {
                                 userMessage = error.replace('Missing required field:', 'Please fill in the required field:');
-                            } else if (error.includes('Field cannot be null')) {
-                                userMessage = error.replace('Field cannot be null:', 'Please provide a value for:');
                             }
                             
-                            // Show the user-friendly message
                             window.showNotification(userMessage, 'error', 'both');
                         });
                     } else if (data.message) {
-                        // Handle single error message
                         window.showNotification(data.message, 'error', 'both');
                     } else {
-                        // Fallback error message
                         window.showNotification('An error occurred while saving the property. Please check all fields and try again.', 'error', 'both');
                     }
                 }
@@ -591,80 +580,152 @@ const addPropertiesModule = {
 
     validateForm: function(form) {
         let isValid = true;
-
-        if (!form.property_address.value.trim()) {
-            window.showNotification('Please enter a property address.', 'error', 'both');
-            isValid = false;
-        }
-
-        if (!form.purchase_price.value || isNaN(form.purchase_price.value)) {
-            window.showNotification('Please enter a valid purchase price.', 'error', 'both');
-            isValid = false;
-        }
-
-        if (!form.down_payment.value || isNaN(form.down_payment.value)) {
-            window.showNotification('Please enter a valid down payment amount.', 'error', 'both');
-            isValid = false;
-        }
-
-        if (!form.primary_loan_rate.value || isNaN(form.primary_loan_rate.value)) {
-            window.showNotification('Please enter a valid primary loan rate.', 'error', 'both');
-            isValid = false;
-        }
-
-        if (!form.primary_loan_term.value || isNaN(form.primary_loan_term.value)) {
-            window.showNotification('Please enter a valid primary loan term.', 'error', 'both');
-            isValid = false;
-        }
-        
-        const partners = form.querySelectorAll('.partner-entry');
-        let totalEquity = 0;
-        partners.forEach((partner, index) => {
-            const nameInput = partner.querySelector(`[name="partners[${index}][name]"]`);
-            const equityInput = partner.querySelector(`[name="partners[${index}][equity_share]"]`);
-            
-            if (!nameInput.value.trim()) {
-                window.showNotification(`Please enter a name for partner ${index + 1}.`, 'error', 'both');
+    
+        // Required field validation - Updated field names to match HTML
+        const requiredFields = [
+            { name: 'property_address', label: 'property address' },
+            { name: 'purchase_date', label: 'purchase date' },
+            { name: 'purchase_price', label: 'purchase price' },
+            { name: 'down_payment', label: 'down payment' },
+            { name: 'primary_loan_amount', label: 'primary loan amount' },
+            { name: 'primary_loan_start_date', label: 'primary loan start date' },
+            { name: 'primary_loan_rate', label: 'primary loan rate' },
+            { name: 'primary_loan_term', label: 'primary loan term' }
+        ];
+    
+        requiredFields.forEach(field => {
+            const input = form.querySelector(`[name="${field.name}"]`);
+            if (!input || !input.value.trim()) {
+                window.showNotification(`Please enter a valid ${field.label}.`, 'error', 'both');
                 isValid = false;
-            }
-
-            if (!equityInput.value || isNaN(equityInput.value)) {
-                window.showNotification(`Please enter a valid equity share for partner ${index + 1}.`, 'error', 'both');
-                isValid = false;
-            } else {
-                totalEquity += parseFloat(equityInput.value);
             }
         });
-
-        // Add duplicate partner check
-        const partnerNames = new Set();        
-        partners.forEach((partner, index) => {
-            const nameInput = partner.querySelector(`[name="partners[${index}][name]"]`);
-            const name = nameInput.value.trim();
-            
-            if (name && name !== 'new') {
-                if (partnerNames.has(name)) {
-                    window.showNotification(`Duplicate partner "${name}" found. Each partner can only be added once.`, 'error', 'both');
+    
+        // Numeric field validation - Updated field names
+        const numericFields = [
+            { name: 'purchase_price', label: 'Purchase price' },
+            { name: 'down_payment', label: 'Down payment' },
+            { name: 'primary_loan_amount', label: 'Primary loan amount' },
+            { name: 'primary_loan_rate', label: 'Primary loan rate' },
+            { name: 'primary_loan_term', label: 'Primary loan term' },
+            { name: 'closing_costs', label: 'Closing costs' },
+            { name: 'renovation_costs', label: 'Renovation costs' },
+            { name: 'marketing_costs', label: 'Marketing costs' }
+        ];
+    
+        numericFields.forEach(field => {
+            const input = form.querySelector(`[name="${field.name}"]`);
+            if (input && input.value.trim()) {
+                const value = parseFloat(input.value);
+                if (isNaN(value) || value < 0) {
+                    window.showNotification(`${field.label} must be a valid positive number.`, 'error', 'both');
                     isValid = false;
                 }
-                partnerNames.add(name);
             }
         });
-
-        // Add property Manager validation
-        const propertyManagerChecks = form.querySelectorAll('.property-manager-check');
-        const checkedCount = Array.from(propertyManagerChecks).filter(check => check.checked).length;
-        
-        if (checkedCount === 0) {
-            window.showNotification('Please designate one partner as Property Manager', 'error', 'both');
-            isValid = false;
-        } else if (checkedCount > 1) {
-            window.showNotification('Only one partner can be designated as Property Manager', 'error', 'both');
+    
+        // Date field validation - Updated field names
+        const dateFields = [
+            { name: 'purchase_date', label: 'Purchase date' },
+            { name: 'primary_loan_start_date', label: 'Primary loan start date' }
+        ];
+        const currentDate = new Date();
+    
+        dateFields.forEach(field => {
+            const input = form.querySelector(`[name="${field.name}"]`);
+            if (input && input.value) {
+                const inputDate = new Date(input.value);
+                if (isNaN(inputDate.getTime())) {
+                    window.showNotification(`Please enter a valid date for ${field.label}.`, 'error', 'both');
+                    isValid = false;
+                }
+                if (inputDate > currentDate) {
+                    window.showNotification(`${field.label} cannot be in the future.`, 'warning', 'both');
+                }
+            }
+        });
+    
+        // Partner validation - Updated selectors
+        const partners = form.querySelectorAll('.partner-entry');
+        let totalEquity = 0;
+        const partnerNames = new Set();
+        let propertyManagerCount = 0;
+    
+        partners.forEach((partner, index) => {
+            const nameSelect = partner.querySelector('.partner-select');
+            const equityInput = partner.querySelector('.partner-equity');
+            const propertyManagerCheck = partner.querySelector('.property-manager-check');
+            
+            // Validate partner name
+            if (nameSelect) {
+                let name = nameSelect.value.trim();
+                if (!name) {
+                    window.showNotification(`Please enter a name for partner ${index + 1}.`, 'error', 'both');
+                    isValid = false;
+                } else if (name === 'new') {
+                    const newPartnerNameInput = partner.querySelector('input[name^="partners"][name$="[new_name]"]');
+                    name = newPartnerNameInput ? newPartnerNameInput.value.trim() : '';
+                    if (!name) {
+                        window.showNotification(`Please enter a name for the new partner ${index + 1}.`, 'error', 'both');
+                        isValid = false;
+                    }
+                }
+                
+                if (name && name !== 'new') {
+                    if (partnerNames.has(name)) {
+                        window.showNotification(`Duplicate partner "${name}" found. Each partner can only be added once.`, 'error', 'both');
+                        isValid = false;
+                    }
+                    partnerNames.add(name);
+                }
+            }
+    
+            // Validate equity share
+            if (equityInput) {
+                const equity = parseFloat(equityInput.value);
+                if (isNaN(equity) || equity < 0 || equity > 100) {
+                    window.showNotification(`Please enter a valid equity share (0-100) for partner ${index + 1}.`, 'error', 'both');
+                    isValid = false;
+                } else {
+                    totalEquity += equity;
+                }
+            }
+    
+            // Count property managers
+            if (propertyManagerCheck && propertyManagerCheck.checked) {
+                propertyManagerCount++;
+            }
+        });
+    
+        // Validate total equity
+        if (Math.abs(totalEquity - 100) > 0.01) {
+            window.showNotification(`Total partner equity must equal 100%. Current total: ${totalEquity.toFixed(2)}%`, 'error', 'both');
             isValid = false;
         }
-
+    
+        // Validate property manager designation
+        if (propertyManagerCount === 0) {
+            window.showNotification('Please designate one partner as Property Manager.', 'error', 'both');
+            isValid = false;
+        } else if (propertyManagerCount > 1) {
+            window.showNotification('Only one partner can be designated as Property Manager.', 'error', 'both');
+            isValid = false;
+        }
+    
+        // Loan amount validation - Updated to use querySelector
+        const purchasePrice = parseFloat(form.querySelector('[name="purchase_price"]').value) || 0;
+        const downPayment = parseFloat(form.querySelector('[name="down_payment"]').value) || 0;
+        const primaryLoanAmount = parseFloat(form.querySelector('[name="primary_loan_amount"]').value) || 0;
+        const secondaryLoanAmount = parseFloat(form.querySelector('[name="secondary_loan_amount"]').value) || 0;
+        const totalLoanAmount = primaryLoanAmount + secondaryLoanAmount;
+    
+        if (Math.abs(purchasePrice - (downPayment + totalLoanAmount)) > 0.01) {
+            window.showNotification('Purchase price must equal down payment plus total loan amounts.', 'error', 'both');
+            isValid = false;
+        }
+    
         return isValid;
-    },
+    }
 };
 
 export default addPropertiesModule;

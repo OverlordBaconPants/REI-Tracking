@@ -4,6 +4,7 @@ from typing import Dict, List, Optional, Union
 from decimal import Decimal
 from utils.money import Money, Percentage, MonthlyPayment
 from datetime import datetime
+from math import ceil
 import logging
 import uuid
 import traceback
@@ -495,6 +496,108 @@ class Analysis(ABC):
         except Exception as e:
             logger.error(f"Error generating report data: {str(e)}")
             raise
+
+class LeaseOptionAnalysis(Analysis):
+    """Lease option analysis implementation."""
+    
+    def __init__(self, data: Dict):
+        """Initialize with validation for lease option-specific requirements."""
+        if data.get('analysis_type') != 'Lease Option':
+            raise ValueError("Invalid analysis type for lease option analysis")
+            
+        super().__init__(data)
+        self._validate_lease_option_requirements()
+
+    def _validate_lease_option_requirements(self) -> None:
+        """Validate fields specific to lease option analysis."""
+        try:
+            # Validate required numeric fields
+            required_fields = {
+                'option_consideration_fee': 'Option fee',
+                'option_term_months': 'Option term',
+                'strike_price': 'Strike price',
+                'monthly_rent_credit_percentage': 'Monthly rent credit percentage',
+                'rent_credit_cap': 'Rent credit cap'
+            }
+            
+            for field, display_name in required_fields.items():
+                value = self._get_money(field) if field != 'option_term_months' else self.data.get(field, 0)
+                if not value or (hasattr(value, 'dollars') and value.dollars <= 0):
+                    raise ValueError(f"{display_name} must be greater than 0")
+
+            if not 0 <= float(self.data.get('monthly_rent_credit_percentage', 0)) <= 100:
+                raise ValueError("Monthly rent credit percentage must be between 0 and 100")
+
+            if float(self.data.get('strike_price', 0)) <= float(self.data.get('purchase_price', 0)):
+                raise ValueError("Strike price must be greater than purchase price")
+
+            # Validate standard rental fields
+            rental_fields = {
+                'monthly_rent': 'Monthly rent',
+                'property_taxes': 'Property taxes',
+                'insurance': 'Insurance'
+            }
+            
+            for field, display_name in rental_fields.items():
+                value = self._get_money(field)
+                if value.dollars <= 0:
+                    raise ValueError(f"{display_name} must be greater than 0")
+
+            # Validate percentage fields
+            percentage_fields = {
+                'management_fee_percentage': (0, 15),  # Typical range 0-15%
+                'capex_percentage': (0, 10),          # Typical range 0-10%
+                'vacancy_percentage': (0, 15),        # Typical range 0-15%
+                'repairs_percentage': (0, 15)         # Typical range 0-15%
+            }
+            
+            for field, (min_val, max_val) in percentage_fields.items():
+                value = float(self._get_percentage(field).value)
+                if value < 0 or value > max_val:
+                    raise ValueError(f"{field} should be between {min_val}% and {max_val}%")
+
+        except Exception as e:
+            logger.error(f"Lease option validation error: {str(e)}")
+            raise ValueError(f"Lease option validation failed: {str(e)}")
+            
+    @property
+    def total_rent_credits(self) -> Money:
+        """Calculate total potential rent credits over option term."""
+        monthly_credit = self._get_money('monthly_rent') * self._get_percentage('monthly_rent_credit_percentage')
+        total_potential = monthly_credit * self.data.get('option_term_months', 0)
+        credit_cap = self._get_money('rent_credit_cap')
+        return min(total_potential, credit_cap)
+
+    @property
+    def effective_purchase_price(self) -> Money:
+        """Calculate effective purchase price after credits."""
+        return self._get_money('strike_price') - self.total_rent_credits
+
+    @property
+    def option_roi(self) -> Percentage:
+        """Calculate ROI on option fee."""
+        annual_cf = float(self.annual_cash_flow.dollars)
+        option_fee = float(self._get_money('option_consideration_fee').dollars)
+        return Percentage((annual_cf / option_fee) * 100) if option_fee > 0 else Percentage(0)
+
+    def calculate_breakeven_months(self) -> int:
+        """Calculate months to break even on option fee."""
+        option_fee = float(self._get_money('option_consideration_fee').dollars)
+        monthly_cf = float(self.calculate_monthly_cash_flow().dollars)
+        return ceil(option_fee / monthly_cf) if monthly_cf > 0 else float('inf')
+    
+    def get_report_data(self) -> Dict:
+        """Get analysis report data with calculated metrics."""
+        metrics = super().get_report_data()
+        
+        metrics['metrics'].update({
+            'total_rent_credits': str(self.total_rent_credits),
+            'effective_purchase_price': str(self.effective_purchase_price),
+            'option_roi': str(self.option_roi),
+            'breakeven_months': str(self.calculate_breakeven_months())
+        })
+        
+        return metrics
 
 class LTRAnalysis(Analysis):
     """Long-term rental analysis implementation."""
@@ -1058,8 +1161,9 @@ def create_analysis(data: Dict) -> Analysis:
     analysis_types = {
         'LTR': LTRAnalysis,
         'BRRRR': BRRRRAnalysis,
-        'PadSplit LTR': LTRAnalysis,  # PadSplit handling now in base class
-        'PadSplit BRRRR': BRRRRAnalysis  # PadSplit handling now in base class
+        'PadSplit LTR': LTRAnalysis,
+        'PadSplit BRRRR': BRRRRAnalysis,
+        'Lease Option': LeaseOptionAnalysis  # Add this line
     }
     
     analysis_type = data.get('analysis_type')

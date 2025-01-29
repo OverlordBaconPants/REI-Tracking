@@ -1,3 +1,4 @@
+from typing import Dict, List, Optional, Tuple, Union
 import dash
 from dash import dcc, html
 import dash_bootstrap_components as dbc
@@ -11,7 +12,6 @@ import plotly.graph_objs as go
 import plotly.express as px
 import logging
 import traceback
-from typing import Dict, List, Optional, Tuple, Union
 
 # Set up module-level logger
 logger = logging.getLogger(__name__)
@@ -63,8 +63,8 @@ def validate_property_data(property_data: Dict, username: str) -> Tuple[bool, st
             return False, "Property data is not in the correct format"
             
         # Required fields for loan calculations
-        loan_fields = ['loan_amount', 'primary_loan_rate', 'primary_loan_term', 
-                      'loan_start_date', 'purchase_price']
+        loan_fields = ['primary_loan_amount', 'primary_loan_rate', 'primary_loan_term', 
+                      'primary_loan_start_date', 'purchase_price']
         missing_loan_fields = [field for field in loan_fields if field not in property_data]
         if missing_loan_fields:
             return False, f"Missing required loan fields: {', '.join(missing_loan_fields)}"
@@ -128,6 +128,86 @@ def calculate_user_equity_share(property_data: Dict, username: str) -> float:
         logger.error(traceback.format_exc())
         return 0.0
 
+def calculate_cash_on_cash_return(property_data: Dict, username: str) -> float:
+    """
+    Calculate Cash on Cash return for a property.
+    
+    Args:
+        property_data: Dictionary containing property information
+        username: Current user's username
+        
+    Returns:
+        Cash on Cash return as a percentage
+    """
+    try:
+        # Calculate total cash invested
+        total_investment = sum([
+            safe_float(property_data.get('down_payment', 0)),
+            safe_float(property_data.get('closing_costs', 0)),
+            safe_float(property_data.get('renovation_costs', 0)),
+            safe_float(property_data.get('marketing_costs', 0)),
+            safe_float(property_data.get('holding_costs', 0))
+        ])
+        
+        if total_investment <= 0:
+            return 0.0
+            
+        # Get equity share
+        equity_share = calculate_user_equity_share(property_data, username)
+        if equity_share == 0:
+            return 0.0
+            
+        # Calculate monthly cash flow
+        monthly_income_data = property_data.get('monthly_income', {})
+        monthly_income = sum([
+            safe_float(monthly_income_data.get('rental_income')),
+            safe_float(monthly_income_data.get('parking_income')),
+            safe_float(monthly_income_data.get('laundry_income')),
+            safe_float(monthly_income_data.get('other_income'))
+        ])
+        
+        # Calculate operating expenses
+        monthly_expenses = property_data.get('monthly_expenses', {})
+        utilities = monthly_expenses.get('utilities', {})
+        total_utilities = sum(safe_float(val) for val in utilities.values())
+        
+        operating_expenses = sum([
+            safe_float(monthly_expenses.get('property_tax')),
+            safe_float(monthly_expenses.get('insurance')),
+            safe_float(monthly_expenses.get('repairs')),
+            safe_float(monthly_expenses.get('capex')),
+            safe_float(monthly_expenses.get('property_management')),
+            safe_float(monthly_expenses.get('hoa_fees')),
+            safe_float(monthly_expenses.get('other_expenses')),
+            total_utilities
+        ])
+        
+        # Calculate loan payment
+        loan_amount = safe_float(property_data.get('primary_loan_amount'))
+        interest_rate = safe_float(property_data.get('primary_loan_rate')) / 100
+        loan_term_months = safe_float(property_data.get('primary_loan_term'))
+        
+        if interest_rate > 0 and loan_term_months > 0:
+            monthly_rate = interest_rate / 12
+            loan_payment = loan_amount * (monthly_rate * (1 + monthly_rate) ** loan_term_months) / \
+                         ((1 + monthly_rate) ** loan_term_months - 1)
+        else:
+            loan_payment = loan_amount / loan_term_months if loan_term_months > 0 else 0
+        
+        # Calculate net monthly cash flow
+        net_monthly_cashflow = monthly_income - operating_expenses - loan_payment
+        
+        # Calculate annual cash flow and CoC return
+        annual_cashflow = net_monthly_cashflow * 12
+        coc_return = (annual_cashflow * equity_share / total_investment) * 100
+        
+        return round(coc_return, 2)
+        
+    except Exception as e:
+        logger.error(f"Error calculating Cash on Cash return: {str(e)}")
+        logger.error(traceback.format_exc())
+        return 0.0
+    
 def calculate_loan_metrics(property_data: Dict, username: str) -> Optional[Dict]:
     """
     Calculate loan and equity metrics for a property, adjusted for user's equity share.
@@ -155,14 +235,14 @@ def calculate_loan_metrics(property_data: Dict, username: str) -> Optional[Dict]
             return None
             
         # Get and validate loan parameters
-        loan_amount = safe_float(property_data.get('loan_amount'))
+        loan_amount = safe_float(property_data.get('primary_loan_amount'))
         interest_rate = safe_float(property_data.get('primary_loan_rate')) / 100
         loan_term_months = safe_float(property_data.get('primary_loan_term'))
         purchase_price = safe_float(property_data.get('purchase_price'))
         
         try:
             loan_start_date = datetime.strptime(
-                property_data.get('loan_start_date', date.today().strftime('%Y-%m-%d')), 
+                property_data.get('primary_loan_start_date', date.today().strftime('%Y-%m-%d')), 
                 '%Y-%m-%d'
             ).date()
         except ValueError as e:
@@ -209,6 +289,9 @@ def calculate_loan_metrics(property_data: Dict, username: str) -> Optional[Dict]
                 current_month_principal = principal_payment
             total_principal_paid += principal_payment
 
+        # Calculate cash on cash return
+        coc_return = calculate_cash_on_cash_return(property_data, username)
+
         logger.info(f"Loan metrics calculated successfully for {property_data.get('address')}")
         
         # Return metrics adjusted for user's equity share
@@ -222,14 +305,15 @@ def calculate_loan_metrics(property_data: Dict, username: str) -> Optional[Dict]
             'equity_this_month': current_month_principal * equity_share,
             'total_equity': (purchase_price - balance) * equity_share,
             'months_paid': months_into_loan,
-            'equity_share': equity_share * 100  # Store as percentage
+            'equity_share': equity_share * 100,  # Store as percentage
+            'cash_on_cash': coc_return  # Add Cash on Cash return
         }
         
     except Exception as e:
         logger.error(f"Error calculating loan metrics for property {property_data.get('address')}: {str(e)}")
         logger.error(traceback.format_exc())
         return None
-    
+
 def calculate_monthly_cashflow(property_data: Dict, username: str) -> Optional[Dict]:
     """
     Calculate monthly cash flow metrics for a property, adjusted for user's equity share.
@@ -290,7 +374,7 @@ def calculate_monthly_cashflow(property_data: Dict, username: str) -> Optional[D
 
         # Calculate primary mortgage payment
         try:
-            loan_amount = safe_float(property_data.get('loan_amount'))
+            loan_amount = safe_float(property_data.get('primary_loan_amount'))
             interest_rate = safe_float(property_data.get('primary_loan_rate')) / 100
             loan_term_months = safe_float(property_data.get('primary_loan_term'))
             
@@ -309,9 +393,9 @@ def calculate_monthly_cashflow(property_data: Dict, username: str) -> Optional[D
 
         # Calculate seller financing payment if applicable
         try:
-            seller_amount = safe_float(property_data.get('seller_financing_amount'))
-            seller_rate = safe_float(property_data.get('seller_financing_rate')) / 100
-            seller_term = safe_float(property_data.get('seller_financing_term'))
+            seller_amount = safe_float(property_data.get('secondary_loan_amount'))
+            seller_rate = safe_float(property_data.get('secondary_loan_rate')) / 100
+            seller_term = safe_float(property_data.get('secondary_loan_term'))
             
             if seller_rate > 0 and seller_term > 0:
                 monthly_seller_rate = seller_rate / 12
@@ -448,6 +532,139 @@ def update_chart_layouts_for_mobile(fig, is_mobile=True):
     }
     fig.update_layout(**mobile_layout)
     return fig
+
+def create_responsive_table(property_metrics, cashflow_metrics):
+    """Create a mobile-responsive property details table."""
+    try:
+        # Create table with bootstrap classes
+        return dbc.Table([
+            html.Thead(
+                html.Tr([
+                    html.Th("Property", className="text-center text-white", 
+                           style={'backgroundColor': '#000080', 'position': 'sticky', 'top': 0}),
+                    html.Th("Share", className="text-center text-white d-none d-md-table-cell",
+                           style={'backgroundColor': '#000080', 'position': 'sticky', 'top': 0}),
+                    html.Th("Monthly Income", className="text-center text-white",
+                           style={'backgroundColor': '#000080', 'position': 'sticky', 'top': 0}),
+                    html.Th("Monthly Expenses", className="text-center text-white d-none d-md-table-cell",
+                           style={'backgroundColor': '#000080', 'position': 'sticky', 'top': 0}),
+                    html.Th("Net Cash Flow", className="text-center text-white",
+                           style={'backgroundColor': '#000080', 'position': 'sticky', 'top': 0}),
+                    html.Th("Total Equity", className="text-center text-white d-none d-md-table-cell",
+                           style={'backgroundColor': '#000080', 'position': 'sticky', 'top': 0}),
+                    html.Th("Monthly Equity Gain", className="text-center text-white d-none d-md-table-cell",
+                           style={'backgroundColor': '#000080', 'position': 'sticky', 'top': 0}),
+                    html.Th("Cash on Cash", className="text-center text-white",
+                           style={'backgroundColor': '#000080', 'position': 'sticky', 'top': 0})
+                ])
+            ),
+            html.Tbody([
+                html.Tr([
+                    html.Td(cm['address'].split(',')[0], className="text-nowrap"),
+                    html.Td(f"{cm['equity_share']}%", className="d-none d-md-table-cell"),
+                    html.Td(f"${cm['monthly_income']:,.2f}"),
+                    html.Td(
+                        f"${(cm['monthly_expenses'] + cm['mortgage_payment'] + cm['seller_payment']):,.2f}",
+                        className="d-none d-md-table-cell"
+                    ),
+                    html.Td(
+                        html.Span(
+                            f"${cm['net_cashflow']:,.2f}",
+                            style={'color': 'green' if cm['net_cashflow'] >= 0 else 'red'}
+                        )
+                    ),
+                    html.Td(f"${pm['total_equity']:,.2f}", className="d-none d-md-table-cell"),
+                    html.Td(f"${pm['equity_this_month']:,.2f}", className="d-none d-md-table-cell"),
+                    html.Td(f"{pm['cash_on_cash']:,.1f}%")
+                ], className="align-middle") for cm, pm in zip(cashflow_metrics, property_metrics)
+            ])
+        ],
+        bordered=True,
+        hover=True,
+        responsive=True,
+        className="mb-4 table-sm")
+        
+    except Exception as e:
+        logger.error(f"Error creating property table: {str(e)}")
+        logger.error(traceback.format_exc())
+        return html.Div("Error creating property table", className="text-danger p-3")
+
+def create_equity_chart(equity_data):
+    """Create the equity distribution pie chart."""
+    return px.pie(
+        values=[float(item['value']) for item in equity_data],
+        names=[str(item['name']) for item in equity_data],
+        hole=0.4,
+        title="Equity Distribution"
+    )
+
+def create_cashflow_chart(cashflow_data):
+    """Create the cash flow bar chart."""
+    return px.bar(
+        x=[str(m['address']).split(',')[0] + f" ({m['equity_share']}%)" for m in cashflow_data],
+        y=[float(m['net_cashflow']) for m in cashflow_data],
+        color=[float(m['net_cashflow']) for m in cashflow_data],
+        color_continuous_scale=[[0, '#E0FFFF'], [1, '#000080']],
+        title="Cash Flow by Property"
+    )
+
+def create_income_chart(income_data):
+    """Create the income breakdown pie chart."""
+    return px.pie(
+        values=[float(item['value']) for item in income_data],
+        names=[str(item['name']) for item in income_data],
+        hole=0.4,
+        title="Monthly Income by Property"
+    )
+
+def create_expenses_chart(expense_data):
+    """Create the expenses breakdown pie chart."""
+    return px.pie(
+        values=[float(item['value']) for item in expense_data],
+        names=[str(item['name']) for item in expense_data],
+        hole=0.4,
+        title="Monthly Expenses Breakdown"
+    )
+
+def create_empty_response(error_message: str) -> tuple:
+    """
+    Create a response for when no data can be displayed.
+    
+    Args:
+        error_message: Error message to display
+        
+    Returns:
+        tuple: Empty values for all dashboard components plus error message
+    """
+    empty_fig = go.Figure()
+    empty_fig.add_annotation(
+        text="No data to display",
+        xref="paper",
+        yref="paper",
+        x=0.5,
+        y=0.5,
+        showarrow=False
+    )
+    
+    # Create empty responsive chart
+    empty_chart = create_responsive_chart(empty_fig, 'empty')
+    
+    return (
+        "",  # context
+        "$0.00",  # portfolio value
+        "$0.00",  # total equity
+        "$0.00",  # equity gained
+        "$0.00",  # monthly income
+        "$0.00",  # monthly expenses
+        html.Span("$0.00"),  # net cashflow
+        empty_chart,  # equity chart
+        empty_chart,  # cashflow chart
+        empty_chart,  # income chart
+        empty_chart,  # expenses chart
+        html.Div("No data to display", className="text-center p-3"),  # table
+        error_message,  # error message
+        {'display': 'block', 'color': 'red'}  # error style
+    )
 
 def create_portfolio_dash(flask_app) -> dash.Dash:
     """
@@ -718,7 +935,6 @@ def create_portfolio_dash(flask_app) -> dash.Dash:
                 table = create_responsive_table(property_metrics, cashflow_metrics)
                 
                 return (
-                    # ... (same returns as before, but with new responsive components)
                     "",  # context
                     f"${total_value:,.2f}",
                     f"${total_equity:,.2f}",
@@ -740,132 +956,6 @@ def create_portfolio_dash(flask_app) -> dash.Dash:
                 logger.error(f"Error in update_metrics: {str(e)}")
                 logger.error(traceback.format_exc())
                 return create_empty_response(f"An error occurred: {str(e)}")
-
-        def create_empty_response(error_message: str) -> tuple:
-            """
-            Create a response for when no data can be displayed.
-            
-            Args:
-                error_message: Error message to display
-                
-            Returns:
-                tuple: Empty values for all dashboard components plus error message
-            """
-            empty_fig = go.Figure()
-            empty_fig.add_annotation(
-                text="No data to display",
-                xref="paper",
-                yref="paper",
-                x=0.5,
-                y=0.5,
-                showarrow=False
-            )
-            
-            # Create empty responsive chart
-            empty_chart = create_responsive_chart(empty_fig, 'empty')
-            
-            return (
-                "",  # context
-                "$0.00",  # portfolio value
-                "$0.00",  # total equity
-                "$0.00",  # equity gained
-                "$0.00",  # monthly income
-                "$0.00",  # monthly expenses
-                html.Span("$0.00"),  # net cashflow
-                empty_chart,  # equity chart
-                empty_chart,  # cashflow chart
-                empty_chart,  # income chart
-                empty_chart,  # expenses chart
-                html.Div("No data to display", className="text-center p-3"),  # table
-                error_message,  # error message
-                {'display': 'block', 'color': 'red'}  # error style
-            )
-
-        def create_responsive_table(property_metrics, cashflow_metrics):
-            """Create a mobile-responsive property details table."""
-            try:
-                # Create table with bootstrap classes
-                return dbc.Table([
-                    html.Thead(
-                        html.Tr([
-                            html.Th("Property", className="text-center text-white", 
-                                   style={'backgroundColor': '#000080', 'position': 'sticky', 'top': 0}),
-                            html.Th("Share", className="text-center text-white d-none d-md-table-cell",
-                                   style={'backgroundColor': '#000080', 'position': 'sticky', 'top': 0}),
-                            html.Th("Monthly Income", className="text-center text-white",
-                                   style={'backgroundColor': '#000080', 'position': 'sticky', 'top': 0}),
-                            html.Th("Monthly Expenses", className="text-center text-white d-none d-md-table-cell",
-                                   style={'backgroundColor': '#000080', 'position': 'sticky', 'top': 0}),
-                            html.Th("Net Cash Flow", className="text-center text-white",
-                                   style={'backgroundColor': '#000080', 'position': 'sticky', 'top': 0}),
-                            html.Th("Total Equity", className="text-center text-white d-none d-md-table-cell",
-                                   style={'backgroundColor': '#000080', 'position': 'sticky', 'top': 0}),
-                            html.Th("Monthly Equity Gain", className="text-center text-white d-none d-md-table-cell",
-                                   style={'backgroundColor': '#000080', 'position': 'sticky', 'top': 0})
-                        ])
-                    ),
-                    html.Tbody([
-                        html.Tr([
-                            html.Td(cm['address'].split(',')[0], className="text-nowrap"),
-                            html.Td(f"{cm['equity_share']}%", className="d-none d-md-table-cell"),
-                            html.Td(f"${cm['monthly_income']:,.2f}"),
-                            html.Td(
-                                f"${(cm['monthly_expenses'] + cm['mortgage_payment'] + cm['seller_payment']):,.2f}",
-                                className="d-none d-md-table-cell"
-                            ),
-                            html.Td(
-                                html.Span(
-                                    f"${cm['net_cashflow']:,.2f}",
-                                    style={'color': 'green' if cm['net_cashflow'] >= 0 else 'red'}
-                                )
-                            ),
-                            html.Td(f"${pm['total_equity']:,.2f}", className="d-none d-md-table-cell"),
-                            html.Td(f"${pm['equity_this_month']:,.2f}", className="d-none d-md-table-cell")
-                        ], className="align-middle") for cm, pm in zip(cashflow_metrics, property_metrics)
-                    ])
-                ],
-                bordered=True,
-                hover=True,
-                responsive=True,
-                className="mb-4 table-sm")
-                
-            except Exception as e:
-                logger.error(f"Error creating property table: {str(e)}")
-                logger.error(traceback.format_exc())
-                return html.Div("Error creating property table", className="text-danger p-3")
-
-        def create_equity_chart(equity_data):
-            """Create the equity distribution pie chart."""
-            return px.pie(
-                values=[float(item['value']) for item in equity_data],
-                names=[str(item['name']) for item in equity_data],
-                hole=0.4
-            )
-
-        def create_cashflow_chart(cashflow_data):
-            """Create the cash flow bar chart."""
-            return px.bar(
-                x=[str(m['address']).split(',')[0] + f" ({m['equity_share']}%)" for m in cashflow_data],
-                y=[float(m['net_cashflow']) for m in cashflow_data],
-                color=[float(m['net_cashflow']) for m in cashflow_data],
-                color_continuous_scale=[[0, '#E0FFFF'], [1, '#000080']]
-            )
-
-        def create_income_chart(income_data):
-            """Create the income breakdown pie chart."""
-            return px.pie(
-                values=[float(item['value']) for item in income_data],
-                names=[str(item['name']) for item in income_data],
-                hole=0.4
-            )
-
-        def create_expenses_chart(expense_data):
-            """Create the expenses breakdown pie chart."""
-            return px.pie(
-                values=[float(item['value']) for item in expense_data],
-                names=[str(item['name']) for item in expense_data],
-                hole=0.4
-            )
         
         logger.info("Portfolio dashboard created successfully")
         return dash_app

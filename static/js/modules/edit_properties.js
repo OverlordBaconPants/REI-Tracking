@@ -1,12 +1,16 @@
-// @ts-nocheck
-
 // edit_properties.js
 
-const editPropertiesModule = {
-    // Class property for available partners
-    availablePartners: [],
+import LoanTermToggle from './loan_term_toggle.js';
 
-    // Initialization
+function truncateAddress(address) {
+    const commaIndex = address.indexOf(',');
+    return commaIndex > -1 ? address.substring(0, commaIndex) : address;
+}
+
+const editPropertiesModule = {
+    availablePartners: [],
+    initialized: false,
+
     init: async function() {
         if (this.initialized) {
             console.log('Module already initialized');
@@ -15,11 +19,21 @@ const editPropertiesModule = {
     
         try {
             console.log('Initializing edit properties module');
+            
+            // First fetch available partners
             await this.fetchAvailablePartners();
+            
+            // Then initialize the form
             this.initializeForm();
-            this.initPropertyManagerHandlers();
+
+            // Initialize loan term toggles
+            LoanTermToggle.init('primary_loan_term', 'secondary_loan_term');
+            
+            // After form is initialized, initialize the partners section
+            await this.initPartnersSection();
+            
             this.initialized = true;
-            window.showNotification('Edit Properties module loaded', 'success', 'both');
+            console.log('Edit Properties module fully initialized');
         } catch (error) {
             console.error('Error initializing Edit Properties module:', error);
             window.showNotification('Error loading Edit Properties module: ' + error.message, 'error', 'both');
@@ -40,15 +54,22 @@ const editPropertiesModule = {
         const self = this;
     
         if (propertySelect) {
-            propertySelect.addEventListener('change', function(event) {
-                self.handlePropertySelect(event);
+            // Remove any existing event listeners
+            const newSelect = propertySelect.cloneNode(true);
+            propertySelect.parentNode.replaceChild(newSelect, propertySelect);
+            
+            // Modify existing options to show truncated addresses
+            Array.from(newSelect.options).forEach(option => {
+                if (option.value) { // Skip the empty/default option
+                    option.textContent = truncateAddress(option.value);
+                }
             });
-            propertySelect.addEventListener('change', function() {
-                setTimeout(() => {
-                    self.updateTotalIncome();
-                    self.updateTotalExpenses();
-                }, 100);
+            
+            // Add event listener
+            newSelect.addEventListener('change', (event) => {
+                this.handlePropertySelect(event);
             });
+            
             console.log('Property select initialized');
         }
     
@@ -107,14 +128,12 @@ const editPropertiesModule = {
         if (totalIncomeElement) {
             totalIncomeElement.textContent = total.toFixed(2);
         }
-
-        this.updateNetIncome();
     },
 
     updateTotalExpenses: function() {
         let total = 0;
         let utilityTotal = 0;
-        let rentalIncome = parseFloat(document.getElementById('rental-income').value) || 0;
+        let rentalIncome = parseFloat(document.querySelector('[name="monthly_income[rental_income]"]').value) || 0;
     
         // Calculate utilities (fixed amounts)
         const utilityInputs = document.querySelectorAll('.utility-input');
@@ -144,30 +163,6 @@ const editPropertiesModule = {
         if (totalExpensesElement) {
             totalExpensesElement.textContent = total.toFixed(2);
         }
-    
-        this.updateNetIncome();
-    },
-
-    updateNetIncome: function() {
-        const totalIncomeElement = document.getElementById('total-monthly-income');
-        const totalExpensesElement = document.getElementById('total-monthly-expenses');
-        const netIncomeElement = document.getElementById('net-monthly-income');
-
-        if (totalIncomeElement && totalExpensesElement && netIncomeElement) {
-            const totalIncome = parseFloat(totalIncomeElement.textContent) || 0;
-            const totalExpenses = parseFloat(totalExpensesElement.textContent) || 0;
-            const netIncome = totalIncome - totalExpenses;
-
-            netIncomeElement.textContent = netIncome.toFixed(2);
-            
-            if (netIncome > 0) {
-                netIncomeElement.classList.remove('text-danger');
-                netIncomeElement.classList.add('text-success');
-            } else {
-                netIncomeElement.classList.remove('text-success');
-                netIncomeElement.classList.add('text-danger');
-            }
-        }
     },
 
     // Property Selection and Details
@@ -176,6 +171,9 @@ const editPropertiesModule = {
         const propertyDetails = document.getElementById('propertyDetails');
 
         if (selectedAddress) {
+            if (propertyDetails) {
+                propertyDetails.classList.remove('hidden');
+            }
             this.fetchPropertyDetails(selectedAddress);
         } else {
             if (propertyDetails) {
@@ -199,6 +197,13 @@ const editPropertiesModule = {
             })
             .then(data => {
                 if (data.success) {
+                    console.log('Received property data:', data.property);
+                    if (data.property.partners) {
+                        console.log('Partners found:', data.property.partners);
+                    } else {
+                        console.warn('No partners array in property data');
+                    }
+                    
                     this.populateForm(data.property);
                     if (propertyDetails) {
                         propertyDetails.classList.remove('hidden');
@@ -220,6 +225,20 @@ const editPropertiesModule = {
 
     populateForm: function(property) {
         try {
+            console.log('Starting to populate form with property:', property);
+    
+            // Add the new select handling code here, right after the console.log
+            const propertySelect = document.getElementById('property_select');
+            if (propertySelect) {
+                const options = propertySelect.options;
+                for (let i = 0; i < options.length; i++) {
+                    if (options[i].value === property.address) {
+                        propertySelect.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+            
             const setInputValue = (id, value) => {
                 const element = document.getElementById(id);
                 if (element) {
@@ -228,81 +247,300 @@ const editPropertiesModule = {
                     console.warn(`Element with id '${id}' not found`);
                 }
             };
-
-            setInputValue('purchase-date', property.purchase_date);
-            setInputValue('loan-amount', property.loan_amount);
-            setInputValue('loan-start-date', property.loan_start_date);
-            setInputValue('purchase-price', property.purchase_price);
-            setInputValue('down-payment', property.down_payment);
-            setInputValue('primary-loan-rate', property.primary_loan_rate);
-            setInputValue('primary-loan-term', property.primary_loan_term);
-            setInputValue('seller-financing-amount', property.seller_financing_amount);
-            setInputValue('seller-financing-rate', property.seller_financing_rate);
-            setInputValue('seller-financing-term', property.seller_financing_term);
-            setInputValue('closing-costs', property.closing_costs);
-            setInputValue('renovation-costs', property.renovation_costs);
-            setInputValue('marketing-costs', property.marketing_costs);
-            setInputValue('holding-costs', property.holding_costs);
-
+     
+            // Basic Property Information
+            setInputValue('property_address', property.address);
+            setInputValue('purchase_date', property.purchase_date);
+            setInputValue('purchase_price', property.purchase_price);
+            setInputValue('down_payment', property.down_payment);
+            setInputValue('closing_costs', property.closing_costs);
+            setInputValue('renovation_costs', property.renovation_costs);
+            setInputValue('marketing_costs', property.marketing_costs);
+            
+            // Primary Loan Information
+            setInputValue('primary_loan_amount', property.primary_loan_amount);
+            setInputValue('primary_loan_start_date', property.primary_loan_start_date);
+            setInputValue('primary_loan_rate', property.primary_loan_rate);
+            LoanTermToggle.setValue('primary_loan_term', property.primary_loan_term);
+            
+            // Secondary Loan Information
+            setInputValue('secondary_loan_amount', property.secondary_loan_amount);
+            setInputValue('secondary_loan_rate', property.secondary_loan_rate);
+            LoanTermToggle.setValue('secondary_loan_term', property.secondary_loan_term);
+     
             // Monthly Income
             if (property.monthly_income) {
-                setInputValue('rental-income', property.monthly_income.rental_income);
-                setInputValue('parking-income', property.monthly_income.parking_income);
-                setInputValue('laundry-income', property.monthly_income.laundry_income);
-                setInputValue('other-income', property.monthly_income.other_income);
-                setInputValue('income-notes', property.monthly_income.income_notes);
+                setInputValue('monthly_income[rental_income]', property.monthly_income.rental_income);
+                setInputValue('monthly_income[parking_income]', property.monthly_income.parking_income);
+                setInputValue('monthly_income[laundry_income]', property.monthly_income.laundry_income);
+                setInputValue('monthly_income[other_income]', property.monthly_income.other_income);
+                setInputValue('monthly_income[income_notes]', property.monthly_income.income_notes);
             }
-
+     
             // Monthly Expenses
             if (property.monthly_expenses) {
-                setInputValue('property-tax', property.monthly_expenses.property_tax);
-                setInputValue('insurance', property.monthly_expenses.insurance);
-                setInputValue('repairs', property.monthly_expenses.repairs);
-                setInputValue('capex', property.monthly_expenses.capex);
-                setInputValue('property-management', property.monthly_expenses.property_management);
-                setInputValue('hoa-fees', property.monthly_expenses.hoa_fees);
+                // Fixed Expenses
+                setInputValue('monthly_expenses[property_tax]', property.monthly_expenses.property_tax);
+                setInputValue('monthly_expenses[insurance]', property.monthly_expenses.insurance);
+                setInputValue('monthly_expenses[hoa_fees]', property.monthly_expenses.hoa_fees);
                 
+                // Percentage Based Expenses
+                setInputValue('monthly_expenses[repairs]', property.monthly_expenses.repairs);
+                setInputValue('monthly_expenses[capex]', property.monthly_expenses.capex);
+                setInputValue('monthly_expenses[property_management]', property.monthly_expenses.property_management);
+                
+                // Utilities
                 if (property.monthly_expenses.utilities) {
-                    setInputValue('water', property.monthly_expenses.utilities.water);
-                    setInputValue('electricity', property.monthly_expenses.utilities.electricity);
-                    setInputValue('gas', property.monthly_expenses.utilities.gas);
-                    setInputValue('trash', property.monthly_expenses.utilities.trash);
+                    setInputValue('monthly_expenses[utilities][water]', property.monthly_expenses.utilities.water);
+                    setInputValue('monthly_expenses[utilities][electricity]', property.monthly_expenses.utilities.electricity);
+                    setInputValue('monthly_expenses[utilities][gas]', property.monthly_expenses.utilities.gas);
+                    setInputValue('monthly_expenses[utilities][trash]', property.monthly_expenses.utilities.trash);
                 }
                 
-                setInputValue('other-expenses', property.monthly_expenses.other_expenses);
-                setInputValue('expense-notes', property.monthly_expenses.expense_notes);
+                setInputValue('monthly_expenses[other_expenses]', property.monthly_expenses.other_expenses);
+                setInputValue('monthly_expenses[expense_notes]', property.monthly_expenses.expense_notes);
             }
-
+     
+            // Partners Section
+            // First clear the partners container
             const partnersContainer = document.getElementById('partners-container');
             if (partnersContainer) {
                 partnersContainer.innerHTML = '';
-                if (property.partners && Array.isArray(property.partners)) {
-                    property.partners.forEach(partner => {
-                        this.addPartnerFields({
-                            name: partner.name,
-                            equity_share: partner.equity_share,
-                            is_property_manager: partner.is_property_manager
-                        });
-                    });
-                    this.updateTotalEquity();
+            }
+            
+            // Handle partners
+            if (property.partners && Array.isArray(property.partners)) {
+                console.log('Processing partners:', property.partners);
+                const partnersContainer = document.getElementById('partners-container');
+                if (!partnersContainer) {
+                    console.error('Partners container not found');
+                    return;
                 }
+
+                // Clear existing partners
+                partnersContainer.innerHTML = '';
+
+                // Add each partner with their data
+                property.partners.forEach((partner, index) => {
+                    console.log(`Adding partner ${index}:`, partner);
+                    const partnerHtml = `
+                        <div class="partner-entry card mt-3">
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-12 col-md-4">
+                                        <div class="form-group">
+                                            <label class="form-label" for="partners[${index}][name]">Partner</label>
+                                            <select class="form-select partner-select" 
+                                                    id="partners[${index}][name]" 
+                                                    name="partners[${index}][name]" 
+                                                    required>
+                                                <option value="">Select a partner</option>
+                                                ${this.availablePartners.map(p => 
+                                                    `<option value="${p}" ${p === partner.name ? 'selected' : ''}>${p}</option>`
+                                                ).join('')}
+                                                <option value="new">Add new partner</option>
+                                            </select>
+                                            <div class="form-group mt-2 new-partner-name" style="display: none;">
+                                                <label class="form-label" for="partners[${index}][new_name]">New Partner Name</label>
+                                                <input type="text" 
+                                                    id="partners[${index}][new_name]" 
+                                                    name="partners[${index}][new_name]" 
+                                                    class="form-control">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-md-3">
+                                        <div class="form-group">
+                                            <label class="form-label" for="partners[${index}][equity_share]">Equity Share</label>
+                                            <div class="input-group">
+                                                <input type="number" 
+                                                    id="partners[${index}][equity_share]" 
+                                                    name="partners[${index}][equity_share]" 
+                                                    class="form-control partner-equity" 
+                                                    value="${partner.equity_share}"
+                                                    step="0.01" min="0" max="100" required>
+                                                <span class="input-group-text">%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-md-3">
+                                        <div class="form-group">
+                                            <label class="d-block"></label>
+                                            <div class="form-check">
+                                                <input type="checkbox" 
+                                                    id="partners[${index}][is_property_manager]" 
+                                                    name="partners[${index}][is_property_manager]" 
+                                                    class="form-check-input project-manager-check"
+                                                    ${partner.is_property_manager ? 'checked' : ''}>
+                                                <label class="form-check-label" for="partners[${index}][is_property_manager]">
+                                                    Property Manager
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-md-2">
+                                        <label class="d-block"></label>
+                                        <button type="button" class="btn btn-danger remove-partner">
+                                            <i class="bi bi-trash me-2"></i>Remove
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    partnersContainer.insertAdjacentHTML('beforeend', partnerHtml);
+                });
+
+                // Update total equity after all partners are added
+                this.updateTotalEquity();
             }
 
-            // If user is not Property Manager, disable editing
-            if (!property.is_property_manager) {
-                this.disableFormEditing();
-            }
-
-            // Update all totals
+            // Update calculations after all fields are populated
             this.updateTotalIncome();
             this.updateTotalExpenses();
 
-            console.log('Form populated successfully');
+            console.log('Form population complete');
         } catch (error) {
             console.error('Error populating form:', error);
-            window.showNotification('Error populating form fields', 'error', 'both');
             throw error;
         }
+    },
+
+    addPartnerFields: function(partner = {}) {
+        console.log('Adding new partner fields with data:', partner);
+        const partnersContainer = document.getElementById('partners-container');
+        if (!partnersContainer) {
+            console.error('Partners container not found');
+            return;
+        }
+    
+        const partnerCount = partnersContainer.querySelectorAll('.partner-entry').length;
+        console.log(`Current partner count: ${partnerCount}`);
+    
+        // First, ensure we have the partner options available
+        const partnerOptions = this.getPartnerOptions();
+        console.log('Available partner options:', partnerOptions);
+        
+        const partnerHtml = `
+            <div class="partner-entry card mt-3">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-4">
+                            <div class="form-group">
+                                <label class="form-label" for="partners[${partnerCount}][name]">Partner</label>
+                                <select class="form-select partner-select" 
+                                        id="partners[${partnerCount}][name]" 
+                                        name="partners[${partnerCount}][name]" 
+                                        required>
+                                    <option value="">Select a partner</option>
+                                    ${partnerOptions}
+                                    <option value="new">Add new partner</option>
+                                </select>
+                                <div class="form-group mt-2 new-partner-name" style="display: none;">
+                                    <label class="form-label" for="partners[${partnerCount}][new_name]">New Partner Name</label>
+                                    <input type="text" 
+                                           id="partners[${partnerCount}][new_name]" 
+                                           name="partners[${partnerCount}][new_name]" 
+                                           class="form-control">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-3">
+                            <div class="form-group">
+                                <label class="form-label" for="partners[${partnerCount}][equity_share]">Equity Share</label>
+                                <div class="input-group">
+                                    <input type="number" 
+                                           id="partners[${partnerCount}][equity_share]" 
+                                           name="partners[${partnerCount}][equity_share]" 
+                                           class="form-control partner-equity" 
+                                           step="0.01" min="0" max="100" required>
+                                    <span class="input-group-text">%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-3">
+                            <div class="form-group">
+                                <label class="d-block"></label>
+                                <div class="form-check">
+                                    <input type="checkbox" 
+                                           id="partners[${partnerCount}][is_property_manager]" 
+                                           name="partners[${partnerCount}][is_property_manager]" 
+                                           class="form-check-input project-manager-check">
+                                    <label class="form-check-label" for="partners[${partnerCount}][is_property_manager]">
+                                        Property Manager
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-2">
+                            <label class="d-block"></label>
+                            <button type="button" class="btn btn-danger remove-partner">
+                                <i class="bi bi-trash me-2"></i>Remove
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    
+        // Add the HTML to the container
+        partnersContainer.insertAdjacentHTML('beforeend', partnerHtml);
+        console.log('Partner HTML added to container');
+    
+        // Get the newly added partner entry
+        const newEntry = partnersContainer.lastElementChild;
+        if (!newEntry) {
+            console.error('Failed to add new partner entry');
+            return;
+        }
+    
+        if (partner && partner.name) {
+            console.log('Setting values for partner:', partner);
+    
+            // Get form elements
+            const select = newEntry.querySelector('.partner-select');
+            const equityInput = newEntry.querySelector('.partner-equity');
+            const propertyManagerCheck = newEntry.querySelector('.project-manager-check');
+    
+            // Set partner name in select
+            if (select) {
+                console.log('Found select element, setting partner name:', partner.name);
+                // First check if the option exists
+                let option = Array.from(select.options).find(opt => opt.value === partner.name);
+                if (!option) {
+                    console.log('Partner option not found, adding new option');
+                    option = new Option(partner.name, partner.name);
+                    // Add it before the "Add new partner" option
+                    const newPartnerOption = select.querySelector('option[value="new"]');
+                    select.insertBefore(option, newPartnerOption);
+                }
+                select.value = partner.name;
+                console.log('Select value set to:', select.value);
+            } else {
+                console.error('Partner select element not found');
+            }
+    
+            // Set equity share
+            if (equityInput) {
+                console.log('Setting equity share:', partner.equity_share);
+                equityInput.value = partner.equity_share;
+                console.log('Equity input value set to:', equityInput.value);
+            } else {
+                console.error('Equity input not found');
+            }
+    
+            // Set property manager status
+            if (propertyManagerCheck) {
+                console.log('Setting property manager status:', partner.is_property_manager);
+                propertyManagerCheck.checked = partner.is_property_manager;
+                console.log('Property manager checkbox set to:', propertyManagerCheck.checked);
+            } else {
+                console.error('Property manager checkbox not found');
+            }
+        }
+    
+        this.updateTotalEquity();
+        console.log('Partner fields completely added and populated');
     },
 
     // Add method to disable form editing for non-Property Managers
@@ -366,55 +604,65 @@ const editPropertiesModule = {
         }
     },
     
+    // Helper function to get partner options
     getPartnerOptions: function() {
+        console.log('Available partners:', this.availablePartners);
         return this.availablePartners
-            .map(partner => `<option value="${partner}">${partner}</option>`)
+            .map(partner => {
+                console.log('Creating option for partner:', partner);
+                return `<option value="${partner}">${partner}</option>`;
+            })
             .join('');
     },
 
     initPartnersSection: function() {
-        // Store reference to 'this' for use in callbacks
-        const self = this;
+        console.log('Initializing partners section');
         const partnersContainer = document.getElementById('partners-container');
-        const addPartnerButton = document.getElementById('add-partner-button');
+
+        if (!partnersContainer) {
+            console.error('Partners container not found during initialization');
+            return;
+        }
         
-        if (partnersContainer && addPartnerButton) {
-            // Remove existing event listeners
-            addPartnerButton.replaceWith(addPartnerButton.cloneNode(true));
-            const newAddPartnerButton = document.getElementById('add-partner-button');
+        if (partnersContainer) {
+            // Clear any existing content
+            partnersContainer.innerHTML = '';
             
-            // Add single event listener for add partner button using arrow function
-            newAddPartnerButton.addEventListener('click', () => {
-                self.addPartnerFields();
-            });
-            
-            // Add delegated event listeners for the container using arrow functions
+            // Add event listeners for the container
             partnersContainer.addEventListener('change', (event) => {
                 if (event.target.classList.contains('partner-select')) {
-                    self.handlePartnerChange(event);
-                    self.updateTotalEquity();
+                    this.handlePartnerSelectChange(event);
                 }
-            });
-            
-            // Partner equity input handler
-            partnersContainer.addEventListener('input', (event) => {
                 if (event.target.classList.contains('partner-equity')) {
-                    self.updateTotalEquity();
+                    this.updateTotalEquity();
                 }
-            });
-            
-            // Remove partner button handler
-            partnersContainer.addEventListener('click', (event) => {
-                if (event.target.classList.contains('remove-partner')) {
-                    event.target.closest('.partner-entry').remove();
-                    self.updateTotalEquity();
+                if (event.target.classList.contains('project-manager-check')) {
+                    this.handlePropertyManagerChange(event.target);
                 }
             });
 
-            console.log('Partners section initialized');
+            console.log('Partners section initialized successfully');
+            return true;
         } else {
-            console.warn('Partners container or add partner button not found');
+            console.error('Partners container not found');
+            return false;
         }
+    },
+
+    debugPartnerData: function(property) {
+        console.group('Partner Data Debug');
+        console.log('Raw property data:', property);
+        console.log('Partners array:', property.partners);
+        if (property.partners) {
+            property.partners.forEach((partner, index) => {
+                console.log(`Partner ${index + 1}:`, {
+                    name: partner.name,
+                    equity_share: partner.equity_share,
+                    is_property_manager: partner.is_property_manager
+                });
+            });
+        }
+        console.groupEnd();
     },
 
     addPartnerFields: function(partner = {}) {
@@ -433,59 +681,43 @@ const editPropertiesModule = {
 
         const partnerCount = partnersContainer.querySelectorAll('.partner-entry').length;
         const partnerHtml = `
-            <div class="partner-entry mb-3">
-                <div class="row align-items-end">
-                    <div class="col-md-5">
-                        <div class="form-group">
-                            <label for="partner-select-${partnerCount}">Partner:</label>
-                            <select id="partner-select-${partnerCount}" 
-                                    name="partners[${partnerCount}][name]" 
-                                    class="form-control partner-select" 
-                                    required>
-                                <option value="">Select a partner</option>
-                                ${this.getPartnerOptions()}
-                                <option value="new">Add new partner</option>
-                            </select>
-                            <div class="new-partner-input mt-2" style="display: none;">
-                                <label for="new-partner-name-${partnerCount}">New Partner Name:</label>
-                                <input type="text" 
-                                       id="new-partner-name-${partnerCount}" 
-                                       name="partners[${partnerCount}][new_name]" 
-                                       class="form-control"
-                                       placeholder="Enter new partner name">
+            <div class="partner-entry card mt-3">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-4">
+                            <div class="form-group">
+                                <label class="form-label" for="partners[${partnerCount}][name]">Partner</label>
+                                <select class="form-select partner-select" id="partners[${partnerCount}][name]" name="partners[${partnerCount}][name]" required>
+                                    <option value="">Select a partner</option>
+                                    ${this.getPartnerOptions()}
+                                    <option value="new">Add new partner</option>
+                                </select>
+                                <div class="form-group mt-2 new-partner-name" style="display: none;">
+                                    <label class="form-label" for="partners[${partnerCount}][new_name]">New Partner Name</label>
+                                    <input type="text" id="partners[${partnerCount}][new_name]" name="partners[${partnerCount}][new_name]" class="form-control">
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="col-md-5">
-                        <div class="form-group">
-                            <label for="partner-equity-${partnerCount}">Equity Share (%):</label>
-                            <input type="number" 
-                                   id="partner-equity-${partnerCount}" 
-                                   name="partners[${partnerCount}][equity_share]" 
-                                   class="form-control partner-equity" 
-                                   step="0.01" 
-                                   min="0" 
-                                   max="100" 
-                                   value="${partner.equity_share || ''}"
-                                   required>
+                        <div class="col-12 col-md-3">
+                            <div class="form-group">
+                                <label class="form-label" for="partners[${partnerCount}][equity_share]">Equity Share</label>
+                                <div class="input-group">
+                                    <input type="number" id="partners[${partnerCount}][equity_share]" name="partners[${partnerCount}][equity_share]" class="form-control partner-equity" step="0.01" min="0" max="100" required>
+                                    <span class="input-group-text">%</span>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="col-md-3">
+                        <div class="col-12 col-md-3">
                             <div class="form-group">
                                 <div class="form-check">
-                                <input type="checkbox" 
-                                    id="property-manager-${partnerCount}" 
-                                    name="partners[${partnerCount}][is_property_manager]" 
-                                    class="form-check-input property-manager-check"
-                                    ${partner.is_property_manager ? 'checked' : ''}>
-                                <label class="form-check-label" for="property-manager-${partnerCount}">
-                                    Property Manager
-                                </label>
+                                    <input type="checkbox" id="partners[${partnerCount}][is_property_manager]" name="partners[${partnerCount}][is_property_manager]" class="form-check-input property-manager-check">
+                                    <label class="form-check-label" for="partners[${partnerCount}][is_property_manager]">Property Manager</label>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="col-md-2">
-                        <button type="button" class="btn btn-danger remove-partner">Remove</button>
+                        <div class="col-12 col-md-2">
+                            <button type="button" class="btn btn-danger remove-partner">Remove</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -508,25 +740,15 @@ const editPropertiesModule = {
         console.log('New partner fields added');
     },
 
-    handlePartnerChange: function(event) {
-        if (event.target.classList.contains('partner-select')) {
-            this.handlePartnerSelectChange(event);
-        }
-    },
-
     handlePartnerSelectChange: function(event) {
         const select = event.target;
         const partnerEntry = select.closest('.partner-entry');
-        const newPartnerInput = partnerEntry.querySelector('.new-partner-input');
-        const newPartnerNameInput = newPartnerInput.querySelector('input');
-
+        const newPartnerNameDiv = partnerEntry.querySelector('.new-partner-name');  // Fixed selector
+        
         if (select.value === 'new') {
-            newPartnerInput.style.display = 'block';
-            newPartnerNameInput.required = true;
+            newPartnerNameDiv.style.display = 'block';
         } else {
-            newPartnerInput.style.display = 'none';
-            newPartnerNameInput.required = false;
-            newPartnerNameInput.value = '';
+            newPartnerNameDiv.style.display = 'none';
         }
     },
 
@@ -539,16 +761,18 @@ const editPropertiesModule = {
 
     updateTotalEquity: function() {
         const equityInputs = document.querySelectorAll('.partner-equity');
-        const totalEquityElement = document.getElementById('total-equity');
-        if (!totalEquityElement) return;
-
         let total = 0;
         equityInputs.forEach(input => {
             total += parseFloat(input.value) || 0;
         });
-
-        totalEquityElement.textContent = `Total Equity: ${total.toFixed(2)}%`;
-        totalEquityElement.className = total === 100 ? 'text-success' : 'text-danger';
+        const totalEquityElement = document.getElementById('total-equity');
+        totalEquityElement.textContent = `${total.toFixed(2)}%`;
+        totalEquityElement.classList.remove('text-success', 'text-danger');
+        if (Math.abs(total - 100) < 0.01) {
+            totalEquityElement.classList.add('text-success');
+        } else {
+            totalEquityElement.classList.add('text-danger');
+        }
     },
 
     initPropertyManagerHandlers: function() {
@@ -595,7 +819,6 @@ const editPropertiesModule = {
 
     handleSubmit: function(event) {
         event.preventDefault();
-        console.log('Form submission started');
         
         // Get property select value
         const propertySelect = document.getElementById('property_select');
@@ -603,18 +826,18 @@ const editPropertiesModule = {
             window.showNotification('Please select a property to edit', 'error', 'both');
             return;
         }
-
+    
         // Validate required fields
         const requiredFields = {
-            'purchase-date': 'Purchase date',
-            'loan-amount': 'Loan amount',
-            'loan-start-date': 'Loan start date',
-            'purchase-price': 'Purchase price',
-            'down-payment': 'Down payment',
-            'primary-loan-rate': 'Primary loan rate',
-            'primary-loan-term': 'Primary loan term'
+            'purchase_date': 'Purchase date',
+            'primary_loan_amount': 'Primary loan amount',
+            'primary_loan_start_date': 'Primary loan start date',
+            'purchase_price': 'Purchase price',
+            'down_payment': 'Down payment',
+            'primary_loan_rate': 'Primary loan rate',
+            'primary_loan_term': 'Primary loan term'
         };
-
+    
         for (const [fieldId, fieldName] of Object.entries(requiredFields)) {
             const field = document.getElementById(fieldId);
             if (!field || !field.value.trim()) {
@@ -622,23 +845,22 @@ const editPropertiesModule = {
                 return;
             }
         }
-
+    
         // Validate numeric fields are positive
         const numericFields = {
-            'purchase-price': 'Purchase price',
-            'down-payment': 'Down payment',
-            'loan-amount': 'Loan amount',
-            'primary-loan-rate': 'Primary loan rate',
-            'primary-loan-term': 'Primary loan term',
-            'seller-financing-amount': 'Seller financing amount',
-            'seller-financing-rate': 'Seller financing rate',
-            'seller-financing-term': 'Seller financing term',
-            'closing-costs': 'Closing costs',
-            'renovation-costs': 'Renovation costs',
-            'marketing-costs': 'Marketing costs',
-            'holding-costs': 'Holding costs'
+            'purchase_price': 'Purchase price',
+            'down_payment': 'Down payment',
+            'primary_loan_amount': 'Primary loan amount',
+            'primary_loan_rate': 'Primary loan rate',
+            'primary_loan_term': 'Primary loan term',
+            'secondary_loan_amount': 'Secondary loan amount',
+            'secondary_loan_rate': 'Secondary loan rate',
+            'secondary_loan_term': 'Secondary loan term',
+            'closing_costs': 'Closing costs',
+            'renovation_costs': 'Renovation costs',
+            'marketing_costs': 'Marketing costs'
         };
-
+    
         for (const [fieldId, fieldName] of Object.entries(numericFields)) {
             const field = document.getElementById(fieldId);
             const value = parseFloat(field?.value || '0');
@@ -647,32 +869,23 @@ const editPropertiesModule = {
                 return;
             }
         }
-
-        // Validate dates
-        const dateFields = ['purchase-date', 'loan-start-date'];
-        for (const fieldId of dateFields) {
-            const field = document.getElementById(fieldId);
-            if (!field || !this.isValidDate(field.value)) {
-                window.showNotification(`Please enter a valid date in YYYY-MM-DD format for ${fieldId.replace(/-/g, ' ')}`, 'error', 'both');
-                return;
-            }
-        }
-
+    
         // Validate partners
         const partnerEntries = document.querySelectorAll('.partner-entry');
         if (partnerEntries.length === 0) {
             window.showNotification('At least one partner is required', 'error', 'both');
             return;
         }
-
+    
+        // Validate partner information
         const partners = [];
         const partnerNames = new Set();
-
+    
         for (const entry of partnerEntries) {
             const select = entry.querySelector('.partner-select');
             const equityInput = entry.querySelector('.partner-equity');
             let partnerName;
-
+    
             if (select.value === 'new') {
                 const newNameInput = entry.querySelector('.new-partner-input input');
                 if (!newNameInput || !newNameInput.value.trim()) {
@@ -686,34 +899,33 @@ const editPropertiesModule = {
             } else {
                 partnerName = select.value;
             }
-
+    
             if (partnerNames.has(partnerName)) {
                 window.showNotification(`Duplicate partner name: ${partnerName}. Each partner can only be added once.`, 'error', 'both');
                 return;
             }
             partnerNames.add(partnerName);
-
+    
             const equityShare = parseFloat(equityInput.value);
             if (isNaN(equityShare) || equityShare <= 0 || equityShare > 100) {
                 window.showNotification(`Please enter a valid equity share (between 0 and 100) for partner ${partnerName}`, 'error', 'both');
                 return;
             }
-
+    
             partners.push({ name: partnerName, equity_share: equityShare });
         }
-
-        // Validate total equity
-        const totalEquity = this.calculateTotalEquity();
+    
+        // Validate total equity equals 100%
+        const totalEquityElement = document.getElementById('total-equity');
+        const totalEquity = parseFloat(totalEquityElement.textContent);
         if (Math.abs(totalEquity - 100) > 0.01) {
             window.showNotification(`Total equity must equal 100%. Current total: ${totalEquity.toFixed(2)}%`, 'error', 'both');
             return;
         }
-
-        // Collect and send the property data...
-        const propertyData = this.collectPropertyData(propertySelect.value, partners);
+    
+        // Collect and send the property data
+        const propertyData = this.collectPropertyData(propertySelect.value);
         
-        console.log('Sending property data:', propertyData);
-
         // Send the POST request
         fetch('/properties/edit_properties', {
             method: 'POST',
@@ -725,7 +937,6 @@ const editPropertiesModule = {
         })
         .then(response => response.json())
         .then(data => {
-            console.log('Server response:', data);
             if (data.success) {
                 window.showNotification('Property updated successfully', 'success', 'both');
                 setTimeout(() => window.location.reload(), 2000);
@@ -745,67 +956,66 @@ const editPropertiesModule = {
         });
     },
 
-    // Helper function to validate date format
-    isValidDate: function(dateString) {
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) return false;
-        const date = new Date(dateString);
-        return date instanceof Date && !isNaN(date) && date.toISOString().slice(0, 10) === dateString;
-    },
-
     // Helper function to collect property data
     collectPropertyData: function(address) {
         const propertyData = {
             address: address,
-            purchase_date: document.getElementById('purchase-date').value,
-            loan_amount: parseFloat(document.getElementById('loan-amount').value),
-            loan_start_date: document.getElementById('loan-start-date').value,
-            purchase_price: parseInt(document.getElementById('purchase-price').value),
-            down_payment: parseInt(document.getElementById('down-payment').value),
-            primary_loan_rate: parseFloat(document.getElementById('primary-loan-rate').value),
-            primary_loan_term: parseInt(document.getElementById('primary-loan-term').value),
-            seller_financing_amount: parseInt(document.getElementById('seller-financing-amount').value || '0'),
-            seller_financing_rate: parseFloat(document.getElementById('seller-financing-rate').value || '0'),
-            seller_financing_term: parseInt(document.getElementById('seller-financing-term').value || '0'),
-            closing_costs: parseInt(document.getElementById('closing-costs').value || '0'),
-            renovation_costs: parseInt(document.getElementById('renovation-costs').value || '0'),
-            marketing_costs: parseInt(document.getElementById('marketing-costs').value || '0'),
-            holding_costs: parseInt(document.getElementById('holding-costs').value || '0'),
+            // Basic Property Information
+            purchase_date: document.getElementById('purchase_date').value,
+            purchase_price: parseInt(document.getElementById('purchase_price').value),
+            down_payment: parseInt(document.getElementById('down_payment').value),
+            closing_costs: parseInt(document.getElementById('closing_costs').value || '0'),
+            renovation_costs: parseInt(document.getElementById('renovation_costs').value || '0'),
+            marketing_costs: parseInt(document.getElementById('marketing_costs').value || '0'),
+            
+            // Loan Information
+            primary_loan_amount: parseFloat(document.getElementById('primary_loan_amount').value),
+            primary_loan_start_date: document.getElementById('primary_loan_start_date').value,
+            primary_loan_rate: parseFloat(document.getElementById('primary_loan_rate').value),
+            primary_loan_term: LoanTermToggle.getValueInMonths('primary_loan_term'),
+            secondary_loan_amount: parseInt(document.getElementById('secondary_loan_amount').value || '0'),
+            secondary_loan_rate: parseFloat(document.getElementById('secondary_loan_rate').value || '0'),
+            secondary_loan_term: LoanTermToggle.getValueInMonths('secondary_loan_term'),
+    
+            // Monthly Income
             monthly_income: {
-                rental_income: parseFloat(document.getElementById('rental-income').value || '0'),
-                parking_income: parseFloat(document.getElementById('parking-income').value || '0'),
-                laundry_income: parseFloat(document.getElementById('laundry-income').value || '0'),
-                other_income: parseFloat(document.getElementById('other-income').value || '0'),
-                income_notes: document.getElementById('income-notes').value
+                rental_income: parseFloat(document.querySelector('[name="monthly_income[rental_income]"]').value || '0'),
+                parking_income: parseFloat(document.querySelector('[name="monthly_income[parking_income]"]').value || '0'),
+                laundry_income: parseFloat(document.querySelector('[name="monthly_income[laundry_income]"]').value || '0'),
+                other_income: parseFloat(document.querySelector('[name="monthly_income[other_income]"]').value || '0'),
+                income_notes: document.querySelector('[name="monthly_income[income_notes]"]').value
             },
+    
+            // Monthly Expenses
             monthly_expenses: {
-                property_tax: parseFloat(document.getElementById('property-tax').value || '0'),
-                insurance: parseFloat(document.getElementById('insurance').value || '0'),
-                repairs: parseFloat(document.getElementById('repairs').value || '0'),
-                capex: parseFloat(document.getElementById('capex').value || '0'),
-                property_management: parseFloat(document.getElementById('property-management').value || '0'),
-                hoa_fees: parseFloat(document.getElementById('hoa-fees').value || '0'),
+                property_tax: parseFloat(document.querySelector('[name="monthly_expenses[property_tax]"]').value || '0'),
+                insurance: parseFloat(document.querySelector('[name="monthly_expenses[insurance]"]').value || '0'),
+                repairs: parseFloat(document.querySelector('[name="monthly_expenses[repairs]"]').value || '0'),
+                capex: parseFloat(document.querySelector('[name="monthly_expenses[capex]"]').value || '0'),
+                property_management: parseFloat(document.querySelector('[name="monthly_expenses[property_management]"]').value || '0'),
+                hoa_fees: parseFloat(document.querySelector('[name="monthly_expenses[hoa_fees]"]').value || '0'),
                 utilities: {
-                    water: parseFloat(document.getElementById('water').value || '0'),
-                    electricity: parseFloat(document.getElementById('electricity').value || '0'),
-                    gas: parseFloat(document.getElementById('gas').value || '0'),
-                    trash: parseFloat(document.getElementById('trash').value || '0')
+                    water: parseFloat(document.querySelector('[name="monthly_expenses[utilities][water]"]').value || '0'),
+                    electricity: parseFloat(document.querySelector('[name="monthly_expenses[utilities][electricity]"]').value || '0'),
+                    gas: parseFloat(document.querySelector('[name="monthly_expenses[utilities][gas]"]').value || '0'),
+                    trash: parseFloat(document.querySelector('[name="monthly_expenses[utilities][trash]"]').value || '0')
                 },
-                other_expenses: parseFloat(document.getElementById('other-expenses').value || '0'),
-                expense_notes: document.getElementById('expense-notes').value
+                other_expenses: parseFloat(document.querySelector('[name="monthly_expenses[other_expenses]"]').value || '0'),
+                expense_notes: document.querySelector('[name="monthly_expenses[expense_notes]"]').value
             },
             partners: []
         };
     
-        // Get all partner entries
+        // Collect partner information
         const partnerEntries = document.querySelectorAll('.partner-entry');
         partnerEntries.forEach((entry) => {
             const nameSelect = entry.querySelector('.partner-select');
             const equityInput = entry.querySelector('.partner-equity');
-            const propertyManagerCheck = entry.querySelector('.property-manager-check');
+            const propertyManagerCheck = entry.querySelector('.project-manager-check'); // Updated class name
             
             let name = nameSelect.value;
             if (name === 'new') {
-                const newNameInput = entry.querySelector('.new-partner-name input');
+                const newNameInput = entry.querySelector('[name$="[new_name]"]');
                 name = newNameInput.value.trim();
             }
             
@@ -819,17 +1029,8 @@ const editPropertiesModule = {
                 });
             }
         });
-    
+        
         return propertyData;
-    },
-
-    calculateTotalEquity: function() {
-        const equityInputs = document.querySelectorAll('.partner-equity');
-        let total = 0;
-        equityInputs.forEach(input => {
-            total += parseFloat(input.value) || 0;
-        });
-        return total;
     }
 };
 
