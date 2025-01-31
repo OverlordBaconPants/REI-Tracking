@@ -156,7 +156,7 @@ class ReportGenerator:
             return False
     
     def generate_report(self, data: Dict, report_type: str = 'analysis') -> BytesIO:
-        """Generate a PDF report from analysis data."""
+        """Generate a PDF report from analysis data with lease option support."""
         try:
             buffer = BytesIO()
             doc = SimpleDocTemplate(
@@ -174,50 +174,33 @@ class ReportGenerator:
             # Initialize story (content) for the PDF
             story = []
             
-            # Add header with error handling
-            try:
-                story.extend(self._create_header(data, doc))
-            except Exception as e:
-                logger.error(f"Error creating header: {str(e)}")
-                story.append(Paragraph("Error creating header", self.styles['Normal']))
+            # Add header
+            story.extend(self._create_header(data, doc))
             
-            try:
-                if data.get('analysis_type') == 'Lease Option':
-                    # Left column for lease option
-                    story.extend(self._create_property_section(data))
-                    story.extend(self._create_financial_section(data))
-                    
-                    # Force switch to right column
-                    story.append(FrameBreak())
-                    
-                    # Right column content
-                    story.extend(self._create_expenses_section(data))
-                    story.extend(self._create_notes_section(data))
+            if data.get('analysis_type') == 'Lease Option':
+                # Left column content
+                story.extend(self._create_property_section(data))
+                story.extend(self._create_lease_option_details(data))
+                story.extend(self._create_loan_section(data))
+                story.extend(self._create_notes_section(data))
                 
-                else:
-                    # Left column content for other analysis types
-                    story.extend(self._create_property_section(data))
-                    story.extend(self._create_loan_section(data))
-                    story.extend(self._create_notes_section(data))
-                    
-                    # Force switch to right column
-                    story.append(FrameBreak())
-                    
-                    # Right column content
-                    story.extend(self._create_financial_section(data))
-                    story.extend(self._create_expenses_section(data))
-
-            except Exception as e:
-                logger.error(f"Error creating report sections: {str(e)}")
-                story.append(Paragraph(f"Error creating report sections: {str(e)}", self.styles['Normal']))
+                # Force switch to right column
+                story.append(FrameBreak())
+                
+                # Right column content - financial overview and expenses
+                story.extend(self._create_financial_section(data))
+                story.extend(self._create_expenses_section(data))
+            else:
+                # Standard report layout for other analysis types
+                story.extend(self._create_property_section(data))
+                story.extend(self._create_loan_section(data))
+                story.extend(self._create_notes_section(data))
+                story.append(FrameBreak())
+                story.extend(self._create_financial_section(data))
+                story.extend(self._create_expenses_section(data))
             
-            # Build the PDF with error handling
-            try:
-                doc.build(story)
-            except Exception as e:
-                logger.error(f"Error building PDF: {str(e)}")
-                raise
-                
+            # Build PDF
+            doc.build(story)
             buffer.seek(0)
             return buffer
             
@@ -268,19 +251,29 @@ class ReportGenerator:
         return elements
 
     def _create_property_section(self, data: Dict) -> list:
-        """Create compact property details section."""
+        """Create property details section with lease option support."""
         elements = []
         
         elements.append(Paragraph("Property Details", self.styles['SectionHeader']))
         
-        # Create property details with minimal widths
-        property_data = [
-            ["Purchase Price:", f"${data.get('purchase_price', 0):,.2f}"],
-            ["After Repair Value:", f"${data.get('after_repair_value', 0):,.2f}"],
-            ["Renovation Costs:", f"${data.get('renovation_costs', 0):,.2f}"],
-            ["Bedrooms:", str(data.get('bedrooms', 0))],
-            ["Bathrooms:", f"{data.get('bathrooms', 0):.1f}"]
-        ]
+        if data.get('analysis_type') == 'Lease Option':
+            property_data = [
+                ["Purchase Price:", f"${self._safe_number(data.get('purchase_price'), 2):,.2f}"],
+                ["Square Footage:", f"{data.get('square_footage', 0):,}"],
+                ["Lot Size:", f"{data.get('lot_size', 0):,}"],
+                ["Year Built:", str(data.get('year_built', 'N/A'))],
+                ["Bedrooms:", str(data.get('bedrooms', 0))],
+                ["Bathrooms:", f"{data.get('bathrooms', 0):.1f}"]
+            ]
+        else:
+            # Standard property details
+            property_data = [
+                ["Purchase Price:", f"${self._safe_number(data.get('purchase_price'), 2):,.2f}"],
+                ["After Repair Value:", f"${self._safe_number(data.get('after_repair_value'), 2):,.2f}"],
+                ["Renovation Costs:", f"${self._safe_number(data.get('renovation_costs'), 2):,.2f}"],
+                ["Bedrooms:", str(data.get('bedrooms', 0))],
+                ["Bathrooms:", f"{data.get('bathrooms', 0):.1f}"]
+            ]
         
         table = Table(
             property_data,
@@ -301,42 +294,37 @@ class ReportGenerator:
         return elements
 
     def _create_financial_section(self, data: Dict) -> list:
-        """Create financial overview section."""
+        """Create financial overview section with support for all analysis types."""
         try:
             elements = []
             metrics = data.get('calculated_metrics', {})
-            
-            if data.get('analysis_type') == 'Lease Option':
-                # Option Details
-                elements.append(Paragraph("Option Details", self.styles['SectionHeader']))
-                option_data = [
-                    ["Option Details", ""],
-                    ["Option Fee:", f"${self._safe_number(data.get('option_consideration_fee'), 2):,.2f}"],
-                    ["Option Term:", f"{data.get('option_term_months')} months"],
-                    ["Strike Price:", f"${self._safe_number(data.get('strike_price'), 2):,.2f}"],
-                    ["Purchase Price:", f"${self._safe_number(data.get('purchase_price'), 2):,.2f}"],
-                    ["Monthly Rent Credit:", f"{self._safe_number(data.get('monthly_rent_credit_percentage'))}%"],
-                    ["Monthly Credit Amount:", f"${self._safe_number(data.get('monthly_rent'), 2) * self._safe_number(data.get('monthly_rent_credit_percentage')) / 100:,.2f}"],
-                    ["Rent Credit Cap:", f"${self._safe_number(data.get('rent_credit_cap'), 2):,.2f}"],
-                    ["Total Potential Credits:", metrics.get('total_rent_credits', '$0.00')],
-                    ["Effective Purchase Price:", metrics.get('effective_purchase_price', '$0.00')],
-                    ["Breakeven Period:", f"{metrics.get('breakeven_months', '0')} months"]
-                ]
-                elements.append(self._create_metrics_table(option_data))
-                elements.append(Spacer(1, 0.2*inch))
+            analysis_type = data.get('analysis_type')
 
-                # Monthly Performance
-                elements.append(Paragraph("Monthly Performance", self.styles['SectionHeader']))
+            # Handle Lease Option analysis
+            if analysis_type == 'Lease Option':
+                elements.append(Paragraph("Financial Overview", self.styles['SectionHeader']))
+                
+                # Calculate monthly rent credit
+                monthly_rent = self._safe_number(data.get('monthly_rent', 0))
+                credit_percentage = self._safe_number(data.get('monthly_rent_credit_percentage', 0))
+                monthly_credit = (monthly_rent * credit_percentage) / 100
+                
                 financial_data = [
-                    ["Monthly Performance", ""],
+                    ["Financial Overview", ""],
                     ["Monthly Rent:", f"${self._safe_number(data.get('monthly_rent'), 2):,.2f}"],
                     ["Monthly Cash Flow:", metrics.get('monthly_cash_flow', '$0.00')],
                     ["Annual Cash Flow:", metrics.get('annual_cash_flow', '$0.00')],
-                    ["Option ROI (Annual):", metrics.get('option_roi', '0%')]
+                    ["Monthly Rent Credit:", f"${monthly_credit:,.2f}"],
+                    ["Rent Credit Percentage:", f"{credit_percentage:.1f}%"],
+                    ["Option Fee ROI (Annual):", metrics.get('option_roi', '0%')],
+                    ["Cash on Cash Return:", metrics.get('cash_on_cash_return', '0%')],
+                    ["Months to Break Even:", metrics.get('breakeven_months', 'N/A')]
                 ]
+                
                 elements.append(self._create_metrics_table(financial_data))
-
-            elif has_balloon := self._check_balloon_payment(data):
+                
+            # Handle analyses with balloon payments
+            elif self._check_balloon_payment(data):
                 # Pre-Balloon Overview
                 elements.append(Paragraph("Pre-Balloon Financial Overview", self.styles['SectionHeader']))
                 pre_balloon_data = [
@@ -348,33 +336,6 @@ class ReportGenerator:
                     ["Balloon Due Date:", datetime.fromisoformat(data['balloon_due_date']).strftime('%Y-%m-%d')]
                 ]
                 elements.append(self._create_metrics_table(pre_balloon_data))
-                elements.append(Spacer(1, 0.2*inch))
-
-                # Pre-Balloon Operating Expenses
-                elements.append(Paragraph("Pre-Balloon Operating Expenses", self.styles['SectionHeader']))
-                monthly_rent = self._safe_number(data.get('monthly_rent'))
-                expense_data = [
-                    ["Pre-Balloon Operating Expenses", ""],
-                    ["Property Taxes:", f"${self._safe_number(data.get('property_taxes'), 2):,.2f}"],
-                    ["Insurance:", f"${self._safe_number(data.get('insurance'), 2):,.2f}"],
-                    ["HOA/COA/COOP:", f"${self._safe_number(data.get('hoa_coa_coop'), 2):,.2f}"]
-                ]
-                
-                percentage_fields = {
-                    'Management': 'management_fee_percentage',
-                    'CapEx': 'capex_percentage',
-                    'Vacancy': 'vacancy_percentage',
-                    'Repairs': 'repairs_percentage'
-                }
-                
-                for label, field in percentage_fields.items():
-                    percentage = self._safe_number(data.get(field))
-                    amount = (monthly_rent * percentage) / 100
-                    expense_data.append([
-                        f"{label}:", 
-                        f"({percentage:.1f}%) ${amount:,.2f}"
-                    ])
-                elements.append(self._create_metrics_table(expense_data))
                 elements.append(Spacer(1, 0.2*inch))
 
                 # Post-Balloon Overview
@@ -390,31 +351,24 @@ class ReportGenerator:
                     ["Monthly Payment Change:", metrics.get('monthly_payment_difference', '$0.00')]
                 ]
                 elements.append(self._create_metrics_table(post_balloon_data))
-                elements.append(Spacer(1, 0.2*inch))
-
-                # Post-Balloon Operating Expenses
-                elements.append(Paragraph("Post-Balloon Operating Expenses", self.styles['SectionHeader']))
-                post_balloon_expenses = [
-                    ["Post-Balloon Operating Expenses", ""],
-                    ["Property Taxes:", metrics.get('post_balloon_property_taxes', '$0.00')],
-                    ["Insurance:", metrics.get('post_balloon_insurance', '$0.00')],
-                    ["HOA/COA/COOP:", f"${self._safe_number(data.get('hoa_coa_coop'), 2):,.2f}"]
-                ]
                 
-                for label, metric in {
-                    'Management': 'post_balloon_management_fee',
-                    'CapEx': 'post_balloon_capex',
-                    'Vacancy': 'post_balloon_vacancy',
-                    'Repairs': 'post_balloon_repairs'
-                }.items():
-                    post_balloon_expenses.append([
-                        f"{label}:", 
-                        metrics.get(metric, '$0.00')
-                    ])
-                elements.append(self._create_metrics_table(post_balloon_expenses))
-
+            # Handle BRRRR analysis
+            elif 'BRRRR' in analysis_type:
+                elements.append(Paragraph("Financial Overview", self.styles['SectionHeader']))
+                financial_data = [
+                    ["Financial Overview", ""],
+                    ["Monthly Rent:", f"${self._safe_number(data.get('monthly_rent'), 2):,.2f}"],
+                    ["Monthly Cash Flow:", metrics.get('monthly_cash_flow', '$0.00')],
+                    ["Annual Cash Flow:", metrics.get('annual_cash_flow', '$0.00')],
+                    ["Cash on Cash Return:", metrics.get('cash_on_cash_return', '0%')],
+                    ["ROI:", metrics.get('roi', '0%')],
+                    ["Equity Captured:", metrics.get('equity_captured', '$0.00')],
+                    ["Cash Recouped:", metrics.get('cash_recouped', '$0.00')]
+                ]
+                elements.append(self._create_metrics_table(financial_data))
+                
+            # Handle standard LTR analysis
             else:
-                # Standard financial overview for regular loans
                 elements.append(Paragraph("Financial Overview", self.styles['SectionHeader']))
                 financial_data = [
                     ["Financial Overview", ""],
@@ -425,11 +379,23 @@ class ReportGenerator:
                     ["ROI:", metrics.get('roi', '0%')]
                 ]
                 elements.append(self._create_metrics_table(financial_data))
-            
+
+            # Add total investment details for all types except balloon payment
+            if not self._check_balloon_payment(data):
+                total_investment = self._safe_number(metrics.get('total_cash_invested', 0))
+                if total_investment > 0:
+                    investment_data = [
+                        ["Investment Overview", ""],
+                        ["Total Cash Invested:", f"${total_investment:,.2f}"]
+                    ]
+                    elements.append(Spacer(1, 0.2*inch))
+                    elements.append(self._create_metrics_table(investment_data))
+
             return elements
-                
+            
         except Exception as e:
             logger.error(f"Error creating financial section: {str(e)}")
+            logger.error(traceback.format_exc())
             return [Paragraph(f"Error creating financial section: {str(e)}", self.styles['Normal'])]
 
     def _create_loan_section(self, data: Dict) -> list:
@@ -498,7 +464,37 @@ class ReportGenerator:
         except Exception as e:
             logger.error(f"Error creating loan section: {str(e)}")
             return [Paragraph(f"Error creating loan section: {str(e)}", self.styles['Normal'])]
-    
+
+    def _create_lease_option_details(self, data: Dict) -> list:
+        """Create lease option specific details section."""
+        elements = []
+        elements.append(Paragraph("Option Details", self.styles['SectionHeader']))
+        
+        # Format option details
+        option_data = [
+            ["Option Details", ""],
+            ["Option Fee:", f"${self._safe_number(data.get('option_consideration_fee'), 2):,.2f}"],
+            ["Option Term:", f"{data.get('option_term_months', 0)} months"],
+            ["Strike Price:", f"${self._safe_number(data.get('strike_price'), 2):,.2f}"],
+            ["Monthly Rent Credit:", f"{self._safe_number(data.get('monthly_rent_credit_percentage'))}%"],
+            ["Rent Credit Cap:", f"${self._safe_number(data.get('rent_credit_cap'), 2):,.2f}"]
+        ]
+        
+        # Calculate total potential credits
+        monthly_rent = self._safe_number(data.get('monthly_rent', 0))
+        monthly_credit_pct = self._safe_number(data.get('monthly_rent_credit_percentage', 0)) / 100
+        term_months = int(data.get('option_term_months', 0))
+        total_potential = monthly_rent * monthly_credit_pct * term_months
+        credit_cap = self._safe_number(data.get('rent_credit_cap', 0))
+        total_credits = min(total_potential, credit_cap)
+        
+        option_data.append(["Total Potential Credits:", f"${total_credits:,.2f}"])
+        
+        elements.append(self._create_metrics_table(option_data))
+        elements.append(Spacer(1, 0.2*inch))
+        
+        return elements
+
     def _create_notes_section(self, data: Dict) -> list:
         """Create notes section for the report."""
         elements = []
