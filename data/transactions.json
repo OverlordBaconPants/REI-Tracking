@@ -2831,5 +2831,23 @@
       "reimbursement_status": "pending",
       "documentation": null
     }
+  },
+  {
+    "id": "176",
+    "property_id": "1911 Grinnalds Avenue, Baltimore, MD 21223, United States of America, Baltimore, Maryland, 21223",
+    "type": "expense",
+    "category": "Utilities",
+    "description": "2025.01.29 Grinnalds BGE Bill",
+    "amount": 146.53,
+    "date": "2025-01-25",
+    "collector_payer": "BJ Marshall",
+    "documentation_file": "trans_176_2025.01.29_Grinnalds_BGE_Bill.png",
+    "notes": "Test",
+    "reimbursement": {
+      "date_shared": "2025-01-25",
+      "share_description": "Auto-completed - Single owner property",
+      "reimbursement_status": "completed",
+      "documentation": null
+    }
   }
 ]

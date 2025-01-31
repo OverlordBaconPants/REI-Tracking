@@ -63,7 +63,7 @@ class Config:
     ALLOWED_IMPORT_EXTENSIONS = {'csv', 'xls', 'xlsx'}
     
     # Load max content length from environment variable
-    MAX_CONTENT_LENGTH = int(os.environ.get('MAX_CONTENT_LENGTH', 5 * 1024 * 1024))  # Default 5MB
+    MAX_CONTENT_LENGTH = int(os.environ.get('MAX_CONTENT_LENGTH', 8 * 1024 * 1024))  # Default 8MB
     
     # Load API key from environment variable with no default
     GEOAPIFY_API_KEY = os.environ.get('GEOAPIFY_API_KEY')

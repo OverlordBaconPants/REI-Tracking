@@ -297,7 +297,11 @@ class TransactionReportGenerator:
             if not isinstance(amount, str):
                 amount = f"${float(amount):,.2f}"
 
-            # Wrap both description and notes in Paragraph objects
+            # Wrap Category, Description, and Notes in Paragraph objects
+            category = Paragraph(
+                t.get('category', ''),
+                self.styles['DescriptionCell']
+            )
             description = Paragraph(
                 t.get('description', ''),
                 self.styles['DescriptionCell']
@@ -310,7 +314,7 @@ class TransactionReportGenerator:
             row = [
                 t.get('date', ''),
                 t.get('type', ''),
-                t.get('category', ''),
+                category,
                 description,
                 notes,  # Added notes
                 amount,

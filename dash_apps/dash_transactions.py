@@ -1,10 +1,12 @@
 import dash
 from dash import dcc, html, dash_table, Input, Output, State
+import numpy as np
 import dash_bootstrap_components as dbc
 import pandas as pd
 import json
 import urllib.parse
-from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
+from datetime import datetime, timedelta, date
 from flask_login import current_user
 from flask import current_app, url_for
 import io
@@ -120,6 +122,36 @@ def validate_property_data(property_data: Dict, username: str) -> Tuple[bool, st
         logger.error(f"Error validating property data: {str(e)}")
         logger.error(traceback.format_exc())
         return False, f"Validation error: {str(e)}"
+
+def safe_float(value, default=0.0) -> float:
+    """Safely convert value to float, returning default if conversion fails."""
+    try:
+        if pd.isna(value):
+            return default
+        return float(value)
+    except (ValueError, TypeError):
+        return default
+
+def calculate_user_equity_share(property_data: Dict, username: str) -> float:
+    """
+    Calculate user's equity share in a property.
+    
+    Args:
+        property_data: Dictionary containing property information
+        username: Current user's username
+        
+    Returns:
+        Float representing user's equity share (0.0 to 1.0)
+    """
+    try:
+        partners = property_data.get('partners', [])
+        for partner in partners:
+            if partner.get('name', '').lower() == username.lower():
+                return float(partner.get('equity_share', 0)) / 100
+        return 0.0
+    except Exception as e:
+        logger.error(f"Error calculating equity share: {str(e)}")
+        return 0.0
 
 def calculate_loan_metrics(property_data: Dict, username: str) -> Optional[Dict]:
     """Calculate loan and equity metrics for a property, adjusted for user's equity share."""
@@ -1019,10 +1051,16 @@ def create_transactions_dash(flask_app):
     def format_transactions_for_mobile(df, properties, property_id, user):
         """Format transaction data for mobile display with reimbursement handling."""
         try:
-            # Store original dates for sorting
-            df['sort_date'] = pd.to_datetime(df['date'])
-            df['date_for_sort'] = df['sort_date']  # Keep original datetime for sorting
-            df['date'] = df['sort_date'].dt.strftime('%m/%d/%Y')
+            # Convert dates once using pandas and format as YYYY-MM-DD
+            df['date'] = pd.to_datetime(df['date']).dt.strftime('%Y-%m-%d')
+            
+            # Configure column for sorting
+            date_column = {
+                'name': 'Date',
+                'id': 'date',  # Show the formatted date
+                'sortable': True,
+                'sort_by': 'date'  # Sort by ISO format
+            }
 
             # Format currency
             df['amount_for_sort'] = df['amount'].astype(float)  # Keep original number for sorting
@@ -1090,7 +1128,8 @@ def create_transactions_dash(flask_app):
                     'name': 'Date', 
                     'id': 'date',
                     'sortable': True,
-                    'sort_by': 'date_for_sort'  # Sort by the datetime object
+                    'sort_by': 'date_for_sort',  # Explicitly tell it to sort by our timestamp column
+                    'type': 'numeric'  # Add this to ensure numeric sorting
                 },
                 {
                     'name': 'Description',

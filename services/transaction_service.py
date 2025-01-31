@@ -4,6 +4,7 @@ from utils.json_handler import read_json, write_json
 from flask import current_app
 from datetime import datetime
 import pandas as pd
+import traceback
 from fuzzywuzzy import process
 import re
 
@@ -72,12 +73,14 @@ def add_transaction(transaction_data):
     
     Args:
         transaction_data (dict): The transaction data to add
+        
+    Returns:
+        str: The ID of the newly created transaction
     """
     try:
         # Load existing transactions
-        with open(current_app.config['TRANSACTIONS_FILE'], 'r') as f:
-            transactions = json.load(f)
-
+        transactions = read_json(current_app.config['TRANSACTIONS_FILE'])
+        
         # Find the highest existing ID
         highest_id = 0
         for transaction in transactions:
@@ -90,40 +93,32 @@ def add_transaction(transaction_data):
 
         # Generate new ID
         new_id = str(highest_id + 1)
-        current_app.logger.debug(f"Generated new transaction ID: {new_id}")
+        
+        # Update transaction data with new ID
+        transaction_data['id'] = new_id
+        
+        # Ensure proper structure for optional fields
+        transaction_data.setdefault('notes', '')
+        transaction_data.setdefault('documentation_file', '')
+        transaction_data.setdefault('reimbursement', {})
+        transaction_data['reimbursement'].setdefault('date_shared', '')
+        transaction_data['reimbursement'].setdefault('share_description', '')
+        transaction_data['reimbursement'].setdefault('reimbursement_status', 'pending')
+        transaction_data['reimbursement'].setdefault('documentation', None)
 
-        # Create structured transaction
-        new_transaction = {
-            "id": new_id,
-            "property_id": transaction_data['property_id'],
-            "type": transaction_data['type'],
-            "category": transaction_data['category'],
-            "description": transaction_data['description'],
-            "amount": float(transaction_data['amount']),
-            "date": transaction_data['date'],
-            "collector_payer": transaction_data['collector_payer'],
-            "notes": transaction_data.get('notes', ''),  # Always include notes field
-            "documentation_file": transaction_data.get('documentation_file', ''),
-            "reimbursement": {
-                "date_shared": transaction_data.get('reimbursement', {}).get('date_shared', ''),
-                "share_description": transaction_data.get('reimbursement', {}).get('share_description', ''),
-                "reimbursement_status": transaction_data.get('reimbursement', {}).get('reimbursement_status', 'pending'),
-                "documentation": transaction_data.get('reimbursement', {}).get('documentation', None)
-            }
-        }
+        # Log the final structure before saving
+        current_app.logger.debug(f"Final transaction structure: {json.dumps(transaction_data, indent=2)}")
 
-        # Append the new transaction
-        transactions.append(new_transaction)
-
-        # Save the updated transactions
-        with open(current_app.config['TRANSACTIONS_FILE'], 'w') as f:
-            json.dump(transactions, f, indent=2)
-
+        # Append and save
+        transactions.append(transaction_data)
+        write_json(current_app.config['TRANSACTIONS_FILE'], transactions)
+        
         current_app.logger.info(f"Successfully added transaction with ID: {new_id}")
-        return True
+        return new_id
 
     except Exception as e:
-        current_app.logger.error(f"Error adding transaction: {str(e)}")
+        current_app.logger.error(f"Error in add_transaction: {str(e)}")
+        current_app.logger.error(traceback.format_exc())
         raise
 
 def get_unresolved_transactions():

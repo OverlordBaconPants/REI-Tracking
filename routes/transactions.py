@@ -56,18 +56,21 @@ def add_transactions():
                 'date': request.form.get('date'),
                 'collector_payer': request.form.get('collector_payer'),
                 'notes': notes,
-                'documentation_file': '',
+                'documentation_file': '',  # Will be updated if file exists
                 'reimbursement': {
-                    'date_shared': request.form.get('date_shared'),
-                    'share_description': request.form.get('share_description'),
-                    'reimbursement_status': request.form.get('reimbursement_status'),
-                    'documentation': None
+                    'date_shared': request.form.get('date_shared', ''),
+                    'share_description': request.form.get('share_description', ''),
+                    'reimbursement_status': request.form.get('reimbursement_status', 'pending'),
+                    'documentation': None  # Will be updated if reimbursement doc exists
                 }
             }
 
+            # Log the initial transaction data
+            current_app.logger.debug(f"Initial transaction data: {json.dumps(transaction_data, indent=2)}")
+
             # Add the transaction first to get an ID
-            add_transaction(transaction_data)
-            transaction_id = transaction_data['id']
+            transaction_id = add_transaction(transaction_data)
+            current_app.logger.debug(f"Received transaction ID: {transaction_id}")
 
             # Handle documentation files after we have the transaction ID
             if 'documentation_file' in request.files:
@@ -78,6 +81,7 @@ def add_transactions():
                         file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
                         file.save(file_path)
                         transaction_data['documentation_file'] = filename
+                        current_app.logger.debug(f"Saved documentation file: {filename}")
                     else:
                         flash_message('Invalid file type. Allowed types are: ' + 
                                     ', '.join(current_app.config['ALLOWED_DOCUMENTATION_EXTENSIONS']), 'error')
@@ -92,19 +96,29 @@ def add_transactions():
                         reimb_file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], reimb_filename)
                         reimb_file.save(reimb_file_path)
                         transaction_data['reimbursement']['documentation'] = reimb_filename
+                        current_app.logger.debug(f"Saved reimbursement documentation: {reimb_filename}")
                     else:
                         flash_message('Invalid reimbursement documentation file type. Allowed types are: ' + 
                                     ', '.join(current_app.config['ALLOWED_DOCUMENTATION_EXTENSIONS']), 'error')
                         return redirect(url_for('transactions.add_transactions'))
 
-            # Update the transaction with file information
-            update_transaction(transaction_data)
+            # Update the transaction with file information if any files were added
+            if transaction_data['documentation_file'] or transaction_data['reimbursement']['documentation']:
+                current_app.logger.debug(f"Updating transaction with file information: {json.dumps(transaction_data, indent=2)}")
+                update_transaction(transaction_data)
             
             flash_message('Transaction added successfully!', 'success')
             return redirect(url_for('transactions.add_transactions'))
 
+        except ValueError as e:
+            logging.error(f"Value Error in add_transaction: {str(e)}")
+            logging.error(traceback.format_exc())
+            flash_message(f"Invalid value in form: {str(e)}", "error")
+            return redirect(url_for('transactions.add_transactions'))
+
         except Exception as e:
             logging.error(f"Error adding transaction: {str(e)}")
+            logging.error(traceback.format_exc())
             flash_message(f"Error adding transaction: {str(e)}", "error")
             return redirect(url_for('transactions.add_transactions'))
 
