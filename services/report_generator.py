@@ -158,9 +158,6 @@ class ReportGenerator:
     def generate_report(self, data: Dict, report_type: str = 'analysis') -> BytesIO:
         """Generate a PDF report from analysis data."""
         try:
-            # Add debug logging
-            logger.debug(f"Starting report generation with data: {data}")
-            
             buffer = BytesIO()
             doc = SimpleDocTemplate(
                 buffer,
@@ -183,27 +180,37 @@ class ReportGenerator:
             except Exception as e:
                 logger.error(f"Error creating header: {str(e)}")
                 story.append(Paragraph("Error creating header", self.styles['Normal']))
-                
-            # Left column content with error handling
-            try:
-                story.extend(self._create_property_section(data))
-                story.extend(self._create_loan_section(data))
-                story.extend(self._create_notes_section(data))
-            except Exception as e:
-                logger.error(f"Error creating left column: {str(e)}")
-                story.append(Paragraph("Error creating property details", self.styles['Normal']))
-                
-            # Force switch to right column
-            story.append(FrameBreak())
             
-            # Right column content with error handling
             try:
-                story.extend(self._create_financial_section(data))
-                story.extend(self._create_expenses_section(data))
-            except Exception as e:
-                logger.error(f"Error creating right column: {str(e)}")
-                story.append(Paragraph("Error creating financial details", self.styles['Normal']))
+                if data.get('analysis_type') == 'Lease Option':
+                    # Left column for lease option
+                    story.extend(self._create_property_section(data))
+                    story.extend(self._create_financial_section(data))
+                    
+                    # Force switch to right column
+                    story.append(FrameBreak())
+                    
+                    # Right column content
+                    story.extend(self._create_expenses_section(data))
+                    story.extend(self._create_notes_section(data))
                 
+                else:
+                    # Left column content for other analysis types
+                    story.extend(self._create_property_section(data))
+                    story.extend(self._create_loan_section(data))
+                    story.extend(self._create_notes_section(data))
+                    
+                    # Force switch to right column
+                    story.append(FrameBreak())
+                    
+                    # Right column content
+                    story.extend(self._create_financial_section(data))
+                    story.extend(self._create_expenses_section(data))
+
+            except Exception as e:
+                logger.error(f"Error creating report sections: {str(e)}")
+                story.append(Paragraph(f"Error creating report sections: {str(e)}", self.styles['Normal']))
+            
             # Build the PDF with error handling
             try:
                 doc.build(story)
@@ -294,21 +301,42 @@ class ReportGenerator:
         return elements
 
     def _create_financial_section(self, data: Dict) -> list:
-        """Create financial overview section with properly handled balloon data."""
+        """Create financial overview section."""
         try:
             elements = []
             metrics = data.get('calculated_metrics', {})
             
-            # Check for balloon payment
-            has_balloon = bool(data.get('has_balloon_payment')) and all([
-                self._safe_number(data.get('balloon_refinance_loan_amount')) > 0,
-                data.get('balloon_due_date'),
-                self._safe_number(data.get('balloon_refinance_ltv_percentage')) > 0
-            ])
+            if data.get('analysis_type') == 'Lease Option':
+                # Option Details
+                elements.append(Paragraph("Option Details", self.styles['SectionHeader']))
+                option_data = [
+                    ["Option Details", ""],
+                    ["Option Fee:", f"${self._safe_number(data.get('option_consideration_fee'), 2):,.2f}"],
+                    ["Option Term:", f"{data.get('option_term_months')} months"],
+                    ["Strike Price:", f"${self._safe_number(data.get('strike_price'), 2):,.2f}"],
+                    ["Purchase Price:", f"${self._safe_number(data.get('purchase_price'), 2):,.2f}"],
+                    ["Monthly Rent Credit:", f"{self._safe_number(data.get('monthly_rent_credit_percentage'))}%"],
+                    ["Monthly Credit Amount:", f"${self._safe_number(data.get('monthly_rent'), 2) * self._safe_number(data.get('monthly_rent_credit_percentage')) / 100:,.2f}"],
+                    ["Rent Credit Cap:", f"${self._safe_number(data.get('rent_credit_cap'), 2):,.2f}"],
+                    ["Total Potential Credits:", metrics.get('total_rent_credits', '$0.00')],
+                    ["Effective Purchase Price:", metrics.get('effective_purchase_price', '$0.00')],
+                    ["Breakeven Period:", f"{metrics.get('breakeven_months', '0')} months"]
+                ]
+                elements.append(self._create_metrics_table(option_data))
+                elements.append(Spacer(1, 0.2*inch))
 
-            if has_balloon:
-                logger.debug("Creating balloon payment financial sections")
-                
+                # Monthly Performance
+                elements.append(Paragraph("Monthly Performance", self.styles['SectionHeader']))
+                financial_data = [
+                    ["Monthly Performance", ""],
+                    ["Monthly Rent:", f"${self._safe_number(data.get('monthly_rent'), 2):,.2f}"],
+                    ["Monthly Cash Flow:", metrics.get('monthly_cash_flow', '$0.00')],
+                    ["Annual Cash Flow:", metrics.get('annual_cash_flow', '$0.00')],
+                    ["Option ROI (Annual):", metrics.get('option_roi', '0%')]
+                ]
+                elements.append(self._create_metrics_table(financial_data))
+
+            elif has_balloon := self._check_balloon_payment(data):
                 # Pre-Balloon Overview
                 elements.append(Paragraph("Pre-Balloon Financial Overview", self.styles['SectionHeader']))
                 pre_balloon_data = [
@@ -332,13 +360,13 @@ class ReportGenerator:
                     ["HOA/COA/COOP:", f"${self._safe_number(data.get('hoa_coa_coop'), 2):,.2f}"]
                 ]
                 
-                # Add percentage-based expenses
                 percentage_fields = {
                     'Management': 'management_fee_percentage',
                     'CapEx': 'capex_percentage',
                     'Vacancy': 'vacancy_percentage',
                     'Repairs': 'repairs_percentage'
                 }
+                
                 for label, field in percentage_fields.items():
                     percentage = self._safe_number(data.get(field))
                     amount = (monthly_rent * percentage) / 100
@@ -386,19 +414,20 @@ class ReportGenerator:
                 elements.append(self._create_metrics_table(post_balloon_expenses))
 
             else:
-                # Standard financial overview for non-balloon loans
+                # Standard financial overview for regular loans
                 elements.append(Paragraph("Financial Overview", self.styles['SectionHeader']))
                 financial_data = [
                     ["Financial Overview", ""],
                     ["Monthly Rent:", f"${self._safe_number(data.get('monthly_rent'), 2):,.2f}"],
                     ["Monthly Cash Flow:", metrics.get('monthly_cash_flow', '$0.00')],
                     ["Annual Cash Flow:", metrics.get('annual_cash_flow', '$0.00')],
-                    ["Cash on Cash Return:", metrics.get('cash_on_cash_return', '0%')]
+                    ["Cash on Cash Return:", metrics.get('cash_on_cash_return', '0%')],
+                    ["ROI:", metrics.get('roi', '0%')]
                 ]
                 elements.append(self._create_metrics_table(financial_data))
             
             return elements
-            
+                
         except Exception as e:
             logger.error(f"Error creating financial section: {str(e)}")
             return [Paragraph(f"Error creating financial section: {str(e)}", self.styles['Normal'])]

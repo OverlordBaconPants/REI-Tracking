@@ -1,0 +1,733 @@
+[
+  {
+    "property_id": "164 Dunrobin Drive, Martinsburg, WV 25404, United States of America, Martinsburg, West Virginia, 25404",
+    "type": "expense",
+    "category": "Association Dues",
+    "description": "2024.07.01 HOA Dues",
+    "amount": 47.47,
+    "date": "2024-07-01",
+    "collector_payer": "Wayne Benny",
+    "reimbursement": {
+      "date_shared": "2024-07-23",
+      "share_description": "Wire to Wayne to Rebalance to 50/50 Partnership",
+      "reimbursement_status": "completed"
+    },
+    "documentation_file": "2024.07.01_Dunrobin_HOA.png",
+    "id": "1"
+  },
+  {
+    "property_id": "164 Dunrobin Drive, Martinsburg, WV 25404, United States of America, Martinsburg, West Virginia, 25404",
+    "type": "expense",
+    "category": "Mortgage",
+    "description": "2024.07.01 Mortgage Payment",
+    "amount": 1294.66,
+    "date": "2024-07-01",
+    "collector_payer": "Wayne Benny",
+    "reimbursement": {
+      "date_shared": "2024-07-23",
+      "share_description": "Wire to Wayne to Rebalance to 50/50 Partnership",
+      "reimbursement_status": "completed"
+    },
+    "documentation_file": "2024.07.01_Dunrobin_Mortgage_Paid.pdf",
+    "id": "2"
+  },
+  {
+    "property_id": "164 Dunrobin Drive, Martinsburg, WV 25404, United States of America, Martinsburg, West Virginia, 25404",
+    "type": "expense",
+    "category": "Utilities",
+    "description": "2024.07.02 Montaineer Gas Invoice",
+    "amount": 264.13,
+    "date": "2024-07-03",
+    "collector_payer": "Wayne Benny",
+    "reimbursement": {
+      "date_shared": "2024-07-23",
+      "share_description": "Wire to Wayne to Rebalance to 50/50 Partnership",
+      "reimbursement_status": "completed"
+    },
+    "documentation_file": "2024.06.23_Dunrobin_Mountaineering_Gas.jpg",
+    "id": "3"
+  },
+  {
+    "property_id": "164 Dunrobin Drive, Martinsburg, WV 25404, United States of America, Martinsburg, West Virginia, 25404",
+    "type": "expense",
+    "category": "Capital Expenditures",
+    "description": "2024.07.12 HVAC Replacement",
+    "amount": 6574.3,
+    "date": "2024-07-12",
+    "collector_payer": "BJ Marshall",
+    "reimbursement": {
+      "date_shared": "2024-07-23",
+      "share_description": "Wire to Wayne to Rebalance to 50/50 Partnership",
+      "reimbursement_status": "completed"
+    },
+    "documentation_file": "2024.07.12_Dunrobin_-_HVAC_Replacement.pdf",
+    "id": "4"
+  },
+  {
+    "property_id": "164 Dunrobin Drive, Martinsburg, WV 25404, United States of America, Martinsburg, West Virginia, 25404",
+    "type": "expense",
+    "category": "Capital Expenditures",
+    "description": "2024.07.06 Refrigerator",
+    "amount": 1100.0,
+    "date": "2024-07-23",
+    "collector_payer": "Wayne Benny",
+    "reimbursement": {
+      "date_shared": "2024-07-23",
+      "share_description": "Wire to Wayne to Rebalance to 50/50 Partnership",
+      "reimbursement_status": "completed"
+    },
+    "documentation_file": "",
+    "id": "5"
+  },
+  {
+    "property_id": "164 Dunrobin Drive, Martinsburg, WV 25404, United States of America, Martinsburg, West Virginia, 25404",
+    "type": "expense",
+    "category": "Asset Acquisition",
+    "description": "2024.07.19 Closing Costs",
+    "amount": 7828.0,
+    "date": "2024-07-23",
+    "collector_payer": "Wayne Benny",
+    "reimbursement": {
+      "date_shared": "2024-07-23",
+      "share_description": "Wire to Wayne to Rebalance to 50/50 Partnership",
+      "reimbursement_status": "completed"
+    },
+    "documentation_file": "",
+    "id": "6"
+  },
+  {
+    "property_id": "164 Dunrobin Drive, Martinsburg, WV 25404, United States of America, Martinsburg, West Virginia, 25404",
+    "type": "expense",
+    "category": "Asset Acquisition",
+    "description": "2024.07.19 Mobile Notary",
+    "amount": 150.0,
+    "date": "2024-07-23",
+    "collector_payer": "BJ Marshall",
+    "reimbursement": {
+      "date_shared": "2024-07-23",
+      "share_description": "Wire to Wayne to Rebalance to 50/50 Partnership",
+      "reimbursement_status": "completed"
+    },
+    "documentation_file": "",
+    "id": "7"
+  },
+  {
+    "property_id": "164 Dunrobin Drive, Martinsburg, WV 25404, United States of America, Martinsburg, West Virginia, 25404",
+    "type": "expense",
+    "category": "Asset Acquisition",
+    "description": "2024.07.19 Wire Refund",
+    "amount": 20113.68,
+    "date": "2024-07-23",
+    "collector_payer": "Wayne Benny",
+    "reimbursement": {
+      "date_shared": "2024-07-23",
+      "share_description": "Wire to Wayne to Rebalance to 50/50 Partnership",
+      "reimbursement_status": "completed"
+    },
+    "documentation_file": "",
+    "id": "8"
+  },
+  {
+    "property_id": "164 Dunrobin Drive, Martinsburg, WV 25404, United States of America, Martinsburg, West Virginia, 25404",
+    "type": "expense",
+    "category": "Mortgage",
+    "description": "2024.08 Mortgage Payment",
+    "amount": 1294.66,
+    "date": "2024-08-01",
+    "collector_payer": "BJ Marshall",
+    "reimbursement": {
+      "date_shared": "",
+      "share_description": "Wayne Said to Hold until We Rebalance with Welbeck",
+      "reimbursement_status": "pending"
+    },
+    "documentation_file": "2024.08_Dunrobin_Mortgage_Payment.PNG",
+    "id": "9"
+  },
+  {
+    "property_id": "164 Dunrobin Drive, Martinsburg, WV 25404, United States of America, Martinsburg, West Virginia, 25404",
+    "type": "expense",
+    "category": "Mortgage",
+    "description": "2024.09 Mortgage Payment",
+    "amount": 1294.66,
+    "date": "2024-09-13",
+    "collector_payer": "BJ Marshall",
+    "reimbursement": {
+      "date_shared": "",
+      "share_description": "Wayne Said to Withhold for Now",
+      "reimbursement_status": "pending"
+    },
+    "documentation_file": "2024.09_Dunrobin_Payment.png",
+    "id": "10"
+  },
+  {
+    "property_id": "164 Dunrobin Drive, Martinsburg, WV 25404, United States of America, Martinsburg, West Virginia, 25404",
+    "type": "income",
+    "category": "Loan Repayment",
+    "description": "2024.07.19 Down Payment",
+    "amount": 70000.0,
+    "date": "2024-07-23",
+    "collector_payer": "BJ Marshall",
+    "reimbursement": {
+      "date_shared": "2024-07-23",
+      "share_description": "Wired to Wayne to Rebalance Equity",
+      "reimbursement_status": "completed"
+    },
+    "documentation_file": "",
+    "id": "11"
+  },
+  {
+    "property_id": "164 Dunrobin Drive, Martinsburg, WV 25404, United States of America, Martinsburg, West Virginia, 25404",
+    "type": "income",
+    "category": "Rent",
+    "description": "2024.07 Rent",
+    "amount": 1625.0,
+    "date": "2024-07-05",
+    "collector_payer": "BJ Marshall",
+    "reimbursement": {
+      "date_shared": "2024-07-23",
+      "share_description": "Wired to Wayne to Rebalance Equity",
+      "reimbursement_status": "completed"
+    },
+    "documentation_file": "2024.06-07_Dunrobin_Rent.png",
+    "id": "12"
+  },
+  {
+    "property_id": "164 Dunrobin Drive, Martinsburg, WV 25404, United States of America, Martinsburg, West Virginia, 25404",
+    "type": "income",
+    "category": "Rent",
+    "description": "2024.08 Rent",
+    "amount": 1625.0,
+    "date": "2024-07-28",
+    "collector_payer": "BJ Marshall",
+    "reimbursement": {
+      "date_shared": "2024-07-23",
+      "share_description": "Wired to Wayne to Rebalance Equity",
+      "reimbursement_status": "completed"
+    },
+    "documentation_file": "2024.06-07_Dunrobin_Rent.png",
+    "id": "13"
+  },
+  {
+    "property_id": "164 Dunrobin Drive, Martinsburg, WV 25404, United States of America, Martinsburg, West Virginia, 25404",
+    "type": "income",
+    "category": "Loan Repayment",
+    "description": "2024.10 Mortgage Payment",
+    "amount": 1294.66,
+    "date": "2024-10-01",
+    "collector_payer": "BJ Marshall",
+    "reimbursement": {
+      "date_shared": "",
+      "share_description": "Not Yet Collected",
+      "reimbursement_status": "pending"
+    },
+    "documentation_file": "",
+    "id": "15"
+  },
+  {
+    "property_id": "2212 Logan Street, Harrisburg, PA 17102, United States of America, Harrisburg, Pennsylvania, 17102",
+    "type": "expense",
+    "category": "Mortgage",
+    "description": "2024.07 Mortgage Payment",
+    "amount": 830.2,
+    "date": "2024-07-01",
+    "collector_payer": "BJ Marshall",
+    "documentation_file": "2024.07.01_Logan_St_Mortgage_Payment.png",
+    "id": "18",
+    "reimbursement": {
+      "date_shared": "2024-06-02",
+      "share_description": "Shared via Zelle",
+      "reimbursement_status": "completed",
+      "documentation": "reimb_630_Dauphin_St_Report.png"
+    }
+  },
+  {
+    "property_id": "2212 Logan Street, Harrisburg, PA 17102, United States of America, Harrisburg, Pennsylvania, 17102",
+    "type": "expense",
+    "category": "Utilities",
+    "description": "2024.08.15 Trash Bill",
+    "amount": 35.57,
+    "date": "2024-09-11",
+    "collector_payer": "BJ Marshall",
+    "reimbursement": {
+      "date_shared": "2024-09-17",
+      "share_description": "Tenant Reimbursed",
+      "reimbursement_status": "completed"
+    },
+    "documentation_file": "2024.08_Logan_Rent_and_Utilities.png",
+    "id": "27"
+  },
+  {
+    "property_id": "2212 Logan Street, Harrisburg, PA 17102, United States of America, Harrisburg, Pennsylvania, 17102",
+    "type": "expense",
+    "category": "Mortgage",
+    "description": "2024.10 Mortgage Payment",
+    "amount": 830.2,
+    "date": "2024-09-30",
+    "collector_payer": "BJ Marshall",
+    "reimbursement": {
+      "date_shared": "2024-10-02",
+      "share_description": "Shared via Zelle",
+      "reimbursement_status": "completed"
+    },
+    "documentation_file": "2024.10.01_Logan_Mortgage_Payment.png",
+    "id": "28"
+  },
+  {
+    "property_id": "2212 Logan Street, Harrisburg, PA 17102, United States of America, Harrisburg, Pennsylvania, 17102",
+    "type": "income",
+    "category": "Rent",
+    "description": "2024.06.01 Rent - Tenant Portion",
+    "amount": 195.0,
+    "date": "2024-06-03",
+    "collector_payer": "BJ Marshall",
+    "reimbursement": {
+      "date_shared": "2024-06-03",
+      "share_description": "Shared via Zelle",
+      "reimbursement_status": "completed"
+    },
+    "documentation_file": "2024.06_Logan_Rent_and_Utilities.png",
+    "id": "30"
+  },
+  {
+    "property_id": "2212 Logan Street, Harrisburg, PA 17102, United States of America, Harrisburg, Pennsylvania, 17102",
+    "type": "income",
+    "category": "Rent",
+    "description": "2024.06.01 Rent - S8 Portion",
+    "amount": 1205.0,
+    "date": "2024-06-03",
+    "collector_payer": "BJ Marshall",
+    "reimbursement": {
+      "date_shared": "2024-06-03",
+      "share_description": "Shared via Zelle",
+      "reimbursement_status": "completed"
+    },
+    "documentation_file": "2024.06_Logan_HAP_Portion_of_Payment.png",
+    "id": "31"
+  },
+  {
+    "property_id": "2212 Logan Street, Harrisburg, PA 17102, United States of America, Harrisburg, Pennsylvania, 17102",
+    "type": "income",
+    "category": "Rent",
+    "description": "2024.07.01 Rent - S8 Portion",
+    "amount": 1205.0,
+    "date": "2024-07-01",
+    "collector_payer": "BJ Marshall",
+    "reimbursement": {
+      "date_shared": "2024-07-03",
+      "share_description": "Shared via Zelle",
+      "reimbursement_status": "completed"
+    },
+    "documentation_file": "2024.07.01_Logan_HAP_Rent_Portion.png",
+    "id": "32"
+  },
+  {
+    "property_id": "2212 Logan Street, Harrisburg, PA 17102, United States of America, Harrisburg, Pennsylvania, 17102",
+    "type": "income",
+    "category": "Rent",
+    "description": "2024.07.03 Rent - Tenant Portion",
+    "amount": 195.0,
+    "date": "2024-07-03",
+    "collector_payer": "BJ Marshall",
+    "reimbursement": {
+      "date_shared": "2024-07-03",
+      "share_description": "Shared via Zelle",
+      "reimbursement_status": "completed"
+    },
+    "documentation_file": "2024.07.03_Logan_Tenant_Portion_of_Rent.PNG",
+    "id": "33"
+  },
+  {
+    "property_id": "2212 Logan Street, Harrisburg, PA 17102, United States of America, Harrisburg, Pennsylvania, 17102",
+    "type": "income",
+    "category": "Rent",
+    "description": "2024.08.01 Rent - S8 Portion",
+    "amount": 1205.0,
+    "date": "2024-08-01",
+    "collector_payer": "BJ Marshall",
+    "reimbursement": {
+      "date_shared": "2024-08-07",
+      "share_description": "Shared via Zelle",
+      "reimbursement_status": "completed"
+    },
+    "documentation_file": "2024.08.01_Logan_HAP_Rent_Portion.png",
+    "id": "35"
+  },
+  {
+    "property_id": "2212 Logan Street, Harrisburg, PA 17102, United States of America, Harrisburg, Pennsylvania, 17102",
+    "type": "income",
+    "category": "Rent",
+    "description": "2024.09.01 Rent - S8 Portion",
+    "amount": 1400.0,
+    "date": "2024-09-10",
+    "collector_payer": "BJ Marshall",
+    "reimbursement": {
+      "date_shared": "2024-09-03",
+      "share_description": "Shared via Zelle",
+      "reimbursement_status": "completed"
+    },
+    "documentation_file": "2024.09.03_Logan_HAP_Rent_Portion.png",
+    "id": "37"
+  },
+  {
+    "property_id": "454 Guilford Avenue, Hagerstown, MD 21740, United States of America, Hagerstown, Maryland, 21740",
+    "type": "expense",
+    "category": "Asset Acquisition",
+    "description": "Sugarloaf Painters",
+    "amount": 19665.04,
+    "date": "2024-06-17",
+    "collector_payer": "Brian Poole",
+    "reimbursement": {
+      "date_shared": "2024-10-23",
+      "share_description": "Shared via Zelle",
+      "reimbursement_status": "completed"
+    },
+    "documentation_file": "2024.06.17_Guilford_Invoice_from_Sugarloaf_Painters_and_Estate_Improvements.pdf",
+    "id": "39"
+  },
+  {
+    "property_id": "454 Guilford Avenue, Hagerstown, MD 21740, United States of America, Hagerstown, Maryland, 21740",
+    "type": "expense",
+    "category": "Mortgage",
+    "description": "2024.07.01 Seller Financing",
+    "amount": 114.0,
+    "date": "2024-07-01",
+    "collector_payer": "BJ Marshall",
+    "documentation_file": "2024.05-10_Guilford_Mortgage_Payments.png",
+    "id": "40",
+    "reimbursement": {
+      "date_shared": "2024-07-01",
+      "share_description": "Automatic Monthly Zelle Payments",
+      "reimbursement_status": "completed",
+      "documentation": "reimb_2024.10.01_Logan_Rent.png"
+    }
+  },
+  {
+    "property_id": "454 Guilford Avenue, Hagerstown, MD 21740, United States of America, Hagerstown, Maryland, 21740",
+    "type": "expense",
+    "category": "Mortgage",
+    "description": "2024.08.01 Mortgage Payment",
+    "amount": 1049.39,
+    "date": "2024-07-01",
+    "collector_payer": "BJ Marshall",
+    "reimbursement": {
+      "date_shared": "2024-07-01",
+      "share_description": "Shared via Zelle",
+      "reimbursement_status": "completed"
+    },
+    "documentation_file": "2024.05-10_Guilford_Mortgage_Payments.png",
+    "id": "41"
+  },
+  {
+    "property_id": "454 Guilford Avenue, Hagerstown, MD 21740, United States of America, Hagerstown, Maryland, 21740",
+    "type": "expense",
+    "category": "Asset Acquisition",
+    "description": "2024.07.29 Lead Abatement",
+    "amount": 1742.73,
+    "date": "2024-08-09",
+    "collector_payer": "Brian Poole",
+    "reimbursement": {
+      "date_shared": "2024-07-29",
+      "share_description": "Shared via Zelle",
+      "reimbursement_status": "completed"
+    },
+    "documentation_file": "2024.07.29_Guilford_Lead_Abatement.pdf",
+    "id": "44"
+  },
+  {
+    "property_id": "454 Guilford Avenue, Hagerstown, MD 21740, United States of America, Hagerstown, Maryland, 21740",
+    "type": "expense",
+    "category": "Asset Acquisition",
+    "description": "2024.06 Rental License Fee",
+    "amount": 75.0,
+    "date": "2024-06-30",
+    "collector_payer": "BJ Marshall",
+    "reimbursement": {
+      "date_shared": "2024-06-30",
+      "share_description": "Shared via Zelle",
+      "reimbursement_status": "completed"
+    },
+    "documentation_file": "2024.06.30_Guilford_Rental_License.pdf",
+    "id": "45"
+  },
+  {
+    "property_id": "454 Guilford Avenue, Hagerstown, MD 21740, United States of America, Hagerstown, Maryland, 21740",
+    "type": "expense",
+    "category": "Repairs",
+    "description": "2024.08.17 Vent, Wiring, Killz, Paint",
+    "amount": 2581.35,
+    "date": "2024-08-20",
+    "collector_payer": "Brian Poole",
+    "reimbursement": {
+      "date_shared": "2024-10-23",
+      "share_description": "Shared via Zelle",
+      "reimbursement_status": "completed"
+    },
+    "documentation_file": "2024.08.17_Guilford_Vent_Wiring_Killz_Paint.pdf",
+    "id": "47"
+  },
+  {
+    "property_id": "454 Guilford Avenue, Hagerstown, MD 21740, United States of America, Hagerstown, Maryland, 21740",
+    "type": "expense",
+    "category": "Utilities",
+    "description": "2024.09.17 Columbia Gas",
+    "amount": 28.32,
+    "date": "2024-09-05",
+    "collector_payer": "BJ Marshall",
+    "reimbursement": {
+      "date_shared": "2024-09-17",
+      "share_description": "Tenant Reimbursed",
+      "reimbursement_status": "completed"
+    },
+    "documentation_file": "2024.09.17_Guilford_-_Columbia_Gas.pdf",
+    "id": "48"
+  },
+  {
+    "property_id": "454 Guilford Avenue, Hagerstown, MD 21740, United States of America, Hagerstown, Maryland, 21740",
+    "type": "expense",
+    "category": "Mortgage",
+    "description": "2024.09.01 Mortgage Payment",
+    "amount": 1049.39,
+    "date": "2024-09-05",
+    "collector_payer": "BJ Marshall",
+    "reimbursement": {
+      "date_shared": "2024-09-05",
+      "share_description": "Sent via Zelle",
+      "reimbursement_status": "completed"
+    },
+    "documentation_file": "2024.09.01_Guilford_Mortgage.pdf",
+    "id": "49"
+  },
+  {
+    "property_id": "454 Guilford Avenue, Hagerstown, MD 21740, United States of America, Hagerstown, Maryland, 21740",
+    "type": "expense",
+    "category": "Utilities",
+    "description": "2024.10.02 Water/Sewer for Jun-Sep",
+    "amount": 111.4,
+    "date": "2024-09-29",
+    "collector_payer": "BJ Marshall",
+    "reimbursement": {
+      "date_shared": "2024-09-29",
+      "share_description": "Tenant Reimbursed",
+      "reimbursement_status": "completed"
+    },
+    "documentation_file": "2024.10.02_Guiford_Water_Bill_2024.06.06-2024.09.04.pdf",
+    "id": "50"
+  },
+  {
+    "property_id": "454 Guilford Avenue, Hagerstown, MD 21740, United States of America, Hagerstown, Maryland, 21740",
+    "type": "income",
+    "category": "Rent",
+    "description": "2024.07.24 Rent and Sec. Deposit",
+    "amount": 3800.0,
+    "date": "2024-07-24",
+    "collector_payer": "BJ Marshall",
+    "documentation_file": "2024.07.24_Guilford_-_Rent_and_Security_Deposit.png",
+    "id": "51",
+    "reimbursement": {
+      "date_shared": "2024-07-25",
+      "share_description": "Sent via Zelle",
+      "reimbursement_status": "completed",
+      "documentation": null
+    }
+  },
+  {
+    "property_id": "454 Guilford Avenue, Hagerstown, MD 21740, United States of America, Hagerstown, Maryland, 21740",
+    "type": "income",
+    "category": "Rent",
+    "description": "2024.09.01 Rent",
+    "amount": 1900.0,
+    "date": "2024-09-05",
+    "collector_payer": "BJ Marshall",
+    "reimbursement": {
+      "date_shared": "2024-09-05",
+      "share_description": "Sent via Zelle",
+      "reimbursement_status": "completed"
+    },
+    "documentation_file": "2024.09.05_Guilford_Rent.PNG",
+    "id": "52"
+  },
+  {
+    "property_id": "454 Guilford Avenue, Hagerstown, MD 21740, United States of America, Hagerstown, Maryland, 21740",
+    "type": "expense",
+    "category": "Utilities",
+    "description": "2024.10.01 Mortgage Payment",
+    "amount": 1049.39,
+    "date": "2024-10-03",
+    "collector_payer": "BJ Marshall",
+    "reimbursement": {
+      "date_shared": "2024-10-03",
+      "share_description": "Shared via Zelle",
+      "reimbursement_status": "completed"
+    },
+    "documentation_file": "2024.10.03_Guilford_Mortgage.png",
+    "id": "53"
+  },
+  {
+    "property_id": "454 Guilford Avenue, Hagerstown, MD 21740, United States of America, Hagerstown, Maryland, 21740",
+    "type": "expense",
+    "category": "Repairs",
+    "description": "2024.10.01 Lock Replacement",
+    "amount": 509.61,
+    "date": "2024-10-03",
+    "collector_payer": "Brian Poole",
+    "reimbursement": {
+      "date_shared": "2024-10-03",
+      "share_description": "Shared via Zelle",
+      "reimbursement_status": "completed"
+    },
+    "documentation_file": "2024.09.15_Guilford_Lock_Replacement.pdf",
+    "id": "54"
+  },
+  {
+    "property_id": "454 Guilford Avenue, Hagerstown, MD 21740, United States of America, Hagerstown, Maryland, 21740",
+    "type": "income",
+    "category": "Rent",
+    "description": "2024.10.01 Rent",
+    "amount": 1955.0,
+    "date": "2024-10-02",
+    "collector_payer": "BJ Marshall",
+    "reimbursement": {
+      "date_shared": "2024-10-07",
+      "share_description": "Shared via Zelle",
+      "reimbursement_status": "completed"
+    },
+    "documentation_file": "2024.10_Guilford_Rent_and_Utilities.png",
+    "id": "55"
+  },
+  {
+    "property_id": "5920 Watch Chain Way, Columbia, MD 21044, United States of America, Columbia, Maryland, 21044",
+    "type": "expense",
+    "category": "Association Dues",
+    "description": "2024.11 COA",
+    "amount": 362.81,
+    "date": "2024-11-01",
+    "collector_payer": "BJ Marshall",
+    "notes": "Testing Notes Here.",
+    "documentation_file": "2024.11_Watch_Chain_COA.pdf",
+    "id": "57",
+    "reimbursement": {
+      "date_shared": "2024-11-01",
+      "share_description": "Auto-completed - Single owner property",
+      "reimbursement_status": "completed",
+      "documentation": null
+    }
+  },
+  {
+    "property_id": "5451 El Camino, Columbia, MD 21044, United States of America, Columbia, Maryland, 21044",
+    "type": "income",
+    "category": "Rent",
+    "description": "2024.11 PennyMac",
+    "amount": 2325.0,
+    "date": "2024-11-01",
+    "collector_payer": "BJ Marshall",
+    "documentation_file": "2024.11_El_Camino_Rent.png",
+    "reimbursement": {
+      "date_shared": "2024-11-01",
+      "share_description": "Auto-completed - Single owner property",
+      "reimbursement_status": "completed"
+    },
+    "id": "58"
+  },
+  {
+    "property_id": "454 Guilford Avenue, Hagerstown, MD 21740, United States of America, Hagerstown, Maryland, 21740",
+    "type": "income",
+    "category": "Rent",
+    "description": "2024.11 Rent",
+    "amount": 1900.0,
+    "date": "2024-11-06",
+    "collector_payer": "BJ Marshall",
+    "documentation_file": "2024.11_Guilford_Rent_and_Utilities.png",
+    "id": "59",
+    "reimbursement": {
+      "date_shared": "2024-11-04",
+      "share_description": "Shared via Zelle",
+      "reimbursement_status": "completed",
+      "documentation": "reimb_2024.11_Guilford_Rent_and_Utilities.png"
+    }
+  },
+  {
+    "property_id": "1911 Grinnalds Avenue, Baltimore, MD 21223, United States of America",
+    "type": "expense",
+    "category": "Asset Acquisition",
+    "description": "2024.11.07 Grinnalds Rental License Fee",
+    "amount": 155.0,
+    "date": "2024-11-07",
+    "collector_payer": "BJ Marshall",
+    "documentation_file": "2024.11.07_Grinnalds_Rental_License_Fee.pdf",
+    "reimbursement": {
+      "date_shared": "2024-11-07",
+      "share_description": "Auto-completed - Single owner property",
+      "reimbursement_status": "completed"
+    },
+    "id": "60"
+  },
+  {
+    "property_id": "454 Guilford Avenue, Hagerstown, MD 21740, United States of America, Hagerstown, Maryland, 21740",
+    "type": "expense",
+    "category": "Mortgage",
+    "description": "2024.11 Fay Mortgage",
+    "amount": 830.2,
+    "date": "2024-11-01",
+    "collector_payer": "BJ Marshall",
+    "documentation_file": "2024.11_Guilford_Mortgage.png",
+    "reimbursement": {
+      "date_shared": "2024-11-04",
+      "share_description": "Shared via Zelle",
+      "reimbursement_status": "completed"
+    },
+    "id": "61"
+  },
+  {
+    "property_id": "2212 Logan Street, Harrisburg, PA 17102, United States of America, Harrisburg, Pennsylvania, 17102",
+    "type": "expense",
+    "category": "Mortgage",
+    "description": "TEST TEST",
+    "amount": 1012.41,
+    "date": "2011-11-11",
+    "collector_payer": "BJ Marshall",
+    "documentation_file": "7700_Victory_Ave.png",
+    "reimbursement": {
+      "date_shared": "2011-11-11",
+      "share_description": "TEST TEST",
+      "reimbursement_status": "completed",
+      "documentation": "reimb_2024.12.18_Miller_BJ_Wire_1_of_2.png"
+    },
+    "id": "62"
+  },
+  {
+    "property_id": "5451 El Camino, Columbia, MD 21044, United States of America, Columbia, Maryland, 21044",
+    "type": "income",
+    "category": "Rent",
+    "description": "A Test to Add Notes when Adding a Transaction",
+    "amount": 2000.0,
+    "date": "2025-01-05",
+    "collector_payer": "BJ Marshall",
+    "notes": "I created a note when adding a transaction. I'm editing a transaction and its note. Oh, and no need to have documentation to save. I'm running out of",
+    "documentation_file": "",
+    "id": "64",
+    "reimbursement": {
+      "date_shared": "2025-01-05",
+      "share_description": "Auto-completed - Single owner property",
+      "reimbursement_status": "completed",
+      "documentation": null
+    }
+  },
+  {
+    "property_id": "5451 El Camino, Columbia, MD 21044, United States of America, Columbia, Maryland, 21044",
+    "type": "income",
+    "category": "Rent",
+    "description": "An insane test",
+    "amount": 20000.0,
+    "date": "2025-01-15",
+    "collector_payer": "BJ Marshall",
+    "notes": "An insane test",
+    "documentation_file": "947_Brooks.png",
+    "reimbursement": {
+      "date_shared": "2025-01-15",
+      "share_description": "Auto-completed - Single owner property",
+      "reimbursement_status": "completed",
+      "documentation": null
+    },
+    "id": "65"
+  }
+]

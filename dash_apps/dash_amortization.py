@@ -1,4 +1,5 @@
 import dash
+import os
 from dash import dcc, html, dash_table
 from dash.dependencies import Input, Output
 import dash_bootstrap_components as dbc
@@ -78,13 +79,14 @@ def create_amortization_dash(flask_app):
     try:
         logger.info("Initializing mobile-first amortization dashboard")
         
+        template_path = os.path.join(str(flask_app.root_path), 'templates', 'dashboards', 'dash_amortization.html')
         dash_app = dash.Dash(
             __name__,
             server=flask_app,
             routes_pathname_prefix='/dashboards/_dash/amortization/',
-            requests_pathname_prefix='/dashboards/_dash/amortization/',
+            requests_pathname_prefix='/dashboards/_dash/amortization/',  
             external_stylesheets=[dbc.themes.BOOTSTRAP],
-            index_string=open('templates/dashboards/dash_amortization.html').read()
+            index_string=open(template_path).read()
         )
 
         # Mobile-first styling
@@ -257,15 +259,15 @@ def create_amortization_dash(flask_app):
                     return create_error_response("Property not found")
 
                 # Validate and parse loan data
-                required_fields = ['loan_amount', 'primary_loan_rate', 'primary_loan_term', 'loan_start_date']
+                required_fields = ['primary_loan_amount', 'primary_loan_rate', 'primary_loan_term', 'primary_loan_start_date']
                 if not all(property_data.get(f) for f in required_fields):
                     return create_error_response("Missing required loan information")
 
                 try:
-                    loan_amount = float(property_data['loan_amount'])
+                    loan_amount = float(property_data['primary_loan_amount'])
                     interest_rate = float(property_data['primary_loan_rate']) / 100
                     loan_term = float(property_data['primary_loan_term']) / 12
-                    loan_start_date = datetime.strptime(property_data['loan_start_date'], '%Y-%m-%d').date()
+                    loan_start_date = datetime.strptime(property_data['primary_loan_start_date'], '%Y-%m-%d').date()
                 except ValueError as e:
                     return create_error_response(f"Invalid loan data: {str(e)}")
 

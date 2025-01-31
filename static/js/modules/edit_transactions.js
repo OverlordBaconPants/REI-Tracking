@@ -335,91 +335,53 @@ const editTransactionsModule = {
     toggleReimbursementSection: function(propertyData) {
         console.log('Toggling reimbursement section with property data:', JSON.stringify(propertyData, null, 2));
         
-        // Find or create reimbursement section
-        let reimbursementSection = document.getElementById('reimbursement-section');
+        // Find reimbursement section
+        const reimbursementSection = document.getElementById('reimbursement-section');
         if (!reimbursementSection) {
-            console.log('Reimbursement section not found, creating it');
-            reimbursementSection = this.createReimbursementSection();
-            if (!reimbursementSection) {
-                console.error('Failed to create reimbursement section');
-                return;
+            console.error('Reimbursement section not found');
+            return null;
+        }
+    
+        // Determine if property has multiple owners
+        const hasMultipleOwners = propertyData?.partners && propertyData.partners.length > 1;
+        console.log('Property has multiple owners:', hasMultipleOwners);
+    
+        if (hasMultipleOwners) {
+            console.log('Showing reimbursement section');
+            reimbursementSection.style.display = 'block';
+            
+            // Update reimbursement details
+            const reimbursementDetails = document.getElementById('reimbursement-details');
+            if (reimbursementDetails) {
+                this.updateReimbursementDetails();
             }
-        }
     
-        let hasOnlyOwner = false;
-        if (propertyData?.partners) {
-            // Check if there's only one partner with 100% equity
-            hasOnlyOwner = propertyData.partners.length === 1 && 
-                          Math.abs(propertyData.partners[0].equity_share - 100) < 0.01;
-            console.log('Property has only one owner:', hasOnlyOwner);
-        }
-    
-        if (hasOnlyOwner) {
-            console.log('Single owner property - hiding reimbursement section');
+            // Clear auto-complete fields
+            const dateSharedInput = document.getElementById('date_shared');
+            const reimbursementStatusInput = document.getElementById('reimbursement_status');
+            const shareDescriptionInput = document.getElementById('share_description');
+            
+            if (dateSharedInput) dateSharedInput.value = '';
+            if (reimbursementStatusInput) reimbursementStatusInput.value = 'pending';
+            if (shareDescriptionInput) shareDescriptionInput.value = '';
+        } else {
+            console.log('Hiding reimbursement section for single owner');
             reimbursementSection.style.display = 'none';
             
-            // Set hidden input values for submission
+            // Auto-complete with default values for single owner
             const dateInput = document.getElementById('date');
             const dateSharedInput = document.getElementById('date_shared');
             const reimbursementStatusInput = document.getElementById('reimbursement_status');
             const shareDescriptionInput = document.getElementById('share_description');
             
-            // Preserve existing doc info
-            const existingReimbursementDoc = document.querySelector('[data-existing-reimbursement-doc]')?.dataset.existingReimbursementDoc;
-            
             if (dateSharedInput && dateInput) {
                 dateSharedInput.value = dateInput.value;
-                console.log('Set date_shared to:', dateInput.value);
             }
             if (reimbursementStatusInput) {
                 reimbursementStatusInput.value = 'completed';
-                console.log('Set reimbursement_status to: completed');
             }
             if (shareDescriptionInput) {
-                shareDescriptionInput.value = existingReimbursementDoc 
-                    ? shareDescriptionInput.value 
-                    : 'Auto-completed - Single owner property';
-                console.log('Set share_description');
-            }
-    
-            // Hide reimbursement details as well
-            const reimbursementDetails = document.getElementById('reimbursement-details');
-            if (reimbursementDetails) {
-                reimbursementDetails.style.display = 'none';
-            }
-    
-            // If there's a reimbursement alert, show it
-            const reimbursementAlert = document.createElement('div');
-            reimbursementAlert.className = 'alert alert-info mt-3';
-            reimbursementAlert.textContent = 'Reimbursement details are hidden because this property is wholly owned by one partner.';
-            reimbursementSection.appendChild(reimbursementAlert);
-        } else {
-            console.log('Multiple owners or no owner data - showing reimbursement section');
-            reimbursementSection.style.display = 'block';
-            
-            // Remove any existing alerts
-            const existingAlerts = reimbursementSection.querySelectorAll('.alert');
-            existingAlerts.forEach(alert => alert.remove());
-            
-            // Reset fields for multiple owners
-            const reimbursementStatusInput = document.getElementById('reimbursement_status');
-            const shareDescriptionInput = document.getElementById('share_description');
-            const dateSharedInput = document.getElementById('date_shared');
-            
-            if (reimbursementStatusInput) {
-                reimbursementStatusInput.value = 'pending';
-            }
-            if (shareDescriptionInput) {
-                shareDescriptionInput.value = '';
-            }
-            if (dateSharedInput) {
-                dateSharedInput.value = '';
-            }
-    
-            // Show reimbursement details
-            const reimbursementDetails = document.getElementById('reimbursement-details');
-            if (reimbursementDetails) {
-                reimbursementDetails.style.display = 'block';
+                shareDescriptionInput.value = 'Auto-completed - Single owner property';
             }
         }
     
@@ -563,25 +525,12 @@ const editTransactionsModule = {
     updateReimbursementDetails: function() {
         console.log('Updating reimbursement details');
         const amount = parseFloat(document.getElementById('amount')?.value) || 0;
-        const collectorPayerSelect = document.getElementById('collector_payer');
-        const collectorPayer = collectorPayerSelect?.value;
+        const collectorPayer = document.getElementById('collector_payer')?.value;
         const propertyId = document.getElementById('property_id')?.value;
         const type = document.querySelector('input[name="type"]:checked')?.value;
         
-        console.log('Current values:', {
-            amount,
-            collectorPayer,
-            propertyId,
-            type
-        });
-    
-        if (!propertyId || !type || !amount) {
+        if (!propertyId || !type || !amount || !collectorPayer) {
             console.log('Missing required fields for reimbursement calculation');
-            return;
-        }
-    
-        if (!collectorPayer) {
-            console.log('No collector/payer selected');
             return;
         }
     
@@ -600,45 +549,35 @@ const editTransactionsModule = {
                 return;
             }
     
-            // Filter out the collector/payer first
-            const otherPartners = partners.filter(partner => {
-                const isCollectorPayer = partner.name === collectorPayer;
-                console.log(`Checking partner ${partner.name} against collector/payer ${collectorPayer}: ${isCollectorPayer}`);
-                return !isCollectorPayer;
-            });
-    
+            // Filter out the collector/payer
+            const otherPartners = partners.filter(partner => partner.name !== collectorPayer);
             console.log('Partners after filtering:', otherPartners);
     
-            let html = '<div class="reimbursement-breakdown mt-3">';
+            let html = '<div class="border rounded p-3">';
+            html += '<h6 class="mb-3">Reimbursement Breakdown</h6>';
             
-            if (otherPartners.length === 0) {
-                html += '<p class="text-muted">No reimbursements needed - single partner transaction</p>';
-            } else {
-                html += '<ul class="list-unstyled">';
-                otherPartners.forEach(partner => {
-                    const equityShare = partner.equity_share / 100;
-                    const share = equityShare * amount;
-                    const shareText = type === 'income' ? 'is owed' : 'owes';
-                    const amountClass = type === 'income' ? 'text-success' : 'text-danger';
-                    
-                    html += `
-                        <li class="mb-2">
-                            <strong>${partner.name}</strong> (${partner.equity_share}% equity) 
-                            ${shareText} <span class="${amountClass}">$${share.toFixed(2)}</span>
-                        </li>`;
-                });
-                html += '</ul>';
-                html += `<p class="text-muted small mt-2">
-                    Based on equity shares and a total ${type} of $${amount.toFixed(2)}
-                </p>`;
-            }
+            otherPartners.forEach(partner => {
+                const equityShare = partner.equity_share / 100;
+                const share = equityShare * amount;
+                const shareText = type === 'income' ? 'is owed' : 'owes';
+                const amountClass = type === 'income' ? 'text-success' : 'text-danger';
+                
+                html += `
+                    <div class="mb-2">
+                        <strong>${partner.name}</strong> (${partner.equity_share}% equity) 
+                        ${shareText} <span class="${amountClass}">$${share.toFixed(2)}</span>
+                    </div>`;
+            });
     
+            html += `<div class="text-muted small mt-3">
+                Based on equity shares and a total ${type} of $${amount.toFixed(2)}
+            </div>`;
             html += '</div>';
+    
             detailsContainer.innerHTML = html;
     
         } catch (error) {
             console.error('Error updating reimbursement details:', error);
-            toastr.error('Error calculating reimbursement details');
         }
     },
 

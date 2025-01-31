@@ -193,67 +193,68 @@
                         </div>
 
                         <!-- Reimbursement Section -->
-                        <div class="card mb-4">
+                        {% if debug %}
+                        <div class="alert alert-info">
+                            <pre>{{ transaction | tojson(indent=2) }}</pre>
+                        </div>
+                        {% endif %}
+
+                        <div class="card mb-4" id="reimbursement-section">
                             <div class="card-header bg-navy">
                                 <h5 class="mb-0">Reimbursement Details</h5>
                             </div>
                             <div class="card-body">
-                                <div id="reimbursement-details" class="mb-4">
-                                    <!-- Reimbursement details will be populated by JavaScript -->
-                                </div>
-
+                                <div id="reimbursement-details" class="mb-4"></div>
+                        
                                 <div class="row g-3">
                                     <div class="col-12 col-md-6">
                                         <div class="form-group">
-                                            <label for="date_shared" class="form-label">Date Shared</label>
+                                            <label for="reimbursement_date_shared" class="form-label">Date Shared</label>
                                             <input type="date" 
                                                    class="form-control" 
-                                                   id="date_shared" 
-                                                   name="date_shared" 
-                                                   value="{{ transaction.reimbursement.date_shared if transaction.reimbursement }}">
+                                                   id="reimbursement_date_shared" 
+                                                   name="reimbursement[date_shared]" 
+                                                   value="{{ transaction.reimbursement.date_shared if transaction.reimbursement else '' }}">
                                         </div>
                                     </div>
-
+                                
                                     <div class="col-12 col-md-6">
                                         <div class="form-group">
-                                            <label for="share_description" class="form-label">Share Description</label>
+                                            <label for="reimbursement_share_description" class="form-label">Share Description</label>
                                             <input type="text" 
                                                    class="form-control" 
-                                                   id="share_description" 
-                                                   name="share_description" 
-                                                   value="{{ transaction.reimbursement.share_description if transaction.reimbursement }}">
+                                                   id="reimbursement_share_description" 
+                                                   name="reimbursement[share_description]" 
+                                                   value="{{ transaction.reimbursement.share_description if transaction.reimbursement else '' }}">
                                         </div>
                                     </div>
-
+                                
                                     <div class="col-12 col-md-6">
                                         <div class="form-group">
                                             <label for="reimbursement_status" class="form-label">Reimbursement Status</label>
                                             <select class="form-select" 
                                                     id="reimbursement_status" 
-                                                    name="reimbursement_status">
-                                                <option value="pending" 
-                                                        {% if transaction.reimbursement and transaction.reimbursement.reimbursement_status == 'pending' %}selected{% endif %}>
+                                                    name="reimbursement[reimbursement_status]">
+                                                <option value="pending" {% if transaction.reimbursement and transaction.reimbursement.reimbursement_status == 'pending' %}selected{% endif %}>
                                                     Pending
                                                 </option>
-                                                <option value="completed" 
-                                                        {% if transaction.reimbursement and transaction.reimbursement.reimbursement_status == 'completed' %}selected{% endif %}>
+                                                <option value="completed" {% if transaction.reimbursement and transaction.reimbursement.reimbursement_status == 'completed' %}selected{% endif %}>
                                                     Completed
                                                 </option>
-                                                <option value="not_required" 
-                                                        {% if transaction.reimbursement and transaction.reimbursement.reimbursement_status == 'not_required' %}selected{% endif %}>
+                                                <option value="not_required" {% if transaction.reimbursement and transaction.reimbursement.reimbursement_status == 'not_required' %}selected{% endif %}>
                                                     Not Required
                                                 </option>
                                             </select>
                                         </div>
                                     </div>
-
+                                
                                     <div class="col-12 col-md-6">
                                         <div class="form-group">
                                             <label for="reimbursement_documentation" class="form-label">
                                                 Reimbursement Documentation
                                             </label>
                                             {% if transaction.reimbursement and transaction.reimbursement.documentation %}
-                                                <div class="card mb-2">
+                                                <div class="card mb-2 current-file">
                                                     <div class="card-body p-2">
                                                         <div class="d-grid gap-2 d-md-flex">
                                                             <a href="{{ url_for('transactions.get_artifact', filename=transaction.reimbursement.documentation) }}" 
@@ -273,7 +274,8 @@
                                             <input type="file" 
                                                    class="form-control" 
                                                    id="reimbursement_documentation" 
-                                                   name="reimbursement_documentation">
+                                                   name="reimbursement_documentation"
+                                                   data-existing-reimbursement-doc="{{ transaction.reimbursement.documentation if transaction.reimbursement else '' }}">
                                         </div>
                                     </div>
                                 </div>

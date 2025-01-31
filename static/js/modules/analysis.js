@@ -132,64 +132,231 @@ const balloonPaymentHTML = `
     </div>
 `;
 
-// Loan template function - used by loan handlers
-const getLoanFieldsHTML = (loanNumber) => `
-    <div class="loan-section mb-4">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Loan ${loanNumber}</h5>
-                <button type="button" class="btn btn-danger btn-sm remove-loan-btn">
-                    <i class="bi bi-trash me-2"></i>Remove
+// Lease Option HTML
+const getLeaseOptionHTML = () => `
+    <!-- Property Details Card -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Property Details</h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-12 col-md-4">
+                    <label for="square_footage" class="form-label">Square Footage</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control form-control-lg" id="square_footage" 
+                            name="square_footage" placeholder="Property square footage">
+                        <span class="input-group-text">sq ft</span>
+                    </div>
+                </div>
+                <div class="col-12 col-md-4">
+                    <label for="lot_size" class="form-label">Lot Size</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control form-control-lg" id="lot_size" 
+                            name="lot_size" placeholder="Lot size">
+                        <span class="input-group-text">sq ft</span>
+                    </div>
+                </div>
+                <div class="col-12 col-md-4">
+                    <label for="year_built" class="form-label">Year Built</label>
+                    <input type="number" class="form-control form-control-lg" id="year_built" 
+                        name="year_built" placeholder="Construction year">
+                </div>
+                <div class="col-12 col-md-6">
+                    <label for="bedrooms" class="form-label">Bedrooms</label>
+                    <input type="number" class="form-control form-control-lg" id="bedrooms" 
+                        name="bedrooms" min="0" step="1" placeholder="Number of bedrooms">
+                </div>
+                <div class="col-12 col-md-6">
+                    <label for="bathrooms" class="form-label">Bathrooms</label>
+                    <input type="number" class="form-control form-control-lg" id="bathrooms" 
+                        name="bathrooms" min="0" step="0.5" placeholder="Number of bathrooms">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Purchase Details Card -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Purchase Details</h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-12 col-md-6">
+                    <label for="purchase_price" class="form-label">Purchase Price</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" 
+                               class="form-control form-control-lg" 
+                               id="purchase_price" 
+                               name="purchase_price" 
+                               placeholder="Current market value/owner's purchase price" 
+                               required
+                               data-bs-toggle="tooltip"
+                               data-bs-placement="top"
+                               title="The current market value or price the owner paid for the property">
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label for="strike_price" class="form-label">Strike Price</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control form-control-lg" id="strike_price" 
+                               name="strike_price" placeholder="Agreed future purchase price" required>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label for="option_consideration_fee" class="form-label">Option Fee</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control form-control-lg" id="option_consideration_fee" 
+                               name="option_consideration_fee" placeholder="Non-refundable option fee" required>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label for="option_term_months" class="form-label">Option Term</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control form-control-lg" id="option_term_months" 
+                               name="option_term_months" placeholder="Option period duration" required>
+                        <span class="input-group-text">months</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Financing Section -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Financing</h5>
+        </div>
+        <div class="card-body" id="financing-section">
+            <div id="loans-container">
+                <!-- Existing loans will be inserted here -->
+            </div>
+            <div class="mt-3">
+                <button type="button" class="btn btn-primary" id="add-loan-btn">
+                    <i class="bi bi-plus-circle me-2"></i>Add Loan
                 </button>
             </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-12 col-md-6">
-                        <label for="loan${loanNumber}_loan_name" class="form-label">Loan Name</label>
-                        <input type="text" class="form-control form-control-lg" id="loan${loanNumber}_loan_name" 
-                               name="loan${loanNumber}_loan_name" placeholder="Enter loan name" required>
+        </div>
+    </div>
+
+    <!-- Rental Income Card -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Rental Income</h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-12 col-md-6">
+                    <label for="monthly_rent" class="form-label">Monthly Rent</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control form-control-lg" id="monthly_rent" 
+                               name="monthly_rent" placeholder="Monthly rent amount" required>
                     </div>
-                    <div class="col-12 col-md-6">
-                        <label for="loan${loanNumber}_loan_amount" class="form-label">Loan Amount</label>
-                        <div class="input-group">
-                            <span class="input-group-text">$</span>
-                            <input type="number" class="form-control form-control-lg" id="loan${loanNumber}_loan_amount" 
-                                   name="loan${loanNumber}_loan_amount" placeholder="Enter loan amount" required>
-                        </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label for="monthly_rent_credit_percentage" class="form-label">Rent Credit</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control form-control-lg" id="monthly_rent_credit_percentage" 
+                               name="monthly_rent_credit_percentage" placeholder="Percentage of rent credited" required>
+                        <span class="input-group-text">%</span>
                     </div>
-                    <div class="col-12 col-md-6">
-                        <label for="loan${loanNumber}_loan_down_payment" class="form-label">Down Payment</label>
-                        <div class="input-group">
-                            <span class="input-group-text">$</span>
-                            <input type="number" class="form-control form-control-lg" id="loan${loanNumber}_loan_down_payment" 
-                                   name="loan${loanNumber}_loan_down_payment" placeholder="Enter down payment" required>
-                        </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label for="rent_credit_cap" class="form-label">Rent Credit Cap</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control form-control-lg" id="rent_credit_cap" 
+                               name="rent_credit_cap" placeholder="Maximum total rent credit" required>
                     </div>
-                    <div class="col-md-6 mb-3">
-                        <label for="loan${loanNumber}_loan_interest_rate" class="form-label">Interest Rate (%)</label>
-                        <input type="number" class="form-control" id="loan${loanNumber}_loan_interest_rate" 
-                            name="loan${loanNumber}_loan_interest_rate" step="0.025" min="0" max="100" 
-                            placeholder="Enter interest rate" required>
-                        <div class="form-check mt-2">
-                            <input class="form-check-input" type="checkbox" id="loan${loanNumber}_interest_only" 
-                                name="loan${loanNumber}_interest_only">
-                            <label class="form-check-label" for="loan${loanNumber}_interest_only">
-                                Interest Only
-                            </label>
-                        </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Operating Expenses Card -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Operating Expenses</h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-12 col-md-6">
+                    <label for="property_taxes" class="form-label">Monthly Property Taxes</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control form-control-lg" id="property_taxes" 
+                               name="property_taxes" placeholder="Monthly taxes" required>
                     </div>
-                    <div class="col-12 col-md-6">
-                        <label for="loan${loanNumber}_loan_term" class="form-label">Loan Term (months)</label>
-                        <input type="number" class="form-control form-control-lg" id="loan${loanNumber}_loan_term" 
-                               name="loan${loanNumber}_loan_term" min="1" placeholder="Enter loan term" required>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label for="insurance" class="form-label">Monthly Insurance</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control form-control-lg" id="insurance" 
+                               name="insurance" placeholder="Monthly insurance" required>
                     </div>
-                    <div class="col-12 col-md-6">
-                        <label for="loan${loanNumber}_loan_closing_costs" class="form-label">Closing Costs</label>
-                        <div class="input-group">
-                            <span class="input-group-text">$</span>
-                            <input type="number" class="form-control form-control-lg" id="loan${loanNumber}_loan_closing_costs" 
-                                   name="loan${loanNumber}_loan_closing_costs" placeholder="Enter closing costs" required>
-                        </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label for="management_fee_percentage" class="form-label">Management Fee</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control form-control-lg" id="management_fee_percentage" 
+                               name="management_fee_percentage" value="8" min="0" max="100" step="0.5" required>
+                        <span class="input-group-text">%</span>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label for="capex_percentage" class="form-label">CapEx</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control form-control-lg" id="capex_percentage" 
+                               name="capex_percentage" value="2" min="0" max="100" step="1" required>
+                        <span class="input-group-text">%</span>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label for="repairs_percentage" class="form-label">Repairs</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control form-control-lg" id="repairs_percentage" 
+                               name="repairs_percentage" value="2" min="0" max="100" step="1" required>
+                        <span class="input-group-text">%</span>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label for="vacancy_percentage" class="form-label">Vacancy Rate</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control form-control-lg" id="vacancy_percentage" 
+                               name="vacancy_percentage" value="4" min="0" max="100" step="1" required>
+                        <span class="input-group-text">%</span>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label for="hoa_coa_coop" class="form-label">HOA/COA/COOP</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control form-control-lg" id="hoa_coa_coop" 
+                               name="hoa_coa_coop" placeholder="Monthly association fees" required>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notes Card -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Notes</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-12">
+                    <textarea class="form-control" id="notes" name="notes" rows="4" 
+                              maxlength="1000" placeholder="Enter any notes about this analysis (max 1,000 characters)"></textarea>
+                    <div class="form-text text-end mt-2">
+                        <span id="notes-counter">0</span>/1000 characters
                     </div>
                 </div>
             </div>
@@ -399,6 +566,71 @@ const getLongTermRentalHTML = () => `
                               maxlength="1000" placeholder="Enter any notes about this analysis (max 1,000 characters)"></textarea>
                     <div class="form-text text-end mt-2">
                         <span id="notes-counter">0</span>/1000 characters
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+`;
+
+// Loan template function - used by loan handlers
+const getLoanFieldsHTML = (loanNumber) => `
+    <div class="loan-section mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Loan ${loanNumber}</h5>
+                <button type="button" class="btn btn-danger btn-sm remove-loan-btn">
+                    <i class="bi bi-trash me-2"></i>Remove
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-12 col-md-6">
+                        <label for="loan${loanNumber}_loan_name" class="form-label">Loan Name</label>
+                        <input type="text" class="form-control form-control-lg" id="loan${loanNumber}_loan_name" 
+                               name="loan${loanNumber}_loan_name" placeholder="Enter loan name" required>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label for="loan${loanNumber}_loan_amount" class="form-label">Loan Amount</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" class="form-control form-control-lg" id="loan${loanNumber}_loan_amount" 
+                                   name="loan${loanNumber}_loan_amount" placeholder="Enter loan amount" required>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label for="loan${loanNumber}_loan_down_payment" class="form-label">Down Payment</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" class="form-control form-control-lg" id="loan${loanNumber}_loan_down_payment" 
+                                   name="loan${loanNumber}_loan_down_payment" placeholder="Enter down payment" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="loan${loanNumber}_loan_interest_rate" class="form-label">Interest Rate (%)</label>
+                        <input type="number" class="form-control" id="loan${loanNumber}_loan_interest_rate" 
+                            name="loan${loanNumber}_loan_interest_rate" step="0.025" min="0" max="100" 
+                            placeholder="Enter interest rate" required>
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="checkbox" id="loan${loanNumber}_interest_only" 
+                                name="loan${loanNumber}_interest_only">
+                            <label class="form-check-label" for="loan${loanNumber}_interest_only">
+                                Interest Only
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label for="loan${loanNumber}_loan_term" class="form-label">Loan Term (months)</label>
+                        <input type="number" class="form-control form-control-lg" id="loan${loanNumber}_loan_term" 
+                               name="loan${loanNumber}_loan_term" min="1" placeholder="Enter loan term" required>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label for="loan${loanNumber}_loan_closing_costs" class="form-label">Closing Costs</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" class="form-control form-control-lg" id="loan${loanNumber}_loan_closing_costs" 
+                                   name="loan${loanNumber}_loan_closing_costs" placeholder="Enter closing costs" required>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -727,13 +959,18 @@ window.analysisModule = {
             this.initButtonHandlers();
             
             const analysisForm = document.querySelector('#analysisForm');
+            console.log('Found analysis form:', !!analysisForm);
+            
             if (analysisForm) {
+                console.log('Initializing form functionality');
                 this.initFormResponsiveness();
                 
                 const urlParams = new URLSearchParams(window.location.search);
                 const analysisId = urlParams.get('analysis_id');
+                console.log('Analysis ID from URL:', analysisId);
                 
                 if (analysisId) {
+                    console.log('Loading existing analysis:', analysisId);
                     this.currentAnalysisId = analysisId;
                     analysisForm.setAttribute('data-analysis-id', analysisId);
                     analysisForm.addEventListener('submit', (event) => {
@@ -741,6 +978,7 @@ window.analysisModule = {
                     });
                     await this.loadAnalysisData(analysisId);
                 } else {
+                    console.log('Creating new analysis');
                     const analysisDataElement = document.getElementById('analysis-data');
                     if (analysisDataElement) {
                         try {
@@ -750,6 +988,7 @@ window.analysisModule = {
                             console.error('Error parsing analysis data:', error);
                         }
                     } else {
+                        console.log('Initializing balloon payment handlers');
                         this.initBalloonPaymentHandlers();
                     }
                     
@@ -757,12 +996,16 @@ window.analysisModule = {
                         this.handleSubmit(event);
                     });
                 }
-                
-                this.initAddressAutocomplete();
+    
+                console.log('Initializing analysis type handler');
                 this.initAnalysisTypeHandler();
+                console.log('Initializing address autocomplete');
+                this.initAddressAutocomplete();
+                console.log('Initializing tab handling');
                 this.initTabHandling();
+                console.log('Form initialization complete');
             }
-
+    
             console.log('Analysis module initialized successfully');
             return true;
         } catch (error) {
@@ -772,8 +1015,14 @@ window.analysisModule = {
     },
 
     initAnalysisTypeHandler() {
+        console.log('Starting initAnalysisTypeHandler');
         const analysisType = document.getElementById('analysis_type');
         const financialTab = document.getElementById('financial');
+        console.log('Found elements:', { 
+            analysisType: !!analysisType, 
+            analysisTypeValue: analysisType?.value,
+            financialTab: !!financialTab 
+        });
         
         if (analysisType && financialTab) {
             // Remove any existing event listeners by cloning
@@ -783,6 +1032,7 @@ window.analysisModule = {
             // Get the analysis ID from URL if it exists
             const urlParams = new URLSearchParams(window.location.search);
             const analysisId = urlParams.get('analysis_id');
+            console.log('AnalysisId in type handler:', analysisId);
             
             // Store initial value
             this.initialAnalysisType = analysisId ? null : newAnalysisType.value;
@@ -790,11 +1040,14 @@ window.analysisModule = {
             
             // Load initial template if not editing existing analysis
             if (!analysisId) {
+                console.log('Should load initial template for:', this.initialAnalysisType);
+                console.log('loadTemplateForType exists:', typeof this.loadTemplateForType === 'function');
                 this.loadTemplateForType(this.initialAnalysisType, financialTab);
             }
                 
             // Set up event listener for changes
             newAnalysisType.addEventListener('change', async (e) => {
+                console.log('Analysis type changed to:', e.target.value);
                 // Prevent multiple concurrent changes
                 if (this.typeChangeInProgress) {
                     console.log('Type change already in progress');
@@ -802,15 +1055,17 @@ window.analysisModule = {
                 }
         
                 const newType = e.target.value;
+                console.log('Processing change to type:', newType);
                 
                 // Skip if initial type hasn't been set yet or if type hasn't actually changed
                 if (!this.initialAnalysisType || newType === this.initialAnalysisType) {
+                    console.log('Skipping - no initial type or no change');
                     return;
                 }
                 
                 // If we're in create mode, just update the fields
                 if (!this.currentAnalysisId) {
-                    console.log('Create mode - updating fields without confirmation');
+                    console.log('Create mode - updating template for type:', newType);
                     this.loadTemplateForType(newType, financialTab);
                     this.initialAnalysisType = newType;
                     return;
@@ -839,33 +1094,56 @@ window.analysisModule = {
     },
 
     loadTemplateForType(type, container) {
-        // Clear existing content
-        container.innerHTML = '';
+        console.log('loadTemplateForType called with:', {
+            type,
+            containerExists: !!container,
+            typeIsLeaseOption: type === 'Lease Option',
+            getLeaseOptionExists: typeof getLeaseOptionHTML === 'function',
+            getLongTermRentalExists: typeof getLongTermRentalHTML === 'function',
+            getBRRRRExists: typeof getBRRRRHTML === 'function'
+        });
         
-        // Load appropriate template based on type
-        if (type.includes('BRRRR')) {
-            container.innerHTML = getBRRRRHTML();
-        } else {
-            container.innerHTML = getLongTermRentalHTML();
-            // Only initialize balloon payment handlers for LTR
-            setTimeout(() => {
-                this.initBalloonPaymentHandlers();
-            }, 100);
+        if (!container) {
+            console.error('No container provided to loadTemplateForType');
+            return;
         }
         
-        // Add PadSplit expenses if needed
-        if (type.includes('PadSplit')) {
-            container.insertAdjacentHTML('beforeend', padSplitExpensesHTML);
-        }
+        try {
+            container.innerHTML = '';
+            
+            if (type === 'Lease Option') {
+                console.log('Loading Lease Option template');
+                if (typeof getLeaseOptionHTML !== 'function') {
+                    console.error('getLeaseOptionHTML is not a function!');
+                    console.log('Value:', getLeaseOptionHTML);
+                    return;
+                }
+                container.innerHTML = getLeaseOptionHTML();
+            } else if (type === 'BRRRR' || type === 'PadSplit BRRRR') {
+                console.log('Loading BRRRR template');
+                container.innerHTML = getBRRRRHTML();
+            } else {
+                console.log('Loading LTR template');
+                container.innerHTML = getLongTermRentalHTML();
+            }
     
-        // Initialize other handlers
-        this.initLoanHandlers();
-        if (type.includes('BRRRR')) {
-            this.initRefinanceCalculations();
+            if (type.includes('PadSplit')) {
+                console.log('Adding PadSplit expenses');
+                container.insertAdjacentHTML('beforeend', padSplitExpensesHTML);
+            }
+    
+            // Initialize handlers
+            this.initLoanHandlers();
+            if (type.includes('BRRRR')) {
+                this.initRefinanceCalculations();
+            }
+            this.initNotesCounter();
+            
+            console.log('Template loaded successfully. Container HTML length:', container.innerHTML.length);
+        } catch (error) {
+            console.error('Error in loadTemplateForType:', error);
+            throw error;  // Re-throw to see where it's called from
         }
-        
-        // Initialize notes counter
-        this.initNotesCounter();
     },
 
     // Add style injection method
@@ -1211,11 +1489,17 @@ window.analysisModule = {
         
         const balloonToggle = document.getElementById('has_balloon_payment');
         const balloonDetails = document.getElementById('balloon-payment-details');
-        
-        // If elements don't exist and this is an LTR analysis, elements might still be loading
         const analysisType = document.getElementById('analysis_type')?.value;
+        
+        // Only proceed for LTR analyses
+        if (!analysisType?.includes('LTR')) {
+            console.log('Balloon payments not applicable for', analysisType);
+            return;
+        }
+    
+        // If elements don't exist and this is an LTR analysis, elements might still be loading
         if (!balloonToggle || !balloonDetails) {
-            if (!analysisType?.includes('BRRRR')) {
+            if (!skipToggleInit) {
                 console.log('Balloon payment elements not found - will retry in 100ms');
                 setTimeout(() => this.initBalloonPaymentHandlers(true), 100);
             }
@@ -1226,6 +1510,8 @@ window.analysisModule = {
         if (!balloonToggle.checked) {
             this.clearBalloonPaymentFields();
         }
+    
+        console.log('Setting up balloon toggle event listener');
     
         console.log('Setting up balloon toggle event listener');
         // Add event listener to toggle
@@ -1568,8 +1854,14 @@ window.analysisModule = {
     },
 
     initAnalysisTypeHandler() {
+        console.log('Starting initAnalysisTypeHandler');
         const analysisType = document.getElementById('analysis_type');
         const financialTab = document.getElementById('financial');
+        console.log('Found elements:', { 
+            analysisTypeExists: !!analysisType, 
+            analysisTypeValue: analysisType?.value,
+            financialTabExists: !!financialTab 
+        });
         
         if (analysisType && financialTab) {
             // Remove any existing event listeners by cloning
@@ -1579,130 +1871,80 @@ window.analysisModule = {
             // Get the analysis ID from URL if it exists
             const urlParams = new URLSearchParams(window.location.search);
             const analysisId = urlParams.get('analysis_id');
+            console.log('AnalysisId in type handler:', analysisId);
             
-            // Store initial value - if editing existing analysis, this will be updated in loadAnalysisData
+            // Store initial value
             this.initialAnalysisType = analysisId ? null : newAnalysisType.value;
             console.log('Initial analysis type:', this.initialAnalysisType);
             
             // Load initial template if not editing existing analysis
             if (!analysisId) {
-                if (this.initialAnalysisType.includes('BRRRR')) {
-                    financialTab.innerHTML = getBRRRRHTML();
-                } else {
-                    financialTab.innerHTML = getLongTermRentalHTML();
-                }
-                
-                if (this.initialAnalysisType.includes('PadSplit')) {
-                    financialTab.insertAdjacentHTML('beforeend', padSplitExpensesHTML);
-                }
-
-                setTimeout(() => {
-                    this.initLoanHandlers();
-                    if (this.initialAnalysisType.includes('BRRRR')) {
-                        this.initRefinanceCalculations();
-                    }
-                    // Add notes counter initialization
-                    this.initNotesCounter();
-                }, 0);
-                
-                // Initialize handlers
-                this.initLoanHandlers();
-                if (this.initialAnalysisType.includes('BRRRR')) {
-                    this.initRefinanceCalculations();
-                }
+                console.log('Not editing - loading initial template for type:', this.initialAnalysisType);
+                console.log('loadTemplateForType exists:', typeof this.loadTemplateForType === 'function');
+                this.loadTemplateForType(this.initialAnalysisType, financialTab);
             }
-            
+                
             // Set up event listener for changes
             newAnalysisType.addEventListener('change', async (e) => {
+                console.log('Analysis type changed to:', e.target.value);
                 // Prevent multiple concurrent changes
                 if (this.typeChangeInProgress) {
                     console.log('Type change already in progress');
                     return;
                 }
-        
+    
                 const newType = e.target.value;
+                console.log('Processing change to type:', newType);
+                console.log('Initial type:', this.initialAnalysisType);
                 
                 // Skip if initial type hasn't been set yet or if type hasn't actually changed
                 if (!this.initialAnalysisType || newType === this.initialAnalysisType) {
+                    console.log('Skipping - no initial type or no change. Initial:', 
+                        this.initialAnalysisType, 'New:', newType);
                     return;
                 }
                 
                 // If we're in create mode, just update the fields
                 if (!this.currentAnalysisId) {
-                    console.log('Create mode - updating fields without confirmation');
-                    if (newType.includes('BRRRR')) {
-                        financialTab.innerHTML = getBRRRRHTML();
-                    } else {
-                        financialTab.innerHTML = getLongTermRentalHTML();
+                    console.log('Create mode - will update template for type:', newType);
+                    console.log('Financial tab exists:', !!financialTab);
+                    console.log('loadTemplateForType exists:', typeof this.loadTemplateForType === 'function');
+                    
+                    // Call loadTemplateForType and check its result
+                    try {
+                        this.loadTemplateForType(newType, financialTab);
+                        console.log('Template loaded successfully');
+                    } catch (error) {
+                        console.error('Error loading template:', error);
                     }
                     
-                    if (newType.includes('PadSplit')) {
-                        financialTab.insertAdjacentHTML('beforeend', padSplitExpensesHTML);
-                    }
-                    
-                    this.initLoanHandlers();
-                    if (newType.includes('BRRRR')) {
-                        this.initRefinanceCalculations();
-                    }
                     this.initialAnalysisType = newType;
                     return;
                 }
                 
                 try {
                     this.typeChangeInProgress = true;
+                    const confirmed = await this.confirmTypeChange(newType);
                     
-                    const confirmed = await new Promise(resolve => {
-                        const modal = document.createElement('div');
-                        modal.className = 'modal fade';
-                        modal.innerHTML = `
-                            <div class="modal-dialog">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title">Change Analysis Type</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                    </div>
-                                    <div class="modal-body">
-                                        Changing analysis type will create a fresh ${newType} analysis for this property. Do you want to proceed?
-                                    </div>
-                                    <div class="modal-footer gap-2">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                        <button type="button" class="btn btn-primary" id="confirmTypeChange">Yes, Proceed</button>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                        document.body.appendChild(modal);
-                        
-                        const modalInstance = new bootstrap.Modal(modal);
-                        modalInstance.show();
-                        
-                        modal.querySelector('#confirmTypeChange').addEventListener('click', () => {
-                            modalInstance.hide();
-                            resolve(true);
-                        });
-                        
-                        modal.addEventListener('hidden.bs.modal', () => {
-                            resolve(false);
-                            modal.remove();
-                        });
-                    });
-    
                     if (!confirmed) {
-                        // Reset to original type without triggering change event
                         e.target.value = this.initialAnalysisType;
                         return;
                     }
-    
+                    
                     await this.handleTypeChange(newType);
                     
                 } catch (error) {
                     console.error('Error:', error);
                     toastr.error(error.message);
-                    // Reset to original type
                     e.target.value = this.initialAnalysisType;
                 } finally {
                     this.typeChangeInProgress = false;
                 }
+            });
+        } else {
+            console.error('Missing required elements:', { 
+                analysisType: !!analysisType, 
+                financialTab: !!financialTab 
             });
         }
     },
@@ -1749,7 +1991,9 @@ window.analysisModule = {
                         
                         // Load appropriate template based on analysis type
                         console.log('Loading template for type:', this.initialAnalysisType);
-                        if (this.initialAnalysisType.includes('BRRRR')) {
+                        if (this.initialAnalysisType === 'Lease Option') {
+                            financialTab.innerHTML = getLeaseOptionHTML();
+                        } else if (this.initialAnalysisType.includes('BRRRR')) {
                             financialTab.innerHTML = getBRRRRHTML();
                         } else {
                             financialTab.innerHTML = getLongTermRentalHTML();
@@ -1945,7 +2189,6 @@ window.analysisModule = {
 
     // Updated isNumericField function for flat schema
     isNumericField(fieldName) {
-        // Money fields (integers in schema)
         const moneyFields = [
             'purchase_price',
             'after_repair_value',
@@ -1967,24 +2210,25 @@ window.analysisModule = {
             'square_footage',
             'lot_size',
             'year_built',
-            'bedrooms'
+            'bedrooms',
+            'option_consideration_fee',
+            'strike_price',
+            'rent_credit_cap'
         ];
-
-        // Add bathrooms to fields that can be decimals
+    
         const decimalFields = [
             'bathrooms'
         ];
-
-        // Percentage fields (floats in schema)
+    
         const percentageFields = [
             'management_fee_percentage',
             'capex_percentage',
             'vacancy_percentage',
             'repairs_percentage',
-            'padsplit_platform_percentage'
+            'padsplit_platform_percentage',
+            'monthly_rent_credit_percentage'
         ];
-
-        // Loan-related fields
+    
         const loanFields = [
             'initial_loan_amount',
             'initial_loan_down_payment',
@@ -2012,10 +2256,10 @@ window.analysisModule = {
             'loan3_loan_term',
             'loan3_loan_closing_costs'
         ];
-
+    
         return moneyFields.includes(fieldName) || 
-            percentageFields.includes(fieldName) || 
-            loanFields.includes(fieldName);
+               percentageFields.includes(fieldName) || 
+               loanFields.includes(fieldName);
     },
 
     // Updated handleEditSubmit function for flat schema
@@ -2198,15 +2442,17 @@ window.analysisModule = {
     
         try {
             let reportContent = '';
-            
-            // Safely check analysis type
             const analysisType = analysisData.analysis_type || '';
             
-            if (analysisType.includes('BRRRR')) {
-                console.log('Generating BRRRR report content');
-                reportContent = this.getBRRRRReportContent.call(this, analysisData);
-            } else {
-                reportContent = this.getLTRReportContent.call(this, analysisData);
+            switch(analysisType) {
+                case 'BRRRR':
+                    reportContent = this.getBRRRRReportContent.call(this, analysisData);
+                    break;
+                case 'Lease Option':
+                    reportContent = this.getLeaseOptionReportContent.call(this, analysisData);
+                    break;
+                default:
+                    reportContent = this.getLTRReportContent.call(this, analysisData);
             }
     
             const finalContent = `
@@ -2242,6 +2488,149 @@ window.analysisModule = {
                     Error generating report content: ${error.message}
                 </div>`;
         }
+    },
+
+    // New function for lease option report content
+    getLeaseOptionReportContent(analysis) {
+        return `
+            <!-- Option Details Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Option Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Option Fee</span>
+                            <strong>${this.formatDisplayValue(analysis.option_consideration_fee)}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Option Term</span>
+                            <strong>${analysis.option_term_months} months</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Strike Price</span>
+                            <strong>${this.formatDisplayValue(analysis.strike_price)}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Monthly Rent Credit</span>
+                            <div class="text-end">
+                                <div class="small text-muted">
+                                    ${this.formatDisplayValue(analysis.monthly_rent_credit_percentage, 'percentage')}
+                                </div>
+                                <strong>${this.formatDisplayValue(analysis.monthly_rent * (analysis.monthly_rent_credit_percentage / 100))}/mo</strong>
+                            </div>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Total Potential Credits</span>
+                            <strong>${this.formatDisplayValue(Math.min(
+                                analysis.monthly_rent * (analysis.monthly_rent_credit_percentage / 100) * analysis.option_term_months,
+                                analysis.rent_credit_cap
+                            ))}</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+    
+            <!-- Financial Overview Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Financial Overview</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Monthly Rent</span>
+                            <strong>${this.formatDisplayValue(analysis.monthly_rent)}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Monthly Cash Flow</span>
+                            <strong>${analysis.calculated_metrics?.monthly_cash_flow}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Annual Cash Flow</span>
+                            <strong>${analysis.calculated_metrics?.annual_cash_flow}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Option Fee ROI (Annual)</span>
+                            <strong>${this.formatDisplayValue(
+                                (analysis.calculated_metrics?.annual_cash_flow / analysis.option_consideration_fee) * 100, 
+                                'percentage'
+                            )}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Cash-on-Cash Return</span>
+                            <strong>${analysis.calculated_metrics?.cash_on_cash_return}</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+    
+            <!-- Operating Expenses Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Operating Expenses</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <div class="row g-0">
+                            <div class="col-12 col-md-6">
+                                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                    <span>Property Taxes</span>
+                                    <strong>${this.formatDisplayValue(analysis.property_taxes)}</strong>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                    <span>Insurance</span>
+                                    <strong>${this.formatDisplayValue(analysis.insurance)}</strong>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                    <span>HOA/COA/COOP</span>
+                                    <strong>${this.formatDisplayValue(analysis.hoa_coa_coop)}</strong>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                    <span>Management</span>
+                                    <div class="text-end">
+                                        <div class="small text-muted">
+                                            ${this.formatDisplayValue(analysis.management_fee_percentage, 'percentage')}
+                                        </div>
+                                        <strong>${this.formatDisplayValue(analysis.monthly_rent * (analysis.management_fee_percentage / 100))}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                    <span>CapEx</span>
+                                    <div class="text-end">
+                                        <div class="small text-muted">
+                                            ${this.formatDisplayValue(analysis.capex_percentage, 'percentage')}
+                                        </div>
+                                        <strong>${this.formatDisplayValue(analysis.monthly_rent * (analysis.capex_percentage / 100))}</strong>
+                                    </div>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                    <span>Vacancy</span>
+                                    <div class="text-end">
+                                        <div class="small text-muted">
+                                            ${this.formatDisplayValue(analysis.vacancy_percentage, 'percentage')}
+                                        </div>
+                                        <strong>${this.formatDisplayValue(analysis.monthly_rent * (analysis.vacancy_percentage / 100))}</strong>
+                                    </div>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                    <span>Repairs</span>
+                                    <div class="text-end">
+                                        <div class="small text-muted">
+                                            ${this.formatDisplayValue(analysis.repairs_percentage, 'percentage')}
+                                        </div>
+                                        <strong>${this.formatDisplayValue(analysis.monthly_rent * (analysis.repairs_percentage / 100))}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            ${this.createNotesSection(analysis.notes)}`;
     },
 
     getLTRReportContent(analysis) {
@@ -2978,7 +3367,7 @@ window.analysisModule = {
     },
 
     // Modified cleanNumericValue to only clean numeric fields
-    cleanNumericValue(value) {
+    cleanNumericValue(value, fieldName) {
         if (value === null || value === undefined || value === '') {
             return '0';
         }
@@ -2986,18 +3375,18 @@ window.analysisModule = {
         // Convert to string if not already
         value = String(value);
         
+        // Handle special lease option fields
+        if (fieldName === 'option_term_months') {
+            return value.replace(/\D/g, ''); // Strip non-digits
+        }
+        
         // Remove currency symbols, commas, spaces
         let cleaned = value.replace(/[$,\s]/g, '');
         
         // Remove % symbol
         cleaned = cleaned.replace(/%/g, '');
         
-        // If result is empty or not a valid number, return '0'
-        if (!cleaned || isNaN(parseFloat(cleaned))) {
-            return '0';
-        }
-        
-        return cleaned;
+        return cleaned || '0';
     },
 
     // Updated populateFormFields function - uses raw values
@@ -3039,42 +3428,62 @@ window.analysisModule = {
             setFieldValue('after_repair_value', analysis.after_repair_value);
             setFieldValue('renovation_costs', analysis.renovation_costs);
             setFieldValue('renovation_duration', analysis.renovation_duration);
-            
+                      
             // Purchase closing details
             setFieldValue('cash_to_seller', analysis.cash_to_seller);
             setFieldValue('closing_costs', analysis.closing_costs);
             setFieldValue('assignment_fee', analysis.assignment_fee);
             setFieldValue('marketing_costs', analysis.marketing_costs);
-            
-            // Check for balloon payment - either by flag or by existing data
-            const hasBalloonData = analysis.has_balloon_payment || (
-                analysis.balloon_refinance_loan_amount > 0 && 
-                analysis.balloon_due_date && 
-                analysis.balloon_refinance_ltv_percentage > 0
-            );
 
-            if (hasBalloonData) {
-                // Show and populate balloon payment section
-                const balloonToggle = document.getElementById('has_balloon_payment');
-                const balloonDetails = document.getElementById('balloon-payment-details');
+            // Handle Lease Option fields
+            if (analysis.analysis_type === 'Lease Option') {
+                // Clear any irrelevant fields that might be present
+                ['after_repair_value', 'renovation_costs', 'renovation_duration'].forEach(field => {
+                    const element = document.getElementById(field);
+                    if (element) element.value = '';
+                });
                 
-                if (balloonToggle && balloonDetails) {
-                    // Enable the toggle
-                    balloonToggle.checked = true;
-                    balloonDetails.style.display = 'block';
+                // Set Lease Option specific fields
+                setFieldValue('option_consideration_fee', analysis.option_consideration_fee);
+                setFieldValue('option_term_months', analysis.option_term_months);
+                setFieldValue('strike_price', analysis.strike_price);
+                setFieldValue('monthly_rent_credit_percentage', analysis.monthly_rent_credit_percentage);
+                setFieldValue('rent_credit_cap', analysis.rent_credit_cap);
+                
+                // Handle loan fields
+                const loansContainer = document.getElementById('loans-container');
+                if (loansContainer) {
+                    // Clear existing loans
+                    loansContainer.innerHTML = '';
                     
-                    // Set balloon payment values
-                    setFieldValue('balloon_due_date', analysis.balloon_due_date);
-                    setFieldValue('balloon_refinance_ltv_percentage', analysis.balloon_refinance_ltv_percentage);
-                    setFieldValue('balloon_refinance_loan_amount', analysis.balloon_refinance_loan_amount);
-                    setFieldValue('balloon_refinance_loan_interest_rate', analysis.balloon_refinance_loan_interest_rate);
-                    setFieldValue('balloon_refinance_loan_term', analysis.balloon_refinance_loan_term);
-                    setFieldValue('balloon_refinance_loan_down_payment', analysis.balloon_refinance_loan_down_payment);
-                    setFieldValue('balloon_refinance_loan_closing_costs', analysis.balloon_refinance_loan_closing_costs);
-
-                    // Force has_balloon_payment to true if we have data
-                    analysis.has_balloon_payment = true;
+                    // Add each existing loan
+                    for (let i = 1; i <= 3; i++) {
+                        const prefix = `loan${i}`;
+                        if (analysis[`${prefix}_loan_amount`] > 0) {
+                            // Insert loan HTML
+                            loansContainer.insertAdjacentHTML('beforeend', getLoanFieldsHTML(i));
+                            
+                            // Populate loan fields
+                            setFieldValue(`${prefix}_loan_name`, analysis[`${prefix}_loan_name`]);
+                            setFieldValue(`${prefix}_loan_amount`, analysis[`${prefix}_loan_amount`]);
+                            setFieldValue(`${prefix}_loan_interest_rate`, analysis[`${prefix}_loan_interest_rate`]);
+                            setFieldValue(`${prefix}_loan_term`, analysis[`${prefix}_loan_term`]);
+                            setFieldValue(`${prefix}_loan_down_payment`, analysis[`${prefix}_loan_down_payment`]);
+                            setFieldValue(`${prefix}_loan_closing_costs`, analysis[`${prefix}_loan_closing_costs`]);
+                            
+                            // Handle interest-only checkbox
+                            const interestOnlyCheckbox = document.getElementById(`${prefix}_interest_only`);
+                            if (interestOnlyCheckbox) {
+                                interestOnlyCheckbox.checked = Boolean(analysis[`${prefix}_interest_only`]);
+                                interestOnlyCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+                                console.log(`Setting ${prefix}_interest_only to:`, Boolean(analysis[`${prefix}_interest_only`]));
+                            }
+                        }
+                    }
                 }
+                
+                // Initialize loan handlers after populating fields
+                this.initLoanHandlers();
             }
 
             // Initialize balloon payment handlers AFTER setting values
@@ -3229,6 +3638,7 @@ window.analysisModule = {
     validateForm(form) {
         let isValid = true;
         const hasBalloon = form.querySelector('#has_balloon_payment')?.checked || false;
+        const analysisType = form.querySelector('#analysis_type')?.value;
     
         // Helper to validate numeric range
         const validateNumericRange = (value, min, max = Infinity) => {
@@ -3246,6 +3656,62 @@ window.analysisModule = {
                 field.classList.remove('is-invalid');
             }
         });
+    
+        // Lease Option specific validation
+        if (analysisType === 'Lease Option') {
+            console.log('Validating Lease Option fields');
+            const leaseFields = {
+                'option_consideration_fee': {
+                    validate: value => validateNumericRange(value, 0),
+                    message: "Option fee must be greater than 0"
+                },
+                'option_term_months': {
+                    validate: value => validateNumericRange(value, 1, 120),
+                    message: "Option term must be between 1 and 120 months"
+                },
+                'strike_price': {
+                    validate: value => {
+                        const strikePrice = this.toRawNumber(value);
+                        const purchasePrice = this.toRawNumber(form.querySelector('#purchase_price').value);
+                        return strikePrice > purchasePrice;
+                    },
+                    message: "Strike price must be greater than purchase price"
+                },
+                'monthly_rent_credit_percentage': {
+                    validate: value => validateNumericRange(value, 0, 100),
+                    message: "Rent credit percentage must be between 0 and 100"
+                },
+                'rent_credit_cap': {
+                    validate: value => validateNumericRange(value, 0),
+                    message: "Rent credit cap must be greater than 0"
+                }
+            };
+    
+            Object.entries(leaseFields).forEach(([fieldName, config]) => {
+                const field = form.querySelector(`#${fieldName}`);
+                if (field) {
+                    const value = field.value;
+                    if (!config.validate(value)) {
+                        isValid = false;
+                        field.classList.add('is-invalid');
+                        
+                        let errorDiv = field.nextElementSibling;
+                        if (!errorDiv || !errorDiv.classList.contains('invalid-feedback')) {
+                            errorDiv = document.createElement('div');
+                            errorDiv.className = 'invalid-feedback';
+                            field.parentNode.insertBefore(errorDiv, field.nextSibling);
+                        }
+                        errorDiv.textContent = config.message;
+                    } else {
+                        field.classList.remove('is-invalid');
+                        const errorDiv = field.nextElementSibling;
+                        if (errorDiv?.classList.contains('invalid-feedback')) {
+                            errorDiv.remove();
+                        }
+                    }
+                }
+            });
+        }
     
         // Validate balloon payment fields only if enabled
         if (hasBalloon) {
@@ -3303,10 +3769,9 @@ window.analysisModule = {
                 }
             });
         }
-
+    
         // Validate loan fields if present
-        const analysisType = form.querySelector('#analysis_type').value;
-        if (analysisType.includes('BRRRR')) {
+        if (analysisType?.includes('BRRRR')) {
             const brrrFields = [
                 'initial_loan_amount',
                 'initial_loan_down_payment',
@@ -3319,7 +3784,7 @@ window.analysisModule = {
                 'refinance_loan_term',
                 'refinance_loan_closing_costs'
             ];
-
+    
             brrrFields.forEach(fieldName => {
                 const field = form.querySelector(`#${fieldName}`);
                 if (field && !validateNumericRange(field.value, 0)) {
@@ -3328,11 +3793,11 @@ window.analysisModule = {
                 }
             });
         }
-
+    
         if (!isValid) {
             toastr.error('Please correct the highlighted fields');
         }
-
+    
         return isValid;
     }
 };

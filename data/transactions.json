@@ -1194,7 +1194,8 @@
     }
   },
   {
-    "property_id": "1714 Miller Street, Harrisburg, PA 17103, United States of America",
+    "id": "75",
+    "property_id": "1714 Miller Street, Harrisburg, PA 17103, United States of America, Harrisburg, Pennsylvania, 17103",
     "type": "expense",
     "category": "Asset Acquisition",
     "description": "2024.12.19 BJ Wire 2 of 2",
@@ -1202,12 +1203,13 @@
     "date": "2024-12-19",
     "collector_payer": "BJ Marshall",
     "documentation_file": "trans_75_2024.12.19_Miller_BJ_Wire_2_of_2.png",
+    "notes": "Testy Test Test",
     "reimbursement": {
       "date_shared": "2024-12-19",
-      "share_description": "No reimbursement needed - split costs 50/50",
-      "reimbursement_status": "not_required"
-    },
-    "id": "75"
+      "share_description": "Zelle",
+      "reimbursement_status": "completed",
+      "documentation": "trans_75_2025.01.24_Brian_Reimbursement_for_Various.png"
+    }
   },
   {
     "property_id": "1911 Grinnalds Avenue, Baltimore, MD 21223, United States of America",
@@ -2703,5 +2705,131 @@
       "documentation": "reimb_168_reimb_2025.01.11_Miller_HVAC_and_Labor_Reimb.png"
     },
     "id": "168"
+  },
+  {
+    "property_id": "1911 Grinnalds Avenue, Baltimore, MD 21223, United States of America",
+    "type": "expense",
+    "category": "Utilities",
+    "description": "2025.01.24 Grinnalds Water Bill",
+    "amount": 103.49,
+    "date": "2025-01-24",
+    "collector_payer": "BJ Marshall",
+    "notes": "",
+    "documentation_file": "trans_169_2025.01.24_Grinnalds_Water_Bill.pdf",
+    "id": "169",
+    "reimbursement": {
+      "date_shared": "2025-01-24",
+      "share_description": "Auto-completed - Single owner property",
+      "reimbursement_status": "completed",
+      "documentation": null
+    }
+  },
+  {
+    "property_id": "1714 Miller Street, Harrisburg, PA 17103, United States of America",
+    "type": "expense",
+    "category": "Property Tax",
+    "description": "2025 Miller City Taxes",
+    "amount": 313.19,
+    "date": "2025-01-24",
+    "collector_payer": "BJ Marshall",
+    "notes": "",
+    "documentation_file": "trans_170_2025.01.24_Miller_City_Taxes.pdf",
+    "id": "170",
+    "reimbursement": {
+      "date_shared": "2025-01-24",
+      "share_description": "",
+      "reimbursement_status": "pending",
+      "documentation": null
+    }
+  },
+  {
+    "property_id": "1714 Miller Street, Harrisburg, PA 17103, United States of America",
+    "type": "expense",
+    "category": "Utilities",
+    "description": "2025.01.24 Miller Gas",
+    "amount": 17.59,
+    "date": "2025-01-24",
+    "collector_payer": "BJ Marshall",
+    "notes": "",
+    "documentation_file": "trans_171_2025.01.24_Miller_Gas_Bill.pdf",
+    "id": "171",
+    "reimbursement": {
+      "date_shared": "2025-01-24",
+      "share_description": "",
+      "reimbursement_status": "pending",
+      "documentation": null
+    }
+  },
+  {
+    "property_id": "1714 Miller Street, Harrisburg, PA 17103, United States of America",
+    "type": "expense",
+    "category": "Utilities",
+    "description": "2025.01.24 Miller Electric Bill",
+    "amount": 20.88,
+    "date": "2025-01-24",
+    "collector_payer": "BJ Marshall",
+    "notes": "",
+    "documentation_file": "trans_172_2025.01.24_Miller_Electric_Bill.png",
+    "id": "172",
+    "reimbursement": {
+      "date_shared": "2025-01-24",
+      "share_description": "",
+      "reimbursement_status": "pending",
+      "documentation": null
+    }
+  },
+  {
+    "property_id": "1714 Miller Street, Harrisburg, PA 17103, United States of America",
+    "type": "expense",
+    "category": "Insurance",
+    "description": "2025.01.20 Miller Insurance",
+    "amount": 91.17,
+    "date": "2025-01-20",
+    "collector_payer": "BJ Marshall",
+    "notes": "",
+    "documentation_file": "trans_173_2025.01.20_Miller_Insurance_Bill.png",
+    "id": "173",
+    "reimbursement": {
+      "date_shared": "2025-01-20",
+      "share_description": "",
+      "reimbursement_status": "pending",
+      "documentation": null
+    }
+  },
+  {
+    "property_id": "1714 Miller Street, Harrisburg, PA 17103, United States of America",
+    "type": "expense",
+    "category": "Capital Expenditures",
+    "description": "2025.01.13 Miller Labor Draw 2",
+    "amount": 5036.75,
+    "date": "2025-01-13",
+    "collector_payer": "Brian Poole",
+    "notes": "",
+    "documentation_file": "trans_174_2025.01.13_Miller_Labor_Draw_2.jpeg",
+    "id": "174",
+    "reimbursement": {
+      "date_shared": "2025-01-13",
+      "share_description": "PNC eCheck",
+      "reimbursement_status": "pending",
+      "documentation": "trans_174_2025.01.13_Miller_Labor_Draw_2_Reimb.png"
+    }
+  },
+  {
+    "property_id": "1714 Miller Street, Harrisburg, PA 17103, United States of America",
+    "type": "expense",
+    "category": "Repairs",
+    "description": "Labor draw",
+    "amount": 5037.0,
+    "date": "2025-01-27",
+    "collector_payer": "Brian Poole",
+    "notes": "",
+    "documentation_file": "trans_175_Screenshot_20250127_083004_Wells_Fargo.jpg",
+    "id": "175",
+    "reimbursement": {
+      "date_shared": "2025-01-27",
+      "share_description": "",
+      "reimbursement_status": "pending",
+      "documentation": null
+    }
   }
 ]

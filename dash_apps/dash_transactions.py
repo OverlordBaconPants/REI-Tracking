@@ -14,8 +14,8 @@ import re
 from urllib.parse import unquote
 import traceback
 import logging
-from typing import Dict, List, Optional
-from services.transaction_service import get_transactions_for_view, get_properties_for_user, format_property_address
+from typing import Dict, List, Optional, Tuple
+from services.transaction_service import get_transactions_for_view, get_properties_for_user, format_address
 from services.transaction_report_generator import TransactionReportGenerator
 
 # Configure logging
@@ -72,6 +72,272 @@ STYLE_CONFIG = {
     }
 }
 
+def validate_property_data(property_data: Dict, username: str) -> Tuple[bool, str]:
+    """
+    Validate property data structure and required fields.
+    
+    Args:
+        property_data: Dictionary containing property information
+        username: Current user's username
+        
+    Returns:
+        Tuple of (is_valid, error_message)
+    """
+    try:
+        # Check if property data is a dictionary
+        if not isinstance(property_data, dict):
+            return False, "Property data is not in the correct format"
+            
+        # Required fields for loan calculations
+        loan_fields = ['primary_loan_amount', 'primary_loan_rate', 'primary_loan_term', 
+                      'primary_loan_start_date', 'purchase_price']
+        missing_loan_fields = [field for field in loan_fields if field not in property_data]
+        if missing_loan_fields:
+            return False, f"Missing required loan fields: {', '.join(missing_loan_fields)}"
+            
+        # Validate monthly income structure
+        monthly_income = property_data.get('monthly_income', {})
+        if not isinstance(monthly_income, dict):
+            return False, "Invalid monthly income format"
+        
+        # Validate monthly expenses structure
+        monthly_expenses = property_data.get('monthly_expenses', {})
+        if not isinstance(monthly_expenses, dict):
+            return False, "Invalid monthly expenses format"
+            
+        # Validate partners data
+        partners = property_data.get('partners', [])
+        if not isinstance(partners, list):
+            return False, "Invalid partners format"
+            
+        # Check if user has an equity share
+        if not any(partner.get('name') == username for partner in partners):
+            return False, f"User {username} has no equity share in this property"
+            
+        return True, ""
+        
+    except Exception as e:
+        logger.error(f"Error validating property data: {str(e)}")
+        logger.error(traceback.format_exc())
+        return False, f"Validation error: {str(e)}"
+
+def calculate_loan_metrics(property_data: Dict, username: str) -> Optional[Dict]:
+    """Calculate loan and equity metrics for a property, adjusted for user's equity share."""
+    try:
+        logger.info(f"Calculating loan metrics for property {property_data.get('address')}")
+        
+        # Validate property data
+        is_valid, error_message = validate_property_data(property_data, username)
+        if not is_valid:
+            logger.error(f"Invalid property data: {error_message}")
+            return None
+        
+        # Get user's equity share
+        equity_share = calculate_user_equity_share(property_data, username)
+        if equity_share == 0:
+            logger.warning(f"No equity share for user {username}")
+            return None
+            
+        # Get and validate loan parameters
+        loan_amount = safe_float(property_data.get('primary_loan_amount'))
+        interest_rate = safe_float(property_data.get('primary_loan_rate')) / 100
+        loan_term_months = safe_float(property_data.get('primary_loan_term'))
+        purchase_price = safe_float(property_data.get('purchase_price'))
+        
+        try:
+            loan_start_date = datetime.strptime(
+                property_data.get('primary_loan_start_date', date.today().strftime('%Y-%m-%d')), 
+                '%Y-%m-%d'
+            ).date()
+        except ValueError as e:
+            logger.error(f"Invalid loan start date: {str(e)}")
+            return None
+        
+        logger.debug(f"Loan parameters - Amount: ${loan_amount:,.2f}, "
+                    f"Rate: {interest_rate:.2%}, Term: {loan_term_months} months")
+        
+        # Calculate monthly payment
+        try:
+            if interest_rate > 0 and loan_term_months > 0:
+                monthly_rate = interest_rate / 12
+                monthly_payment = loan_amount * (monthly_rate * (1 + monthly_rate) ** loan_term_months) / \
+                                ((1 + monthly_rate) ** loan_term_months - 1)
+            else:
+                monthly_payment = loan_amount / loan_term_months if loan_term_months > 0 else 0
+                
+            logger.debug(f"Calculated monthly payment: ${monthly_payment:,.2f}")
+                
+        except ZeroDivisionError:
+            logger.error("Error calculating monthly payment: Division by zero")
+            return None
+        
+        # Calculate cash on cash return
+        coc_return = calculate_cash_on_cash_return(property_data, username)
+        
+        # Calculate months into loan
+        today = date.today()
+        months_into_loan = relativedelta(today, loan_start_date).months + \
+                          relativedelta(today, loan_start_date).years * 12
+        
+        # Calculate equity and principal paid
+        balance = loan_amount
+        total_principal_paid = 0
+        current_month_principal = 0
+        
+        for month in range(min(months_into_loan, int(loan_term_months))):
+            if balance <= 0:
+                break
+                
+            interest_payment = balance * (interest_rate / 12)
+            principal_payment = monthly_payment - interest_payment
+            balance = max(0, balance - principal_payment)
+            
+            if month == months_into_loan - 1:  # Last month
+                current_month_principal = principal_payment
+            total_principal_paid += principal_payment
+
+        logger.info(f"Loan metrics calculated successfully for {property_data.get('address')}")
+        
+        # Return metrics adjusted for user's equity share
+        return {
+            'address': property_data.get('address', 'Unknown'),
+            'purchase_price': purchase_price * equity_share,
+            'loan_amount': loan_amount * equity_share,
+            'current_balance': balance * equity_share,
+            'monthly_payment': monthly_payment * equity_share,
+            'equity_from_principal': total_principal_paid * equity_share,
+            'equity_this_month': current_month_principal * equity_share,
+            'total_equity': (purchase_price - balance) * equity_share,
+            'months_paid': months_into_loan,
+            'equity_share': equity_share * 100,  # Store as percentage
+            'cash_on_cash': coc_return  # Add Cash on Cash return
+        }
+        
+    except Exception as e:
+        logger.error(f"Error calculating loan metrics: {str(e)}")
+        logger.error(traceback.format_exc())
+        return None
+
+def calculate_monthly_cashflow(property_data: Dict, username: str) -> Optional[Dict]:
+    """Calculate monthly cash flow metrics for a property, adjusted for user's equity share."""
+    try:
+        logger.info(f"Calculating monthly cash flow for property {property_data.get('address')}")
+        
+        # Validate property data
+        is_valid, error_message = validate_property_data(property_data, username)
+        if not is_valid:
+            logger.error(f"Invalid property data: {error_message}")
+            return None
+        
+        # Calculate equity share
+        equity_share = calculate_user_equity_share(property_data, username)
+        if equity_share == 0:
+            logger.warning(f"No equity share for user {username}")
+            return None
+            
+        # Calculate total monthly income
+        monthly_income_data = property_data.get('monthly_income', {})
+        monthly_income = sum([
+            safe_float(monthly_income_data.get('rental_income')),
+            safe_float(monthly_income_data.get('parking_income')),
+            safe_float(monthly_income_data.get('laundry_income')),
+            safe_float(monthly_income_data.get('other_income'))
+        ])
+        
+        # Calculate monthly expenses and loan payments
+        monthly_expenses = property_data.get('monthly_expenses', {})
+        
+        # Calculate utilities total
+        utilities = monthly_expenses.get('utilities', {})
+        total_utilities = sum(safe_float(val) for val in utilities.values())
+        
+        # Calculate total operating expenses
+        operating_expenses = sum([
+            safe_float(monthly_expenses.get('property_tax')),
+            safe_float(monthly_expenses.get('insurance')),
+            safe_float(monthly_expenses.get('repairs')),
+            safe_float(monthly_expenses.get('capex')),
+            safe_float(monthly_expenses.get('property_management')),
+            safe_float(monthly_expenses.get('hoa_fees')),
+            safe_float(monthly_expenses.get('other_expenses')),
+            total_utilities
+        ])
+        
+        # Calculate primary mortgage payment
+        try:
+            loan_amount = safe_float(property_data.get('primary_loan_amount'))
+            interest_rate = safe_float(property_data.get('primary_loan_rate')) / 100
+            loan_term_months = safe_float(property_data.get('primary_loan_term'))
+            
+            if interest_rate > 0 and loan_term_months > 0:
+                monthly_rate = interest_rate / 12
+                mortgage_payment = loan_amount * (monthly_rate * (1 + monthly_rate) ** loan_term_months) / \
+                                 ((1 + monthly_rate) ** loan_term_months - 1)
+            else:
+                mortgage_payment = loan_amount / loan_term_months if loan_term_months > 0 else 0
+        except Exception as e:
+            logger.error(f"Error calculating mortgage payment: {str(e)}")
+            mortgage_payment = 0
+
+        # Calculate net cash flow
+        net_cashflow = monthly_income - operating_expenses - mortgage_payment
+        
+        # Return metrics adjusted for user's equity share
+        return {
+            'address': property_data.get('address', 'Unknown'),
+            'monthly_income': monthly_income * equity_share,
+            'monthly_expenses': operating_expenses * equity_share,
+            'mortgage_payment': mortgage_payment * equity_share,
+            'net_cashflow': net_cashflow * equity_share,
+            'equity_share': equity_share * 100
+        }
+            
+    except Exception as e:
+        logger.error(f"Error calculating cash flow metrics: {str(e)}")
+        logger.error(traceback.format_exc())
+        return None
+
+def calculate_cash_on_cash_return(property_data: Dict, username: str) -> float:
+    """
+    Calculate Cash on Cash return for a property.
+    
+    Args:
+        property_data: Dictionary containing property information
+        username: Current user's username
+        
+    Returns:
+        Cash on Cash return as a percentage
+    """
+    try:
+        # Calculate total cash invested
+        total_investment = sum([
+            safe_float(property_data.get('down_payment', 0)),
+            safe_float(property_data.get('closing_costs', 0)),
+            safe_float(property_data.get('renovation_costs', 0)),
+            safe_float(property_data.get('marketing_costs', 0)),
+            safe_float(property_data.get('holding_costs', 0))
+        ])
+        
+        if total_investment <= 0:
+            return 0.0
+            
+        # Calculate annual cash flow
+        cashflow = calculate_monthly_cashflow(property_data, username)
+        if not cashflow:
+            return 0.0
+            
+        annual_cashflow = cashflow['net_cashflow'] * 12
+        
+        # Calculate CoC return
+        coc_return = (annual_cashflow / total_investment) * 100
+        
+        return round(coc_return, 2)
+        
+    except Exception as e:
+        logger.error(f"Error calculating Cash on Cash return: {str(e)}")
+        logger.error(traceback.format_exc())
+        return 0.0
+
 def validate_date_range(start_date: Optional[str], end_date: Optional[str]) -> tuple[bool, str]:
     """Validates the date range for transactions."""
     try:
@@ -116,8 +382,65 @@ def is_wholly_owned_by_user(property_data: dict, user_name: str) -> bool:
     
     return abs(user_equity - 100.0) < 0.01
 
+def create_responsive_table(property_metrics, cashflow_metrics):
+    """Create a mobile-responsive property details table."""
+    try:
+        # Create table with bootstrap classes
+        return dbc.Table([
+            html.Thead(
+                html.Tr([
+                    html.Th("Property", className="text-center text-white", 
+                           style={'backgroundColor': '#000080', 'position': 'sticky', 'top': 0}),
+                    html.Th("Share", className="text-center text-white d-none d-md-table-cell",
+                           style={'backgroundColor': '#000080', 'position': 'sticky', 'top': 0}),
+                    html.Th("Monthly Income", className="text-center text-white",
+                           style={'backgroundColor': '#000080', 'position': 'sticky', 'top': 0}),
+                    html.Th("Monthly Expenses", className="text-center text-white d-none d-md-table-cell",
+                           style={'backgroundColor': '#000080', 'position': 'sticky', 'top': 0}),
+                    html.Th("Net Cash Flow", className="text-center text-white",
+                           style={'backgroundColor': '#000080', 'position': 'sticky', 'top': 0}),
+                    html.Th("Total Equity", className="text-center text-white d-none d-md-table-cell",
+                           style={'backgroundColor': '#000080', 'position': 'sticky', 'top': 0}),
+                    html.Th("Monthly Equity Gain", className="text-center text-white d-none d-md-table-cell",
+                           style={'backgroundColor': '#000080', 'position': 'sticky', 'top': 0}),
+                    html.Th("Cash on Cash", className="text-center text-white",
+                           style={'backgroundColor': '#000080', 'position': 'sticky', 'top': 0})
+                ])
+            ),
+            html.Tbody([
+                html.Tr([
+                    html.Td(cm['address'].split(',')[0], className="text-nowrap"),
+                    html.Td(f"{cm['equity_share']}%", className="d-none d-md-table-cell"),
+                    html.Td(f"${cm['monthly_income']:,.2f}"),
+                    html.Td(
+                        f"${(cm['monthly_expenses'] + cm['mortgage_payment'] + cm['seller_payment']):,.2f}",
+                        className="d-none d-md-table-cell"
+                    ),
+                    html.Td(
+                        html.Span(
+                            f"${cm['net_cashflow']:,.2f}",
+                            style={'color': 'green' if cm['net_cashflow'] >= 0 else 'red'}
+                        )
+                    ),
+                    html.Td(f"${pm['total_equity']:,.2f}", className="d-none d-md-table-cell"),
+                    html.Td(f"${pm['equity_this_month']:,.2f}", className="d-none d-md-table-cell"),
+                    html.Td(f"{pm['cash_on_cash']:,.1f}%")
+                ], className="align-middle") for cm, pm in zip(cashflow_metrics, property_metrics)
+            ])
+        ],
+        bordered=True,
+        hover=True,
+        responsive=True,
+        className="mb-4 table-sm")
+        
+    except Exception as e:
+        logger.error(f"Error creating property table: {str(e)}")
+        logger.error(traceback.format_exc())
+        return html.Div("Error creating property table", className="text-danger p-3")
+
 def create_transactions_dash(flask_app):
     """Creates and configures the mobile-first Dash application for transaction management."""
+    template_path = os.path.join(flask_app.root_path, 'templates', 'dashboards', 'dash_transactions.html')
     dash_app = dash.Dash(
         __name__,
         server=flask_app,
@@ -137,7 +460,7 @@ def create_transactions_dash(flask_app):
     )
 
     # Load custom HTML template
-    dash_app.index_string = open('templates/dashboards/dash_transactions.html').read()
+    dash_app.index_string = open(template_path).read()
 
     # Define the mobile-first layout
     dash_app.layout = dbc.Container([
@@ -319,10 +642,9 @@ def create_transactions_dash(flask_app):
                     }],
                     tooltip_duration=None,
                     markdown_options={'html': True},
-                    # dangerously_allow_html=True,
                     sort_action='native',
-                    sort_mode='multi',
-                    sort_by=[{'column_id': 'date', 'direction': 'desc'}]
+                    sort_mode='single',
+                    sort_by=[{'column_id': 'date', 'direction': 'desc'}],
                 )
             ])
         ], style=STYLE_CONFIG['card'])
@@ -348,28 +670,23 @@ def create_transactions_dash(flask_app):
                     start_date, end_date, description_search, reimbursement_status):
         try:
             logger.debug("=== Starting update_table function ===")
-            logger.debug(f"Inputs - property_id: {property_id}, type: {transaction_type}, "
-                        f"reimbursement_status: {reimbursement_status}, "
-                        f"dates: {start_date} to {end_date}, "
-                        f"description: {description_search}")
             
-            logger.debug(f"Current user: {current_user.id}, {current_user.name}, {current_user.role}")
-            
-            # Get properties and log them
+            # Get properties
             properties = get_properties_for_user(
                 current_user.id,
                 current_user.name,
                 current_user.role == 'Admin'
             )
-            logger.debug(f"Retrieved {len(properties)} properties")
-
-            # Create property options with truncated display
+            
+            # Create property options with standardized addresses
             property_options = [{'label': 'All Properties', 'value': 'all'}]
             for prop in properties:
                 if prop.get('address'):
+                    # Get the base address for both display and value
+                    base_address = format_address(prop['address'], 'base')
                     property_options.append({
-                        'label': prop['display_address'],  # Use truncated address for display
-                        'value': prop['full_address']     # Keep full address as value
+                        'label': base_address,  # Show simplified address in dropdown
+                        'value': prop['address']  # Keep full address as value
                     })
             logger.debug(f"Created {len(property_options)} property options")
 
@@ -398,7 +715,7 @@ def create_transactions_dash(flask_app):
 
             # Format property addresses in transactions
             if 'property_id' in df.columns:
-                df['property_id'] = df['property_id'].apply(lambda x: format_property_address(x)[0])
+                df['property_id'] = df['property_id'].apply(lambda x: format_address(x, 'display'))
 
             # Apply filters
             if transaction_type and transaction_type != 'all':  # Only filter if a specific type is selected
@@ -502,68 +819,91 @@ def create_transactions_dash(flask_app):
         [State("transactions-table", "data")]
     )
     def generate_zip_archive(n_clicks, transactions_data):
-        """Generate ZIP archive with mobile-friendly organization."""
+        """Generate ZIP archive with transaction documents."""
         if not n_clicks or not transactions_data:
             return None
 
         try:
             logger.debug(f"Generating ZIP for {len(transactions_data)} transactions")
             buffer = io.BytesIO()
+            
             with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-                added_files = {'transactions': set(), 'reimbursements': set()}
+                added_files = set()
                 
                 for transaction in transactions_data:
                     # Add transaction documents
                     doc_file = transaction.get('documentation_file', '')
+                    logger.debug(f"Processing transaction document: {doc_file}")
+                    
                     if doc_file:
                         try:
-                            # Extract filename from HTML button if present
-                            match = re.search(r'/artifact/([^"\']+)', doc_file)
-                            if match:
-                                filename = unquote(match.group(1))
-                                if filename not in added_files['transactions']:
-                                    file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
-                                    if os.path.exists(file_path):
-                                        logger.debug(f"Adding transaction document: {filename}")
-                                        zip_file.write(file_path, f"transactions/{filename}")
-                                        added_files['transactions'].add(filename)
+                            # Extract filename if it's a button/link
+                            if '<button' in doc_file:
+                                match = re.search(r'/artifact/([^"\']+)', doc_file)
+                                if match:
+                                    filename = unquote(match.group(1))
+                                else:
+                                    continue
+                            else:
+                                filename = doc_file
+                                
+                            if filename and filename not in added_files:
+                                file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                                if os.path.exists(file_path):
+                                    logger.debug(f"Adding document: {filename}")
+                                    zip_file.write(file_path, f"documents/{filename}")
+                                    added_files.add(filename)
+                                    
                         except Exception as e:
-                            logger.warning(f"Error adding transaction doc: {str(e)}")
+                            logger.error(f"Error adding document {filename}: {str(e)}")
 
                     # Add reimbursement documents
                     reimb_doc = transaction.get('reimbursement_documentation', '')
+                    logger.debug(f"Processing reimbursement document: {reimb_doc}")
+                    
                     if reimb_doc:
                         try:
-                            # Extract filename from HTML button if present
-                            match = re.search(r'/artifact/([^"\']+)', reimb_doc)
-                            if match:
-                                filename = unquote(match.group(1))
-                                if filename not in added_files['reimbursements']:
-                                    # Determine correct directory based on filename prefix
-                                    file_path = os.path.join(
-                                        current_app.config['REIMBURSEMENTS_DIR']
-                                        if filename.startswith('reimb_')
-                                        else current_app.config['UPLOAD_FOLDER'],
-                                        filename
-                                    )
-                                    if os.path.exists(file_path):
-                                        logger.debug(f"Adding reimbursement document: {filename}")
-                                        zip_file.write(file_path, f"reimbursements/{filename}")
-                                        added_files['reimbursements'].add(filename)
+                            # Extract filename if it's a button/link
+                            if '<button' in reimb_doc:
+                                match = re.search(r'/artifact/([^"\']+)', reimb_doc)
+                                if match:
+                                    filename = unquote(match.group(1))
+                                else:
+                                    continue
+                            else:
+                                filename = reimb_doc
+
+                            if filename and filename not in added_files:
+                                file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                                if os.path.exists(file_path):
+                                    logger.debug(f"Adding document: {filename}")
+                                    zip_file.write(file_path, f"documents/{filename}")
+                                    added_files.add(filename)
+                                        
                         except Exception as e:
-                            logger.warning(f"Error adding reimbursement doc: {str(e)}")
+                            logger.error(f"Error adding document {filename}: {str(e)}")
+
+                # Add a summary text file
+                summary = f"""Document Summary
+    Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+    Total Documents: {len(added_files)}
+
+    Documents:
+    {chr(10).join(sorted(added_files))}
+    """
+                zip_file.writestr('document_summary.txt', summary)
 
             buffer.seek(0)
             
-            # Log summary of added files
-            logger.debug(f"Added {len(added_files['transactions'])} transaction documents and "
-                        f"{len(added_files['reimbursements'])} reimbursement documents to ZIP")
+            # Log summary
+            logger.debug(f"Added {len(added_files)} documents to ZIP")
 
             timestamp = datetime.now().strftime('%Y%m%d_%H%M')
             return dcc.send_bytes(
                 buffer.getvalue(),
                 f"transaction_docs_{timestamp}.zip"
             )
+            
         except Exception as e:
             logger.error(f"Error generating ZIP: {str(e)}")
             logger.error(traceback.format_exc())
@@ -679,15 +1019,20 @@ def create_transactions_dash(flask_app):
     def format_transactions_for_mobile(df, properties, property_id, user):
         """Format transaction data for mobile display with reimbursement handling."""
         try:
+            # Store original dates for sorting
+            df['sort_date'] = pd.to_datetime(df['date'])
+            df['date_for_sort'] = df['sort_date']  # Keep original datetime for sorting
+            df['date'] = df['sort_date'].dt.strftime('%m/%d/%Y')
+
             # Format currency
-            df['amount'] = df['amount'].apply(lambda x: f"${abs(float(x)):,.2f}")
+            df['amount_for_sort'] = df['amount'].astype(float)  # Keep original number for sorting
+            df['amount'] = df['amount_for_sort'].apply(lambda x: f"${abs(float(x)):,.2f}")
 
-            # Truncate property addresses
+            # Handle property display and sorting
             if not property_id or property_id == 'all':
-                df['property_id'] = df['property_id'].apply(lambda x: ', '.join(x.split(',')[:2]).strip())
-
-            # Format dates for mobile
-            df['date'] = pd.to_datetime(df['date']).dt.strftime('%m/%d/%Y')
+                df['property_display'] = df['property_id'].apply(lambda x: ', '.join(x.split(',')[:2]).strip())
+            else:
+                df['property_display'] = df['property_id'].apply(lambda x: ', '.join(x.split(',')[:2]).strip())
 
             # Check property ownership
             is_wholly_owned = check_property_ownership(property_id)
@@ -697,24 +1042,26 @@ def create_transactions_dash(flask_app):
                 lambda x: create_mobile_button(x, 'View', 'primary') if x else ''
             )
 
-            # Make sure 'notes' field exists and handle any missing values
+            # Handle notes
             if 'notes' not in df.columns:
                 df['notes'] = ''
             df['notes'] = df['notes'].fillna('')
 
+            # Add action buttons
             df['edit'] = df.apply(lambda row: f'<button class="btn btn-sm btn-warning m-1" onclick="window.parent.viewTransactionsModule.handleEditTransaction(\'{row.id}\', \'{row.description}\')">Edit<i class="bi bi-pencil"></i></button>', axis=1)
-
             df['delete'] = df.apply(lambda row: f'<button class="btn btn-sm btn-danger m-1" onclick="window.parent.viewTransactionsModule.handleDeleteTransaction(\'{row.id}\', \'{row.description}\')">Delete<i class="bi bi-trash"></i></button>', axis=1)
 
-            # Only include reimbursement columns if not wholly owned
+            # Handle reimbursement data
             if not is_wholly_owned and 'date_shared' in df.columns:
-                df['date_shared'] = pd.to_datetime(df['date_shared']).dt.strftime('%m/%d/%Y')
+                df['sort_date_shared'] = pd.to_datetime(df['date_shared'])
+                df['date_shared_for_sort'] = df['sort_date_shared']  # Keep original datetime for sorting
+                df['date_shared'] = df['sort_date_shared'].dt.strftime('%m/%d/%Y')
+                
                 df['reimbursement_documentation'] = df['reimbursement_documentation'].apply(
                     lambda x: create_mobile_button(x, 'View', 'primary') if x else ''
                 )
             else:
-                # Remove reimbursement columns for wholly owned properties
-                for col in ['date_shared', 'reimbursement_documentation']:
+                for col in ['date_shared', 'reimbursement_documentation', 'sort_date_shared', 'date_shared_for_sort']:
                     if col in df.columns:
                         df = df.drop(columns=[col])
 
@@ -728,31 +1075,55 @@ def create_transactions_dash(flask_app):
         try:
             columns = []
             
-            # Only include property column for 'all properties' view
+            # Property column for 'all properties' view
             if not property_id or property_id == 'all':
                 columns.append({
                     'name': 'Property',
-                    'id': 'property_id',
-                    'presentation': 'markdown'
+                    'id': 'property_display',
+                    'presentation': 'markdown',
+                    'sortable': True
                 })
 
-            # Core columns
+            # Core columns with sort configuration
             columns.extend([
-                {'name': 'Date', 'id': 'date'},
-                {'name': 'Description', 'id': 'description'},
-                {'name': 'Amount', 'id': 'amount'},
-                {'name': 'Category', 'id': 'category'},
-                {'name': 'Notes', 'id': 'notes'},  # Add Notes column
+                {
+                    'name': 'Date', 
+                    'id': 'date',
+                    'sortable': True,
+                    'sort_by': 'date_for_sort'  # Sort by the datetime object
+                },
+                {
+                    'name': 'Description',
+                    'id': 'description',
+                    'sortable': True
+                },
+                {
+                    'name': 'Amount',
+                    'id': 'amount',
+                    'sortable': True,
+                    'sort_by': 'amount_for_sort'  # Sort by the numeric value
+                },
+                {
+                    'name': 'Category',
+                    'id': 'category',
+                    'sortable': True
+                },
+                {
+                    'name': 'Notes',
+                    'id': 'notes',
+                    'sortable': True
+                },
                 {
                     'name': 'Doc', 
                     'id': 'documentation_file', 
                     'presentation': 'markdown',
                     'type': 'text',
-                    'dangerously_allow_html': True
-                },
+                    'dangerously_allow_html': True,
+                    'sortable': False
+                }
             ])
 
-            # Add reimbursement columns if property is not wholly owned
+            # Add reimbursement columns if needed
             if property_id and property_id != 'all':
                 properties = get_properties_for_user(
                     current_user.id,
@@ -764,44 +1135,54 @@ def create_transactions_dash(flask_app):
                 if not property_data or not is_wholly_owned_by_user(property_data, current_user.name):
                     if 'date_shared' in df.columns:
                         columns.extend([
-                            {'name': 'Reimb Date', 'id': 'date_shared'},
+                            {
+                                'name': 'Reimb Date', 
+                                'id': 'date_shared',
+                                'sortable': True,
+                                'sort_by': 'date_shared_for_sort'  # Sort by the datetime object
+                            },
                             {
                                 'name': 'Reimb Doc', 
                                 'id': 'reimbursement_documentation', 
                                 'presentation': 'markdown',
                                 'type': 'text',
-                                'dangerously_allow_html': True
+                                'sortable': False
                             }
                         ])
             else:
-                # Show reimbursement columns in 'all properties' view
                 if 'date_shared' in df.columns:
                     columns.extend([
-                        {'name': 'Reimb Date', 'id': 'date_shared'},
+                        {
+                            'name': 'Reimb Date', 
+                            'id': 'date_shared',
+                            'sortable': True,
+                            'sort_by': 'date_shared_for_sort'  # Sort by the datetime object
+                        },
                         {
                             'name': 'Reimb Doc', 
                             'id': 'reimbursement_documentation', 
                             'presentation': 'markdown',
                             'type': 'text',
-                            'dangerously_allow_html': True
+                            'dangerously_allow_html': True,
+                            'sortable': False
                         }
                     ])
 
-            # Add action columns
+            # Action columns (not sortable)
             columns.extend([
                 {
                     'name': 'Edit',
                     'id': 'edit',
                     'presentation': 'markdown',
                     'type': 'text',
-                    'dangerously_allow_html': True
+                    'sortable': False
                 },
                 {
                     'name': 'Delete',
                     'id': 'delete',
                     'presentation': 'markdown',
                     'type': 'text',
-                    'dangerously_allow_html': True
+                    'sortable': False
                 }
             ])
 

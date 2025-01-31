@@ -5,682 +5,667 @@
 
 {% block content %}
 <div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <div class="card mt-3">
-                <div class="card-header bg-navy">
-                    <h4 class="mb-0">Add Properties</h4>
-                </div>
-                <div class="card-body p-3">
-                    <p class="text-muted mb-4">To view all properties you are associated with, please select the Dashboard menu.</p>
-
-                    <form id="add-property-form" method="POST">
-                        <!-- Property Information -->
-                        <div class="card mb-4">
-                            <div class="card-header bg-navy">
-                                <h5 class="mb-0">Property Information</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="row g-3">
-                                    <div class="col-12">
-                                        <div class="form-group autocomplete-container">
-                                            <label for="property_address" class="form-label">Property Address:</label>
-                                            <input type="text" 
-                                                   id="property_address" 
-                                                   name="property_address" 
-                                                   class="form-control" 
-                                                   required>
-                                            <ul id="autocomplete-results" class="autocomplete-results"></ul>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-12 col-md-6">
-                                        <div class="form-group">
-                                            <label for="purchase_date" class="form-label">Purchase Date:</label>
-                                            <input type="date" 
-                                                   id="purchase_date" 
-                                                   name="purchase_date" 
-                                                   class="form-control" 
-                                                   required>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-12 col-md-6">
-                                        <div class="form-group">
-                                            <label for="purchase_price" class="form-label">Purchase Price</label>
-                                            <div class="input-group">
-                                                <span class="input-group-text">$</span>
-                                                <input type="number" 
-                                                       id="purchase_price" 
-                                                       name="purchase_price" 
-                                                       class="form-control" 
-                                                       required>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-12 col-md-6">
-                                        <div class="form-group">
-                                            <label for="down_payment" class="form-label">Down Payment</label>
-                                            <div class="input-group">
-                                                <span class="input-group-text">$</span>
-                                                <input type="number" 
-                                                       id="down_payment" 
-                                                       name="down_payment" 
-                                                       class="form-control" 
-                                                       required>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-12 col-md-6">
-                                        <div class="form-group">
-                                            <label for="closing_costs" class="form-label">Closing Costs</label>
-                                            <div class="input-group">
-                                                <span class="input-group-text">$</span>
-                                                <input type="number" 
-                                                       id="closing_costs" 
-                                                       name="closing_costs" 
-                                                       class="form-control" 
-                                                       value="0">
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-12 col-md-6">
-                                        <div class="form-group">
-                                            <label for="renovation_costs" class="form-label">Renovation Costs</label>
-                                            <div class="input-group">
-                                                <span class="input-group-text">$</span>
-                                                <input type="number" 
-                                                       id="renovation_costs" 
-                                                       name="renovation_costs" 
-                                                       class="form-control" 
-                                                       value="0">
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-12 col-md-6">
-                                        <div class="form-group">
-                                            <label for="marketing_costs" class="form-label">Marketing Costs</label>
-                                            <div class="input-group">
-                                                <span class="input-group-text">$</span>
-                                                <input type="number" 
-                                                       id="marketing_costs" 
-                                                       name="marketing_costs" 
-                                                       class="form-control" 
-                                                       value="0">
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Loan Information -->
-                        <div class="card mb-4">
-                            <div class="card-header bg-navy">
-                                <h5 class="mb-0">Loan Information</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="row g-3">
-                                    <div class="col-12 col-md-6">
-                                        <div class="form-group">
-                                            <label for="loan_amount" class="form-label">Loan Amount</label>
-                                            <div class="input-group">
-                                                <span class="input-group-text">$</span>
-                                                <input type="number" 
-                                                       id="loan_amount" 
-                                                       name="loan_amount" 
-                                                       class="form-control" 
-                                                       required>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-12 col-md-6">
-                                        <div class="form-group">
-                                            <label for="loan_start_date" class="form-label">Loan Start Date</label>
-                                            <input type="date" 
-                                                   id="loan_start_date" 
-                                                   name="loan_start_date" 
-                                                   class="form-control" 
-                                                   required>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-12 col-md-6">
-                                        <div class="form-group">
-                                            <label for="primary_loan_rate" class="form-label">Primary Loan Rate</label>
-                                            <div class="input-group">
-                                                <input type="number" 
-                                                       id="primary_loan_rate" 
-                                                       name="primary_loan_rate" 
-                                                       class="form-control" 
-                                                       step="0.01" 
-                                                       required>
-                                                <span class="input-group-text">%</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-12 col-md-6">
-                                        <div class="form-group">
-                                            <label for="primary_loan_term" class="form-label">Primary Loan Term</label>
-                                            <div class="input-group">
-                                                <input type="number" 
-                                                       id="primary_loan_term" 
-                                                       name="primary_loan_term" 
-                                                       class="form-control" 
-                                                       required>
-                                                <span class="input-group-text">months</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Secondary Financing Section -->
-                                <div class="row g-3 mt-3">
-                                    <div class="col-12">
-                                        <h6>Secondary Financing</h6>
-                                    </div>
-                                    <div class="col-12 col-md-4">
-                                        <div class="form-group">
-                                            <label for="seller_financing_amount" class="form-label">Seller Financing Amount</label>
-                                            <div class="input-group">
-                                                <span class="input-group-text">$</span>
-                                                <input type="number" 
-                                                       id="seller_financing_amount" 
-                                                       name="seller_financing_amount" 
-                                                       class="form-control" 
-                                                       value="0">
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-12 col-md-4">
-                                        <div class="form-group">
-                                            <label for="seller_financing_rate" class="form-label">Seller Financing Rate</label>
-                                            <div class="input-group">
-                                                <input type="number" 
-                                                       id="seller_financing_rate" 
-                                                       name="seller_financing_rate" 
-                                                       class="form-control" 
-                                                       step="0.01" 
-                                                       value="0">
-                                                <span class="input-group-text">%</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-12 col-md-4">
-                                        <div class="form-group">
-                                            <label for="seller_financing_term" class="form-label">Seller Financing Term</label>
-                                            <div class="input-group">
-                                                <input type="number" 
-                                                       id="seller_financing_term" 
-                                                       name="seller_financing_term" 
-                                                       class="form-control" 
-                                                       value="0">
-                                                <span class="input-group-text">months</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Monthly Income -->
-                        <div class="card mb-4">
-                            <div class="card-header bg-navy text-white">
-                                <h5 class="mb-0">Monthly Income</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="row g-3">
-                                    <div class="col-12 col-md-6">
-                                        <div class="form-group">
-                                            <label for="rental_income" class="form-label">Rental Income</label>
-                                            <div class="input-group">
-                                                <span class="input-group-text">$</span>
-                                                <input type="number" 
-                                                       id="rental_income" 
-                                                       name="monthly_income[rental_income]" 
-                                                       class="form-control income-input" 
-                                                       value="0">
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-12 col-md-6">
-                                        <div class="form-group">
-                                            <label for="parking_income" class="form-label">Parking Income</label>
-                                            <div class="input-group">
-                                                <span class="input-group-text">$</span>
-                                                <input type="number" 
-                                                       id="parking_income" 
-                                                       name="monthly_income[parking_income]" 
-                                                       class="form-control income-input" 
-                                                       value="0">
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-12 col-md-6">
-                                        <div class="form-group">
-                                            <label for="laundry_income" class="form-label">Laundry Income</label>
-                                            <div class="input-group">
-                                                <span class="input-group-text">$</span>
-                                                <input type="number" 
-                                                       id="laundry_income" 
-                                                       name="monthly_income[laundry_income]" 
-                                                       class="form-control income-input" 
-                                                       value="0">
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-12 col-md-6">
-                                        <div class="form-group">
-                                            <label for="other_income" class="form-label">Other Income</label>
-                                            <div class="input-group">
-                                                <span class="input-group-text">$</span>
-                                                <input type="number" 
-                                                       id="other_income" 
-                                                       name="monthly_income[other_income]" 
-                                                       class="form-control income-input" 
-                                                       value="0">
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-12">
-                                        <div class="form-group">
-                                            <label for="income_notes" class="form-label">Income Notes</label>
-                                            <textarea id="income_notes" 
-                                                      name="monthly_income[income_notes]" 
-                                                      class="form-control" 
-                                                      rows="3"></textarea>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-12">
-                                        <div class="alert alert-success">
-                                            <strong>Total Monthly Income:</strong> 
-                                            $<span id="total-monthly-income">0.00</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Monthly Expenses -->
-                        <div class="card mb-4">
-                            <div class="card-header bg-navy text-white">
-                                <h5 class="mb-0">Monthly Expenses</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="row g-3">
-                                    <!-- Fixed Expenses -->
-                                    <div class="col-12 col-lg-6">
-                                        <div class="card h-100">
-                                            <div class="card-header bg-navy">
-                                                <h6 class="mb-0">Fixed Expenses</h6>
-                                            </div>
-                                            <div class="card-body">
-                                                <div class="row g-3">
-                                                    <div class="col-12">
-                                                        <div class="form-group">
-                                                            <label for="property_tax" class="form-label">Property Tax</label>
-                                                            <div class="input-group">
-                                                                <span class="input-group-text">$</span>
-                                                                <input type="number" 
-                                                                       id="property_tax" 
-                                                                       name="monthly_expenses[property_tax]" 
-                                                                       class="form-control expense-input" 
-                                                                       value="0">
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    <div class="col-12">
-                                                        <div class="form-group">
-                                                            <label for="insurance" class="form-label">Insurance</label>
-                                                            <div class="input-group">
-                                                                <span class="input-group-text">$</span>
-                                                                <input type="number" 
-                                                                       id="insurance" 
-                                                                       name="monthly_expenses[insurance]" 
-                                                                       class="form-control expense-input" 
-                                                                       value="0">
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    <div class="col-12">
-                                                        <div class="form-group">
-                                                            <label for="hoa_fees" class="form-label">HOA Fees</label>
-                                                            <div class="input-group">
-                                                                <span class="input-group-text">$</span>
-                                                                <input type="number" 
-                                                                       id="hoa_fees" 
-                                                                       name="monthly_expenses[hoa_fees]" 
-                                                                       class="form-control expense-input" 
-                                                                       value="0">
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Percentage Based Expenses -->
-                                    <div class="col-12 col-lg-6">
-                                        <div class="card h-100">
-                                            <div class="card-header bg-navy">
-                                                <h6 class="mb-0">Percentage Based Expenses</h6>
-                                            </div>
-                                            <div class="card-body">
-                                                <div class="row g-3">
-                                                    <div class="col-12">
-                                                        <div class="form-group">
-                                                            <label for="repairs" class="form-label">Repairs</label>
-                                                            <div class="input-group">
-                                                                <input type="number" 
-                                                                       id="repairs" 
-                                                                       name="monthly_expenses[repairs]" 
-                                                                       class="form-control expense-input expense-percent" 
-                                                                       step="0.01" 
-                                                                       min="0" 
-                                                                       max="100"
-                                                                       value="0">
-                                                                <span class="input-group-text">% of Rent</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    <div class="col-12">
-                                                        <div class="form-group">
-                                                            <label for="capex" class="form-label">CapEx</label>
-                                                            <div class="input-group">
-                                                                <input type="number" 
-                                                                       id="capex" 
-                                                                       name="monthly_expenses[capex]" 
-                                                                       class="form-control expense-input expense-percent" 
-                                                                       step="0.01" 
-                                                                       min="0" 
-                                                                       max="100"
-                                                                       value="0">
-                                                                <span class="input-group-text">% of Rent</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    <div class="col-12">
-                                                        <div class="form-group">
-                                                            <label for="property-management" class="form-label">Property Management</label>
-                                                            <div class="input-group">
-                                                                <input type="number" 
-                                                                       id="property-management" 
-                                                                       name="monthly_expenses[property_management]" 
-                                                                       class="form-control expense-input expense-percent" 
-                                                                       step="0.01" 
-                                                                       min="0" 
-                                                                       max="100"
-                                                                       value="0">
-                                                                <span class="input-group-text">% of Rent</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Utilities -->
-                                    <div class="col-12">
-                                        <div class="card">
-                                            <div class="card-header bg-navy">
-                                                <h6 class="mb-0">Utilities</h6>
-                                            </div>
-                                            <div class="card-body">
-                                                <div class="row g-3">
-                                                    <div class="col-12 col-sm-6 col-lg-3">
-                                                        <div class="form-group">
-                                                            <label for="water" class="form-label">Water</label>
-                                                            <div class="input-group">
-                                                                <span class="input-group-text">$</span>
-                                                                <input type="number" 
-                                                                       id="water" 
-                                                                       name="monthly_expenses[utilities][water]" 
-                                                                       class="form-control expense-input utility-input" 
-                                                                       value="0">
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    <div class="col-12 col-sm-6 col-lg-3">
-                                                        <div class="form-group">
-                                                            <label for="electricity" class="form-label">Electricity</label>
-                                                            <div class="input-group">
-                                                                <span class="input-group-text">$</span>
-                                                                <input type="number" 
-                                                                       id="electricity" 
-                                                                       name="monthly_expenses[utilities][electricity]" 
-                                                                       class="form-control expense-input utility-input" 
-                                                                       value="0">
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    <div class="col-12 col-sm-6 col-lg-3">
-                                                        <div class="form-group">
-                                                            <label for="gas" class="form-label">Gas</label>
-                                                            <div class="input-group">
-                                                                <span class="input-group-text">$</span>
-                                                                <input type="number" 
-                                                                       id="gas" 
-                                                                       name="monthly_expenses[utilities][gas]" 
-                                                                       class="form-control expense-input utility-input" 
-                                                                       value="0">
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    <div class="col-12 col-sm-6 col-lg-3">
-                                                        <div class="form-group">
-                                                            <label for="trash" class="form-label">Trash</label>
-                                                            <div class="input-group">
-                                                                <span class="input-group-text">$</span>
-                                                                <input type="number" 
-                                                                       id="trash" 
-                                                                       name="monthly_expenses[utilities][trash]" 
-                                                                       class="form-control expense-input utility-input" 
-                                                                       value="0">
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Other Expenses -->
-                                    <div class="col-12">
-                                        <div class="form-group">
-                                            <label for="other_expenses" class="form-label">Other Expenses</label>
-                                            <div class="input-group">
-                                                <span class="input-group-text">$</span>
-                                                <input type="number" 
-                                                       id="other_expenses" 
-                                                       name="monthly_expenses[other_expenses]" 
-                                                       class="form-control expense-input" 
-                                                       value="0">
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-12">
-                                        <div class="form-group">
-                                            <label for="expense_notes" class="form-label">Expense Notes</label>
-                                            <textarea id="expense_notes" 
-                                                      name="monthly_expenses[expense_notes]" 
-                                                      class="form-control" 
-                                                      rows="3"></textarea>
-                                        </div>
-                                    </div>
-
-                                    <!-- Summary -->
-                                    <div class="col-12">
-                                        <div class="card bg-navy">
-                                            <div class="card-body">
-                                                <div class="row g-3">
-                                                    <div class="col-12 col-md-6">
-                                                        <div class="alert alert-danger mb-0">
-                                                            <strong>Total Monthly Expenses:</strong> 
-                                                            $<span id="total-monthly-expenses">0.00</span>
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-12 col-md-6">
-                                                        <div class="alert alert-success mb-0">
-                                                            <strong>Net Monthly Income:</strong> 
-                                                            $<span id="net-monthly-income">0.00</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Partner Section -->
-                        <div class="card mb-4">
-                            <div class="card-header bg-info text-white">
-                                <h5 class="mb-0">Partners</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="alert alert-info mb-4">
-                                    <h6 class="alert-heading">Property Manager Information</h6>
-                                    <p class="mb-0">One partner must be designated as Property Manager. While any partner can add property and transaction details, only the designated Property Manager can edit or remove them.</p>
-                                </div>
-
-                                <select id="partners-list" style="display: none;">
-                                    {% for partner in partners %}
-                                        <option value="{{ partner }}">{{ partner }}</option>
-                                    {% endfor %}
-                                </select>
-
-                                <div id="partners-container">
-                                    <!-- Partner entries will be dynamically added here -->
-                                </div>
-
-                                <div class="d-grid gap-2 d-md-block">
-                                    <button type="button" id="add-partner-button" class="btn btn-primary">
-                                        <i class="bi bi-plus-circle me-2"></i>Add Partner
-                                    </button>
-                                </div>
-
-                                <!-- Partner Entry Template -->
-                                <template id="partner-entry-template">
-                                    <div class="partner-entry card mt-3">
-                                        <div class="card-body">
-                                            <div class="row g-3">
-                                                <div class="col-12 col-md-4">
-                                                    <div class="form-group">
-                                                        <label for="partner-select-{index}" class="form-label">Partner</label>
-                                                        <select id="partner-select-{index}" 
-                                                                name="partners[{index}][name]" 
-                                                                class="form-select partner-select" 
-                                                                required>
-                                                            <option value="">Select a partner</option>
-                                                            <option value="new">Add new partner</option>
-                                                        </select>
-                                                        <div class="form-group mt-2 new-partner-name" style="display: none;">
-                                                            <label for="new-partner-name-{index}" class="form-label">New Partner Name</label>
-                                                            <input type="text" 
-                                                                   id="new-partner-name-{index}" 
-                                                                   name="partners[{index}][new_name]" 
-                                                                   class="form-control">
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <div class="col-12 col-md-3">
-                                                    <div class="form-group">
-                                                        <label for="partner-equity-{index}" class="form-label">Equity Share</label>
-                                                        <div class="input-group">
-                                                            <input type="number" 
-                                                                   id="partner-equity-{index}" 
-                                                                   name="partners[{index}][equity_share]" 
-                                                                   class="form-control partner-equity" 
-                                                                   step="0.01" 
-                                                                   min="0" 
-                                                                   max="100" 
-                                                                   required>
-                                                            <span class="input-group-text">%</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <div class="col-12 col-md-3">
-                                                    <div class="form-group">
-                                                        <label class="d-block">&nbsp;</label>
-                                                        <div class="form-check">
-                                                            <input type="checkbox" 
-                                                                   id="project-manager-{index}" 
-                                                                   name="partners[{index}][is_project_manager]" 
-                                                                   class="form-check-input project-manager-check">
-                                                            <label class="form-check-label" for="project-manager-{index}">
-                                                                Property Manager
-                                                            </label>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <div class="col-12 col-md-2">
-                                                    <label class="d-block">&nbsp;</label>
-                                                    <button type="button" class="btn btn-danger remove-partner">
-                                                        <i class="bi bi-trash me-2"></i>Remove
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </template>
-
-                                <div class="alert alert-info mt-3">
-                                    <strong>Total Equity:</strong> <span id="total-equity">0%</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Form Actions -->
-                        <div class="row g-3">
-                            <div class="col-12">
-                                <div class="d-grid gap-2 d-md-flex">
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="bi bi-plus-circle me-2"></i>Add Property
-                                    </button>
-                                    <button type="reset" class="btn btn-secondary">
-                                        <i class="bi bi-arrow-counterclockwise me-2"></i>Reset Form
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
+ <div class="row">
+  <div class="col-12">
+   <div class="card mt-3">
+    <div class="card-header bg-navy">
+     <h4 class="mb-0">
+      Add Properties
+     </h4>
     </div>
+    <div class="card-body p-3">
+     <p class="text-muted mb-4">
+      To view all properties you are associated with, please select the Dashboard menu.
+     </p>
+     <form id="add-property-form" method="POST">
+      <!-- Property Information -->
+      <div class="card mb-4">
+       <div class="card-header bg-navy">
+        <h5 class="mb-0">
+         Property Information
+        </h5>
+       </div>
+       <div class="card-body">
+        <div class="row g-3">
+         <div class="col-12">
+          <div class="form-group autocomplete-container">
+           <label class="form-label" for="property_address">
+            Property Address:
+           </label>
+           <input class="form-control" id="property_address" name="property_address" required="" type="text"/>
+           <ul class="autocomplete-results" id="autocomplete-results">
+           </ul>
+          </div>
+         </div>
+         <div class="col-12 col-md-6">
+          <div class="form-group">
+           <label class="form-label" for="purchase_date">
+            Purchase Date:
+           </label>
+           <input class="form-control" id="purchase_date" name="purchase_date" required="" type="date"/>
+          </div>
+         </div>
+         <div class="col-12 col-md-6">
+          <div class="form-group">
+           <label class="form-label" for="purchase_price">
+            Purchase Price
+           </label>
+           <div class="input-group">
+            <span class="input-group-text">
+             $
+            </span>
+            <input class="form-control" id="purchase_price" name="purchase_price" required="" type="number"/>
+           </div>
+          </div>
+         </div>
+         <div class="col-12 col-md-6">
+          <div class="form-group">
+           <label class="form-label" for="down_payment">
+            Down Payment
+           </label>
+           <div class="input-group">
+            <span class="input-group-text">
+             $
+            </span>
+            <input class="form-control" id="down_payment" name="down_payment" required="" type="number"/>
+           </div>
+          </div>
+         </div>
+         <div class="col-12 col-md-6">
+          <div class="form-group">
+           <label class="form-label" for="closing_costs">
+            Closing Costs
+           </label>
+           <div class="input-group">
+            <span class="input-group-text">
+             $
+            </span>
+            <input class="form-control" id="closing_costs" name="closing_costs" type="number" value="0"/>
+           </div>
+          </div>
+         </div>
+         <div class="col-12 col-md-6">
+          <div class="form-group">
+           <label class="form-label" for="renovation_costs">
+            Renovation Costs
+           </label>
+           <div class="input-group">
+            <span class="input-group-text">
+             $
+            </span>
+            <input class="form-control" id="renovation_costs" name="renovation_costs" type="number" value="0"/>
+           </div>
+          </div>
+         </div>
+         <div class="col-12 col-md-6">
+          <div class="form-group">
+           <label class="form-label" for="marketing_costs">
+            Marketing Costs
+           </label>
+           <div class="input-group">
+            <span class="input-group-text">
+             $
+            </span>
+            <input class="form-control" id="marketing_costs" name="marketing_costs" type="number" value="0"/>
+           </div>
+          </div>
+         </div>
+        </div>
+       </div>
+      </div>
+      <!-- Loan Information -->
+      <div class="card mb-4">
+       <div class="card-header bg-navy">
+        <h5 class="mb-0">
+         Loan Information
+        </h5>
+       </div>
+       <div class="card-body">
+        <div class="row g-3">
+         <div class="col-12 col-md-6">
+          <div class="form-group">
+           <label class="form-label" for="primary_loan_amount">
+            Primary Loan Amount
+           </label>
+           <div class="input-group">
+            <span class="input-group-text">
+             $
+            </span>
+            <input class="form-control" id="primary_loan_amount" name="primary_loan_amount" required="" type="number"/>
+           </div>
+          </div>
+         </div>
+         <div class="col-12 col-md-6">
+          <div class="form-group">
+           <label class="form-label" for="primary_loan_start_date">
+            Loan Start Date
+           </label>
+           <input class="form-control" id="primary_loan_start_date" name="primary_loan_start_date" required="" type="date"/>
+          </div>
+         </div>
+         <div class="col-12 col-md-6">
+          <div class="form-group">
+           <label class="form-label" for="primary_loan_rate">
+            Primary Loan Rate
+           </label>
+           <div class="input-group">
+            <input class="form-control" id="primary_loan_rate" name="primary_loan_rate" required="" step="0.01" type="number"/>
+            <span class="input-group-text">
+             %
+            </span>
+           </div>
+          </div>
+         </div>
+         <div class="col-12 col-md-6">
+            <div class="form-group">
+              <label class="form-label" for="primary_loan_term">Primary Loan Term</label>
+              <input 
+                type="number" 
+                class="form-control" 
+                id="primary_loan_term" 
+                name="primary_loan_term" 
+                required
+                min="0"
+                value="360"
+              />
+            </div>
+          </div>
+         <!-- Secondary Financing Section -->
+         <div class="col-12">
+          <h6>
+           Secondary Financing
+          </h6>
+         </div>
+         <div class="col-12 col-md-4">
+          <div class="form-group">
+           <label class="form-label" for="secondary_loan_amount">
+            Secondary Loan Amount
+           </label>
+           <div class="input-group">
+            <span class="input-group-text">
+             $
+            </span>
+            <input class="form-control" id="secondary_loan_amount" name="secondary_loan_amount" type="number" value="0"/>
+           </div>
+          </div>
+         </div>
+         <div class="col-12 col-md-4">
+          <div class="form-group">
+           <label class="form-label" for="secondary_loan_rate">
+            Secondary Loan Rate
+           </label>
+           <div class="input-group">
+            <input class="form-control" id="secondary_loan_rate" name="secondary_loan_rate" step="0.01" type="number" value="0"/>
+            <span class="input-group-text">
+             %
+            </span>
+           </div>
+          </div>
+         </div>
+         <div class="col-12 col-md-4">
+            <div class="form-group">
+              <label class="form-label" for="secondary_loan_term">Secondary Loan Term</label>
+              <input 
+                type="number" 
+                class="form-control" 
+                id="secondary_loan_term" 
+                name="secondary_loan_term" 
+                min="0"
+                value="0"
+              />
+            </div>
+          </div>          
+        </div>
+       </div>
+      </div>
+      <!-- Monthly Income -->
+      <div class="card mb-4">
+       <div class="card-header bg-navy text-white">
+        <h5 class="mb-0">
+         Monthly Income
+        </h5>
+       </div>
+       <div class="card-body">
+        <div class="row g-3">
+         <div class="col-12 col-md-6">
+          <div class="form-group">
+           <label class="form-label" for="rental_income">
+            Rental Income
+           </label>
+           <div class="input-group">
+            <span class="input-group-text">
+             $
+            </span>
+            <input class="form-control income-input" id="monthly_income[rental_income]" name="monthly_income[rental_income]" type="number" value="0"/>
+           </div>
+          </div>
+         </div>
+         <div class="col-12 col-md-6">
+          <div class="form-group">
+           <label class="form-label" for="parking_income">
+            Parking Income
+           </label>
+           <div class="input-group">
+            <span class="input-group-text">
+             $
+            </span>
+            <input class="form-control income-input" id="monthly_income[parking_income]" name="monthly_income[parking_income]" type="number" value="0"/>
+           </div>
+          </div>
+         </div>
+         <div class="col-12 col-md-6">
+          <div class="form-group">
+           <label class="form-label" for="laundry_income">
+            Laundry Income
+           </label>
+           <div class="input-group">
+            <span class="input-group-text">
+             $
+            </span>
+            <input class="form-control income-input" id="monthly_income[laundry_income]" name="monthly_income[laundry_income]" type="number" value="0"/>
+           </div>
+          </div>
+         </div>
+         <div class="col-12 col-md-6">
+          <div class="form-group">
+           <label class="form-label" for="other_income">
+            Other Income
+           </label>
+           <div class="input-group">
+            <span class="input-group-text">
+             $
+            </span>
+            <input class="form-control income-input" id="monthly_income[other_income]" name="monthly_income[other_income]" type="number" value="0"/>
+           </div>
+          </div>
+         </div>
+         <div class="col-12">
+          <div class="form-group">
+           <label class="form-label" for="income_notes">
+            Income Notes
+           </label>
+           <textarea class="form-control" id="monthly_income[income_notes]" name="monthly_income[income_notes]" rows="3"></textarea>
+          </div>
+         </div>
+         <div class="col-12">
+          <div class="alert alert-success">
+           <strong>
+            Total Monthly Income:
+           </strong>
+           $
+           <span id="total-monthly-income">
+            0.00
+           </span>
+          </div>
+         </div>
+        </div>
+       </div>
+      </div>
+      <!-- Monthly Expenses -->
+      <div class="card mb-4">
+       <div class="card-header bg-navy text-white">
+        <h5 class="mb-0">
+         Monthly Expenses
+        </h5>
+       </div>
+       <div class="card-body">
+        <div class="row g-3">
+         <!-- Fixed Expenses -->
+         <div class="col-12 col-lg-6">
+          <div class="card h-100">
+           <div class="card-header bg-navy">
+            <h6 class="mb-0">
+             Fixed Expenses
+            </h6>
+           </div>
+           <div class="card-body">
+            <div class="row g-3">
+             <div class="col-12">
+              <div class="form-group">
+               <label class="form-label" for="property_tax">
+                Property Tax
+               </label>
+               <div class="input-group">
+                <span class="input-group-text">
+                 $
+                </span>
+                <input class="form-control expense-input" id="monthly_expenses[property_tax]" name="monthly_expenses[property_tax]" type="number" value="0"/>
+               </div>
+              </div>
+             </div>
+             <div class="col-12">
+              <div class="form-group">
+               <label class="form-label" for="insurance">
+                Insurance
+               </label>
+               <div class="input-group">
+                <span class="input-group-text">
+                 $
+                </span>
+                <input class="form-control expense-input" id="monthly_expenses[insurance]" name="monthly_expenses[insurance]" type="number" value="0"/>
+               </div>
+              </div>
+             </div>
+             <div class="col-12">
+              <div class="form-group">
+               <label class="form-label" for="hoa_fees">
+                HOA Fees
+               </label>
+               <div class="input-group">
+                <span class="input-group-text">
+                 $
+                </span>
+                <input class="form-control expense-input" id="monthly_expenses[hoa_fees]" name="monthly_expenses[hoa_fees]" type="number" value="0"/>
+               </div>
+              </div>
+             </div>
+            </div>
+           </div>
+          </div>
+         </div>
+         <!-- Percentage Based Expenses -->
+         <div class="col-12 col-lg-6">
+          <div class="card h-100">
+           <div class="card-header bg-navy">
+            <h6 class="mb-0">
+             Percentage Based Expenses
+            </h6>
+           </div>
+           <div class="card-body">
+            <div class="row g-3">
+             <div class="col-12">
+              <div class="form-group">
+               <label class="form-label" for="repairs">
+                Repairs
+               </label>
+               <div class="input-group">
+                <input class="form-control expense-input expense-percent" id="monthly_expenses[repairs]" max="100" min="0" name="monthly_expenses[repairs]" step="0.01" type="number" value="0"/>
+                <span class="input-group-text">
+                 % of Rent
+                </span>
+               </div>
+              </div>
+             </div>
+             <div class="col-12">
+              <div class="form-group">
+               <label class="form-label" for="capex">
+                CapEx
+               </label>
+               <div class="input-group">
+                <input class="form-control expense-input expense-percent" id="monthly_expenses[capex]" max="100" min="0" name="monthly_expenses[capex]" step="0.01" type="number" value="0"/>
+                <span class="input-group-text">
+                 % of Rent
+                </span>
+               </div>
+              </div>
+             </div>
+             <div class="col-12">
+              <div class="form-group">
+               <label class="form-label" for="property-management">
+                Property Management
+               </label>
+               <div class="input-group">
+                <input class="form-control expense-input expense-percent" id="monthly_expenses[property_management]" max="100" min="0" name="monthly_expenses[property_management]" step="0.01" type="number" value="0"/>
+                <span class="input-group-text">
+                 % of Rent
+                </span>
+               </div>
+              </div>
+             </div>
+            </div>
+           </div>
+          </div>
+         </div>
+         <!-- Utilities -->
+         <div class="col-12">
+          <div class="card">
+           <div class="card-header bg-navy">
+            <h6 class="mb-0">
+             Utilities
+            </h6>
+           </div>
+           <div class="card-body">
+            <div class="row g-3">
+             <div class="col-12 col-sm-6 col-lg-3">
+              <div class="form-group">
+               <label class="form-label" for="water">
+                Water
+               </label>
+               <div class="input-group">
+                <span class="input-group-text">
+                 $
+                </span>
+                <input class="form-control expense-input utility-input" id="monthly_expenses[utilities][water]" name="monthly_expenses[utilities][water]" type="number" value="0"/>
+               </div>
+              </div>
+             </div>
+             <div class="col-12 col-sm-6 col-lg-3">
+              <div class="form-group">
+               <label class="form-label" for="electricity">
+                Electricity
+               </label>
+               <div class="input-group">
+                <span class="input-group-text">
+                 $
+                </span>
+                <input class="form-control expense-input utility-input" id="monthly_expenses[utilities][electricity]" name="monthly_expenses[utilities][electricity]" type="number" value="0"/>
+               </div>
+              </div>
+             </div>
+             <div class="col-12 col-sm-6 col-lg-3">
+              <div class="form-group">
+               <label class="form-label" for="gas">
+                Gas
+               </label>
+               <div class="input-group">
+                <span class="input-group-text">
+                 $
+                </span>
+                <input class="form-control expense-input utility-input" id="monthly_expenses[utilities][gas]" name="monthly_expenses[utilities][gas]" type="number" value="0"/>
+               </div>
+              </div>
+             </div>
+             <div class="col-12 col-sm-6 col-lg-3">
+              <div class="form-group">
+               <label class="form-label" for="trash">
+                Trash
+               </label>
+               <div class="input-group">
+                <span class="input-group-text">
+                 $
+                </span>
+                <input class="form-control expense-input utility-input" id="monthly_expenses[utilities][trash]" name="monthly_expenses[utilities][trash]" type="number" value="0"/>
+               </div>
+              </div>
+             </div>
+            </div>
+           </div>
+          </div>
+         </div>
+         <!-- Other Expenses -->
+         <div class="col-12">
+          <div class="form-group">
+           <label class="form-label" for="other_expenses">
+            Other Expenses
+           </label>
+           <div class="input-group">
+            <span class="input-group-text">
+             $
+            </span>
+            <input class="form-control expense-input" id="monthly_expenses[other_expenses]" name="monthly_expenses[other_expenses]" type="number" value="0"/>
+           </div>
+          </div>
+         </div>
+         <div class="col-12">
+          <div class="form-group">
+           <label class="form-label" for="expense_notes">
+            Expense Notes
+           </label>
+           <textarea class="form-control" id="monthly_expenses[expense_notes]" name="monthly_expenses[expense_notes]" rows="3"></textarea>
+          </div>
+         </div>
+         <div class="col-12">
+          <div class="alert alert-danger">
+           <strong>
+            Total Monthly Expenses:
+           </strong>
+           $
+           <span id="total-monthly-expenses">
+            0.00
+           </span>
+          </div>
+         </div>
+        </div>
+       </div>
+      </div>
+      <!-- Portfolio KPIs Notice -->
+      <div class="alert alert-info mb-4">
+       <h6 class="alert-heading">
+        Want to see how this property performs?
+       </h6>
+       <p class="mb-0">
+        Once added, you can view detailed KPIs and analytics for this property in the
+        <a class="alert-link" href="{{ url_for('dashboards.portfolio_view') }}">
+         Portfolio Dashboard
+        </a>
+        .
+       </p>
+      </div>
+      <!-- Partner Section -->
+      <div class="card mb-4">
+       <div class="card-header bg-info text-white">
+        <h5 class="mb-0">
+         Partners
+        </h5>
+       </div>
+       <div class="card-body">
+        <div class="alert alert-info mb-4">
+         <h6 class="alert-heading">
+          Property Manager Information
+         </h6>
+         <p class="mb-0">
+          One partner must be designated as Property Manager. While any partner can add property and transaction details, only the designated Property Manager can edit or remove them.
+         </p>
+        </div>
+        <select id="partners-list" style="display: none;">
+         {% for partner in partners %}
+         <option value="{{ partner }}">
+          {{ partner }}
+         </option>
+         {% endfor %}
+        </select>
+        <div id="partners-container">
+         <!-- Partner entries will be dynamically added here -->
+        </div>
+        <div class="d-grid gap-2 d-md-block">
+         <button class="btn btn-primary" id="add-partner-button" type="button">
+          <i class="bi bi-plus-circle me-2">
+          </i>
+          Add Partner
+         </button>
+        </div>
+        <!-- Partner Entry Template -->
+        <template id="partner-entry-template">
+         <div class="partner-entry card mt-3">
+          <div class="card-body">
+           <div class="row g-3">
+            <div class="col-12 col-md-4">
+             <div class="form-group">
+              <label class="form-label" for="partner-select-{index}">
+               Partner
+              </label>
+              <select class="form-select partner-select" id="partners[{index}][name]" name="partners[{index}][name]" required="">
+               <option value="">
+                Select a partner
+               </option>
+               <option value="new">
+                Add new partner
+               </option>
+              </select>
+              <div class="form-group mt-2 new-partner-name" style="display: none;">
+               <label class="form-label" for="new-partner-name-{index}">
+                New Partner Name
+               </label>
+               <input class="form-control" id="partners[{index}][new_name]" name="partners[{index}][new_name]" type="text"/>
+              </div>
+             </div>
+            </div>
+            <div class="col-12 col-md-3">
+             <div class="form-group">
+              <label class="form-label" for="partner-equity-{index}">
+               Equity Share
+              </label>
+              <div class="input-group">
+               <input class="form-control partner-equity" id="partners[{index}][equity_share]" max="100" min="0" name="partners[{index}][equity_share]" required="" step="0.01" type="number"/>
+               <span class="input-group-text">
+                %
+               </span>
+              </div>
+             </div>
+            </div>
+            <div class="col-12 col-md-3">
+             <div class="form-group">
+              <label class="d-block">
+              </label>
+              <div class="form-check">
+               <input class="form-check-input property-manager-check" id="partners[{index}][is_property_manager]" name="partners[{index}][is_property_manager]" type="checkbox"/>
+               <label class="form-check-label" for="property-manager-{index}">
+                Property Manager
+               </label>
+              </div>
+             </div>
+            </div>
+            <div class="col-12 col-md-2">
+             <label class="d-block">
+             </label>
+             <button class="btn btn-danger remove-partner" type="button">
+              <i class="bi bi-trash me-2">
+              </i>
+              Remove
+             </button>
+            </div>
+           </div>
+          </div>
+         </div>
+        </template>
+        <div class="alert alert-info mt-3">
+         <strong>
+          Total Equity:
+         </strong>
+         <span id="total-equity">
+          0%
+         </span>
+        </div>
+       </div>
+      </div>
+      <!-- Form Actions -->
+      <div class="row g-3">
+       <div class="col-12">
+        <div class="d-grid gap-2 d-md-flex">
+         <button class="btn btn-primary" type="submit">
+          <i class="bi bi-plus-circle me-2">
+          </i>
+          Add Property
+         </button>
+         <button class="btn btn-secondary" type="reset">
+          <i class="bi bi-arrow-counterclockwise me-2">
+          </i>
+          Reset Form
+         </button>
+        </div>
+       </div>
+      </div>
+     </form>
+    </div>
+   </div>
+  </div>
+ </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script type="module">
-    import { init } from '/static/js/main.js';
+ import { init } from '/static/js/main.js';
     import addPropertiesModule from '/static/js/modules/add_properties.js';
 
     document.addEventListener('DOMContentLoaded', function() {

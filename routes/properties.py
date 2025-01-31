@@ -35,16 +35,16 @@ def validate_property_data(property_data: Dict[str, Any]) -> Tuple[bool, List[st
     """
     errors = []
     
-    # Required fields with their types
+    # Required fields with their types - Updated field names
     required_fields = {
         'address': str,
         'purchase_price': (int, float),
         'down_payment': (int, float),
-        'primary_loan_rate': (int, float),
-        'primary_loan_term': (int, float),
+        'primary_loan_rate': (int, float),  # Changed from loan_rate
+        'primary_loan_term': (int, float),  # Changed from loan_term
         'purchase_date': str,
-        'loan_amount': (int, float),
-        'loan_start_date': str,
+        'primary_loan_amount': (int, float),  # Changed from loan_amount
+        'primary_loan_start_date': str,      # Changed from loan_start_date
         'partners': list
     }
     
@@ -61,9 +61,14 @@ def validate_property_data(property_data: Dict[str, Any]) -> Tuple[bool, List[st
         if not isinstance(property_data[field], expected_type):
             errors.append(f"Invalid type for {field}: expected {expected_type}, got {type(property_data[field])}")
 
-    # Validate numeric fields are positive
-    numeric_fields = ['purchase_price', 'down_payment', 'primary_loan_rate', 
-                     'primary_loan_term', 'loan_amount']
+    # Validate numeric fields are positive - Updated field names
+    numeric_fields = [
+        'purchase_price', 
+        'down_payment', 
+        'primary_loan_rate',      # Changed from loan_rate
+        'primary_loan_term',      # Changed from loan_term
+        'primary_loan_amount'     # Changed from loan_amount
+    ]
     for field in numeric_fields:
         if field in property_data and property_data[field] is not None:
             try:
@@ -73,8 +78,11 @@ def validate_property_data(property_data: Dict[str, Any]) -> Tuple[bool, List[st
             except (ValueError, TypeError):
                 errors.append(f"Invalid numeric value for {field}")
 
-    # Validate dates
-    date_fields = ['purchase_date', 'loan_start_date']
+    # Validate dates - Updated field names
+    date_fields = [
+        'purchase_date', 
+        'primary_loan_start_date'  # Changed from loan_start_date
+    ]
     for field in date_fields:
         if field in property_data and property_data[field]:
             try:
@@ -82,12 +90,11 @@ def validate_property_data(property_data: Dict[str, Any]) -> Tuple[bool, List[st
             except ValueError:
                 errors.append(f"Invalid date format for {field}. Expected YYYY-MM-DD")
 
-    # Validate address
+    # Rest of validation remains the same
     if 'address' in property_data and property_data['address']:
         if not property_data['address'].strip():
             errors.append("Address cannot be empty")
 
-    # Validate partners
     if 'partners' in property_data and property_data['partners']:
         partners_errors = validate_partners_data(property_data['partners'])
         errors.extend(partners_errors)
@@ -161,18 +168,17 @@ def sanitize_property_data(property_data: Dict[str, Any]) -> Dict[str, Any]:
             'address': str(property_data['address']).strip(),
             'purchase_price': float(property_data['purchase_price']),
             'down_payment': float(property_data['down_payment']),
-            'primary_loan_rate': float(property_data['primary_loan_rate']),
-            'primary_loan_term': float(property_data['primary_loan_term']),
+            'primary_loan_rate': float(property_data['primary_loan_rate']),         # Changed from loan_rate
+            'primary_loan_term': float(property_data['primary_loan_term']),         # Changed from loan_term
             'purchase_date': str(property_data['purchase_date']),
-            'loan_amount': float(property_data['loan_amount']),
-            'loan_start_date': str(property_data['loan_start_date']),
-            'seller_financing_amount': float(property_data.get('seller_financing_amount', 0)),
-            'seller_financing_rate': float(property_data.get('seller_financing_rate', 0)),
-            'seller_financing_term': float(property_data.get('seller_financing_term', 0)),
+            'primary_loan_amount': float(property_data['primary_loan_amount']),     # Changed from loan_amount
+            'primary_loan_start_date': str(property_data['primary_loan_start_date']), # Changed from loan_start_date
+            'secondary_loan_amount': float(property_data.get('secondary_loan_amount', 0)),
+            'secondary_loan_rate': float(property_data.get('secondary_loan_rate', 0)),
+            'secondary_loan_term': float(property_data.get('secondary_loan_term', 0)),
             'closing_costs': float(property_data.get('closing_costs', 0)),
             'renovation_costs': float(property_data.get('renovation_costs', 0)),
             'marketing_costs': float(property_data.get('marketing_costs', 0)),
-            'holding_costs': float(property_data.get('holding_costs', 0)),
             'monthly_income': {
                 'rental_income': float(property_data.get('monthly_income', {}).get('rental_income', 0)),
                 'parking_income': float(property_data.get('monthly_income', {}).get('parking_income', 0)),
@@ -207,17 +213,8 @@ def sanitize_property_data(property_data: Dict[str, Any]) -> Dict[str, Any]:
                 'is_property_manager': bool(partner.get('is_property_manager', False))
             }
             sanitized['partners'].append(sanitized_partner)
-        
-        # Round all numeric values to 2 decimal places
-        def round_nested_dict(d: Dict) -> Dict:
-            for k, v in d.items():
-                if isinstance(v, dict):
-                    d[k] = round_nested_dict(v)
-                elif isinstance(v, (int, float)) and k != 'primary_loan_term':
-                    d[k] = round(float(v), 2)
-            return d
             
-        return round_nested_dict(sanitized)
+        return sanitized
         
     except Exception as e:
         logger.error(f"Error sanitizing property data: {str(e)}")

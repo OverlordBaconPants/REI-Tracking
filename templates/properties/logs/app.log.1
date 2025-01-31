@@ -1,0 +1,104 @@
+2025-01-26 09:09:36,600 INFO: Application startup in development mode [in /home/bj/python/REI-Tracker/__init__.py:84]
+2025-01-26 09:09:36,600 INFO: Running with BASE_DIR: /home/bj/python/REI-Tracker [in /home/bj/python/REI-Tracker/__init__.py:101]
+2025-01-26 09:09:36,600 INFO: Environment: Development [in /home/bj/python/REI-Tracker/__init__.py:102]
+2025-01-26 09:09:36,654 ERROR: Error creating Dash apps: [Errno 2] No such file or directory: 'templates/dashboards/dash_amortization.html' [in /home/bj/python/REI-Tracker/__init__.py:172]
+2025-01-26 09:09:36,654 ERROR: Full traceback: [in /home/bj/python/REI-Tracker/__init__.py:173]
+Traceback (most recent call last):
+  File "/home/bj/python/REI-Tracker/__init__.py", line 149, in create_app
+    app.amortization_dash = create_amortization_dash(app)
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bj/python/REI-Tracker/dash_apps/dash_amortization.py", line 87, in create_amortization_dash
+    index_string=open('templates/dashboards/dash_amortization.html').read()
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'templates/dashboards/dash_amortization.html'
+2025-01-26 09:15:07,425 INFO: Application startup in development mode [in /home/bj/python/REI-Tracker/__init__.py:84]
+2025-01-26 09:15:07,425 INFO: Running with BASE_DIR: /home/bj/python/REI-Tracker [in /home/bj/python/REI-Tracker/__init__.py:101]
+2025-01-26 09:15:07,425 INFO: Environment: Development [in /home/bj/python/REI-Tracker/__init__.py:102]
+2025-01-26 09:15:07,454 ERROR: Error creating Dash apps: name 'template_path' is not defined [in /home/bj/python/REI-Tracker/__init__.py:172]
+2025-01-26 09:15:07,454 ERROR: Full traceback: [in /home/bj/python/REI-Tracker/__init__.py:173]
+Traceback (most recent call last):
+  File "/home/bj/python/REI-Tracker/__init__.py", line 149, in create_app
+    app.amortization_dash = create_amortization_dash(app)
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bj/python/REI-Tracker/dash_apps/dash_amortization.py", line 89, in create_amortization_dash
+    index_string=open(template_path).read()
+                      ^^^^^^^^^^^^^
+NameError: name 'template_path' is not defined
+2025-01-26 09:16:01,594 INFO: Application startup in development mode [in /home/bj/python/REI-Tracker/__init__.py:84]
+2025-01-26 09:16:01,594 INFO: Running with BASE_DIR: /home/bj/python/REI-Tracker [in /home/bj/python/REI-Tracker/__init__.py:101]
+2025-01-26 09:16:01,594 INFO: Environment: Development [in /home/bj/python/REI-Tracker/__init__.py:102]
+2025-01-26 09:16:01,622 ERROR: Error creating Dash apps: name 'template_path' is not defined [in /home/bj/python/REI-Tracker/__init__.py:172]
+2025-01-26 09:16:01,622 ERROR: Full traceback: [in /home/bj/python/REI-Tracker/__init__.py:173]
+Traceback (most recent call last):
+  File "/home/bj/python/REI-Tracker/__init__.py", line 149, in create_app
+    app.amortization_dash = create_amortization_dash(app)
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bj/python/REI-Tracker/dash_apps/dash_amortization.py", line 89, in create_amortization_dash
+    index_string=open(template_path).read()
+                      ^^^^^^^^^^^^^
+NameError: name 'template_path' is not defined
+2025-01-26 09:16:07,872 INFO: Application startup in development mode [in /home/bj/python/REI-Tracker/__init__.py:84]
+2025-01-26 09:16:07,872 INFO: Running with BASE_DIR: /home/bj/python/REI-Tracker [in /home/bj/python/REI-Tracker/__init__.py:101]
+2025-01-26 09:16:07,872 INFO: Environment: Development [in /home/bj/python/REI-Tracker/__init__.py:102]
+2025-01-26 09:16:07,901 ERROR: Error creating Dash apps: expected str, bytes or os.PathLike object, not tuple [in /home/bj/python/REI-Tracker/__init__.py:172]
+2025-01-26 09:16:07,901 ERROR: Full traceback: [in /home/bj/python/REI-Tracker/__init__.py:173]
+Traceback (most recent call last):
+  File "/home/bj/python/REI-Tracker/__init__.py", line 149, in create_app
+    app.amortization_dash = create_amortization_dash(app)
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bj/python/REI-Tracker/dash_apps/dash_amortization.py", line 89, in create_amortization_dash
+    index_string=open(template_path).read()
+                 ^^^^^^^^^^^^^^^^^^^
+TypeError: expected str, bytes or os.PathLike object, not tuple
+2025-01-26 09:17:14,599 INFO: Application startup in development mode [in /home/bj/python/REI-Tracker/__init__.py:84]
+2025-01-26 09:17:14,599 INFO: Running with BASE_DIR: /home/bj/python/REI-Tracker [in /home/bj/python/REI-Tracker/__init__.py:101]
+2025-01-26 09:17:14,599 INFO: Environment: Development [in /home/bj/python/REI-Tracker/__init__.py:102]
+2025-01-26 09:17:14,664 ERROR: Error creating Dash apps: [Errno 2] No such file or directory: 'templates/dashboards/dash_transactions.html' [in /home/bj/python/REI-Tracker/__init__.py:172]
+2025-01-26 09:17:14,664 ERROR: Full traceback: [in /home/bj/python/REI-Tracker/__init__.py:173]
+Traceback (most recent call last):
+  File "/home/bj/python/REI-Tracker/__init__.py", line 165, in create_app
+    app.transactions_dash = create_transactions_dash(app)
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bj/python/REI-Tracker/dash_apps/dash_transactions.py", line 140, in create_transactions_dash
+    dash_app.index_string = open('templates/dashboards/dash_transactions.html').read()
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'templates/dashboards/dash_transactions.html'
+2025-01-26 09:19:13,564 INFO: Application startup in development mode [in /home/bj/python/REI-Tracker/__init__.py:84]
+2025-01-26 09:19:13,564 INFO: Running with BASE_DIR: /home/bj/python/REI-Tracker [in /home/bj/python/REI-Tracker/__init__.py:101]
+2025-01-26 09:19:13,564 INFO: Environment: Development [in /home/bj/python/REI-Tracker/__init__.py:102]
+2025-01-26 09:19:13,602 INFO: All Dash apps initialized successfully [in /home/bj/python/REI-Tracker/__init__.py:176]
+2025-01-26 09:19:14,106 INFO: Application startup in development mode [in /home/bj/python/REI-Tracker/__init__.py:84]
+2025-01-26 09:19:14,106 INFO: Running with BASE_DIR: /home/bj/python/REI-Tracker [in /home/bj/python/REI-Tracker/__init__.py:101]
+2025-01-26 09:19:14,106 INFO: Environment: Development [in /home/bj/python/REI-Tracker/__init__.py:102]
+2025-01-26 09:19:14,144 INFO: All Dash apps initialized successfully [in /home/bj/python/REI-Tracker/__init__.py:176]
+2025-01-26 09:22:03,723 INFO: Application startup in development mode [in /home/bj/python/REI-Tracker/__init__.py:84]
+2025-01-26 09:22:03,723 INFO: Running with BASE_DIR: /home/bj/python/REI-Tracker [in /home/bj/python/REI-Tracker/__init__.py:101]
+2025-01-26 09:22:03,723 INFO: Environment: Development [in /home/bj/python/REI-Tracker/__init__.py:102]
+2025-01-26 09:22:03,764 INFO: All Dash apps initialized successfully [in /home/bj/python/REI-Tracker/__init__.py:176]
+2025-01-26 09:22:41,957 INFO: Application startup in development mode [in /home/bj/python/REI-Tracker/__init__.py:84]
+2025-01-26 09:22:41,958 INFO: Running with BASE_DIR: /home/bj/python/REI-Tracker [in /home/bj/python/REI-Tracker/__init__.py:101]
+2025-01-26 09:22:41,958 INFO: Environment: Development [in /home/bj/python/REI-Tracker/__init__.py:102]
+2025-01-26 09:22:41,995 INFO: All Dash apps initialized successfully [in /home/bj/python/REI-Tracker/__init__.py:176]
+2025-01-26 09:23:17,158 INFO: Application startup in development mode [in /home/bj/python/REI-Tracker/__init__.py:84]
+2025-01-26 09:23:17,158 INFO: Running with BASE_DIR: /home/bj/python/REI-Tracker [in /home/bj/python/REI-Tracker/__init__.py:101]
+2025-01-26 09:23:17,158 INFO: Environment: Development [in /home/bj/python/REI-Tracker/__init__.py:102]
+2025-01-26 09:23:17,196 INFO: All Dash apps initialized successfully [in /home/bj/python/REI-Tracker/__init__.py:176]
+2025-01-26 09:23:18,866 INFO: Application startup in development mode [in /home/bj/python/REI-Tracker/__init__.py:84]
+2025-01-26 09:23:18,866 INFO: Running with BASE_DIR: /home/bj/python/REI-Tracker [in /home/bj/python/REI-Tracker/__init__.py:101]
+2025-01-26 09:23:18,866 INFO: Environment: Development [in /home/bj/python/REI-Tracker/__init__.py:102]
+2025-01-26 09:23:18,904 INFO: All Dash apps initialized successfully [in /home/bj/python/REI-Tracker/__init__.py:176]
+2025-01-26 09:23:19,395 INFO: Application startup in development mode [in /home/bj/python/REI-Tracker/__init__.py:84]
+2025-01-26 09:23:19,396 INFO: Running with BASE_DIR: /home/bj/python/REI-Tracker [in /home/bj/python/REI-Tracker/__init__.py:101]
+2025-01-26 09:23:19,396 INFO: Environment: Development [in /home/bj/python/REI-Tracker/__init__.py:102]
+2025-01-26 09:23:19,434 INFO: All Dash apps initialized successfully [in /home/bj/python/REI-Tracker/__init__.py:176]
+2025-01-26 09:23:21,917 INFO: Application startup in development mode [in /home/bj/python/REI-Tracker/__init__.py:84]
+2025-01-26 09:23:21,917 INFO: Running with BASE_DIR: /home/bj/python/REI-Tracker [in /home/bj/python/REI-Tracker/__init__.py:101]
+2025-01-26 09:23:21,917 INFO: Environment: Development [in /home/bj/python/REI-Tracker/__init__.py:102]
+2025-01-26 09:23:21,954 INFO: All Dash apps initialized successfully [in /home/bj/python/REI-Tracker/__init__.py:176]
+2025-01-26 09:23:22,451 INFO: Application startup in development mode [in /home/bj/python/REI-Tracker/__init__.py:84]
+2025-01-26 09:23:22,451 INFO: Running with BASE_DIR: /home/bj/python/REI-Tracker [in /home/bj/python/REI-Tracker/__init__.py:101]
+2025-01-26 09:23:22,451 INFO: Environment: Development [in /home/bj/python/REI-Tracker/__init__.py:102]
+2025-01-26 09:23:22,489 INFO: All Dash apps initialized successfully [in /home/bj/python/REI-Tracker/__init__.py:176]
+2025-01-27 06:10:25,909 INFO: Application startup in development mode [in /home/bj/python/REI-Tracker/__init__.py:84]
+2025-01-27 06:10:25,909 INFO: Running with BASE_DIR: /home/bj/python/REI-Tracker [in /home/bj/python/REI-Tracker/__init__.py:101]
+2025-01-27 06:10:25,909 INFO: Environment: Development [in /home/bj/python/REI-Tracker/__init__.py:102]

@@ -2,15 +2,15 @@
   {
     "address": "454 Guilford Avenue, Hagerstown, MD 21740, United States of America, Hagerstown, Maryland, 21740",
     "purchase_price": 160000.0,
+    "purchase_date": "2024-05-15",
     "down_payment": 10000.0,
     "primary_loan_rate": 5.73,
     "primary_loan_term": 360.0,
-    "purchase_date": "2024-05-15",
-    "loan_amount": 112800.0,
-    "loan_start_date": "2022-08-03",
-    "seller_financing_amount": 40000.0,
-    "seller_financing_rate": 0.0,
-    "seller_financing_term": 120.0,
+    "primary_loan_amount": 112800.0,
+    "primary_loan_start_date": "2022-08-03",
+    "secondary_loan_amount": 40000.0,
+    "secondary_loan_rate": 0.0,
+    "secondary_loan_term": 120.0,
     "closing_costs": 5800.0,
     "renovation_costs": 24435.0,
     "marketing_costs": 0.0,
@@ -53,266 +53,266 @@
   },
   {
     "address": "2212 Logan Street, Harrisburg, PA 17102, United States of America, Harrisburg, Pennsylvania, 17102",
-    "purchase_price": 125000,
-    "down_payment": 31250,
-    "primary_loan_rate": 8.5,
-    "primary_loan_term": 360,
+    "purchase_price": 125000.0,
     "purchase_date": "2024-05-20",
-    "loan_amount": "93750",
-    "loan_start_date": "2022-08-01",
-    "seller_financing_amount": 0,
-    "seller_financing_rate": 0,
-    "seller_financing_term": 0,
-    "closing_costs": 11598,
-    "renovation_costs": 0,
-    "marketing_costs": 0,
-    "holding_costs": 0,
+    "down_payment": 31250.0,
+    "primary_loan_rate": 8.5,
+    "primary_loan_term": 360.0,
+    "primary_loan_amount": 93750.0,
+    "primary_loan_start_date": "2022-08-01",
+    "secondary_loan_amount": 0.0,
+    "secondary_loan_rate": 0.0,
+    "secondary_loan_term": 0.0,
+    "closing_costs": 11598.0,
+    "renovation_costs": 0.0,
+    "marketing_costs": 0.0,
+    "holding_costs": 0.0,
+    "monthly_income": {
+      "rental_income": 1900.0,
+      "parking_income": 0.0,
+      "laundry_income": 0.0,
+      "other_income": 0.0,
+      "income_notes": ""
+    },
+    "monthly_expenses": {
+      "property_tax": 126.0,
+      "insurance": 0.0,
+      "repairs": 2.0,
+      "capex": 2.0,
+      "property_management": 0.0,
+      "hoa_fees": 0.0,
+      "utilities": {
+        "water": 0.0,
+        "electricity": 0.0,
+        "gas": 0.0,
+        "trash": 0.0
+      },
+      "other_expenses": 0.0,
+      "expense_notes": ""
+    },
     "partners": [
       {
         "name": "BJ Marshall",
-        "equity_share": 50,
+        "equity_share": 50.0,
         "is_property_manager": true
       },
       {
         "name": "Brian Poole",
-        "equity_share": 50,
+        "equity_share": 50.0,
         "is_property_manager": false
       }
-    ],
-    "monthly_income": {
-      "rental_income": 1900,
-      "parking_income": 0,
-      "laundry_income": 0,
-      "other_income": 0,
-      "income_notes": ""
-    },
-    "monthly_expenses": {
-      "property_tax": 126,
-      "insurance": 0,
-      "repairs": 2,
-      "capex": 2,
-      "property_management": 0,
-      "hoa_fees": 0,
-      "utilities": {
-        "water": 0,
-        "electricity": 0,
-        "gas": 0,
-        "trash": 0
-      },
-      "other_expenses": 0,
-      "expense_notes": ""
-    }
+    ]
   },
   {
     "address": "164 Dunrobin Drive, Martinsburg, WV 25404, United States of America, Martinsburg, West Virginia, 25404",
-    "purchase_price": 211824,
-    "down_payment": 23000,
-    "primary_loan_rate": 3.5,
-    "primary_loan_term": 360,
+    "purchase_price": 211824.0,
     "purchase_date": "2024-02-16",
-    "loan_amount": "205945",
-    "loan_start_date": "2021-05-01",
-    "seller_financing_amount": 0,
-    "seller_financing_rate": 0,
-    "seller_financing_term": 0,
-    "closing_costs": 10980,
-    "renovation_costs": 0,
-    "marketing_costs": 7000,
-    "holding_costs": 8856,
-    "partners": [
-      {
-        "name": "BJ Marshall",
-        "equity_share": 50,
-        "is_property_manager": true
-      },
-      {
-        "name": "Wayne Benny",
-        "equity_share": 50,
-        "is_property_manager": false
-      }
-    ],
+    "down_payment": 23000.0,
+    "primary_loan_rate": 3.5,
+    "primary_loan_term": 360.0,
+    "primary_loan_amount": 205945.0,
+    "primary_loan_start_date": "2021-05-01",
+    "secondary_loan_amount": 0.0,
+    "secondary_loan_rate": 0.0,
+    "secondary_loan_term": 0.0,
+    "closing_costs": 10980.0,
+    "renovation_costs": 0.0,
+    "marketing_costs": 7000.0,
+    "holding_costs": 8856.0,
     "monthly_income": {
-      "rental_income": 1566,
-      "parking_income": 0,
-      "laundry_income": 0,
-      "other_income": 0,
+      "rental_income": 1566.0,
+      "parking_income": 0.0,
+      "laundry_income": 0.0,
+      "other_income": 0.0,
       "income_notes": "Wraparound mortgage. They pay taxes and insurance themselves."
     },
     "monthly_expenses": {
-      "property_tax": 0,
-      "insurance": 0,
-      "repairs": 0,
-      "capex": 0,
-      "property_management": 0,
-      "hoa_fees": 0,
+      "property_tax": 0.0,
+      "insurance": 0.0,
+      "repairs": 0.0,
+      "capex": 0.0,
+      "property_management": 0.0,
+      "hoa_fees": 0.0,
       "utilities": {
-        "water": 0,
-        "electricity": 0,
-        "gas": 0,
-        "trash": 0
+        "water": 0.0,
+        "electricity": 0.0,
+        "gas": 0.0,
+        "trash": 0.0
       },
-      "other_expenses": 0,
+      "other_expenses": 0.0,
       "expense_notes": ""
-    }
+    },
+    "partners": [
+      {
+        "name": "BJ Marshall",
+        "equity_share": 50.0,
+        "is_property_manager": true
+      },
+      {
+        "name": "Wayne Benny",
+        "equity_share": 50.0,
+        "is_property_manager": false
+      }
+    ]
   },
   {
     "address": "5451 El Camino, Columbia, MD 21044, United States of America, Columbia, Maryland, 21044",
-    "purchase_price": 234900,
-    "down_payment": 58650,
-    "primary_loan_rate": 2.99,
-    "primary_loan_term": 360,
+    "purchase_price": 234900.0,
     "purchase_date": "2020-11-30",
-    "loan_amount": "176250",
-    "loan_start_date": "2020-12-14",
-    "seller_financing_amount": 0,
-    "seller_financing_rate": 0,
-    "seller_financing_term": 0,
-    "closing_costs": 14000,
-    "renovation_costs": 7500,
-    "marketing_costs": 125,
-    "holding_costs": 0,
-    "partners": [
-      {
-        "name": "BJ Marshall",
-        "equity_share": 100,
-        "is_property_manager": true
-      }
-    ],
+    "down_payment": 58650.0,
+    "primary_loan_rate": 2.99,
+    "primary_loan_term": 360.0,
+    "primary_loan_amount": 176250.0,
+    "primary_loan_start_date": "2020-12-14",
+    "secondary_loan_amount": 0.0,
+    "secondary_loan_rate": 0.0,
+    "secondary_loan_term": 0.0,
+    "closing_costs": 14000.0,
+    "renovation_costs": 7500.0,
+    "marketing_costs": 125.0,
+    "holding_costs": 0.0,
     "monthly_income": {
-      "rental_income": 2325,
-      "parking_income": 0,
-      "laundry_income": 0,
-      "other_income": 0,
+      "rental_income": 2325.0,
+      "parking_income": 0.0,
+      "laundry_income": 0.0,
+      "other_income": 0.0,
       "income_notes": ""
     },
     "monthly_expenses": {
-      "property_tax": 288,
-      "insurance": 46,
-      "repairs": 2,
-      "capex": 2,
-      "property_management": 0,
+      "property_tax": 288.0,
+      "insurance": 46.0,
+      "repairs": 2.0,
+      "capex": 2.0,
+      "property_management": 0.0,
       "hoa_fees": 385.06,
       "utilities": {
-        "water": 0,
-        "electricity": 0,
-        "gas": 0,
-        "trash": 0
+        "water": 0.0,
+        "electricity": 0.0,
+        "gas": 0.0,
+        "trash": 0.0
       },
-      "other_expenses": 0,
+      "other_expenses": 0.0,
       "expense_notes": "Condo"
-    }
+    },
+    "partners": [
+      {
+        "name": "BJ Marshall",
+        "equity_share": 100.0,
+        "is_property_manager": true
+      }
+    ]
   },
   {
     "address": "5920 Watch Chain Way, Columbia, MD 21044, United States of America, Columbia, Maryland, 21044",
-    "purchase_price": 198000,
-    "down_payment": 46000,
-    "primary_loan_rate": 4.25,
-    "primary_loan_term": 360,
+    "purchase_price": 198000.0,
     "purchase_date": "2021-05-28",
-    "loan_amount": "152000",
-    "loan_start_date": "2021-06-14",
-    "seller_financing_amount": 0,
-    "seller_financing_rate": 0,
-    "seller_financing_term": 0,
-    "closing_costs": 8000,
-    "renovation_costs": 500,
-    "marketing_costs": 0,
-    "holding_costs": 1200,
-    "partners": [
-      {
-        "name": "BJ Marshall",
-        "equity_share": 100,
-        "is_property_manager": true
-      }
-    ],
+    "down_payment": 46000.0,
+    "primary_loan_rate": 4.25,
+    "primary_loan_term": 360.0,
+    "primary_loan_amount": 152000.0,
+    "primary_loan_start_date": "2021-06-14",
+    "secondary_loan_amount": 0.0,
+    "secondary_loan_rate": 0.0,
+    "secondary_loan_term": 0.0,
+    "closing_costs": 8000.0,
+    "renovation_costs": 500.0,
+    "marketing_costs": 0.0,
+    "holding_costs": 1200.0,
     "monthly_income": {
-      "rental_income": 1950,
-      "parking_income": 0,
-      "laundry_income": 0,
-      "other_income": 0,
+      "rental_income": 1950.0,
+      "parking_income": 0.0,
+      "laundry_income": 0.0,
+      "other_income": 0.0,
       "income_notes": ""
     },
     "monthly_expenses": {
-      "property_tax": 249,
-      "insurance": 61,
-      "repairs": 2,
-      "capex": 2,
-      "property_management": 0,
+      "property_tax": 249.0,
+      "insurance": 61.0,
+      "repairs": 2.0,
+      "capex": 2.0,
+      "property_management": 0.0,
       "hoa_fees": 380.23,
       "utilities": {
-        "water": 0,
-        "electricity": 0,
-        "gas": 0,
-        "trash": 0
+        "water": 0.0,
+        "electricity": 0.0,
+        "gas": 0.0,
+        "trash": 0.0
       },
-      "other_expenses": 0,
+      "other_expenses": 0.0,
       "expense_notes": "Condo"
-    }
+    },
+    "partners": [
+      {
+        "name": "BJ Marshall",
+        "equity_share": 100.0,
+        "is_property_manager": true
+      }
+    ]
   },
   {
-    "address": "8845 Welbeck Way, Montgomery Village, MD 20886, United States of America",
-    "purchase_price": 322401,
-    "down_payment": 0,
-    "primary_loan_rate": 5.13,
-    "primary_loan_term": 360,
+    "address": "8845 Welbeck Way, Montgomery Village, MD 20886, United States of America, Montgomery Village, Maryland, 20886",
+    "purchase_price": 322401.0,
     "purchase_date": "2024-06-27",
-    "loan_amount": "310000",
-    "loan_start_date": "2022-06-01",
-    "seller_financing_amount": 0,
-    "seller_financing_rate": 0,
-    "seller_financing_term": 0,
-    "closing_costs": 16500,
-    "renovation_costs": 0,
-    "marketing_costs": 0,
-    "holding_costs": 0,
+    "down_payment": 0.0,
+    "primary_loan_rate": 5.13,
+    "primary_loan_term": 360.0,
+    "primary_loan_amount": 310000.0,
+    "primary_loan_start_date": "2022-06-01",
+    "secondary_loan_amount": 0.0,
+    "secondary_loan_rate": 0.0,
+    "secondary_loan_term": 0.0,
+    "closing_costs": 16500.0,
+    "renovation_costs": 0.0,
+    "marketing_costs": 0.0,
+    "holding_costs": 0.0,
+    "monthly_income": {
+      "rental_income": 2660.0,
+      "parking_income": 0.0,
+      "laundry_income": 0.0,
+      "other_income": 0.0,
+      "income_notes": "Wraparound mortgage. Buyer pays taxes and insurance and repairs. We are the bank."
+    },
+    "monthly_expenses": {
+      "property_tax": 0.0,
+      "insurance": 0.0,
+      "repairs": 0.0,
+      "capex": 0.0,
+      "property_management": 0.0,
+      "hoa_fees": 0.0,
+      "utilities": {
+        "water": 0.0,
+        "electricity": 0.0,
+        "gas": 0.0,
+        "trash": 0.0
+      },
+      "other_expenses": 0.0,
+      "expense_notes": "Wrap buyer pays all taxes, insurance, utilities, and repairs."
+    },
     "partners": [
       {
         "name": "Wayne Benny",
-        "equity_share": 50,
+        "equity_share": 50.0,
         "is_property_manager": true
       },
       {
         "name": "BJ Marshall",
-        "equity_share": 50,
+        "equity_share": 50.0,
         "is_property_manager": false
       }
-    ],
-    "monthly_income": {
-      "rental_income": 2660,
-      "parking_income": 0,
-      "laundry_income": 0,
-      "other_income": 0,
-      "income_notes": "Wraparound mortgage. Buyer pays taxes and insurance and repairs. We are the bank."
-    },
-    "monthly_expenses": {
-      "property_tax": 0,
-      "insurance": 0,
-      "repairs": 0,
-      "capex": 0,
-      "property_management": 0,
-      "hoa_fees": 0,
-      "utilities": {
-        "water": 0,
-        "electricity": 0,
-        "gas": 0,
-        "trash": 0
-      },
-      "other_expenses": 0,
-      "expense_notes": "Wrap buyer pays all taxes, insurance, utilities, and repairs."
-    }
+    ]
   },
   {
-    "address": "1911 Grinnalds Avenue, Baltimore, MD 21223, United States of America",
+    "address": "1911 Grinnalds Avenue, Baltimore, MD 21223, United States of America, Baltimore, Maryland, 21223",
     "purchase_price": 109700.0,
+    "purchase_date": "2023-01-11",
     "down_payment": 30000.0,
     "primary_loan_rate": 4.88,
     "primary_loan_term": 360.0,
-    "purchase_date": "2023-01-11",
-    "loan_amount": 78750.0,
-    "loan_start_date": "2022-03-01",
-    "seller_financing_amount": 10000.0,
-    "seller_financing_rate": 0.0,
-    "seller_financing_term": 120.0,
+    "primary_loan_amount": 78750.0,
+    "primary_loan_start_date": "2022-03-01",
+    "secondary_loan_amount": 10000.0,
+    "secondary_loan_rate": 0.0,
+    "secondary_loan_term": 120.0,
     "closing_costs": 9500.0,
     "renovation_costs": 22403.0,
     "marketing_costs": 0.0,
@@ -349,64 +349,64 @@
     ]
   },
   {
-    "address": "26 Furlong Way, Martinsburg, WV 25404, United States of America",
-    "purchase_price": 260000,
-    "down_payment": 60000,
-    "primary_loan_rate": 4.25,
-    "primary_loan_term": 360,
+    "address": "26 Furlong Way, Martinsburg, WV 25404, United States of America, Martinsburg, West Virginia, 25404",
+    "purchase_price": 260000.0,
     "purchase_date": "2022-06-16",
-    "loan_amount": "202800",
-    "loan_start_date": "2022-06-16",
-    "seller_financing_amount": 0,
-    "seller_financing_rate": 0,
-    "seller_financing_term": 0,
-    "closing_costs": 13000,
-    "renovation_costs": 0,
-    "marketing_costs": 0,
-    "holding_costs": 0,
+    "down_payment": 60000.0,
+    "primary_loan_rate": 4.25,
+    "primary_loan_term": 360.0,
+    "primary_loan_amount": 202800.0,
+    "primary_loan_start_date": "2022-06-16",
+    "secondary_loan_amount": 0.0,
+    "secondary_loan_rate": 0.0,
+    "secondary_loan_term": 0.0,
+    "closing_costs": 13000.0,
+    "renovation_costs": 0.0,
+    "marketing_costs": 0.0,
+    "holding_costs": 0.0,
     "monthly_income": {
-      "rental_income": 1981,
-      "parking_income": 0,
-      "laundry_income": 0,
-      "other_income": 0,
+      "rental_income": 1981.0,
+      "parking_income": 0.0,
+      "laundry_income": 0.0,
+      "other_income": 0.0,
       "income_notes": "Wrap buyer pays taxes, insurance, repairs, utilities, HOA, etc."
     },
     "monthly_expenses": {
-      "property_tax": 0,
-      "insurance": 0,
-      "repairs": 0,
-      "capex": 0,
-      "property_management": 0,
-      "hoa_fees": 0,
+      "property_tax": 0.0,
+      "insurance": 0.0,
+      "repairs": 0.0,
+      "capex": 0.0,
+      "property_management": 0.0,
+      "hoa_fees": 0.0,
       "utilities": {
-        "water": 0,
-        "electricity": 0,
-        "gas": 0,
-        "trash": 0
+        "water": 0.0,
+        "electricity": 0.0,
+        "gas": 0.0,
+        "trash": 0.0
       },
-      "other_expenses": 0,
+      "other_expenses": 0.0,
       "expense_notes": ""
     },
     "partners": [
       {
         "name": "BJ Marshall",
-        "equity_share": 100,
+        "equity_share": 100.0,
         "is_property_manager": true
       }
     ]
   },
   {
-    "address": "1714 Miller Street, Harrisburg, PA 17103, United States of America",
+    "address": "1714 Miller Street, Harrisburg, PA 17103, United States of America, Harrisburg, Pennsylvania, 17103",
     "purchase_price": 67500.0,
+    "purchase_date": "2024-12-21",
     "down_payment": 0.0,
     "primary_loan_rate": 7.25,
     "primary_loan_term": 360.0,
-    "purchase_date": "2024-12-21",
-    "loan_amount": 10000.0,
-    "loan_start_date": "2025-02-01",
-    "seller_financing_amount": 0.0,
-    "seller_financing_rate": 0.0,
-    "seller_financing_term": 0.0,
+    "primary_loan_amount": 10000.0,
+    "primary_loan_start_date": "2025-02-01",
+    "secondary_loan_amount": 0.0,
+    "secondary_loan_rate": 0.0,
+    "secondary_loan_term": 0.0,
     "closing_costs": 3000.0,
     "renovation_costs": 20000.0,
     "marketing_costs": 0.0,

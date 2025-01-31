@@ -1,3 +1,8 @@
+function truncateAddress(address) {
+    const commaIndex = address.indexOf(',');
+    return commaIndex > -1 ? address.substring(0, commaIndex) : address;
+}
+
 const removePropertiesModule = {
     init: async function() {
         try {
@@ -86,7 +91,9 @@ const removePropertiesModule = {
                     p.name === this.currentUser.name && 
                     p.is_property_manager
                 )) {
-                    const option = new Option(property.address, property.address);
+                    // Use truncated address for display but keep full address as value
+                    const truncatedAddress = truncateAddress(property.address);
+                    const option = new Option(truncatedAddress, property.address);
                     option.dataset.property = JSON.stringify(property);
                     propertySelect.add(option);
                 }
