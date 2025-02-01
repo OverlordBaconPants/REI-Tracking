@@ -1094,15 +1094,8 @@ window.analysisModule = {
     },
 
     loadTemplateForType(type, container) {
-        console.log('loadTemplateForType called with:', {
-            type,
-            containerExists: !!container,
-            typeIsLeaseOption: type === 'Lease Option',
-            getLeaseOptionExists: typeof getLeaseOptionHTML === 'function',
-            getLongTermRentalExists: typeof getLongTermRentalHTML === 'function',
-            getBRRRRExists: typeof getBRRRRHTML === 'function'
-        });
-        
+        console.log('Loading template for type:', type);
+    
         if (!container) {
             console.error('No container provided to loadTemplateForType');
             return;
@@ -1112,37 +1105,35 @@ window.analysisModule = {
             container.innerHTML = '';
             
             if (type === 'Lease Option') {
-                console.log('Loading Lease Option template');
-                if (typeof getLeaseOptionHTML !== 'function') {
-                    console.error('getLeaseOptionHTML is not a function!');
-                    console.log('Value:', getLeaseOptionHTML);
-                    return;
-                }
                 container.innerHTML = getLeaseOptionHTML();
-            } else if (type === 'BRRRR' || type === 'PadSplit BRRRR') {
-                console.log('Loading BRRRR template');
+            } else if (type.includes('BRRRR')) {
                 container.innerHTML = getBRRRRHTML();
             } else {
-                console.log('Loading LTR template');
-                container.innerHTML = getLongTermRentalHTML();
+                // For LTR-type analyses
+                const template = getLongTermRentalHTML();
+                container.innerHTML = template;
+                
+                // Initialize balloon payment handlers after template is loaded
+                setTimeout(() => {
+                    this.initBalloonPaymentHandlers();
+                }, 0);
             }
-    
+
+            // Add PadSplit expenses if needed
             if (type.includes('PadSplit')) {
-                console.log('Adding PadSplit expenses');
                 container.insertAdjacentHTML('beforeend', padSplitExpensesHTML);
             }
-    
-            // Initialize handlers
+
+            // Initialize other handlers
             this.initLoanHandlers();
             if (type.includes('BRRRR')) {
                 this.initRefinanceCalculations();
             }
             this.initNotesCounter();
             
-            console.log('Template loaded successfully. Container HTML length:', container.innerHTML.length);
         } catch (error) {
             console.error('Error in loadTemplateForType:', error);
-            throw error;  // Re-throw to see where it's called from
+            throw error;
         }
     },
 
@@ -1486,39 +1477,58 @@ window.analysisModule = {
 
     initBalloonPaymentHandlers(skipToggleInit = false) {
         console.log('Initializing balloon payment handlers...');
-        
+    
+        // Get elements
         const balloonToggle = document.getElementById('has_balloon_payment');
         const balloonDetails = document.getElementById('balloon-payment-details');
         const analysisType = document.getElementById('analysis_type')?.value;
+        
+        // Debug log the elements we found
+        console.log('Found elements:', {
+            balloonToggle: !!balloonToggle,
+            balloonDetails: !!balloonDetails,
+            analysisType
+        });
         
         // Only proceed for LTR analyses
         if (!analysisType?.includes('LTR')) {
             console.log('Balloon payments not applicable for', analysisType);
             return;
         }
-    
-        // If elements don't exist and this is an LTR analysis, elements might still be loading
+
+        // If elements don't exist and this is an LTR analysis, retry
         if (!balloonToggle || !balloonDetails) {
             if (!skipToggleInit) {
                 console.log('Balloon payment elements not found - will retry in 100ms');
-                setTimeout(() => this.initBalloonPaymentHandlers(true), 100);
+                setTimeout(() => initBalloonPaymentHandlers(true), 100);
+            } else {
+                console.error('Failed to find balloon payment elements after retry');
             }
             return;
         }
-    
-        // Clear any existing balloon-related fields if balloon payment is not enabled
-        if (!balloonToggle.checked) {
+
+        // Remove any existing event listeners
+        const newToggle = balloonToggle.cloneNode(true);
+        balloonToggle.parentNode.replaceChild(newToggle, balloonToggle);
+        
+        // Set initial state
+        console.log('Setting initial state...');
+        if (newToggle.checked) {
+            balloonDetails.style.display = 'block';
+            const balloonInputs = balloonDetails.querySelectorAll('input:not([type="checkbox"])');
+            balloonInputs.forEach(input => {
+                input.required = true;
+            });
+        } else {
             this.clearBalloonPaymentFields();
+            balloonDetails.style.display = 'none';
         }
-    
-        console.log('Setting up balloon toggle event listener');
-    
-        console.log('Setting up balloon toggle event listener');
+
         // Add event listener to toggle
-        balloonToggle.addEventListener('change', (e) => {
+        newToggle.addEventListener('change', (e) => {
             console.log('Balloon toggle changed:', e.target.checked);
             
-            // Toggle visibility with animation
+            // Toggle display with animation
             if (e.target.checked) {
                 balloonDetails.style.display = 'block';
                 // Optional: add fade-in effect
@@ -1531,31 +1541,16 @@ window.analysisModule = {
                 balloonDetails.style.opacity = '0';
                 setTimeout(() => {
                     balloonDetails.style.display = 'none';
+                    // Clear fields when hiding
+                    this.clearBalloonPaymentFields();
                 }, 300);
             }
             
-            // Get all inputs in the balloon details section
+            // Toggle required fields
             const balloonInputs = balloonDetails.querySelectorAll('input:not([type="checkbox"])');
-            
-            // Toggle required attribute and clear fields if unchecked
             balloonInputs.forEach(input => {
-                if (e.target.checked) {
-                    input.setAttribute('required', '');
-                } else {
-                    input.removeAttribute('required');
-                    input.value = '';
-                }
+                input.required = e.target.checked;
             });
-        });
-    
-        // Set initial state
-        const isChecked = balloonToggle.checked;
-        balloonDetails.style.display = isChecked ? 'block' : 'none';
-        balloonDetails.style.opacity = isChecked ? '1' : '0';
-        
-        const balloonInputs = balloonDetails.querySelectorAll('input:not([type="checkbox"])');
-        balloonInputs.forEach(input => {
-            input.required = isChecked;
         });
         
         console.log('Balloon payment handlers initialized successfully');
@@ -3640,26 +3635,121 @@ window.analysisModule = {
         const hasBalloon = form.querySelector('#has_balloon_payment')?.checked || false;
         const analysisType = form.querySelector('#analysis_type')?.value;
     
+        console.log('Starting form validation:', { analysisType, hasBalloon });
+    
         // Helper to validate numeric range
         const validateNumericRange = (value, min, max = Infinity) => {
-            const num = parseFloat(value);
+            const num = this.toRawNumber(value);
             return !isNaN(num) && num >= min && num <= max;
         };
     
-        // Validate required fields
+        // Helper to add error message
+        const addErrorMessage = (field, message) => {
+            let errorDiv = field.nextElementSibling;
+            if (!errorDiv || !errorDiv.classList.contains('invalid-feedback')) {
+                errorDiv = document.createElement('div');
+                errorDiv.className = 'invalid-feedback';
+                field.parentNode.insertBefore(errorDiv, field.nextSibling);
+            }
+            errorDiv.textContent = message;
+        };
+    
+        // Validate required fields first
         const requiredFields = form.querySelectorAll('[required]');
         requiredFields.forEach(field => {
             if (!field.value.trim()) {
                 isValid = false;
                 field.classList.add('is-invalid');
+                addErrorMessage(field, 'This field is required');
+                console.log('Required field empty:', field.id);
             } else {
                 field.classList.remove('is-invalid');
             }
         });
     
-        // Lease Option specific validation
+        // Validate all numeric fields
+        const numericFields = {
+            'purchase_price': { min: 0, message: 'Purchase price must be greater than 0' },
+            'monthly_rent': { min: 0, message: 'Monthly rent must be greater than 0' },
+            'property_taxes': { min: 0, message: 'Property taxes must be greater than 0' },
+            'insurance': { min: 0, message: 'Insurance must be greater than 0' },
+            'hoa_coa_coop': { min: 0, message: 'HOA/COA/COOP must be greater than 0' },
+            'square_footage': { min: 0, message: 'Square footage must be greater than 0' },
+            'lot_size': { min: 0, message: 'Lot size must be greater than 0' },
+            'year_built': { min: 1800, max: new Date().getFullYear(), message: 'Please enter a valid year' },
+            'bedrooms': { min: 0, message: 'Number of bedrooms must be 0 or greater' },
+            'bathrooms': { min: 0, message: 'Number of bathrooms must be 0 or greater' }
+        };
+    
+        // Add renovation fields if not Lease Option
+        if (analysisType !== 'Lease Option') {
+            Object.assign(numericFields, {
+                'renovation_costs': { min: 0, message: 'Renovation costs must be 0 or greater' },
+                'renovation_duration': { min: 0, message: 'Renovation duration must be 0 or greater' },
+                'after_repair_value': { min: 0, message: 'After repair value must be greater than 0' }
+            });
+        }
+    
+        // Validate percentage fields
+        const percentageFields = {
+            'management_fee_percentage': { min: 0, max: 100, message: 'Management fee must be between 0 and 100%' },
+            'capex_percentage': { min: 0, max: 100, message: 'CapEx must be between 0 and 100%' },
+            'vacancy_percentage': { min: 0, max: 100, message: 'Vacancy rate must be between 0 and 100%' },
+            'repairs_percentage': { min: 0, max: 100, message: 'Repairs percentage must be between 0 and 100%' }
+        };
+    
+        // Validate PadSplit-specific fields if applicable
+        if (analysisType?.includes('PadSplit')) {
+            Object.assign(numericFields, {
+                'utilities': { min: 0, message: 'Utilities must be 0 or greater' },
+                'internet': { min: 0, message: 'Internet must be 0 or greater' },
+                'cleaning': { min: 0, message: 'Cleaning costs must be 0 or greater' },
+                'pest_control': { min: 0, message: 'Pest control must be 0 or greater' },
+                'landscaping': { min: 0, message: 'Landscaping must be 0 or greater' }
+            });
+            Object.assign(percentageFields, {
+                'padsplit_platform_percentage': { min: 0, max: 100, message: 'Platform fee must be between 0 and 100%' }
+            });
+        }
+    
+        // Validate numeric fields
+        Object.entries(numericFields).forEach(([fieldName, rules]) => {
+            const field = form.querySelector(`#${fieldName}`);
+            if (field && field.value.trim()) {
+                if (!validateNumericRange(field.value, rules.min, rules.max)) {
+                    isValid = false;
+                    field.classList.add('is-invalid');
+                    addErrorMessage(field, rules.message);
+                    console.log(`Invalid numeric field: ${fieldName}`, {
+                        value: field.value,
+                        rules: rules
+                    });
+                } else {
+                    field.classList.remove('is-invalid');
+                }
+            }
+        });
+    
+        // Validate percentage fields
+        Object.entries(percentageFields).forEach(([fieldName, rules]) => {
+            const field = form.querySelector(`#${fieldName}`);
+            if (field && field.value.trim()) {
+                if (!validateNumericRange(field.value, rules.min, rules.max)) {
+                    isValid = false;
+                    field.classList.add('is-invalid');
+                    addErrorMessage(field, rules.message);
+                    console.log(`Invalid percentage field: ${fieldName}`, {
+                        value: field.value,
+                        rules: rules
+                    });
+                } else {
+                    field.classList.remove('is-invalid');
+                }
+            }
+        });
+    
+        // Validate Lease Option specific fields
         if (analysisType === 'Lease Option') {
-            console.log('Validating Lease Option fields');
             const leaseFields = {
                 'option_consideration_fee': {
                     validate: value => validateNumericRange(value, 0),
@@ -3694,26 +3784,19 @@ window.analysisModule = {
                     if (!config.validate(value)) {
                         isValid = false;
                         field.classList.add('is-invalid');
-                        
-                        let errorDiv = field.nextElementSibling;
-                        if (!errorDiv || !errorDiv.classList.contains('invalid-feedback')) {
-                            errorDiv = document.createElement('div');
-                            errorDiv.className = 'invalid-feedback';
-                            field.parentNode.insertBefore(errorDiv, field.nextSibling);
-                        }
-                        errorDiv.textContent = config.message;
+                        addErrorMessage(field, config.message);
+                        console.log(`Invalid lease option field: ${fieldName}`, {
+                            value: value,
+                            valid: config.validate(value)
+                        });
                     } else {
                         field.classList.remove('is-invalid');
-                        const errorDiv = field.nextElementSibling;
-                        if (errorDiv?.classList.contains('invalid-feedback')) {
-                            errorDiv.remove();
-                        }
                     }
                 }
             });
         }
     
-        // Validate balloon payment fields only if enabled
+        // Validate balloon payment fields if enabled
         if (hasBalloon) {
             const balloonFields = {
                 'balloon_due_date': {
@@ -3747,57 +3830,68 @@ window.analysisModule = {
             Object.entries(balloonFields).forEach(([fieldName, config]) => {
                 const field = form.querySelector(`#${fieldName}`);
                 if (field) {
-                    const value = field.value;
-                    if (!config.validate(value)) {
+                    if (!config.validate(field.value)) {
                         isValid = false;
                         field.classList.add('is-invalid');
-                        
-                        let errorDiv = field.nextElementSibling;
-                        if (!errorDiv || !errorDiv.classList.contains('invalid-feedback')) {
-                            errorDiv = document.createElement('div');
-                            errorDiv.className = 'invalid-feedback';
-                            field.parentNode.insertBefore(errorDiv, field.nextSibling);
-                        }
-                        errorDiv.textContent = config.message;
+                        addErrorMessage(field, config.message);
+                        console.log(`Invalid balloon field: ${fieldName}`, {
+                            value: field.value,
+                            valid: config.validate(field.value)
+                        });
                     } else {
                         field.classList.remove('is-invalid');
-                        const errorDiv = field.nextElementSibling;
-                        if (errorDiv?.classList.contains('invalid-feedback')) {
-                            errorDiv.remove();
-                        }
                     }
                 }
             });
         }
     
-        // Validate loan fields if present
+        // Validate loan fields for BRRRR analysis
         if (analysisType?.includes('BRRRR')) {
-            const brrrFields = [
-                'initial_loan_amount',
-                'initial_loan_down_payment',
-                'initial_loan_interest_rate',
-                'initial_loan_term',
-                'initial_loan_closing_costs',
-                'refinance_loan_amount',
-                'refinance_loan_down_payment',
-                'refinance_loan_interest_rate',
-                'refinance_loan_term',
-                'refinance_loan_closing_costs'
-            ];
+            const brrrFields = {
+                'initial_loan_amount': { min: 0, message: 'Initial loan amount must be greater than 0' },
+                'initial_loan_down_payment': { min: 0, message: 'Initial down payment must be 0 or greater' },
+                'initial_loan_interest_rate': { min: 0, max: 30, message: 'Interest rate must be between 0 and 30%' },
+                'initial_loan_term': { min: 1, max: 360, message: 'Loan term must be between 1 and 360 months' },
+                'initial_loan_closing_costs': { min: 0, message: 'Closing costs must be 0 or greater' },
+                'refinance_loan_amount': { min: 0, message: 'Refinance amount must be greater than 0' },
+                'refinance_loan_down_payment': { min: 0, message: 'Refinance down payment must be 0 or greater' },
+                'refinance_loan_interest_rate': { min: 0, max: 30, message: 'Interest rate must be between 0 and 30%' },
+                'refinance_loan_term': { min: 1, max: 360, message: 'Loan term must be between 1 and 360 months' },
+                'refinance_loan_closing_costs': { min: 0, message: 'Closing costs must be 0 or greater' }
+            };
     
-            brrrFields.forEach(fieldName => {
+            Object.entries(brrrFields).forEach(([fieldName, rules]) => {
                 const field = form.querySelector(`#${fieldName}`);
-                if (field && !validateNumericRange(field.value, 0)) {
-                    isValid = false;
-                    field.classList.add('is-invalid');
+                if (field && field.value.trim()) {
+                    if (!validateNumericRange(field.value, rules.min, rules.max)) {
+                        isValid = false;
+                        field.classList.add('is-invalid');
+                        addErrorMessage(field, rules.message);
+                        console.log(`Invalid BRRRR field: ${fieldName}`, {
+                            value: field.value,
+                            rules: rules
+                        });
+                    } else {
+                        field.classList.remove('is-invalid');
+                    }
                 }
             });
         }
     
+        // Check for any invalid fields and show appropriate error message
         if (!isValid) {
-            toastr.error('Please correct the highlighted fields');
+            const invalidFields = form.querySelectorAll('.is-invalid');
+            if (invalidFields.length > 0) {
+                const fieldNames = Array.from(invalidFields)
+                    .map(f => f.labels?.[0]?.textContent || f.id)
+                    .filter(Boolean);
+                toastr.error(`Please check these fields: ${fieldNames.join(', ')}`);
+            } else {
+                toastr.error('Please check all required fields');
+            }
         }
     
+        console.log('Form validation result:', isValid);
         return isValid;
     }
 };

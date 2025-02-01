@@ -38,6 +38,9 @@ def setup_logging(config_name):
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.DEBUG if config_name == 'development' else logging.INFO)
     
+    # Silence watchdog logs
+    logging.getLogger('watchdog').setLevel(logging.WARNING)
+    
     # Remove existing handlers to avoid duplicates
     root_logger.handlers = []
     
