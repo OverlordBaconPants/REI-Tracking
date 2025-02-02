@@ -291,8 +291,13 @@ class Analysis(ABC):
                     is_interest_only=False
                 )
                 logger.debug(f"BRRRR refinance payment: ${refinance_payment.dollars:.2f}")
+                self.data.setdefault('calculated_metrics', {})['refinance_loan_payment'] = str(refinance_payment)
                 return refinance_payment
-            
+
+            # For balloon payments, handle differently
+            if self.data.get('has_balloon_payment'):
+                return self._calculate_balloon_payment()
+                
             # For LTR/PadSplit LTR, calculate all loan payments
             total_payments = Money(0)
             loan_prefixes = ['loan1', 'loan2', 'loan3']
@@ -300,19 +305,76 @@ class Analysis(ABC):
             for prefix in loan_prefixes:
                 amount = self._get_money(f'{prefix}_loan_amount')
                 if amount.dollars > 0:
+                    # Calculate individual loan payment
                     payment = self._calculate_single_loan_payment(
                         amount=amount,
                         interest_rate=self._get_percentage(f'{prefix}_loan_interest_rate'),
                         term=self.data.get(f'{prefix}_loan_term', 0),
                         is_interest_only=self.data.get(f'{prefix}_interest_only', False)
                     )
-                    total_payments += payment
-                    logger.debug(f"Loan {prefix} payment: ${payment.dollars:.2f}")
                     
+                    # Store individual loan payment in metrics
+                    self.data.setdefault('calculated_metrics', {})[f'{prefix}_loan_payment'] = str(payment)
+                    
+                    # Add to total payments
+                    total_payments += payment
+                    
+                    # Log the calculation details
+                    logger.debug(f"""
+                        {prefix} loan payment calculation:
+                        Amount: ${amount.dollars:.2f}
+                        Interest Rate: {self._get_percentage(f'{prefix}_loan_interest_rate').value:.2f}%
+                        Term: {self.data.get(f'{prefix}_loan_term', 0)} months
+                        Interest Only: {self.data.get(f'{prefix}_interest_only', False)}
+                        Calculated Payment: ${payment.dollars:.2f}
+                    """)
+                    
+            logger.debug(f"Total monthly loan payments: ${total_payments.dollars:.2f}")
             return total_payments
-            
+                
         except Exception as e:
             logger.error(f"Error calculating loan payments: {str(e)}")
+            logger.error(traceback.format_exc())
+            return Money(0)
+
+    def _calculate_balloon_payment(self) -> Money:
+        """Calculate loan payments for balloon payment scenario."""
+        try:
+            now = datetime.now()
+            balloon_date = datetime.fromisoformat(self.data['balloon_due_date'])
+            
+            if now > balloon_date:
+                # Past balloon date, use refinanced terms
+                payment = self._calculate_single_loan_payment(
+                    amount=self._get_money('balloon_refinance_loan_amount'),
+                    interest_rate=self._get_percentage('balloon_refinance_loan_interest_rate'),
+                    term=self.data.get('balloon_refinance_loan_term', 0),
+                    is_interest_only=False  # Refinanced balloon typically amortizes
+                )
+                self.data.setdefault('calculated_metrics', {})['balloon_refinance_payment'] = str(payment)
+                return payment
+            else:
+                # Before balloon date, use original loan payments
+                total_payments = Money(0)
+                loan_prefixes = ['loan1', 'loan2', 'loan3']
+                
+                for prefix in loan_prefixes:
+                    amount = self._get_money(f'{prefix}_loan_amount')
+                    if amount.dollars > 0:
+                        payment = self._calculate_single_loan_payment(
+                            amount=amount,
+                            interest_rate=self._get_percentage(f'{prefix}_loan_interest_rate'),
+                            term=self.data.get(f'{prefix}_loan_term', 0),
+                            is_interest_only=self.data.get(f'{prefix}_interest_only', False)
+                        )
+                        self.data.setdefault('calculated_metrics', {})[f'{prefix}_loan_payment'] = str(payment)
+                        total_payments += payment
+                        logger.debug(f"Pre-balloon {prefix} payment: ${payment.dollars:.2f}")
+                        
+                return total_payments
+                
+        except Exception as e:
+            logger.error(f"Error calculating balloon payment: {str(e)}")
             logger.error(traceback.format_exc())
             return Money(0)
 
@@ -443,10 +505,27 @@ class Analysis(ABC):
     def get_report_data(self) -> Dict:
         """Get analysis report data with calculated metrics."""
         try:
-            # Calculate cash flow first for debugging
-            monthly_cf = self.calculate_monthly_cash_flow()
-            logger.debug(f"Calculated monthly cash flow: {monthly_cf}")
+            # Calculate all loan payments first
+            loan_payments = {}
+            loan_prefixes = ['loan1', 'loan2', 'loan3']
             
+            for prefix in loan_prefixes:
+                amount = self._get_money(f'{prefix}_loan_amount')
+                if amount.dollars > 0:
+                    payment = self._calculate_single_loan_payment(
+                        amount=amount,
+                        interest_rate=self._get_percentage(f'{prefix}_loan_interest_rate'),
+                        term=self.data.get(f'{prefix}_loan_term', 0),
+                        is_interest_only=self.data.get(f'{prefix}_interest_only', False)
+                    )
+                    loan_payments[f'{prefix}_loan_payment'] = payment
+                    logger.debug(f"Calculated {prefix} loan payment: ${payment.dollars:.2f}")
+
+            # Calculate monthly cash flow using loan payments
+            monthly_cf = self.calculate_monthly_cash_flow()
+            logger.debug(f"Calculated monthly cash flow: ${monthly_cf.dollars:.2f}")
+
+            # Build base metrics dictionary
             metrics = {
                 'monthly_cash_flow': str(monthly_cf),
                 'annual_cash_flow': str(self.annual_cash_flow),
@@ -454,25 +533,16 @@ class Analysis(ABC):
                 'cash_on_cash_return': str(self.cash_on_cash_return),
                 'roi': str(self.roi)
             }
-            
+
+            # Add loan payments to metrics - explicitly convert to strings
+            for prefix in loan_prefixes:
+                key = f'{prefix}_loan_payment'
+                if key in loan_payments:
+                    metrics[key] = str(loan_payments[key])
+                    logger.debug(f"Added {key} to metrics: {metrics[key]}")
+
+            # Handle BRRRR-specific metrics if needed
             if 'BRRRR' in self.data.get('analysis_type', ''):
-                # Calculate and log both loan payments
-                initial_payment = self._calculate_single_loan_payment(
-                    amount=self._get_money('initial_loan_amount'),
-                    interest_rate=self._get_percentage('initial_loan_interest_rate'),
-                    term=self.data.get('initial_loan_term', 0),
-                    is_interest_only=self.data.get('initial_interest_only', False)
-                )
-                logger.debug(f"Calculated initial loan payment: {initial_payment}")
-
-                refinance_payment = self._calculate_single_loan_payment(
-                    amount=self._get_money('refinance_loan_amount'),
-                    interest_rate=self._get_percentage('refinance_loan_interest_rate'),
-                    term=self.data.get('refinance_loan_term', 0),
-                    is_interest_only=False
-                )
-                logger.debug(f"Calculated refinance loan payment: {refinance_payment}")
-
                 arv = self._get_money('after_repair_value')
                 total_costs = sum([
                     self._get_money('purchase_price'),
@@ -481,20 +551,18 @@ class Analysis(ABC):
 
                 metrics.update({
                     'equity_captured': str(arv - total_costs),
-                    'cash_recouped': str(self._get_money('refinance_loan_amount')),
-                    'initial_loan_payment': str(initial_payment),
-                    'refinance_loan_payment': str(refinance_payment)
+                    'cash_recouped': str(self._get_money('refinance_loan_amount'))
                 })
-                
-                # Log the final metrics for debugging
-                logger.debug(f"Final metrics: {metrics}")
+
+            # Debug log final metrics
+            logger.debug(f"Final metrics with loan payments: {metrics}")
             
             return {
                 'metrics': metrics
             }
-            
         except Exception as e:
             logger.error(f"Error generating report data: {str(e)}")
+            logger.error(traceback.format_exc())
             raise
 
 class LeaseOptionAnalysis(Analysis):
@@ -959,60 +1027,69 @@ class LTRAnalysis(Analysis):
         """Get analysis report data with calculated metrics."""
         try:
             # Calculate monthly cash flows
-            pre_balloon_monthly_cf = self.calculate_pre_balloon_monthly_cash_flow()
-            post_balloon_monthly_cf = self._calculate_post_balloon_monthly_cash_flow()
-            
-            # Get post-balloon values with increases
-            post_balloon_values = self._calculate_post_balloon_values()
-            
-            # Calculate loan payments
-            pre_balloon_payment = self._calculate_pre_balloon_loan_payments()
-            post_balloon_payment = self._calculate_post_balloon_loan_payment()
-            
-            # Calculate monthly payment difference
-            payment_difference = post_balloon_payment - pre_balloon_payment
-            
-            # Calculate refinance costs
-            refinance_costs = sum([
-                self._get_money('balloon_refinance_loan_down_payment'),
-                self._get_money('balloon_refinance_loan_closing_costs')
-            ], Money(0))
-            
-            # Calculate post-balloon cash-on-cash return
-            post_balloon_investment = sum([
-                self._get_money('renovation_costs'),
-                self._get_money('balloon_refinance_loan_down_payment'),
-                self._get_money('balloon_refinance_loan_closing_costs')
-            ], Money(0))
-            
-            post_balloon_annual_cf = float(post_balloon_monthly_cf.dollars) * 12
-            post_balloon_coc = Percentage((post_balloon_annual_cf / float(post_balloon_investment.dollars)) * 100) if post_balloon_investment.dollars > 0 else Percentage(0)
-            
+            monthly_cf = self.calculate_monthly_cash_flow()
             metrics = {
-                'monthly_cash_flow': str(pre_balloon_monthly_cf),
-                'annual_cash_flow': str(pre_balloon_monthly_cf * 12),
-                'pre_balloon_monthly_cash_flow': str(pre_balloon_monthly_cf),
-                'pre_balloon_annual_cash_flow': str(pre_balloon_monthly_cf * 12),
-                'post_balloon_monthly_cash_flow': str(post_balloon_monthly_cf),
-                'post_balloon_annual_cash_flow': str(post_balloon_monthly_cf * 12),
-                'pre_balloon_monthly_payment': str(pre_balloon_payment),
-                'post_balloon_monthly_payment': str(post_balloon_payment),
-                'monthly_payment_difference': str(payment_difference),
-                'balloon_refinance_costs': str(refinance_costs),
+                'monthly_cash_flow': str(monthly_cf),
+                'annual_cash_flow': str(monthly_cf * 12),
                 'total_cash_invested': str(self.calculate_total_cash_invested()),
                 'cash_on_cash_return': str(self.cash_on_cash_return),
-                'post_balloon_cash_on_cash_return': str(post_balloon_coc),
-                'roi': str(self.roi),
-                # Add post-balloon values to metrics
-                'post_balloon_monthly_rent': str(post_balloon_values.get('monthly_rent', self._get_money('monthly_rent'))),
-                'post_balloon_property_taxes': str(post_balloon_values.get('property_taxes', self._get_money('property_taxes'))),
-                'post_balloon_insurance': str(post_balloon_values.get('insurance', self._get_money('insurance'))),
-                'post_balloon_management_fee': str(post_balloon_values.get('management_fee', Money(0))),
-                'post_balloon_capex': str(post_balloon_values.get('capex', Money(0))),
-                'post_balloon_vacancy': str(post_balloon_values.get('vacancy', Money(0))),
-                'post_balloon_repairs': str(post_balloon_values.get('repairs', Money(0)))
+                'roi': str(self.roi)
             }
-            
+
+            # Calculate and add loan payments to metrics
+            for prefix in ['loan1', 'loan2', 'loan3']:
+                amount = self._get_money(f'{prefix}_loan_amount')
+                if amount.dollars > 0:
+                    payment = self._calculate_single_loan_payment(
+                        amount=amount,
+                        interest_rate=self._get_percentage(f'{prefix}_loan_interest_rate'),
+                        term=self.data.get(f'{prefix}_loan_term', 0),
+                        is_interest_only=self.data.get(f'{prefix}_interest_only', False)
+                    )
+                    metrics[f'{prefix}_loan_payment'] = str(payment)
+                    logger.debug(f"Calculated {prefix} loan payment: {payment}")
+
+            # Only calculate balloon-related metrics if balloon payment is enabled
+            if self.data.get('has_balloon_payment'):
+                pre_balloon_monthly_cf = self.calculate_pre_balloon_monthly_cash_flow()
+                post_balloon_monthly_cf = self._calculate_post_balloon_monthly_cash_flow()
+                post_balloon_values = self._calculate_post_balloon_values()
+                
+                # Calculate loan payments
+                pre_balloon_payment = self._calculate_pre_balloon_loan_payments()
+                post_balloon_payment = self._calculate_post_balloon_loan_payment()
+                payment_difference = post_balloon_payment - pre_balloon_payment
+                
+                # Add balloon-specific metrics
+                metrics.update({
+                    'pre_balloon_monthly_cash_flow': str(pre_balloon_monthly_cf),
+                    'pre_balloon_annual_cash_flow': str(pre_balloon_monthly_cf * 12),
+                    'post_balloon_monthly_cash_flow': str(post_balloon_monthly_cf),
+                    'post_balloon_annual_cash_flow': str(post_balloon_monthly_cf * 12),
+                    'pre_balloon_monthly_payment': str(pre_balloon_payment),
+                    'post_balloon_monthly_payment': str(post_balloon_payment),
+                    'monthly_payment_difference': str(payment_difference),
+                    'balloon_refinance_costs': str(self.calculate_balloon_refinance_costs()),
+                    'post_balloon_monthly_rent': str(post_balloon_values.get('monthly_rent', self._get_money('monthly_rent'))),
+                    'post_balloon_property_taxes': str(post_balloon_values.get('property_taxes', self._get_money('property_taxes'))),
+                    'post_balloon_insurance': str(post_balloon_values.get('insurance', self._get_money('insurance'))),
+                    'post_balloon_management_fee': str(post_balloon_values.get('management_fee', Money(0))),
+                    'post_balloon_capex': str(post_balloon_values.get('capex', Money(0))),
+                    'post_balloon_vacancy': str(post_balloon_values.get('vacancy', Money(0))),
+                    'post_balloon_repairs': str(post_balloon_values.get('repairs', Money(0)))
+                })
+                
+                # Calculate post-balloon cash-on-cash return
+                post_balloon_investment = sum([
+                    self._get_money('renovation_costs'),
+                    self._get_money('balloon_refinance_loan_down_payment'),
+                    self._get_money('balloon_refinance_loan_closing_costs')
+                ], Money(0))
+                
+                post_balloon_annual_cf = float(post_balloon_monthly_cf.dollars) * 12
+                post_balloon_coc = Percentage((post_balloon_annual_cf / float(post_balloon_investment.dollars)) * 100) if post_balloon_investment.dollars > 0 else Percentage(0)
+                metrics['post_balloon_cash_on_cash_return'] = str(post_balloon_coc)
+
             logger.debug(f"Final metrics: {metrics}")
             return {'metrics': metrics}
                 

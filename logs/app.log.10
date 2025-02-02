@@ -1,90 +1,87 @@
-2025-01-31 07:10:43,848 INFO: Application startup in development mode [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:84]
-2025-01-31 07:10:43,852 INFO: Running with BASE_DIR: c:\Users\BJ.Marshall\Documents\python\REI-Tracker [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:101]
-2025-01-31 07:10:43,853 INFO: Environment: Development [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:102]
-2025-01-31 07:10:45,121 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:176]
-2025-01-31 07:10:46,017 INFO: Application startup in development mode [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:84]
-2025-01-31 07:10:46,018 INFO: Running with BASE_DIR: c:\Users\BJ.Marshall\Documents\python\REI-Tracker [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:101]
-2025-01-31 07:10:46,019 INFO: Environment: Development [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:102]
-2025-01-31 07:10:46,301 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:176]
-2025-01-31 07:18:33,085 INFO: View transactions accessed by user: {'id': 'bjmar867@gmail.com', 'name': 'BJ Marshall', 'role': 'Admin', 'is_authenticated': True} [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\transactions.py:440]
-2025-01-31 07:20:01,807 INFO: Processing POST request to edit transaction ID: 75 [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\transactions.py:314]
-2025-01-31 07:20:01,818 INFO: Final transaction data being sent to update_transaction: {
-  "id": 75,
-  "property_id": "1714 Miller Street, Harrisburg, PA 17103, United States of America, Harrisburg, Pennsylvania, 17103",
-  "type": "expense",
-  "category": "Asset Acquisition",
-  "description": "2024.12.19 BJ Wire 2 of 2",
-  "amount": 9991.98,
-  "date": "2024-12-19",
-  "collector_payer": "BJ Marshall",
-  "notes": "Test",
-  "documentation_file": "trans_75_2024.12.19_Miller_BJ_Wire_2_of_2.png",
-  "reimbursement": {
-    "date_shared": "2024-12-19",
-    "share_description": "Zelle",
-    "reimbursement_status": "completed",
-    "documentation": "trans_75_2025.01.24_Brian_Reimbursement_for_Various.png"
-  }
-} [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\transactions.py:389]
-2025-01-31 07:20:01,822 INFO: === Starting transaction update === [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\services\transaction_service.py:228]
-2025-01-31 07:20:01,828 INFO: Found transaction to update at index 71 [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\services\transaction_service.py:236]
-2025-01-31 07:20:01,836 INFO: Writing updated transactions to file [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\services\transaction_service.py:285]
-2025-01-31 07:20:01,836 INFO: === Transaction update completed === [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\services\transaction_service.py:287]
-2025-01-31 07:20:01,836 INFO: View transactions accessed by user: {'id': 'bjmar867@gmail.com', 'name': 'BJ Marshall', 'role': 'Admin', 'is_authenticated': True} [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\transactions.py:440]
-2025-01-31 07:20:04,874 INFO: View transactions accessed by user: {'id': 'bjmar867@gmail.com', 'name': 'BJ Marshall', 'role': 'Admin', 'is_authenticated': True} [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\transactions.py:440]
-2025-01-31 07:20:24,678 INFO: Processing POST request to edit transaction ID: 75 [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\transactions.py:314]
-2025-01-31 07:20:24,686 INFO: Final transaction data being sent to update_transaction: {
-  "id": 75,
-  "property_id": "1714 Miller Street, Harrisburg, PA 17103, United States of America, Harrisburg, Pennsylvania, 17103",
-  "type": "expense",
-  "category": "Asset Acquisition",
-  "description": "2024.12.19 BJ Wire 2 of 2",
-  "amount": 9991.98,
-  "date": "2024-12-19",
-  "collector_payer": "BJ Marshall",
-  "notes": "Testy Test Test",
-  "documentation_file": "trans_75_2024.12.19_Miller_BJ_Wire_2_of_2.png",
-  "reimbursement": {
-    "date_shared": "2024-12-19",
-    "share_description": "Zelle",
-    "reimbursement_status": "completed",
-    "documentation": "trans_75_2025.01.24_Brian_Reimbursement_for_Various.png"
-  }
-} [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\transactions.py:389]
-2025-01-31 07:20:24,689 INFO: === Starting transaction update === [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\services\transaction_service.py:228]
-2025-01-31 07:20:24,694 INFO: Found transaction to update at index 71 [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\services\transaction_service.py:236]
-2025-01-31 07:20:24,703 INFO: Writing updated transactions to file [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\services\transaction_service.py:285]
-2025-01-31 07:20:24,710 INFO: === Transaction update completed === [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\services\transaction_service.py:287]
-2025-01-31 07:20:24,716 INFO: View transactions accessed by user: {'id': 'bjmar867@gmail.com', 'name': 'BJ Marshall', 'role': 'Admin', 'is_authenticated': True} [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\transactions.py:440]
-2025-01-31 07:20:27,750 INFO: View transactions accessed by user: {'id': 'bjmar867@gmail.com', 'name': 'BJ Marshall', 'role': 'Admin', 'is_authenticated': True} [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\transactions.py:440]
-2025-01-31 08:29:24,274 INFO: Application startup in development mode [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:84]
-2025-01-31 08:29:24,274 INFO: Running with BASE_DIR: c:\Users\BJ.Marshall\Documents\python\REI-Tracker [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:101]
-2025-01-31 08:29:24,274 INFO: Environment: Development [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:102]
-2025-01-31 08:29:25,075 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:176]
-2025-01-31 08:29:25,875 INFO: Application startup in development mode [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:84]
-2025-01-31 08:29:25,876 INFO: Running with BASE_DIR: c:\Users\BJ.Marshall\Documents\python\REI-Tracker [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:101]
-2025-01-31 08:29:25,876 INFO: Environment: Development [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:102]
-2025-01-31 08:29:26,165 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:176]
-2025-01-31 08:42:23,166 INFO: Application startup in development mode [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:84]
-2025-01-31 08:42:23,166 INFO: Running with BASE_DIR: c:\Users\BJ.Marshall\Documents\python\REI-Tracker [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:101]
-2025-01-31 08:42:23,166 INFO: Environment: Development [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:102]
-2025-01-31 08:42:23,465 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:176]
-2025-01-31 08:45:46,635 INFO: Application startup in development mode [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:84]
-2025-01-31 08:45:46,636 INFO: Running with BASE_DIR: c:\Users\BJ.Marshall\Documents\python\REI-Tracker [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:101]
-2025-01-31 08:45:46,637 INFO: Environment: Development [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:102]
-2025-01-31 08:45:46,930 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:176]
-2025-01-31 08:46:54,681 INFO: Application startup in development mode [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:84]
-2025-01-31 08:46:54,681 INFO: Running with BASE_DIR: c:\Users\BJ.Marshall\Documents\python\REI-Tracker [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:101]
-2025-01-31 08:46:54,681 INFO: Environment: Development [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:102]
-2025-01-31 08:46:55,019 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:176]
-2025-01-31 08:48:18,622 INFO: Application startup in development mode [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:84]
-2025-01-31 08:48:18,623 INFO: Running with BASE_DIR: c:\Users\BJ.Marshall\Documents\python\REI-Tracker [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:101]
-2025-01-31 08:48:18,624 INFO: Environment: Development [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:102]
-2025-01-31 08:48:18,948 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:176]
-2025-01-31 08:49:07,458 INFO: View transactions accessed by user: {'id': 'bjmar867@gmail.com', 'name': 'BJ Marshall', 'role': 'Admin', 'is_authenticated': True} [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\routes\transactions.py:454]
-2025-01-31 09:07:46,687 INFO: Application startup in development mode [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:84]
-2025-01-31 09:07:46,687 INFO: Running with BASE_DIR: c:\Users\BJ.Marshall\Documents\python\REI-Tracker [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:101]
-2025-01-31 09:07:46,687 INFO: Environment: Development [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:102]
-2025-01-31 09:07:46,986 INFO: All Dash apps initialized successfully [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:176]
-2025-01-31 09:07:47,709 INFO: Application startup in development mode [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:84]
-2025-01-31 09:07:47,709 INFO: Environment: Development [in c:\Users\BJ.Marshall\Documents\python\REI-Tracker\__init__.py:102]
+2025-02-01 16:07:27,575 INFO: Environment: Development [in /home/bj/python/REI-Tracker/__init__.py:102]
+2025-02-01 16:07:27,612 INFO: All Dash apps initialized successfully [in /home/bj/python/REI-Tracker/__init__.py:176]
+2025-02-01 16:07:32,645 INFO: Application startup in development mode [in /home/bj/python/REI-Tracker/__init__.py:84]
+2025-02-01 16:07:32,645 INFO: Running with BASE_DIR: /home/bj/python/REI-Tracker [in /home/bj/python/REI-Tracker/__init__.py:101]
+2025-02-01 16:07:32,645 INFO: Environment: Development [in /home/bj/python/REI-Tracker/__init__.py:102]
+2025-02-01 16:07:32,685 INFO: All Dash apps initialized successfully [in /home/bj/python/REI-Tracker/__init__.py:176]
+2025-02-01 16:07:37,598 INFO: Application startup in development mode [in /home/bj/python/REI-Tracker/__init__.py:84]
+2025-02-01 16:07:37,598 INFO: Running with BASE_DIR: /home/bj/python/REI-Tracker [in /home/bj/python/REI-Tracker/__init__.py:101]
+2025-02-01 16:07:37,598 INFO: Environment: Development [in /home/bj/python/REI-Tracker/__init__.py:102]
+2025-02-01 16:07:37,637 INFO: All Dash apps initialized successfully [in /home/bj/python/REI-Tracker/__init__.py:176]
+2025-02-01 16:07:42,459 INFO: Application startup in development mode [in /home/bj/python/REI-Tracker/__init__.py:84]
+2025-02-01 16:07:42,459 INFO: Running with BASE_DIR: /home/bj/python/REI-Tracker [in /home/bj/python/REI-Tracker/__init__.py:101]
+2025-02-01 16:07:42,459 INFO: Environment: Development [in /home/bj/python/REI-Tracker/__init__.py:102]
+2025-02-01 16:07:42,500 INFO: All Dash apps initialized successfully [in /home/bj/python/REI-Tracker/__init__.py:176]
+2025-02-01 16:07:48,458 INFO: Application startup in development mode [in /home/bj/python/REI-Tracker/__init__.py:84]
+2025-02-01 16:07:48,458 INFO: Running with BASE_DIR: /home/bj/python/REI-Tracker [in /home/bj/python/REI-Tracker/__init__.py:101]
+2025-02-01 16:07:48,458 INFO: Environment: Development [in /home/bj/python/REI-Tracker/__init__.py:102]
+2025-02-01 16:07:48,507 INFO: All Dash apps initialized successfully [in /home/bj/python/REI-Tracker/__init__.py:176]
+2025-02-01 16:08:36,737 INFO: Application startup in development mode [in /home/bj/python/REI-Tracker/__init__.py:84]
+2025-02-01 16:08:36,737 INFO: Running with BASE_DIR: /home/bj/python/REI-Tracker [in /home/bj/python/REI-Tracker/__init__.py:101]
+2025-02-01 16:08:36,737 INFO: Environment: Development [in /home/bj/python/REI-Tracker/__init__.py:102]
+2025-02-01 16:08:36,778 INFO: All Dash apps initialized successfully [in /home/bj/python/REI-Tracker/__init__.py:176]
+2025-02-01 16:08:41,655 INFO: Application startup in development mode [in /home/bj/python/REI-Tracker/__init__.py:84]
+2025-02-01 16:08:41,655 INFO: Running with BASE_DIR: /home/bj/python/REI-Tracker [in /home/bj/python/REI-Tracker/__init__.py:101]
+2025-02-01 16:08:41,655 INFO: Environment: Development [in /home/bj/python/REI-Tracker/__init__.py:102]
+2025-02-01 16:08:41,695 INFO: All Dash apps initialized successfully [in /home/bj/python/REI-Tracker/__init__.py:176]
+2025-02-01 16:08:43,605 INFO: Application startup in development mode [in /home/bj/python/REI-Tracker/__init__.py:84]
+2025-02-01 16:08:43,605 INFO: Running with BASE_DIR: /home/bj/python/REI-Tracker [in /home/bj/python/REI-Tracker/__init__.py:101]
+2025-02-01 16:08:43,605 INFO: Environment: Development [in /home/bj/python/REI-Tracker/__init__.py:102]
+2025-02-01 16:08:43,642 INFO: All Dash apps initialized successfully [in /home/bj/python/REI-Tracker/__init__.py:176]
+2025-02-01 16:08:46,456 INFO: Application startup in development mode [in /home/bj/python/REI-Tracker/__init__.py:84]
+2025-02-01 16:08:46,456 INFO: Running with BASE_DIR: /home/bj/python/REI-Tracker [in /home/bj/python/REI-Tracker/__init__.py:101]
+2025-02-01 16:08:46,456 INFO: Environment: Development [in /home/bj/python/REI-Tracker/__init__.py:102]
+2025-02-01 16:08:46,497 INFO: All Dash apps initialized successfully [in /home/bj/python/REI-Tracker/__init__.py:176]
+2025-02-01 16:08:51,319 INFO: Application startup in development mode [in /home/bj/python/REI-Tracker/__init__.py:84]
+2025-02-01 16:08:51,319 INFO: Running with BASE_DIR: /home/bj/python/REI-Tracker [in /home/bj/python/REI-Tracker/__init__.py:101]
+2025-02-01 16:08:51,320 INFO: Environment: Development [in /home/bj/python/REI-Tracker/__init__.py:102]
+2025-02-01 16:08:51,358 INFO: All Dash apps initialized successfully [in /home/bj/python/REI-Tracker/__init__.py:176]
+2025-02-01 16:08:57,206 INFO: Application startup in development mode [in /home/bj/python/REI-Tracker/__init__.py:84]
+2025-02-01 16:08:57,206 INFO: Running with BASE_DIR: /home/bj/python/REI-Tracker [in /home/bj/python/REI-Tracker/__init__.py:101]
+2025-02-01 16:08:57,206 INFO: Environment: Development [in /home/bj/python/REI-Tracker/__init__.py:102]
+2025-02-01 16:08:57,244 INFO: All Dash apps initialized successfully [in /home/bj/python/REI-Tracker/__init__.py:176]
+2025-02-01 16:09:02,089 INFO: Application startup in development mode [in /home/bj/python/REI-Tracker/__init__.py:84]
+2025-02-01 16:09:02,089 INFO: Running with BASE_DIR: /home/bj/python/REI-Tracker [in /home/bj/python/REI-Tracker/__init__.py:101]
+2025-02-01 16:09:02,089 INFO: Environment: Development [in /home/bj/python/REI-Tracker/__init__.py:102]
+2025-02-01 16:09:02,130 INFO: All Dash apps initialized successfully [in /home/bj/python/REI-Tracker/__init__.py:176]
+2025-02-01 16:09:04,048 INFO: Application startup in development mode [in /home/bj/python/REI-Tracker/__init__.py:84]
+2025-02-01 16:09:04,048 INFO: Running with BASE_DIR: /home/bj/python/REI-Tracker [in /home/bj/python/REI-Tracker/__init__.py:101]
+2025-02-01 16:09:04,048 INFO: Environment: Development [in /home/bj/python/REI-Tracker/__init__.py:102]
+2025-02-01 16:09:04,086 INFO: All Dash apps initialized successfully [in /home/bj/python/REI-Tracker/__init__.py:176]
+2025-02-01 16:09:05,906 INFO: Application startup in development mode [in /home/bj/python/REI-Tracker/__init__.py:84]
+2025-02-01 16:09:05,906 INFO: Running with BASE_DIR: /home/bj/python/REI-Tracker [in /home/bj/python/REI-Tracker/__init__.py:101]
+2025-02-01 16:09:05,907 INFO: Environment: Development [in /home/bj/python/REI-Tracker/__init__.py:102]
+2025-02-01 16:09:05,945 INFO: All Dash apps initialized successfully [in /home/bj/python/REI-Tracker/__init__.py:176]
+2025-02-01 16:09:11,911 INFO: Application startup in development mode [in /home/bj/python/REI-Tracker/__init__.py:84]
+2025-02-01 16:09:11,911 INFO: Running with BASE_DIR: /home/bj/python/REI-Tracker [in /home/bj/python/REI-Tracker/__init__.py:101]
+2025-02-01 16:09:11,911 INFO: Environment: Development [in /home/bj/python/REI-Tracker/__init__.py:102]
+2025-02-01 16:09:11,952 INFO: All Dash apps initialized successfully [in /home/bj/python/REI-Tracker/__init__.py:176]
+2025-02-01 16:09:16,917 INFO: Application startup in development mode [in /home/bj/python/REI-Tracker/__init__.py:84]
+2025-02-01 16:09:16,918 INFO: Running with BASE_DIR: /home/bj/python/REI-Tracker [in /home/bj/python/REI-Tracker/__init__.py:101]
+2025-02-01 16:09:16,918 INFO: Environment: Development [in /home/bj/python/REI-Tracker/__init__.py:102]
+2025-02-01 16:09:16,956 INFO: All Dash apps initialized successfully [in /home/bj/python/REI-Tracker/__init__.py:176]
+2025-02-01 16:09:21,901 INFO: Application startup in development mode [in /home/bj/python/REI-Tracker/__init__.py:84]
+2025-02-01 16:09:21,902 INFO: Running with BASE_DIR: /home/bj/python/REI-Tracker [in /home/bj/python/REI-Tracker/__init__.py:101]
+2025-02-01 16:09:21,902 INFO: Environment: Development [in /home/bj/python/REI-Tracker/__init__.py:102]
+2025-02-01 16:09:21,941 INFO: All Dash apps initialized successfully [in /home/bj/python/REI-Tracker/__init__.py:176]
+2025-02-01 16:09:24,878 INFO: Application startup in development mode [in /home/bj/python/REI-Tracker/__init__.py:84]
+2025-02-01 16:09:24,878 INFO: Running with BASE_DIR: /home/bj/python/REI-Tracker [in /home/bj/python/REI-Tracker/__init__.py:101]
+2025-02-01 16:09:24,878 INFO: Environment: Development [in /home/bj/python/REI-Tracker/__init__.py:102]
+2025-02-01 16:09:24,917 INFO: All Dash apps initialized successfully [in /home/bj/python/REI-Tracker/__init__.py:176]
+2025-02-01 16:09:26,884 INFO: Application startup in development mode [in /home/bj/python/REI-Tracker/__init__.py:84]
+2025-02-01 16:09:26,884 INFO: Running with BASE_DIR: /home/bj/python/REI-Tracker [in /home/bj/python/REI-Tracker/__init__.py:101]
+2025-02-01 16:09:26,884 INFO: Environment: Development [in /home/bj/python/REI-Tracker/__init__.py:102]
+2025-02-01 16:09:26,928 INFO: All Dash apps initialized successfully [in /home/bj/python/REI-Tracker/__init__.py:176]
+2025-02-01 16:09:28,707 INFO: Application startup in development mode [in /home/bj/python/REI-Tracker/__init__.py:84]
+2025-02-01 16:09:28,707 INFO: Running with BASE_DIR: /home/bj/python/REI-Tracker [in /home/bj/python/REI-Tracker/__init__.py:101]
+2025-02-01 16:09:28,707 INFO: Environment: Development [in /home/bj/python/REI-Tracker/__init__.py:102]
+2025-02-01 16:09:28,746 INFO: All Dash apps initialized successfully [in /home/bj/python/REI-Tracker/__init__.py:176]
+2025-02-01 16:09:31,607 INFO: Application startup in development mode [in /home/bj/python/REI-Tracker/__init__.py:84]
+2025-02-01 16:09:31,607 INFO: Running with BASE_DIR: /home/bj/python/REI-Tracker [in /home/bj/python/REI-Tracker/__init__.py:101]
+2025-02-01 16:09:31,607 INFO: Environment: Development [in /home/bj/python/REI-Tracker/__init__.py:102]
+2025-02-01 16:09:31,645 INFO: All Dash apps initialized successfully [in /home/bj/python/REI-Tracker/__init__.py:176]
+2025-02-01 16:09:35,459 INFO: Application startup in development mode [in /home/bj/python/REI-Tracker/__init__.py:84]
+2025-02-01 16:09:35,460 INFO: Running with BASE_DIR: /home/bj/python/REI-Tracker [in /home/bj/python/REI-Tracker/__init__.py:101]
+2025-02-01 16:09:35,460 INFO: Environment: Development [in /home/bj/python/REI-Tracker/__init__.py:102]
+2025-02-01 16:09:35,503 INFO: All Dash apps initialized successfully [in /home/bj/python/REI-Tracker/__init__.py:176]
+2025-02-01 16:09:37,362 INFO: Application startup in development mode [in /home/bj/python/REI-Tracker/__init__.py:84]

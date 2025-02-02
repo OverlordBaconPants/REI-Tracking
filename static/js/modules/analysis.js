@@ -640,6 +640,7 @@ const getLoanFieldsHTML = (loanNumber) => `
 
 // BRRRR template
 const getBRRRRHTML = () => `
+    <!-- Property Details Card -->
     <div class="card mb-4">
         <div class="card-header">
             <h5 class="mb-0">Property Details</h5>
@@ -681,6 +682,50 @@ const getBRRRRHTML = () => `
         </div>
     </div>
 
+    <!-- Purchase Details Card -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Purchase Details</h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-12 col-md-6">
+                    <label for="purchase_price" class="form-label">Purchase Price</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control form-control-lg" id="purchase_price" 
+                               name="purchase_price" placeholder="Sales price" required>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label for="after_repair_value" class="form-label">After Repair Value</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control form-control-lg" id="after_repair_value" 
+                               name="after_repair_value" placeholder="Post-renovation value" required>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label for="renovation_costs" class="form-label">Renovation Costs</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control form-control-lg" id="renovation_costs" 
+                               name="renovation_costs" placeholder="Expected renovation costs" required>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label for="renovation_duration" class="form-label">Renovation Duration</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control form-control-lg" id="renovation_duration" 
+                               name="renovation_duration" placeholder="Duration" required>
+                        <span class="input-group-text">months</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Initial Financing -->
     <div class="card mb-4">
         <div class="card-header">
             <h5 class="mb-0">Initial Financing</h5>
@@ -727,6 +772,7 @@ const getBRRRRHTML = () => `
         </div>
     </div>
 
+    <!-- Refinance Details -->
     <div class="card mb-4">
         <div class="card-header">
             <h5 class="mb-0">Refinance Details</h5>
@@ -769,6 +815,26 @@ const getBRRRRHTML = () => `
         </div>
     </div>
 
+    <!-- Rental Income Card -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Rental Income</h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-12 col-md-6">
+                    <label for="monthly_rent" class="form-label">Monthly Rent</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control form-control-lg" id="monthly_rent" 
+                               name="monthly_rent" placeholder="Expected monthly rent" required>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Operating Expenses -->
     <div class="card mb-4">
         <div class="card-header">
             <h5 class="mb-0">Operating Expenses</h5>
@@ -827,6 +893,7 @@ const getBRRRRHTML = () => `
         </div>
     </div>
 
+    <!-- Notes Card -->
     <div class="card mb-4">
         <div class="card-header">
             <h5 class="mb-0">Notes</h5>
@@ -2363,6 +2430,7 @@ window.analysisModule = {
         })
         .then(data => {
             console.log('Server response:', data);
+            console.log("Server response calculated_metrics:", data.analysis.calculated_metrics);
             
             if (data.success) {
                 const analysisData = data.analysis.analysis || data.analysis;
@@ -2640,15 +2708,17 @@ window.analysisModule = {
         return `
             <!-- Income & Returns Card -->
             <div class="card mb-4">
-                <div class="card-body p-3 p-md-4">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="mb-0 fs-6 fs-md-5">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
                             ${this.hasBalloonData(analysis) ? 'Pre-Balloon Financial Overview' : 'Income & Returns'}
                         </h5>
-                        ${this.hasBalloonData(analysis) ? `
-                            <span class="badge bg-primary">Balloon Due: ${new Date(analysis.balloon_due_date).toLocaleDateString()}</span>
-                        ` : ''}
+                        ${this.hasBalloonData(analysis) ? 
+                            `<span class="badge bg-primary">Balloon Due: ${new Date(analysis.balloon_due_date).toLocaleDateString()}</span>` 
+                            : ''}
                     </div>
+                </div>
+                <div class="card-body">
                     <div class="list-group list-group-flush">
                         <div class="list-group-item d-flex justify-content-between align-items-center py-3">
                             <span>Monthly Rent</span>
@@ -2687,24 +2757,46 @@ window.analysisModule = {
                             </span>
                             <strong>${analysis.calculated_metrics?.cash_on_cash_return}</strong>
                         </div>
+                        ${analysis.analysis_type.includes('PadSplit') ? `
+                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                <span class="d-flex align-items-center">
+                                    Platform Fee
+                                    <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" data-bs-html="true" 
+                                       title="PadSplit platform fee based on monthly rent">
+                                    </i>
+                                </span>
+                                <div class="text-end">
+                                    <div class="small text-muted">
+                                        ${this.formatDisplayValue(analysis.padsplit_platform_percentage, 'percentage')}
+                                    </div>
+                                    <strong>${this.formatDisplayValue(analysis.monthly_rent * (analysis.padsplit_platform_percentage / 100))}</strong>
+                                </div>
+                            </div>
+                        ` : ''}
                     </div>
                 </div>
             </div>
     
             <!-- Financing Details Card -->
             <div class="card mb-4">
-                <div class="card-body p-3 p-md-4">
-                    <h5 class="mb-3 fs-6 fs-md-5">Financing Details</h5>
-                    ${this.getLoanDetailsContent(analysis)}
+                <div class="card-header">
+                    <h5 class="mb-0">Financing Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="accordion" id="loanDetailsAccordion">
+                        ${this.getLoanDetailsContent(analysis)}
+                    </div>
                 </div>
             </div>
     
             <!-- Operating Expenses Card -->
             <div class="card mb-4">
-                <div class="card-body p-3 p-md-4">
-                    <h5 class="mb-3 fs-6 fs-md-5">
+                <div class="card-header">
+                    <h5 class="mb-0">
                         ${this.hasBalloonData(analysis) ? 'Pre-Balloon Operating Expenses' : 'Operating Expenses'}
                     </h5>
+                </div>
+                <div class="card-body">
                     <div class="list-group list-group-flush">
                         <div class="row g-0">
                             <div class="col-12 col-md-6">
@@ -2726,11 +2818,23 @@ window.analysisModule = {
                                         <div class="small text-muted">
                                             ${this.formatDisplayValue(analysis.management_fee_percentage, 'percentage')}
                                         </div>
-                                        <strong>
-                                            ${this.formatDisplayValue(analysis.monthly_rent * (analysis.management_fee_percentage / 100))}
-                                        </strong>
+                                        <strong>${this.formatDisplayValue(analysis.monthly_rent * (analysis.management_fee_percentage / 100))}</strong>
                                     </div>
                                 </div>
+                                ${analysis.analysis_type.includes('PadSplit') ? `
+                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                        <span>Utilities</span>
+                                        <strong>${this.formatDisplayValue(analysis.utilities)}</strong>
+                                    </div>
+                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                        <span>Internet</span>
+                                        <strong>${this.formatDisplayValue(analysis.internet)}</strong>
+                                    </div>
+                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                        <span>Cleaning</span>
+                                        <strong>${this.formatDisplayValue(analysis.cleaning)}</strong>
+                                    </div>
+                                ` : ''}
                             </div>
                             <div class="col-12 col-md-6">
                                 <div class="list-group-item d-flex justify-content-between align-items-center py-3">
@@ -2739,9 +2843,7 @@ window.analysisModule = {
                                         <div class="small text-muted">
                                             ${this.formatDisplayValue(analysis.capex_percentage, 'percentage')}
                                         </div>
-                                        <strong>
-                                            ${this.formatDisplayValue(analysis.monthly_rent * (analysis.capex_percentage / 100))}
-                                        </strong>
+                                        <strong>${this.formatDisplayValue(analysis.monthly_rent * (analysis.capex_percentage / 100))}</strong>
                                     </div>
                                 </div>
                                 <div class="list-group-item d-flex justify-content-between align-items-center py-3">
@@ -2750,9 +2852,7 @@ window.analysisModule = {
                                         <div class="small text-muted">
                                             ${this.formatDisplayValue(analysis.vacancy_percentage, 'percentage')}
                                         </div>
-                                        <strong>
-                                            ${this.formatDisplayValue(analysis.monthly_rent * (analysis.vacancy_percentage / 100))}
-                                        </strong>
+                                        <strong>${this.formatDisplayValue(analysis.monthly_rent * (analysis.vacancy_percentage / 100))}</strong>
                                     </div>
                                 </div>
                                 <div class="list-group-item d-flex justify-content-between align-items-center py-3">
@@ -2761,11 +2861,19 @@ window.analysisModule = {
                                         <div class="small text-muted">
                                             ${this.formatDisplayValue(analysis.repairs_percentage, 'percentage')}
                                         </div>
-                                        <strong>
-                                            ${this.formatDisplayValue(analysis.monthly_rent * (analysis.repairs_percentage / 100))}
-                                        </strong>
+                                        <strong>${this.formatDisplayValue(analysis.monthly_rent * (analysis.repairs_percentage / 100))}</strong>
                                     </div>
                                 </div>
+                                ${analysis.analysis_type.includes('PadSplit') ? `
+                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                        <span>Pest Control</span>
+                                        <strong>${this.formatDisplayValue(analysis.pest_control)}</strong>
+                                    </div>
+                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                        <span>Landscaping</span>
+                                        <strong>${this.formatDisplayValue(analysis.landscaping)}</strong>
+                                    </div>
+                                ` : ''}
                             </div>
                         </div>
                     </div>
@@ -2778,6 +2886,20 @@ window.analysisModule = {
     // Shared loan details component
     getLoanDetailsContent(analysis) {
         // Add debugging
+        console.log('Full analysis object:', {
+            loan1: {
+                amount: analysis.loan1_loan_amount,
+                interest: analysis.loan1_loan_interest_rate,
+                term: analysis.loan1_loan_term
+            },
+            loan2: {
+                amount: analysis.loan2_loan_amount,
+                interest: analysis.loan2_loan_interest_rate,
+                term: analysis.loan2_loan_term
+            },
+            calculated_metrics: analysis.calculated_metrics
+        });
+
         console.log('Loan payment metrics:', {
             loan1_payment: analysis.calculated_metrics?.loan1_loan_payment,
             loan2_payment: analysis.calculated_metrics?.loan2_loan_payment,
@@ -2899,77 +3021,83 @@ window.analysisModule = {
                         </div>
                     </div>
                 </div>`;
-        } else {
-            // Regular loans
-            const loanPrefixes = ['loan1', 'loan2', 'loan3'];
-            let hasLoans = false;
-            
-            let html = '<div class="accordion" id="regularLoansAccordion">';
-            
-            for (const prefix of loanPrefixes) {
-                if (analysis[`${prefix}_loan_amount`] > 0) {
-                    hasLoans = true;
-                    html += `
-                        <div class="accordion-item">
-                            <h6 class="accordion-header">
-                                <button class="accordion-button ${prefix !== 'loan1' ? 'collapsed' : ''}" type="button" 
-                                        data-bs-toggle="collapse" data-bs-target="#${prefix}Collapse">
-                                    ${analysis[`${prefix}_loan_name`] || `Loan ${prefix.slice(-1)}`}
-                                </button>
-                            </h6>
-                            <div id="${prefix}Collapse" class="accordion-collapse collapse ${prefix === 'loan1' ? 'show' : ''}" 
-                                 data-bs-parent="#regularLoansAccordion">
-                                <div class="accordion-body p-0">
-                                    <div class="list-group list-group-flush">
-                                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                            <span>Amount</span>
-                                            <strong>${this.formatDisplayValue(analysis[`${prefix}_loan_amount`])}</strong>
-                                        </div>
-                                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                            <span>Interest Rate</span>
-                                            <div>
-                                                <strong>${this.formatDisplayValue(analysis[`${prefix}_loan_interest_rate`], 'percentage')}</strong>
-                                                <span class="badge ${analysis[`${prefix}_interest_only`] ? 'bg-success' : 'bg-info'} ms-2">
-                                                    ${analysis[`${prefix}_interest_only`] ? 'Interest Only' : 'Amortized'}
-                                                </span>
+            } else {
+                // Regular loans
+                const loanPrefixes = ['loan1', 'loan2', 'loan3'];
+                let hasLoans = false;
+                
+                let html = '<div class="accordion" id="regularLoansAccordion">';
+                
+                for (const prefix of loanPrefixes) {
+                    // Check if loan exists by verifying amount is greater than 0
+                    const loanAmount = this.toRawNumber(analysis[`${prefix}_loan_amount`]);
+                    if (loanAmount > 0) {
+                        hasLoans = true;
+                        
+                        // Get loan payment from calculated metrics
+                        const loanPayment = analysis.calculated_metrics?.[`${prefix}_loan_payment`];
+                        console.log(`${prefix} payment:`, loanPayment);
+                        
+                        html += `
+                            <div class="accordion-item">
+                                <h6 class="accordion-header">
+                                    <button class="accordion-button ${prefix !== 'loan1' ? 'collapsed' : ''}" type="button" 
+                                            data-bs-toggle="collapse" data-bs-target="#${prefix}Collapse">
+                                        ${analysis[`${prefix}_loan_name`] || `Loan ${prefix.slice(-1)}`}
+                                    </button>
+                                </h6>
+                                <div id="${prefix}Collapse" class="accordion-collapse collapse ${prefix === 'loan1' ? 'show' : ''}" 
+                                     data-bs-parent="#regularLoansAccordion">
+                                    <div class="accordion-body p-0">
+                                        <div class="list-group list-group-flush">
+                                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                                <span>Amount</span>
+                                                <strong>${this.formatDisplayValue(loanAmount)}</strong>
                                             </div>
-                                        </div>
-                                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                            <span>Term</span>
-                                            <strong>${analysis[`${prefix}_loan_term`] || '0'} months</strong>
-                                        </div>
-                                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                            <span class="d-flex align-items-center">
-                                                Monthly Payment
-                                                <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" 
-                                                   title="${analysis[`${prefix}_interest_only`] ? 
-                                                       'Interest-only payment on loan' : 
-                                                       'Fully amortized payment including principal and interest'}"></i>
-                                            </span>
-                                            <strong>${analysis.calculated_metrics?.[`${prefix}_loan_payment`] || 
-                                                     this.formatDisplayValue(0)}</strong>
-                                        </div>
-                                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                            <span>Down Payment</span>
-                                            <strong>${this.formatDisplayValue(analysis[`${prefix}_loan_down_payment`])}</strong>
-                                        </div>
-                                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                            <span>Closing Costs</span>
-                                            <strong>${this.formatDisplayValue(analysis[`${prefix}_loan_closing_costs`])}</strong>
+                                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                                <span>Interest Rate</span>
+                                                <div>
+                                                    <strong>${this.formatDisplayValue(analysis[`${prefix}_loan_interest_rate`], 'percentage')}</strong>
+                                                    <span class="badge ${analysis[`${prefix}_interest_only`] ? 'bg-success' : 'bg-info'} ms-2">
+                                                        ${analysis[`${prefix}_interest_only`] ? 'Interest Only' : 'Amortized'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                                <span>Term</span>
+                                                <strong>${analysis[`${prefix}_loan_term`] || '0'} months</strong>
+                                            </div>
+                                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                                <span class="d-flex align-items-center">
+                                                    Monthly Payment
+                                                    <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" 
+                                                       title="${analysis[`${prefix}_interest_only`] ? 
+                                                           'Interest-only payment on loan' : 
+                                                           'Fully amortized payment including principal and interest'}"></i>
+                                                </span>
+                                                <strong>${loanPayment || this.formatDisplayValue(0)}</strong>
+                                            </div>
+                                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                                <span>Down Payment</span>
+                                                <strong>${this.formatDisplayValue(analysis[`${prefix}_loan_down_payment`])}</strong>
+                                            </div>
+                                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                                <span>Closing Costs</span>
+                                                <strong>${this.formatDisplayValue(analysis[`${prefix}_loan_closing_costs`])}</strong>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        </div>`;
+                            </div>`;
+                    }
                 }
+                html += '</div>';
+                
+                return hasLoans ? html : `
+                    <div class="text-center py-4">
+                        <p class="mb-0 text-muted">No loan details available</p>
+                    </div>`;
             }
-            html += '</div>';
-            
-            return hasLoans ? html : `
-                <div class="text-center py-4">
-                    <p class="mb-0 text-muted">No loan details available</p>
-                </div>`;
-        }
     },
 
     // Updated getBRRRRReportContent function to handle flat schema and formatting
@@ -2991,165 +3119,116 @@ window.analysisModule = {
         }
     
         return `
+            <!-- Income & Returns Card -->
             <div class="card mb-4">
-                <div class="card-body p-3 p-md-4">
-                    <div class="row g-4">
-                        <!-- Income & Returns Section -->
-                        <div class="col-12 col-lg-6">
-                            <h5 class="mb-3 fs-6 fs-md-5">Income & Returns</h5>
-                            <div class="card bg-light h-100">
-                                <div class="list-group list-group-flush">
-                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                        <span>Monthly Rent</span>
-                                        <strong>${this.formatDisplayValue(analysis.monthly_rent)}</strong>
-                                    </div>
-                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                        <span>Monthly Cash Flow</span>
-                                        <strong>${analysis.calculated_metrics.monthly_cash_flow}</strong>
-                                    </div>
-                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                        <span>Annual Cash Flow</span>
-                                        <strong>${analysis.calculated_metrics.annual_cash_flow}</strong>
-                                    </div>
-                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                        <span>Cash-on-Cash Return</span>
-                                        <strong>${analysis.calculated_metrics.cash_on_cash_return}</strong>
-                                    </div>
-                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                        <span>ROI</span>
-                                        <strong>${analysis.calculated_metrics.roi}</strong>
-                                    </div>
-                                </div>
-                            </div>
+                <div class="card-header">
+                    <h5 class="mb-0">Income & Returns</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Monthly Rent</span>
+                            <strong>${this.formatDisplayValue(analysis.monthly_rent)}</strong>
                         </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Monthly Cash Flow</span>
+                            <strong>${analysis.calculated_metrics.monthly_cash_flow}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Annual Cash Flow</span>
+                            <strong>${analysis.calculated_metrics.annual_cash_flow}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Cash-on-Cash Return</span>
+                            <strong>${analysis.calculated_metrics.cash_on_cash_return}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>ROI</span>
+                            <strong>${analysis.calculated_metrics.roi}</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
     
-                        <!-- Financing Section -->
-                        <div class="col-12 col-lg-6">
-                            <h5 class="mb-3 fs-6 fs-md-5">BRRRR Strategy Details</h5>
-                            <div class="card bg-light h-100">
-                                <div class="accordion" id="brrrFinancingAccordion">
-                                    <!-- Initial Loan Section -->
-                                    <div class="accordion-item">
-                                        <h6 class="accordion-header">
-                                            <button class="accordion-button" type="button" data-bs-toggle="collapse" 
-                                                    data-bs-target="#initialLoanCollapse">
-                                                Initial Loan Details
-                                            </button>
-                                        </h6>
-                                        <div id="initialLoanCollapse" class="accordion-collapse collapse show" 
-                                             data-bs-parent="#brrrFinancingAccordion">
-                                            <div class="accordion-body p-0">
-                                                <div class="list-group list-group-flush">
-                                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                                        <span>Monthly Payment</span>
-                                                        <strong>${analysis.calculated_metrics.initial_loan_payment}</strong>
-                                                    </div>
-                                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                                        <span>Interest Rate</span>
-                                                        <strong>${this.formatDisplayValue(analysis.initial_loan_interest_rate, 'percentage')}</strong>
-                                                    </div>
-                                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                                        <span>Term</span>
-                                                        <strong>${analysis.initial_loan_term} months</strong>
-                                                    </div>
-                                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                                        <span>Down Payment</span>
-                                                        <strong>${this.formatDisplayValue(analysis.initial_loan_down_payment)}</strong>
-                                                    </div>
-                                                </div>
-                                            </div>
+            <!-- BRRRR Strategy Details Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">BRRRR Strategy Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="accordion" id="brrrFinancingAccordion">
+                        <!-- Initial Loan Section -->
+                        <div class="accordion-item">
+                            <h6 class="accordion-header">
+                                <button class="accordion-button" type="button" data-bs-toggle="collapse" 
+                                        data-bs-target="#initialLoanCollapse">
+                                    Initial Loan Details
+                                </button>
+                            </h6>
+                            <div id="initialLoanCollapse" class="accordion-collapse collapse show" 
+                                 data-bs-parent="#brrrFinancingAccordion">
+                                <div class="accordion-body p-0">
+                                    <div class="list-group list-group-flush">
+                                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                            <span>Amount</span>
+                                            <strong>${this.formatDisplayValue(analysis.initial_loan_amount)}</strong>
                                         </div>
-                                    </div>
-    
-                                    <!-- Refinance Loan Section -->
-                                    <div class="accordion-item">
-                                        <h6 class="accordion-header">
-                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
-                                                    data-bs-target="#refinanceCollapse">
-                                                Refinance Details
-                                            </button>
-                                        </h6>
-                                        <div id="refinanceCollapse" class="accordion-collapse collapse" 
-                                             data-bs-parent="#brrrFinancingAccordion">
-                                            <div class="accordion-body p-0">
-                                                <div class="list-group list-group-flush">
-                                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                                        <span>Monthly Payment</span>
-                                                        <strong>${analysis.calculated_metrics.refinance_loan_payment}</strong>
-                                                    </div>
-                                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                                        <span>Interest Rate</span>
-                                                        <strong>${this.formatDisplayValue(analysis.refinance_loan_interest_rate, 'percentage')}</strong>
-                                                    </div>
-                                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                                        <span>Term</span>
-                                                        <strong>${analysis.refinance_loan_term} months</strong>
-                                                    </div>
-                                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                                        <span>Down Payment</span>
-                                                        <strong>${this.formatDisplayValue(analysis.refinance_loan_down_payment)}</strong>
-                                                    </div>
-                                                </div>
-                                            </div>
+                                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                            <span>Monthly Payment</span>
+                                            <strong>${analysis.calculated_metrics.initial_loan_payment}</strong>
+                                        </div>
+                                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                            <span>Interest Rate</span>
+                                            <strong>${this.formatDisplayValue(analysis.initial_loan_interest_rate, 'percentage')}</strong>
+                                        </div>
+                                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                            <span>Term</span>
+                                            <strong>${analysis.initial_loan_term} months</strong>
+                                        </div>
+                                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                            <span>Down Payment</span>
+                                            <strong>${this.formatDisplayValue(analysis.initial_loan_down_payment)}</strong>
+                                        </div>
+                                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                            <span>Interest Only</span>
+                                            <strong>${analysis.initial_interest_only ? 'Yes' : 'No'}</strong>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
     
-                        <!-- Operating Expenses Section -->
-                        <div class="col-12">
-                            <h5 class="mb-3 fs-6 fs-md-5">Operating Expenses</h5>
-                            <div class="card bg-light">
-                                <div class="list-group list-group-flush">
-                                    <div class="row g-0">
-                                        <div class="col-12 col-md-6">
-                                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                                <span>Property Taxes</span>
-                                                <strong>${this.formatDisplayValue(analysis.property_taxes)}</strong>
-                                            </div>
-                                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                                <span>Insurance</span>
-                                                <strong>${this.formatDisplayValue(analysis.insurance)}</strong>
-                                            </div>
-                                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                                <span>HOA/COA/COOP</span>
-                                                <strong>${this.formatDisplayValue(analysis.hoa_coa_coop)}</strong>
-                                            </div>
-                                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                                <span>Management</span>
-                                                <div class="text-end">
-                                                    <div class="small text-muted">
-                                                        ${this.formatDisplayValue(analysis.management_fee_percentage, 'percentage')}
-                                                    </div>
-                                                </div>
-                                            </div>
+                        <!-- Refinance Section -->
+                        <div class="accordion-item">
+                            <h6 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                        data-bs-target="#refinanceCollapse">
+                                    Refinance Details
+                                </button>
+                            </h6>
+                            <div id="refinanceCollapse" class="accordion-collapse collapse" 
+                                 data-bs-parent="#brrrFinancingAccordion">
+                                <div class="accordion-body p-0">
+                                    <div class="list-group list-group-flush">
+                                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                            <span>Amount</span>
+                                            <strong>${this.formatDisplayValue(analysis.refinance_loan_amount)}</strong>
                                         </div>
-                                        <div class="col-12 col-md-6">
-                                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                                <span>CapEx</span>
-                                                <div class="text-end">
-                                                    <div class="small text-muted">
-                                                        ${this.formatDisplayValue(analysis.capex_percentage, 'percentage')}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                                <span>Vacancy</span>
-                                                <div class="text-end">
-                                                    <div class="small text-muted">
-                                                        ${this.formatDisplayValue(analysis.vacancy_percentage, 'percentage')}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                                <span>Repairs</span>
-                                                <div class="text-end">
-                                                    <div class="small text-muted">
-                                                        ${this.formatDisplayValue(analysis.repairs_percentage, 'percentage')}
-                                                    </div>
-                                                </div>
-                                            </div>
+                                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                            <span>Monthly Payment</span>
+                                            <strong>${analysis.calculated_metrics.refinance_loan_payment}</strong>
+                                        </div>
+                                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                            <span>Interest Rate</span>
+                                            <strong>${this.formatDisplayValue(analysis.refinance_loan_interest_rate, 'percentage')}</strong>
+                                        </div>
+                                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                            <span>Term</span>
+                                            <strong>${analysis.refinance_loan_term} months</strong>
+                                        </div>
+                                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                            <span>Closing Costs</span>
+                                            <strong>${this.formatDisplayValue(analysis.refinance_loan_closing_costs)}</strong>
                                         </div>
                                     </div>
                                 </div>
@@ -3158,6 +3237,68 @@ window.analysisModule = {
                     </div>
                 </div>
             </div>
+    
+            <!-- Operating Expenses Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Operating Expenses</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <div class="row g-0">
+                            <div class="col-12 col-md-6">
+                                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                    <span>Property Taxes</span>
+                                    <strong>${this.formatDisplayValue(analysis.property_taxes)}</strong>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                    <span>Insurance</span>
+                                    <strong>${this.formatDisplayValue(analysis.insurance)}</strong>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                    <span>Management</span>
+                                    <div class="text-end">
+                                        <div class="small text-muted">
+                                            ${this.formatDisplayValue(analysis.management_fee_percentage, 'percentage')}
+                                        </div>
+                                        <strong>${this.formatDisplayValue(analysis.monthly_rent * (analysis.management_fee_percentage / 100))}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                    <span>CapEx</span>
+                                    <div class="text-end">
+                                        <div class="small text-muted">
+                                            ${this.formatDisplayValue(analysis.capex_percentage, 'percentage')}
+                                        </div>
+                                        <strong>${this.formatDisplayValue(analysis.monthly_rent * (analysis.capex_percentage / 100))}</strong>
+                                    </div>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                    <span>Vacancy</span>
+                                    <div class="text-end">
+                                        <div class="small text-muted">
+                                            ${this.formatDisplayValue(analysis.vacancy_percentage, 'percentage')}
+                                        </div>
+                                        <strong>${this.formatDisplayValue(analysis.monthly_rent * (analysis.vacancy_percentage / 100))}</strong>
+                                    </div>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                    <span>Repairs</span>
+                                    <div class="text-end">
+                                        <div class="small text-muted">
+                                            ${this.formatDisplayValue(analysis.repairs_percentage, 'percentage')}
+                                        </div>
+                                        <strong>${this.formatDisplayValue(analysis.monthly_rent * (analysis.repairs_percentage / 100))}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
             ${this.createNotesSection(analysis.notes)}`;
     },
 
