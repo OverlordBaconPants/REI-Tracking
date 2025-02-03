@@ -5,6 +5,12 @@ const maoCalculator = {
             input.addEventListener('input', () => this.updateCalculations());
             input.addEventListener('change', () => this.updateCalculations());
         });
+
+        // Add specific listeners for ARV and renovation costs
+        ['after_repair_value', 'renovation_costs'].forEach(id => {
+            document.getElementById(id)?.addEventListener('input', () => this.updateSuggestedLoanAmount());
+        });
+
         this.updateCalculations();
     },
 
@@ -27,8 +33,8 @@ const maoCalculator = {
     },
 
     calculateAcquisitionLoanAmount: function(arv, renovationCosts) {
-        // Calculate as 80% of ARV plus renovation costs
-        return (arv * 0.80) + renovationCosts;
+        // Calculate as 60% of ARV plus renovation costs
+        return (arv * 0.60) + renovationCosts;
     },
 
     calculateMAO: function(arv, ltv, renovationCosts, closingCosts, monthlyHoldingCosts, totalHoldingMonths, maxCashLeft) {
@@ -47,6 +53,18 @@ const maoCalculator = {
         return Math.max(0, mao);
     },
 
+    updateSuggestedLoanAmount: function() {
+        const arv = parseFloat(document.getElementById('after_repair_value').value) || 0;
+        const renovationCosts = parseFloat(document.getElementById('renovation_costs').value) || 0;
+        const suggestedAmount = this.calculateAcquisitionLoanAmount(arv, renovationCosts);
+        
+        const acquisitionLoanInput = document.getElementById('acquisition_loan_amount');
+        // Only update if the field hasn't been manually edited
+        if (!acquisitionLoanInput.dataset.userEdited) {
+            acquisitionLoanInput.value = suggestedAmount.toFixed(2);
+        }
+    },
+
     updateCalculations: function() {
         const values = {
             arv: parseFloat(document.getElementById('after_repair_value').value) || 0,
@@ -62,9 +80,12 @@ const maoCalculator = {
             maxCashLeft: parseFloat(document.getElementById('max_cash_left').value) || 0
         };
 
-        // Calculate acquisition/renovation loan amount (80% ARV + Reno Costs)
-        const acquisitionLoanAmount = this.calculateAcquisitionLoanAmount(values.arv, values.renovationCosts);
-        
+        // Update suggested loan amount
+        this.updateSuggestedLoanAmount();
+
+        // Get actual loan amount from input
+        const acquisitionLoanAmount = parseFloat(document.getElementById('acquisition_loan_amount').value) || 0;
+
         const monthlyHoldingCosts = this.calculateMonthlyHoldingCosts(
             acquisitionLoanAmount,
             values.acqRenoRate,
@@ -104,6 +125,11 @@ const maoCalculator = {
         updateElement('acquisition_loan_amount', acquisitionLoanAmount);
     }
 };
+
+// Add event listener for manual edits
+document.getElementById('acquisition_loan_amount')?.addEventListener('input', function() {
+    this.dataset.userEdited = 'true';
+});
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => maoCalculator.init());
