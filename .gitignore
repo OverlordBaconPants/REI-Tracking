@@ -29,4 +29,6 @@ venv/*
 !/data/uploads/reimbursements/.gitkeep  # But keep the .gitkeep file
 !/data/analyses          # Don't ignore the analyses directory itself
 /data/analyses/*         # Ignore everything in analyses
-!/data/analyses/.gitkeep # But keep the .gitkeep file
+!/data/analyses/.gitkeep # But keep the .gitkeep filedata/transactions.json
+data/users.json
+data/transactions.json
