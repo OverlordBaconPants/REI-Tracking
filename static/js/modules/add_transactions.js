@@ -221,7 +221,8 @@ const addTransactionsModule = {
             categorySelect: document.getElementById('category'),
             collectorPayerSelect: document.getElementById('collector_payer')
         };
-
+    
+        // Log found elements
         Object.entries(elements).forEach(([key, element]) => {
             if (element instanceof NodeList) {
                 console.log(`${key}: ${element.length > 0 ? 'Found' : 'Not found'}`);
@@ -229,7 +230,8 @@ const addTransactionsModule = {
                 console.log(`${key}: ${element ? 'Found' : 'Not found'}`);
             }
         });
-
+    
+        // Type radio change handlers
         if (elements.typeRadios.length > 0) {
             elements.typeRadios.forEach(radio => {
                 radio.addEventListener('change', () => {
@@ -238,51 +240,53 @@ const addTransactionsModule = {
                     this.updateReimbursementDetails();
                 });
             });
-        } else {
-            console.error('Type radio buttons not found');
         }
-
+    
+        // Collector/Payer change handler
         if (elements.collectorPayerSelect) {
             elements.collectorPayerSelect.addEventListener('change', () => {
                 console.log('Collector/Payer selection changed');
                 this.updateReimbursementDetails();
             });
-        } else {
-            console.error('Collector/Payer select element not found');
         }
-
+    
+        // Property select change handler - consolidated into one
         if (elements.propertySelect) {
             elements.propertySelect.addEventListener('change', (event) => {
                 console.log('Property selection changed');
                 console.log('Selected index:', event.target.selectedIndex);
                 console.log('Selected value:', event.target.value);
-                console.log('Selected option:', event.target.options[event.target.selectedIndex].text);
                 
                 try {
                     const selectedOption = event.target.options[event.target.selectedIndex];
                     const propertyData = JSON.parse(selectedOption.dataset.property);
                     
-                    // First create/update collector payer options
-                    this.updateCollectorPayerOptions();
-                    
-                    // Then toggle reimbursement section
                     this.toggleReimbursementSection(propertyData);
-                    
-                    // Finally update reimbursement details
+                    this.updateCollectorPayerOptions();
                     this.updateReimbursementDetails();
                 } catch (error) {
                     console.error('Error handling property change:', error);
                 }
             });
+    
+            // Initial state if property already selected
+            if (elements.propertySelect.value) {
+                const selectedOption = elements.propertySelect.options[elements.propertySelect.selectedIndex];
+                try {
+                    const propertyData = JSON.parse(selectedOption.dataset.property);
+                    this.toggleReimbursementSection(propertyData);
+                } catch (error) {
+                    console.error('Error handling initial property state:', error);
+                }
+            }
         }
-
+    
+        // Amount change handler
         if (elements.amountInput) {
             elements.amountInput.addEventListener('input', () => this.updateReimbursementDetails());
-        } else {
-            console.error('Amount input element not found');
         }
-
-        // Add date input change listener to update hidden date_shared
+    
+        // Date input handler
         const dateInput = document.getElementById('date');
         if (dateInput) {
             dateInput.addEventListener('change', (event) => {
@@ -292,14 +296,8 @@ const addTransactionsModule = {
                 }
             });
         }
-
-        if (this.form) {
-            this.form.addEventListener('submit', this.handleSubmit.bind(this));
-            this.updateCollectorPayerOptions();
-        } else {
-            console.error('Form element not found');
-        }
-
+    
+        // Reimbursement status handler
         const reimbursementStatus = document.getElementById('reimbursement_status');
         if (reimbursementStatus) {
             reimbursementStatus.addEventListener('change', (event) => {
@@ -308,33 +306,6 @@ const addTransactionsModule = {
                     this.validateReimbursementStatus(formData);
                 }
             });
-        }
-
-        const propertySelect = document.getElementById('property_id');
-        if (propertySelect) {
-            propertySelect.addEventListener('change', (event) => {
-                console.log('Property selection changed');
-                const selectedOption = event.target.options[event.target.selectedIndex];
-                try {
-                    const propertyData = JSON.parse(selectedOption.dataset.property);
-                    this.toggleReimbursementSection(propertyData);
-                    this.updateCollectorPayerOptions();
-                    this.updateReimbursementDetails();
-                } catch (error) {
-                    console.error('Error handling property change:', error);
-                }
-            });
-
-            // Also trigger initial state if property is already selected
-            if (propertySelect.value) {
-                const selectedOption = propertySelect.options[propertySelect.selectedIndex];
-                try {
-                    const propertyData = JSON.parse(selectedOption.dataset.property);
-                    this.toggleReimbursementSection(propertyData);
-                } catch (error) {
-                    console.error('Error handling initial property state:', error);
-                }
-            }
         }
     },
 
@@ -383,95 +354,89 @@ const addTransactionsModule = {
     toggleReimbursementSection: function(propertyData) {
         console.log('Toggling reimbursement section with property data:', JSON.stringify(propertyData, null, 2));
         
-        // Find or create reimbursement section
-        let reimbursementSection = document.getElementById('reimbursement-section');
-        if (!reimbursementSection) {
-            console.log('Reimbursement section not found, creating it');
-            reimbursementSection = this.createReimbursementSection();
-            if (!reimbursementSection) {
-                console.error('Failed to create reimbursement section');
-                return;
-            }
-        }
-    
+        // Check ownership
         let hasOnlyOwner = false;
         if (propertyData?.partners) {
-            // Check if there's only one partner with 100% equity
             hasOnlyOwner = propertyData.partners.length === 1 && 
                           Math.abs(propertyData.partners[0].equity_share - 100) < 0.01;
-            console.log('Property has only one owner:', hasOnlyOwner);
+        }
+    
+        // Remove existing section if present
+        const existingSection = document.getElementById('reimbursement-section');
+        if (existingSection) {
+            existingSection.remove();
         }
     
         if (hasOnlyOwner) {
-            console.log('Single owner property - hiding reimbursement section');
-            reimbursementSection.style.display = 'none';
-            
-            // Set hidden input values for submission
+            // For single owner, just set hidden fields
             const dateInput = document.getElementById('date');
-            const dateSharedInput = document.getElementById('date_shared');
-            const reimbursementStatusInput = document.getElementById('reimbursement_status');
-            const shareDescriptionInput = document.getElementById('share_description');
+            const hiddenDateShared = document.getElementById('hidden_date_shared');
+            const hiddenStatus = document.getElementById('hidden_reimbursement_status');
             
-            // Preserve existing doc info
-            const existingReimbursementDoc = document.querySelector('[data-existing-reimbursement-doc]')?.dataset.existingReimbursementDoc;
-            
-            if (dateSharedInput && dateInput) {
-                dateSharedInput.value = dateInput.value;
-                console.log('Set date_shared to:', dateInput.value);
-            }
-            if (reimbursementStatusInput) {
-                reimbursementStatusInput.value = 'completed';
-                console.log('Set reimbursement_status to: completed');
-            }
-            if (shareDescriptionInput) {
-                shareDescriptionInput.value = existingReimbursementDoc 
-                    ? shareDescriptionInput.value 
-                    : 'Auto-completed - Single owner property';
-                console.log('Set share_description');
-            }
-    
-            // Hide reimbursement details as well
-            const reimbursementDetails = document.getElementById('reimbursement-details');
-            if (reimbursementDetails) {
-                reimbursementDetails.style.display = 'none';
-            }
-    
-            // If there's a reimbursement alert, show it
-            const reimbursementAlert = document.createElement('div');
-            reimbursementAlert.className = 'alert alert-info mt-3';
-            reimbursementAlert.textContent = 'Reimbursement details are hidden because this property is wholly owned by one partner.';
-            reimbursementSection.appendChild(reimbursementAlert);
-        } else {
-            console.log('Multiple owners or no owner data - showing reimbursement section');
-            reimbursementSection.style.display = 'block';
-            
-            // Remove any existing alerts
-            const existingAlerts = reimbursementSection.querySelectorAll('.alert');
-            existingAlerts.forEach(alert => alert.remove());
-            
-            // Reset fields for multiple owners
-            const reimbursementStatusInput = document.getElementById('reimbursement_status');
-            const shareDescriptionInput = document.getElementById('share_description');
-            const dateSharedInput = document.getElementById('date_shared');
-            
-            if (reimbursementStatusInput) {
-                reimbursementStatusInput.value = 'pending';
-            }
-            if (shareDescriptionInput) {
-                shareDescriptionInput.value = '';
-            }
-            if (dateSharedInput) {
-                dateSharedInput.value = '';
-            }
-    
-            // Show reimbursement details
-            const reimbursementDetails = document.getElementById('reimbursement-details');
-            if (reimbursementDetails) {
-                reimbursementDetails.style.display = 'block';
-            }
+            if (hiddenDateShared && dateInput) hiddenDateShared.value = dateInput.value;
+            if (hiddenStatus) hiddenStatus.value = 'completed';
+            return null;
         }
     
-        return reimbursementSection;
+        // Create section for multi-owner properties
+        const section = document.createElement('div');
+        section.id = 'reimbursement-section';
+        section.className = 'card mb-4';
+        section.innerHTML = `
+            <div class="card-header bg-navy">
+                <h5 class="mb-0">Reimbursement Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info mb-4">
+                    <i class="bi bi-info-circle me-2"></i>
+                    This section is optional. You can return later to complete reimbursement details.
+                </div>
+    
+                <div id="reimbursement-details" class="mb-4"></div>
+    
+                <div class="row g-3">
+                    <div class="col-12 col-md-6">
+                        <div class="form-group">
+                            <label for="date_shared" class="form-label">Date Shared</label>
+                            <input type="date" class="form-control" id="date_shared" name="date_shared">
+                        </div>
+                    </div>
+    
+                    <div class="col-12 col-md-6">
+                        <div class="form-group">
+                            <label for="share_description" class="form-label">Share Description</label>
+                            <input type="text" class="form-control" id="share_description" name="share_description" 
+                                   placeholder="Describe how this is shared">
+                        </div>
+                    </div>
+    
+                    <div class="col-12 col-md-6">
+                        <div class="form-group">
+                            <label for="reimbursement_status" class="form-label">Reimbursement Status</label>
+                            <select class="form-select" id="reimbursement_status" name="reimbursement_status">
+                                <option value="pending">Pending</option>
+                                <option value="completed">Completed</option>
+                                <option value="not_required">Not Required</option>
+                            </select>
+                        </div>
+                    </div>
+    
+                    <div class="col-12 col-md-6">
+                        <div class="form-group">
+                            <label for="reimbursement_documentation" class="form-label">Reimbursement Documentation</label>
+                            <input type="file" class="form-control" id="reimbursement_documentation" 
+                                   name="reimbursement_documentation">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    
+        // Insert before submit button
+        const submitBtn = document.querySelector('button[type="submit"]').closest('.d-grid');
+        submitBtn.parentNode.insertBefore(section, submitBtn);
+    
+        return section;
     },
 
     updateCollectorPayerLabel: function(type) {
@@ -505,9 +470,6 @@ const addTransactionsModule = {
         try {
             const propertyData = JSON.parse(selectedProperty.dataset.property);
             console.log('Parsed property data:', propertyData);
-            
-            // Toggle reimbursement section first
-            this.toggleReimbursementSection(propertyData);
             
             const partners = propertyData.partners || [];
             if (partners.length === 0) {

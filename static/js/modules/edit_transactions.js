@@ -12,7 +12,16 @@ const editTransactionsModule = {
         this.form = document.getElementById('edit-transaction-form');
         this.reimbursementSection = document.getElementById('reimbursement-section');
         
-        // Initialize Bootstrap modal first
+        // Load transaction data from form
+        try {
+            this.transaction = this.form ? JSON.parse(this.form.dataset.transaction || 'null') : null;
+            console.log('Loaded transaction data:', this.transaction);
+        } catch (error) {
+            console.error('Error parsing transaction data:', error);
+            this.transaction = null;
+        }
+        
+        // Initialize Bootstrap modal
         const modalElement = document.getElementById('documentRemovalModal');
         if (modalElement) {
             this.documentRemovalModal = new bootstrap.Modal(modalElement);
@@ -24,6 +33,21 @@ const editTransactionsModule = {
         if (this.form) {
             console.log('Starting module initialization');
             await this.initializeModule();
+            
+            // Set up reimbursement section if property has multiple owners
+            if (this.transaction) {
+                const propertySelect = document.getElementById('property_id');
+                const selectedOption = propertySelect.options[propertySelect.selectedIndex];
+                if (selectedOption) {
+                    try {
+                        const propertyData = JSON.parse(selectedOption.dataset.property);
+                        this.toggleReimbursementSection(propertyData);
+                    } catch (error) {
+                        console.error('Error handling property data:', error);
+                    }
+                }
+            }
+            
             this.initDocumentRemovalHandlers();
             this.initNotesCounter();
         } else {
@@ -270,122 +294,114 @@ const editTransactionsModule = {
         }
     },
 
-    createReimbursementSection: function() {
-        // Check if section already exists
-        let section = document.getElementById('reimbursement-section');
-        if (section) {
-            console.log('Found existing reimbursement section');
-            return section;
-        }
-    
-        // In edit mode, we should always find an existing section
-        if (document.getElementById('edit-transaction-form')) {
-            console.warn('Reimbursement section not found in edit mode - this should not happen');
-            return null;
-        }
-        
-        // Create new section for add mode
-        console.log('Creating new reimbursement section for add mode');
-        section = document.createElement('div');
+    createReimbursementSection: function(transactionData) {
+        const section = document.createElement('div');
         section.id = 'reimbursement-section';
-        section.className = 'mb-3';
-    
-        // Create the HTML structure for reimbursement section
+        section.className = 'card mb-4';
+        
         section.innerHTML = `
-            <h4 class="mb-3">Reimbursement Details</h4>
-            <div class="row g-3">
-                <div class="col-12 col-md-6">
-                    <label for="date_shared" class="form-label">Date Shared</label>
-                    <input type="date" class="form-control" id="date_shared" name="date_shared">
+            <div class="card-header bg-navy">
+                <h5 class="mb-0">Reimbursement Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info mb-4">
+                    <i class="bi bi-info-circle me-2"></i>
+                    This section is optional. You can return later to complete reimbursement details.
                 </div>
-                <div class="col-12 col-md-6">
-                    <label for="reimbursement_status" class="form-label">Status</label>
-                    <select class="form-select" id="reimbursement_status" name="reimbursement_status">
-                        <option value="pending">Pending</option>
-                        <option value="completed">Completed</option>
-                    </select>
-                </div>
-                <div class="col-12">
-                    <label for="share_description" class="form-label">Share Description</label>
-                    <textarea class="form-control" id="share_description" name="share_description" rows="2"></textarea>
-                </div>
-                <div class="col-12">
-                    <label for="reimbursement_documentation" class="form-label">Documentation</label>
-                    <input type="file" class="form-control" id="reimbursement_documentation" name="reimbursement_documentation">
-                </div>
-                <div class="col-12">
-                    <div id="reimbursement-details" class="border rounded p-3 mt-2">
-                        <!-- Reimbursement breakdown will be populated here -->
+    
+                <div id="reimbursement-details" class="mb-4"></div>
+    
+                <div class="row g-3">
+                    <div class="col-12 col-md-6">
+                        <div class="form-group">
+                            <label for="date_shared" class="form-label">Date Shared</label>
+                            <input type="date" class="form-control" id="date_shared" name="date_shared" 
+                                   value="${transactionData?.reimbursement?.date_shared || ''}">
+                        </div>
+                    </div>
+    
+                    <div class="col-12 col-md-6">
+                        <div class="form-group">
+                            <label for="reimbursement_status" class="form-label">Status</label>
+                            <select class="form-select" id="reimbursement_status" name="reimbursement_status">
+                                <option value="pending" ${transactionData?.reimbursement?.reimbursement_status === 'pending' ? 'selected' : ''}>
+                                    Pending
+                                </option>
+                                <option value="completed" ${transactionData?.reimbursement?.reimbursement_status === 'completed' ? 'selected' : ''}>
+                                    Completed
+                                </option>
+                                <option value="not_required" ${transactionData?.reimbursement?.reimbursement_status === 'not_required' ? 'selected' : ''}>
+                                    Not Required
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+    
+                    <div class="col-12">
+                        <div class="form-group">
+                            <label for="share_description" class="form-label">Share Description</label>
+                            <input type="text" class="form-control" id="share_description" name="share_description"
+                                   value="${transactionData?.reimbursement?.share_description || ''}"
+                                   placeholder="Describe how this is shared">
+                        </div>
+                    </div>
+    
+                    <div class="col-12">
+                        <div class="form-group">
+                            <label for="reimbursement_documentation" class="form-label">Documentation</label>
+                            <input type="file" class="form-control" id="reimbursement_documentation" 
+                                   name="reimbursement_documentation">
+                            ${transactionData?.reimbursement?.documentation ? `
+                                <div class="current-file mt-2">
+                                    <small>Current file: ${transactionData.reimbursement.documentation}</small>
+                                    <button type="button" class="btn btn-sm btn-outline-danger ms-2 document-remove-btn"
+                                            data-document-type="reimbursement">
+                                        <i class="bi bi-trash"></i> Remove
+                                    </button>
+                                </div>
+                            ` : ''}
+                        </div>
                     </div>
                 </div>
             </div>
         `;
     
-        // Find the appropriate place to insert the section (after the main transaction form fields)
-        const formGroup = document.querySelector('.form-group') || document.querySelector('form > div');
-        if (formGroup) {
-            formGroup.parentNode.insertBefore(section, formGroup.nextSibling);
-        } else {
-            this.form.appendChild(section);
-        }
-    
         return section;
     },
 
     toggleReimbursementSection: function(propertyData) {
-        console.log('Toggling reimbursement section with property data:', JSON.stringify(propertyData, null, 2));
-        
-        // Find reimbursement section
-        const reimbursementSection = document.getElementById('reimbursement-section');
-        if (!reimbursementSection) {
-            console.error('Reimbursement section not found');
-            return null;
+        // Remove existing section
+        const existingSection = document.getElementById('reimbursement-section');
+        if (existingSection) {
+            existingSection.remove();
         }
     
-        // Determine if property has multiple owners
-        const hasMultipleOwners = propertyData?.partners && propertyData.partners.length > 1;
-        console.log('Property has multiple owners:', hasMultipleOwners);
+        const hasOnlyOwner = propertyData?.partners?.length === 1 && 
+                            Math.abs(propertyData.partners[0].equity_share - 100) < 0.01;
     
-        if (hasMultipleOwners) {
-            console.log('Showing reimbursement section');
-            reimbursementSection.style.display = 'block';
-            
-            // Update reimbursement details
-            const reimbursementDetails = document.getElementById('reimbursement-details');
-            if (reimbursementDetails) {
-                this.updateReimbursementDetails();
-            }
-    
-            // Clear auto-complete fields
-            const dateSharedInput = document.getElementById('date_shared');
-            const reimbursementStatusInput = document.getElementById('reimbursement_status');
-            const shareDescriptionInput = document.getElementById('share_description');
-            
-            if (dateSharedInput) dateSharedInput.value = '';
-            if (reimbursementStatusInput) reimbursementStatusInput.value = 'pending';
-            if (shareDescriptionInput) shareDescriptionInput.value = '';
-        } else {
-            console.log('Hiding reimbursement section for single owner');
-            reimbursementSection.style.display = 'none';
-            
-            // Auto-complete with default values for single owner
+        if (hasOnlyOwner) {
+            // Set hidden fields for single owner
             const dateInput = document.getElementById('date');
-            const dateSharedInput = document.getElementById('date_shared');
-            const reimbursementStatusInput = document.getElementById('reimbursement_status');
-            const shareDescriptionInput = document.getElementById('share_description');
+            const hiddenDateShared = document.getElementById('hidden_date_shared');
+            const hiddenStatus = document.getElementById('hidden_reimbursement_status');
             
-            if (dateSharedInput && dateInput) {
-                dateSharedInput.value = dateInput.value;
-            }
-            if (reimbursementStatusInput) {
-                reimbursementStatusInput.value = 'completed';
-            }
-            if (shareDescriptionInput) {
-                shareDescriptionInput.value = 'Auto-completed - Single owner property';
-            }
+            if (hiddenDateShared && dateInput) hiddenDateShared.value = dateInput.value;
+            if (hiddenStatus) hiddenStatus.value = 'completed';
+            return;
         }
     
-        return reimbursementSection;
+        // Create reimbursement section with existing data
+        const section = this.createReimbursementSection(this.transaction);
+        
+        // Insert before submit button
+        const submitBtn = document.querySelector('button[type="submit"]').closest('.d-grid');
+        submitBtn.parentNode.insertBefore(section, submitBtn);
+    
+        // Reinitialize document removal handlers
+        this.initDocumentRemovalHandlers();
+    
+        // Update reimbursement details display
+        this.updateReimbursementDetails();
     },
 
     updateCollectorPayerOptions: function() {
