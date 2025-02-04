@@ -15,8 +15,8 @@ def format_address(address: str, format_type: str = 'full') -> str | tuple[str, 
     Args:
         address (str): Full property address
         format_type (str): Type of formatting needed:
-            - 'display': Returns just the street address (before first comma)
-            - 'base': Returns street address and city (before second comma)
+            - 'display': Returns just house number and street (e.g., "1714 Miller")
+            - 'base': Same as 'display' for consistency
             - 'full': Returns tuple of (display_address, full_address)
             
     Returns:
@@ -27,12 +27,15 @@ def format_address(address: str, format_type: str = 'full') -> str | tuple[str, 
         
     parts = [p.strip() for p in address.split(',')]
     
-    if format_type == 'display':
-        return parts[0]
-    elif format_type == 'base':
-        return ', '.join(parts[:2]) if len(parts) >= 2 else parts[0]
-    else:  # 'full'
-        return (parts[0], address)
+    # Extract house number and street
+    street_address = parts[0].strip()
+    
+    # For display and base, return just house number and street
+    if format_type in ['display', 'base']:
+        return street_address
+        
+    # For full format, return tuple of (display_address, full_address)
+    return (street_address, address)
 
 def get_properties_for_user(user_id, user_name, is_admin=False):
     """Get properties for a user with formatted addresses."""

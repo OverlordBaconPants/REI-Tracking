@@ -2829,5 +2829,23 @@
       "reimbursement_status": "completed",
       "documentation": "trans_175_2025.02.04_El_Camino_Rent.png"
     }
+  },
+  {
+    "id": "176",
+    "property_id": "2212 Logan Street, Harrisburg, PA 17102, United States of America, Harrisburg, Pennsylvania, 17102",
+    "type": "income",
+    "category": "Rent",
+    "description": "2025.02 Logan Tenant Rent Portion",
+    "amount": 78.0,
+    "date": "2025-02-01",
+    "collector_payer": "BJ Marshall",
+    "documentation_file": "trans_176_2025.02_Logan_Tenant_Rent_Portion.png",
+    "notes": "Net Cash Flow shared via Zelle",
+    "reimbursement": {
+      "date_shared": "",
+      "share_description": "",
+      "reimbursement_status": "",
+      "documentation": null
+    }
   }
 ]

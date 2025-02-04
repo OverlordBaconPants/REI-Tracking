@@ -682,6 +682,18 @@ def create_transactions_dash(flask_app):
         ], style=STYLE_CONFIG['card'])
     ], fluid=True, className='p-3')
 
+    def create_property_options(properties):
+        """Create standardized property options for dropdowns and filters."""
+        property_options = [{'label': 'All Properties', 'value': 'all'}]
+        for prop in properties:
+            if prop.get('address'):
+                display_address = format_address(prop['address'], 'display')
+                property_options.append({
+                    'label': display_address,
+                    'value': prop['address']  # Keep full address as value
+                })
+        return property_options
+
     # Register callbacks
     @dash_app.callback(
         [Output('transactions-table', 'data'),
@@ -701,11 +713,6 @@ def create_transactions_dash(flask_app):
     def update_table(refresh_trigger, property_id, transaction_type, 
                     reimbursement_status, start_date, end_date, description_search):
         try:
-            logger.debug("=== Starting update_table function ===")
-            logger.debug(f"Filters: property={property_id}, type={transaction_type}, "
-                        f"reimbursement={reimbursement_status}, start={start_date}, "
-                        f"end={end_date}, search={description_search}")
-            
             # Get properties
             properties = get_properties_for_user(
                 current_user.id,
@@ -713,8 +720,8 @@ def create_transactions_dash(flask_app):
                 current_user.role == 'Admin'
             )
             
-            # Create property options with standardized addresses
-            property_options = [{'label': 'All Properties', 'value': 'all'}]
+            # Create property options with standardized display
+            property_options = create_property_options(properties)
             for prop in properties:
                 if prop.get('address'):
                     base_address = format_address(prop['address'], 'base')
@@ -1075,19 +1082,14 @@ def create_transactions_dash(flask_app):
     def format_transactions_for_mobile(df, properties, property_id, user):
         """Format transaction data for mobile display with reimbursement handling."""
         try:
-            # Convert dates once using pandas and format as YYYY-MM-DD
+            # Convert dates
             df['date'] = pd.to_datetime(df['date']).dt.strftime('%Y-%m-%d')
             
-            # Configure column for sorting
-            date_column = {
-                'name': 'Date',
-                'id': 'date',  # Show the formatted date
-                'sortable': True,
-                'sort_by': 'date'  # Sort by ISO format
-            }
+            # Handle property display consistently
+            df['property_display'] = df['property_id'].apply(lambda x: format_address(x, 'display'))
 
             # Format currency
-            df['amount_for_sort'] = df['amount'].astype(float)  # Keep original number for sorting
+            df['amount_for_sort'] = df['amount'].astype(float)
             df['amount'] = df['amount_for_sort'].apply(lambda x: f"${abs(float(x)):,.2f}")
 
             # Handle property display and sorting
