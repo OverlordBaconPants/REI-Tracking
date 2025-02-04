@@ -983,16 +983,34 @@ const editTransactionsModule = {
     },
 
     handleCancel: function() {
-        // Get the current filters from the page
-        const filters = document.querySelector('form').dataset.filters || '{}';
-
+        // Get raw filters value
+        let filters = document.querySelector('form').dataset.filters || '{}';
+        
+        // Ensure we're working with a clean, decoded value
+        try {
+            // First decode any existing encoding
+            while (filters.includes('%')) {
+                filters = decodeURIComponent(filters);
+            }
+            
+            // Remove any extra quotes
+            filters = filters.replace(/^["']+|["']+$/g, '');
+            
+            // Verify it's valid JSON, if not, use empty object
+            JSON.parse(filters);
+        } catch (e) {
+            console.warn('Invalid filters format, using default', e);
+            filters = '{}';
+        }
+    
         // Show cancellation notification
         toastr.info('Transaction Edit Canceled. Refreshing Transactions...', '', {
             timeOut: 1200,
             onHidden: () => {
-                // Add a timestamp to force cache refresh and trigger Dash update
+                // Add timestamp and encode filters once
                 const timestamp = new Date().getTime();
-                window.location.href = `/transactions/view/?filters=${encodeURIComponent(filters)}&refresh=${timestamp}`;
+                const encodedFilters = encodeURIComponent(filters);
+                window.location.href = `/transactions/view/?filters=${encodedFilters}&refresh=${timestamp}`;
             }
         });
     }

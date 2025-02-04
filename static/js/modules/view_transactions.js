@@ -331,6 +331,11 @@ const viewTransactionsModule = {
         return await response.json();
     },
 
+    createTransactionUrl: function(filters) {
+        const encodedFilters = encodeURIComponent(filters);
+        return `/transactions/view/?filters=${encodedFilters}`;
+    },
+
     showNotification: function(message, type = 'info', timeout = 3000) {
         // Update position based on screen size
         toastr.options.positionClass = window.innerWidth < 768 ? 
@@ -345,13 +350,19 @@ const viewTransactionsModule = {
         }
     },
 
-    restoreFilters: function(filterState) {
-        console.log('Restoring filters:', filterState);
-        const filterStore = document.getElementById('filter-options');
-        if (filterStore) {
-            filterStore.value = JSON.stringify(filterState);
-            filterStore.dispatchEvent(new Event('change'));
+    restoreFilters: function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        let filters = urlParams.get('filters') || '{}';
+        try {
+            // Decode if needed
+            filters = decodeURIComponent(filters);
+            // Verify it's valid JSON
+            JSON.parse(filters);
+        } catch (e) {
+            console.warn('Invalid filters format, using default');
+            filters = '{}';
         }
+        return filters;
     },
 
     forceDataRefresh: function() {

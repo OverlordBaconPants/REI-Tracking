@@ -312,6 +312,17 @@ def edit_transactions(transaction_id):
         # Get filter state from URL
         filters = request.args.get('filters', '{}')
         current_app.logger.debug(f"Filters received: {filters}")
+
+        try:
+            # Attempt to decode if it's encoded
+            from urllib.parse import unquote
+            decoded_filters = unquote(filters)
+            # Verify it's valid JSON
+            json.loads(decoded_filters)
+            filters = decoded_filters
+        except (json.JSONDecodeError, ValueError):
+            # If decoding fails, use default empty filters
+            filters = '{}'
         
         # Get transaction
         transaction = get_transaction_by_id(transaction_id)

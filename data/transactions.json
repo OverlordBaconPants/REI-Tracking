@@ -2669,6 +2669,7 @@
     "id": "166"
   },
   {
+    "id": "167",
     "property_id": "454 Guilford Avenue, Hagerstown, MD 21740, United States of America, Hagerstown, Maryland, 21740",
     "type": "income",
     "category": "Insurance Refund",
@@ -2676,15 +2677,14 @@
     "amount": 1341.0,
     "date": "2025-01-16",
     "collector_payer": "BJ Marshall",
-    "notes": "",
     "documentation_file": "trans_167_2025.01.16_Guilford_Insurance_Reimb_from_Tom.png",
+    "notes": "",
     "reimbursement": {
       "date_shared": "2025-01-16",
       "share_description": "PNC eCheck",
-      "reimbursement_status": "pending",
+      "reimbursement_status": "completed",
       "documentation": "reimb_167_reimb_2025.01.16_Guilford_Insurance_Reimb_from_Tom_to_Brian.png"
-    },
-    "id": "167"
+    }
   },
   {
     "property_id": "1714 Miller Street, Harrisburg, PA 17103, United States of America",
