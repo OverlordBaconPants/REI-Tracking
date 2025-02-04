@@ -317,40 +317,37 @@ def edit_transactions(transaction_id):
             flash_message('Transaction not found', 'error')
             return redirect(url_for('transactions.view_transactions'))
             
-        # Add debug logging
-        current_app.logger.debug(f"Transaction data: {json.dumps(transaction, indent=2)}")
-        current_app.logger.debug(f"Reimbursement data: {json.dumps(transaction.get('reimbursement', {}), indent=2)}")
-        
         properties = get_properties_for_user(current_user.id, current_user.name, current_user.role == 'Admin')
         
         if request.method == 'POST':
             try:
                 current_app.logger.info(f"Processing POST request to edit transaction ID: {transaction_id}")
                 
-                # Get the raw form data
-                raw_form_data = request.form.to_dict()
+                # Get and parse form data
+                form_data = request.form.to_dict()
                 
-                # Parse form data to handle nested structure
-                form_data = {}
-                for key, value in raw_form_data.items():
-                    if '[' in key and ']' in key:
-                        # Handle nested keys like 'reimbursement[date_shared]'
-                        parent_key = key.split('[')[0]
-                        child_key = key.split('[')[1].split(']')[0]
-                        if parent_key not in form_data:
-                            form_data[parent_key] = {}
-                        form_data[parent_key][child_key] = value
-                    else:
-                        form_data[key] = value
+                # Extract reimbursement data
+                reimbursement_data = {
+                    'date_shared': form_data.get('date_shared', ''),
+                    'share_description': form_data.get('share_description', ''),
+                    'reimbursement_status': form_data.get('reimbursement_status', 'pending'),
+                    'documentation': transaction.get('reimbursement', {}).get('documentation')
+                }
 
-                current_app.logger.debug(f"Parsed form data: {json.dumps(form_data, indent=2)}")
+                # Handle reimbursement document removal
+                remove_reimbursement_doc = form_data.get('remove_reimbursement_documentation') == 'true'
+                if remove_reimbursement_doc:
+                    reimbursement_data['documentation'] = None
 
-                # Sanitize and get notes
-                sanitized_notes = sanitize_notes(form_data.get('notes', ''))
-
-                # Get reimbursement data from parsed form
-                reimbursement_data = form_data.get('reimbursement', {})
-                reimbursement_data['documentation'] = transaction.get('reimbursement', {}).get('documentation')
+                # Handle new reimbursement documentation upload
+                if 'reimbursement_documentation' in request.files:
+                    file = request.files['reimbursement_documentation']
+                    if file and file.filename:
+                        if allowed_file(file.filename):
+                            filename = generate_documentation_filename(transaction_id, file.filename)
+                            file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                            file.save(file_path)
+                            reimbursement_data['documentation'] = filename
 
                 # Create updated transaction dict
                 updated_transaction = {
@@ -362,23 +359,16 @@ def edit_transactions(transaction_id):
                     'amount': float(form_data.get('amount')),
                     'date': form_data.get('date'),
                     'collector_payer': form_data.get('collector_payer'),
-                    'notes': sanitized_notes,
+                    'notes': sanitize_notes(form_data.get('notes', '')),
                     'documentation_file': transaction.get('documentation_file'),
                     'reimbursement': reimbursement_data
                 }
 
-                current_app.logger.debug(f"Updated transaction data: {json.dumps(updated_transaction, indent=2)}")
-
-                # Handle document removals
-                remove_transaction_doc = form_data.get('remove_transaction_documentation') == 'true'
-                remove_reimbursement_doc = form_data.get('remove_reimbursement_documentation') == 'true'
-
-                if remove_transaction_doc:
+                # Handle transaction document removal
+                if form_data.get('remove_transaction_documentation') == 'true':
                     updated_transaction['documentation_file'] = None
-                if remove_reimbursement_doc:
-                    updated_transaction['reimbursement']['documentation'] = None
 
-                # Handle file uploads
+                # Handle new transaction documentation upload
                 if 'documentation_file' in request.files:
                     file = request.files['documentation_file']
                     if file and file.filename:
@@ -387,20 +377,9 @@ def edit_transactions(transaction_id):
                             file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
                             file.save(file_path)
                             updated_transaction['documentation_file'] = filename
-                            current_app.logger.debug(f"Saved documentation file: {filename}")
 
-                if 'reimbursement_documentation' in request.files:
-                    file = request.files['reimbursement_documentation']
-                    if file and file.filename:
-                        if allowed_file(file.filename):
-                            filename = generate_documentation_filename(transaction_id, file.filename)
-                            file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
-                            file.save(file_path)
-                            updated_transaction['reimbursement']['documentation'] = filename
-                            current_app.logger.debug(f"Saved reimbursement documentation: {filename}")
-
-                # Log final state before update
-                current_app.logger.info(f"Final transaction data being sent to update_transaction: {json.dumps(updated_transaction, indent=2)}")
+                # Log the data being sent to update
+                current_app.logger.debug(f"Sending to update_transaction: {json.dumps(updated_transaction, indent=2)}")
 
                 # Update the transaction
                 update_transaction(updated_transaction)
