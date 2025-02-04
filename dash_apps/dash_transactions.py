@@ -693,15 +693,18 @@ def create_transactions_dash(flask_app):
         [Input('refresh-trigger', 'data'),
         Input('property-filter', 'value'),
         Input('type-filter', 'value'),
+        Input('reimbursement-filter', 'value'),
         Input('date-range', 'start_date'),
         Input('date-range', 'end_date'),
-        Input('description-search', 'value')],
-        [State('reimbursement-filter', 'value')]
+        Input('description-search', 'value')]
     )
     def update_table(refresh_trigger, property_id, transaction_type, 
-                    start_date, end_date, description_search, reimbursement_status):
+                    reimbursement_status, start_date, end_date, description_search):
         try:
             logger.debug("=== Starting update_table function ===")
+            logger.debug(f"Filters: property={property_id}, type={transaction_type}, "
+                        f"reimbursement={reimbursement_status}, start={start_date}, "
+                        f"end={end_date}, search={description_search}")
             
             # Get properties
             properties = get_properties_for_user(
@@ -714,63 +717,84 @@ def create_transactions_dash(flask_app):
             property_options = [{'label': 'All Properties', 'value': 'all'}]
             for prop in properties:
                 if prop.get('address'):
-                    # Get the base address for both display and value
                     base_address = format_address(prop['address'], 'base')
                     property_options.append({
-                        'label': base_address,  # Show simplified address in dropdown
-                        'value': prop['address']  # Keep full address as value
+                        'label': base_address,
+                        'value': prop['address']
                     })
             logger.debug(f"Created {len(property_options)} property options")
 
-            # Get transactions
-            # Get transactions
+            # Get transactions with filters
             effective_property_id = None if not property_id or property_id == 'all' else property_id
             transactions = get_transactions_for_view(
                 current_user.id,
                 current_user.name,
                 effective_property_id,
-                reimbursement_status,
+                reimbursement_status if reimbursement_status != 'all' else None,
                 start_date,
                 end_date,
                 current_user.role == 'Admin'
             )
-
             logger.debug(f"Retrieved {len(transactions) if transactions else 0} transactions")
 
-            # Process transactions
+            # Create DataFrame
             df = pd.DataFrame(transactions if transactions else [])
-            logger.debug(f"Created DataFrame with {len(df)} rows")
-            
             if df.empty:
-                logger.debug("DataFrame is empty, returning early")
-                return [], "No transactions found", property_options, [], "", False
+                header = "No transactions found"
+                if description_search:
+                    header += f" matching '{description_search}'"
+                return [], header, property_options, [], "", False
 
-            # Format property addresses in transactions
-            if 'property_id' in df.columns:
-                df['property_id'] = df['property_id'].apply(lambda x: format_address(x, 'display'))
-
-            # Apply filters
-            if transaction_type and transaction_type != 'all':  # Only filter if a specific type is selected
-                logger.debug(f"Filtering by transaction type: {transaction_type}")
+            # Apply transaction type filter
+            if transaction_type and transaction_type != 'all':
                 df = df[df['type'].str.lower() == transaction_type.lower()]
                 logger.debug(f"After type filter: {len(df)} rows")
-                
+
+            # Apply description search
             if description_search:
-                logger.debug(f"Filtering by description: {description_search}")
                 df = df[df['description'].str.lower().str.contains(description_search.lower(), na=False)]
                 logger.debug(f"After description filter: {len(df)} rows")
 
             # Format data for display
             df = format_transactions_for_mobile(df, properties, property_id, current_user)
             logger.debug(f"After mobile formatting: {len(df)} rows")
-            logger.debug(f"DataFrame columns: {df.columns.tolist()}")
 
             # Create columns
             columns = create_mobile_columns(property_id, df)
             logger.debug(f"Created {len(columns)} columns")
 
-            # Create header
-            header = create_mobile_header(transaction_type, property_id, start_date, end_date, description_search)
+            # Create header with filter information
+            header_parts = []
+            
+            # Add transaction type to header
+            if transaction_type and transaction_type != 'all':
+                header_parts.append(transaction_type.capitalize())
+            
+            # Add "Transactions" to header
+            header_parts.append("Transactions")
+            
+            # Add property information
+            if property_id and property_id != 'all':
+                property_display = format_address(property_id, 'base')
+                header_parts.append(f"for {property_display}")
+            
+            # Add reimbursement status
+            if reimbursement_status and reimbursement_status != 'all':
+                header_parts.append(f"({reimbursement_status})")
+            
+            # Add date range
+            if start_date and end_date:
+                header_parts.append(f"from {start_date} to {end_date}")
+            elif start_date:
+                header_parts.append(f"from {start_date}")
+            elif end_date:
+                header_parts.append(f"until {end_date}")
+            
+            # Add search term
+            if description_search:
+                header_parts.append(f"matching '{description_search}'")
+
+            header = " ".join(header_parts)
             logger.debug(f"Created header: {header}")
 
             # Prepare final data

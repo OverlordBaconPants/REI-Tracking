@@ -1,0 +1,55 @@
+{
+  "bjmar867@gmail.com": {
+    "first_name": "BJ",
+    "last_name": "Marshall",
+    "name": "BJ Marshall",
+    "email": "bjmar867@gmail.com",
+    "phone": "+14435465716",
+    "password": "pbkdf2:sha256:600000$RW1h6Oalhp4zutww$bfea68cc108126cb1673d76bd8b86c3551d3d8533e1b66412218ce6b1b79d2af",
+    "role": "Admin"
+  },
+  "brian@bnbventures.biz": {
+    "first_name": "Brian",
+    "last_name": "Poole",
+    "name": "Brian Poole",
+    "email": "brian@bnbventures.biz",
+    "phone": "+12403971744",
+    "password": "pbkdf2:sha256:600000$mPkKaltRPaeghe6a$66177d505b2a525f5699b5e60312c4bf83bbf7960e9c42bb837b37311a03523f",
+    "role": "User"
+  },
+  "bj@bnbventures.biz": {
+    "name": "Tester McTestyFace",
+    "email": "bj@bnbventures.biz",
+    "password": "pbkdf2:sha256:600000$5Ja2M8Jb7qUIBEKo$d31f5e600bd31f2feeca5c4941517b222e149fc5113cda07bf8249756a7b8490",
+    "phone": "",
+    "role": "User"
+  },
+  "321badtime@gmail.com": {
+    "name": "Caroline Marshall",
+    "email": "321badtime@gmail.com",
+    "password": "pbkdf2:sha256:600000$zrhft5b9XcZy7ttQ$05c22e3af76456a78877f4840c386216cbc3169602af215eed21012c2b46fa80",
+    "phone": "4431234567",
+    "role": "User"
+  },
+  "josemontanorealtor@gmail.com": {
+    "name": "Jose Montano",
+    "email": "josemontanorealtor@gmail.com",
+    "password": "pbkdf2:sha256:600000$b1pcEafqSxZ9lBtY$987c712bee1b4d8b905e21453ee110f408e00df54ca6fc360d02b5b36a739bdf",
+    "phone": "7178297674",
+    "role": "User"
+  },
+  "ben@ihosolutions.com": {
+    "name": "Benjamin Meyer",
+    "email": "ben@ihosolutions.com",
+    "password": "pbkdf2:sha256:600000$TCzTkw6JYvRnjc4D$dd4c26a7d6f6568d3b793111ee7cc628dbca8a6e26b55fa35e3363619f412bdd",
+    "phone": "",
+    "role": "User"
+  },
+  "craigkinkade@yahoo.com": {
+    "name": "Craig Kinkade",
+    "email": "craigkinkade@yahoo.com",
+    "password": "pbkdf2:sha256:600000$rvzvf3rIOmX312FE$4b291907afd7d61bb7b14910c0b2b231ea3dcdf0f26efa97e595e7ba90f87b60",
+    "phone": "7163598743",
+    "role": "User"
+  }
+}

@@ -12,12 +12,19 @@ const editTransactionsModule = {
         this.form = document.getElementById('edit-transaction-form');
         this.reimbursementSection = document.getElementById('reimbursement-section');
         
-        // Load transaction data from form
+        // Load transaction data from form with better error handling
         try {
-            this.transaction = this.form ? JSON.parse(this.form.dataset.transaction || 'null') : null;
-            console.log('Loaded transaction data:', this.transaction);
+            const transactionData = this.form ? this.form.dataset.transaction : null;
+            if (transactionData) {
+                this.transaction = JSON.parse(transactionData);
+                console.log('Loaded transaction data:', this.transaction);
+            } else {
+                console.error('No transaction data found in form dataset');
+                this.transaction = null;
+            }
         } catch (error) {
             console.error('Error parsing transaction data:', error);
+            console.error('Raw transaction data:', this.form ? this.form.dataset.transaction : 'No form found');
             this.transaction = null;
         }
         
@@ -35,15 +42,21 @@ const editTransactionsModule = {
             await this.initializeModule();
             
             // Set up reimbursement section if property has multiple owners
-            if (this.transaction) {
+            if (this.transaction && this.transaction.property_id) {
                 const propertySelect = document.getElementById('property_id');
-                const selectedOption = propertySelect.options[propertySelect.selectedIndex];
-                if (selectedOption) {
-                    try {
-                        const propertyData = JSON.parse(selectedOption.dataset.property);
-                        this.toggleReimbursementSection(propertyData);
-                    } catch (error) {
-                        console.error('Error handling property data:', error);
+                if (propertySelect) {
+                    // Set the initial property value
+                    propertySelect.value = this.transaction.property_id;
+                    
+                    const selectedOption = propertySelect.options[propertySelect.selectedIndex];
+                    if (selectedOption) {
+                        try {
+                            const propertyData = JSON.parse(selectedOption.dataset.property);
+                            await this.updateCollectorPayerOptions();
+                            this.toggleReimbursementSection(propertyData);
+                        } catch (error) {
+                            console.error('Error handling property data:', error);
+                        }
                     }
                 }
             }
@@ -97,63 +110,108 @@ const editTransactionsModule = {
             property: document.getElementById('property_id'),
             category: document.getElementById('category'),
             collectorPayer: document.getElementById('collector_payer'),
-            type: document.querySelector('input[name="type"]:checked'),
+            type: document.querySelector(`input[name="type"][value="${this.transaction?.type || 'expense'}"]`),
             collectorPayerLabel: document.querySelector('label[for="collector_payer"]'),
             typeRadios: document.querySelectorAll('input[name="type"]'),
             removeButtons: document.querySelectorAll('.document-remove-btn'),
             confirmDocumentRemoval: document.getElementById('confirmDocumentRemoval')
         };
     
-        console.log('Found remove buttons:', this.elements.removeButtons);
-    
-        // Add click handlers for remove buttons
-        this.elements.removeButtons.forEach(button => {
-            console.log('Adding click handler to button:', button);
-            button.addEventListener('click', (e) => {
-                e.preventDefault();
-                const documentType = button.dataset.documentType;
-                console.log('Remove button clicked for:', documentType);
-                this.handleDocumentRemoval(documentType);
-            });
-        });
-
-        console.log('Initial elements:', this.elements);
-
-        // Store initial values
+        // Store initial values from transaction data
         this.initialValues = {
-            propertyValue: this.elements.property?.value || '',
-            categoryValue: this.elements.category?.value || '',
-            categoryDataset: this.elements.category?.dataset?.initialValue || '',
-            collectorPayerValue: this.elements.collectorPayer?.value || '',
-            collectorPayerDataset: this.elements.collectorPayer?.dataset?.initialValue || '',
-            typeValue: this.elements.type?.value || ''
+            propertyValue: this.transaction?.property_id || '',
+            categoryValue: this.transaction?.category || '',
+            categoryDataset: this.transaction?.category || '',
+            collectorPayerValue: this.transaction?.collector_payer || '',
+            collectorPayerDataset: this.transaction?.collector_payer || '',
+            typeValue: this.transaction?.type || 'expense'
         };
-
+    
+        console.log('Initial elements:', this.elements);
         console.log('Initial values:', this.initialValues);
-
-        // Add type change event listeners
-        this.elements.typeRadios.forEach(radio => {
-            radio.addEventListener('change', async (event) => {
-                const selectedType = event.target.value;
-                console.log('Type changed to:', selectedType);
-                await this.populateCategories(selectedType);
-                this.updateCollectorPayerLabel(selectedType);
-                this.updateReimbursementDetails();
+    
+        // Set initial type
+        if (this.elements.type) {
+            this.elements.type.checked = true;
+        }
+    
+        // Populate initial categories
+        await this.populateCategories(this.initialValues.typeValue);
+        this.updateCollectorPayerLabel(this.initialValues.typeValue);
+    
+        if (this.elements.property && this.initialValues.propertyValue) {
+            console.log('Attempting to set initial property value:', this.initialValues.propertyValue);
+            
+            // Get the street address portion of the initial value
+            const targetStreetAddress = this.getStreetAddress(this.initialValues.propertyValue);
+            console.log('Looking for street address:', targetStreetAddress);
+            
+            // Find matching option based on street address
+            const matchingOption = Array.from(this.elements.property.options)
+                .find(option => {
+                    const optionStreetAddress = this.getStreetAddress(option.value);
+                    const matches = optionStreetAddress === targetStreetAddress;
+                    console.log('Comparing:', {
+                        target: targetStreetAddress,
+                        option: optionStreetAddress,
+                        matches: matches,
+                        fullValue: option.value
+                    });
+                    return matches;
+                });
+                
+            if (matchingOption) {
+                console.log('Found matching property. Setting select value to:', matchingOption.value);
+                
+                // Set the value and verify it was set
+                this.elements.property.value = matchingOption.value;
+                console.log('Select value after setting:', this.elements.property.value);
+                
+                // Double-check selected option
+                const selectedOption = this.elements.property.options[this.elements.property.selectedIndex];
+                console.log('Selected option after setting:', {
+                    text: selectedOption.text,
+                    value: selectedOption.value
+                });
+                
+                // Get property data and set up reimbursement section
+                try {
+                    const propertyData = JSON.parse(matchingOption.dataset.property);
+                    console.log('Property data loaded:', propertyData);
+                    
+                    // Force a selection event to ensure everything updates
+                    this.elements.property.dispatchEvent(new Event('change'));
+                    
+                    await this.updateCollectorPayerOptions();
+                    this.toggleReimbursementSection(propertyData);
+                } catch (error) {
+                    console.error('Error handling property data:', error);
+                }
+            } else {
+                console.warn('No matching property option found for:', targetStreetAddress);
+                console.log('Available options:', Array.from(this.elements.property.options)
+                    .map(opt => ({
+                        value: opt.value, 
+                        text: opt.text,
+                        streetAddress: this.getStreetAddress(opt.value)
+                    })));
+            }
+        } else {
+            console.warn('Property element or value missing:', {
+                element: !!this.elements.property,
+                value: this.initialValues.propertyValue
             });
-        });
-
-        // Populate initial data
-        const initialType = this.initialValues.typeValue || 'expense';
-        await this.populateCategories(initialType);
-        this.updateCollectorPayerLabel(initialType);
-        await this.updateCollectorPayerOptions();
+        }
         
-        // Set initial collector/payer value if it exists
-        if (this.initialValues.collectorPayerDataset) {
+        // Set initial collector/payer value after options are populated
+        if (this.initialValues.collectorPayerDataset && this.elements.collectorPayer) {
             this.elements.collectorPayer.value = this.initialValues.collectorPayerDataset;
         }
         
+        // Update reimbursement details
         this.updateReimbursementDetails();
+    
+        // Initialize event listeners
         this.initEventListeners();
     },
 
@@ -234,6 +292,16 @@ const editTransactionsModule = {
                 this.handleCancel();
             });
         }
+    },
+
+    getStreetAddress: function(fullAddress) {
+        // Extract just the house number and street name
+        if (!fullAddress) return '';
+        
+        // Split on first comma and trim
+        const streetPart = fullAddress.split(',')[0].trim();
+        console.log('Extracted street address:', streetPart);
+        return streetPart;
     },
 
     populateCategories: async function(type) {

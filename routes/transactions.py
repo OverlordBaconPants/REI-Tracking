@@ -311,20 +311,36 @@ def edit_transactions(transaction_id):
     try:
         # Get filter state from URL
         filters = request.args.get('filters', '{}')
+        current_app.logger.debug(f"Filters received: {filters}")
         
+        # Get transaction
         transaction = get_transaction_by_id(transaction_id)
         if not transaction:
+            current_app.logger.error(f"Transaction {transaction_id} not found")
             flash_message('Transaction not found', 'error')
             return redirect(url_for('transactions.view_transactions'))
             
+        # Log the transaction data
+        current_app.logger.debug(f"Transaction data: {json.dumps(transaction, indent=2)}")
+        current_app.logger.debug(f"Transaction property_id: {transaction.get('property_id')}")
+        
+        # Get properties
         properties = get_properties_for_user(current_user.id, current_user.name, current_user.role == 'Admin')
         
+        # Debug log all property addresses
+        for prop in properties:
+            current_app.logger.debug(f"Property address: {prop.get('address')}")
+            if prop.get('address') == transaction.get('property_id'):
+                current_app.logger.debug("Found matching property!")
+                current_app.logger.debug(f"Property details: {json.dumps(prop, indent=2)}")
+
         if request.method == 'POST':
             try:
                 current_app.logger.info(f"Processing POST request to edit transaction ID: {transaction_id}")
                 
                 # Get and parse form data
                 form_data = request.form.to_dict()
+                current_app.logger.debug(f"Received form data: {json.dumps(form_data, indent=2)}")
                 
                 # Extract reimbursement data
                 reimbursement_data = {
@@ -348,6 +364,7 @@ def edit_transactions(transaction_id):
                             file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
                             file.save(file_path)
                             reimbursement_data['documentation'] = filename
+                            current_app.logger.debug(f"Saved new reimbursement documentation: {filename}")
 
                 # Create updated transaction dict
                 updated_transaction = {
@@ -367,6 +384,7 @@ def edit_transactions(transaction_id):
                 # Handle transaction document removal
                 if form_data.get('remove_transaction_documentation') == 'true':
                     updated_transaction['documentation_file'] = None
+                    current_app.logger.debug("Removing transaction documentation")
 
                 # Handle new transaction documentation upload
                 if 'documentation_file' in request.files:
@@ -377,15 +395,18 @@ def edit_transactions(transaction_id):
                             file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
                             file.save(file_path)
                             updated_transaction['documentation_file'] = filename
+                            current_app.logger.debug(f"Saved new transaction documentation: {filename}")
 
                 # Log the data being sent to update
                 current_app.logger.debug(f"Sending to update_transaction: {json.dumps(updated_transaction, indent=2)}")
 
                 # Update the transaction
                 update_transaction(updated_transaction)
-
-                return redirect(url_for('transactions.view_transactions') + 
-                    f'?filters={filters}&message=Transaction updated successfully&message_type=success')
+                
+                # Redirect with success message
+                success_url = url_for('transactions.view_transactions') + \
+                    f'?filters={filters}&message=Transaction updated successfully&message_type=success'
+                return redirect(success_url)
 
             except Exception as e:
                 current_app.logger.error(f"Error updating transaction: {str(e)}")
@@ -395,7 +416,14 @@ def edit_transactions(transaction_id):
                     transaction_id=transaction_id, 
                     filters=filters))
 
-        # GET request: render the edit form
+        # For GET request: render template with debug info
+        template_data = {
+            'transaction': transaction,
+            'properties': properties,
+            'filters': filters
+        }
+        current_app.logger.debug(f"Data being passed to template: {json.dumps(template_data, indent=2)}")
+        
         return render_template(
             'transactions/edit_transactions.html',
             transaction=transaction,
@@ -405,7 +433,7 @@ def edit_transactions(transaction_id):
 
     except Exception as e:
         current_app.logger.error(f"Error in edit_transactions: {str(e)}")
-        current_app.logger.error(f"Traceback: {traceback.format_exc()}")
+        current_app.logger.error(traceback.format_exc())
         flash_message(f'Error: {str(e)}', 'error')
         return redirect(url_for('transactions.view_transactions'))
 

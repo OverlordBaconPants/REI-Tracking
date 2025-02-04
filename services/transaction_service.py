@@ -144,7 +144,7 @@ def get_partners_for_property(property_id):
 def get_transactions_for_view(user_id, user_name, property_id=None, reimbursement_status=None, 
                             start_date=None, end_date=None, is_admin=False):
     """Get filtered transactions with consistent address handling."""
-    current_app.logger.debug(f"get_transactions_for_view called with property_id: {property_id}")
+    current_app.logger.debug(f"get_transactions_for_view called with property_id: {property_id}, reimbursement_status: {reimbursement_status}")
     
     transactions = read_json(current_app.config['TRANSACTIONS_FILE'])
     properties = read_json(current_app.config['PROPERTIES_FILE'])
@@ -169,16 +169,43 @@ def get_transactions_for_view(user_id, user_name, property_id=None, reimbursemen
         ]
         current_app.logger.debug(f"After property filter: {len(transactions)} transactions")
     
-    # Apply remaining filters
+    # Handle reimbursement status filtering
     if reimbursement_status and reimbursement_status != 'all':
-        transactions = [
-            t for t in transactions 
-            if t.get('reimbursement', {}).get('reimbursement_status') == reimbursement_status
-        ]
+        filtered_transactions = []
+        for t in transactions:
+            # Get property data for the transaction
+            property_data = next(
+                (p for p in properties if p['address'] == t.get('property_id')), 
+                None
+            )
+            
+            # For wholly-owned properties, set status to 'completed'
+            if property_data and is_wholly_owned_property(property_data, user_name):
+                if reimbursement_status == 'completed':
+                    filtered_transactions.append(t)
+            else:
+                # For shared properties, check actual status
+                t_status = t.get('reimbursement', {}).get('reimbursement_status')
+                if t_status == reimbursement_status:
+                    filtered_transactions.append(t)
+        
+        transactions = filtered_transactions
+        current_app.logger.debug(f"After reimbursement status filter: {len(transactions)} transactions")
     
     # Apply date filters
     if start_date or end_date:
         transactions = filter_by_date_range(transactions, start_date, end_date)
+    
+    # Set reimbursement status for wholly-owned properties
+    for t in transactions:
+        property_data = next(
+            (p for p in properties if p['address'] == t.get('property_id')), 
+            None
+        )
+        if property_data and is_wholly_owned_property(property_data, user_name):
+            if 'reimbursement' not in t:
+                t['reimbursement'] = {}
+            t['reimbursement']['reimbursement_status'] = 'completed'
     
     # Flatten and return transactions
     return [flatten_transaction(t) for t in transactions]
@@ -396,6 +423,16 @@ def bulk_import_transactions(transactions):
         write_json(current_app.config['TRANSACTIONS_FILE'], existing_transactions)
     
     return imported_count
+
+def is_wholly_owned_property(property_data: dict, user_name: str) -> bool:
+    """Check if a property is wholly owned by a user."""
+    partners = property_data.get('partners', [])
+    if len(partners) == 1:
+        partner = partners[0]
+        is_user = partner.get('name', '').lower() == user_name.lower()
+        equity = float(partner.get('equity_share', 0))
+        return is_user and abs(equity - 100.0) < 0.01
+    return False
 
 def is_duplicate_transaction(new_transaction):
     transactions = read_json(current_app.config['TRANSACTIONS_FILE'])
