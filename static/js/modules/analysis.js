@@ -1,3 +1,332 @@
+// Add new template for Multi-Family analysis
+const getMultiFamilyHTML = () => `
+    <!-- Property Details Card -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Property Details</h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-12 col-md-4">
+                    <label for="square_footage" class="form-label">Total Square Footage</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control form-control-lg" id="square_footage" 
+                            name="square_footage" placeholder="Total building square footage">
+                        <span class="input-group-text">sq ft</span>
+                    </div>
+                </div>
+                <div class="col-12 col-md-4">
+                    <label for="lot_size" class="form-label">Lot Size</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control form-control-lg" id="lot_size" 
+                            name="lot_size" placeholder="Lot size">
+                        <span class="input-group-text">sq ft</span>
+                    </div>
+                </div>
+                <div class="col-12 col-md-4">
+                    <label for="year_built" class="form-label">Year Built</label>
+                    <input type="number" class="form-control form-control-lg" id="year_built" 
+                        name="year_built" placeholder="Construction year">
+                </div>
+                <div class="col-12 col-md-4">
+                    <label for="total_units" class="form-label">Total Units</label>
+                    <input type="number" class="form-control form-control-lg" id="total_units" 
+                        name="total_units" min="2" placeholder="Number of units" required>
+                </div>
+                <div class="col-12 col-md-4">
+                    <label for="occupied_units" class="form-label">Occupied Units</label>
+                    <input type="number" class="form-control form-control-lg" id="occupied_units" 
+                        name="occupied_units" min="0" placeholder="Currently occupied units" required>
+                </div>
+                <div class="col-12 col-md-4">
+                    <label for="floors" class="form-label">Number of Floors</label>
+                    <input type="number" class="form-control form-control-lg" id="floors" 
+                        name="floors" min="1" placeholder="Number of floors" required>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Unit Mix Card -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Unit Mix</h5>
+            <button type="button" class="btn btn-primary btn-sm" id="add-unit-type-btn">
+                <i class="bi bi-plus-circle me-2"></i>Add Unit Type
+            </button>
+        </div>
+        <div class="card-body">
+            <div id="unit-types-container">
+                <!-- Unit types will be added here dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Purchase Details Card -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Purchase Details</h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-12 col-md-6">
+                    <label for="purchase_price" class="form-label">Purchase Price</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control form-control-lg" id="purchase_price" 
+                               name="purchase_price" placeholder="Sales price" required>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label for="after_repair_value" class="form-label">After Repair Value</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control form-control-lg" id="after_repair_value" 
+                               name="after_repair_value" placeholder="Post-renovation value" required>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label for="renovation_costs" class="form-label">Renovation Costs</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control form-control-lg" id="renovation_costs" 
+                               name="renovation_costs" placeholder="Expected renovation costs" required>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label for="renovation_duration" class="form-label">Renovation Duration</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control form-control-lg" id="renovation_duration" 
+                               name="renovation_duration" placeholder="Duration" required>
+                        <span class="input-group-text">months</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Building Income Card -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Building Income</h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-12 col-md-6">
+                    <label for="other_income" class="form-label">Other Monthly Income</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control form-control-lg" id="other_income" 
+                               name="other_income" placeholder="Parking, laundry, etc." required>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label for="total_potential_income" class="form-label">Total Potential Income</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control form-control-lg" id="total_potential_income" 
+                               name="total_potential_income" readonly>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Financing Section -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Financing</h5>
+        </div>
+        <div class="card-body" id="financing-section">
+            <div id="loans-container">
+                <!-- Existing loans will be inserted here -->
+            </div>
+            <div class="mt-3">
+                <button type="button" class="btn btn-primary" id="add-loan-btn">
+                    <i class="bi bi-plus-circle me-2"></i>Add Loan
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Operating Expenses Card -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Operating Expenses</h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <!-- Standard Expenses -->
+                <div class="col-12 col-md-6">
+                    <label for="property_taxes" class="form-label">Monthly Property Taxes</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control form-control-lg" id="property_taxes" 
+                               name="property_taxes" placeholder="Monthly taxes" required>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label for="insurance" class="form-label">Monthly Insurance</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control form-control-lg" id="insurance" 
+                               name="insurance" placeholder="Monthly insurance" required>
+                    </div>
+                </div>
+                
+                <!-- Multi-Family Specific Expenses -->
+                <div class="col-12 col-md-6">
+                    <label for="common_area_maintenance" class="form-label">Common Area Maintenance</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control form-control-lg" id="common_area_maintenance" 
+                               name="common_area_maintenance" placeholder="Monthly CAM costs" required>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label for="elevator_maintenance" class="form-label">Elevator Maintenance</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control form-control-lg" id="elevator_maintenance" 
+                               name="elevator_maintenance" placeholder="Monthly maintenance">
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label for="staff_payroll" class="form-label">Staff Payroll</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control form-control-lg" id="staff_payroll" 
+                               name="staff_payroll" placeholder="Monthly payroll costs" required>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label for="trash_removal" class="form-label">Trash Removal</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control form-control-lg" id="trash_removal" 
+                               name="trash_removal" placeholder="Monthly cost" required>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label for="common_utilities" class="form-label">Common Utilities</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control form-control-lg" id="common_utilities" 
+                               name="common_utilities" placeholder="Monthly utilities" required>
+                    </div>
+                </div>
+
+                <!-- Percentage-based expenses -->
+                <div class="col-12 col-md-6">
+                    <label for="management_fee_percentage" class="form-label">Management Fee</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control form-control-lg" id="management_fee_percentage" 
+                               name="management_fee_percentage" value="4" min="0" max="100" step="0.5" required>
+                        <span class="input-group-text">%</span>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label for="capex_percentage" class="form-label">CapEx</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control form-control-lg" id="capex_percentage" 
+                               name="capex_percentage" value="5" min="0" max="100" step="1" required>
+                        <span class="input-group-text">%</span>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label for="repairs_percentage" class="form-label">Repairs</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control form-control-lg" id="repairs_percentage" 
+                               name="repairs_percentage" value="3" min="0" max="100" step="1" required>
+                        <span class="input-group-text">%</span>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label for="vacancy_percentage" class="form-label">Vacancy Rate</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control form-control-lg" id="vacancy_percentage" 
+                               name="vacancy_percentage" value="7" min="0" max="100" step="1" required>
+                        <span class="input-group-text">%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notes Card -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Notes</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-12">
+                    <textarea class="form-control" id="notes" name="notes" rows="4" 
+                            maxlength="1000" placeholder="Enter any notes about this analysis (max 1,000 characters)"></textarea>
+                    <div class="form-text text-end mt-2">
+                        <span id="notes-counter">0</span>/1000 characters
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+`;
+
+// Template for adding unit types dynamically
+const getUnitTypeHTML = (index) => `
+    <div class="unit-type-section mb-4" data-unit-index="${index}">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Unit Type ${index + 1}</h6>
+                <button type="button" class="btn btn-danger btn-sm remove-unit-type-btn">
+                    <i class="bi bi-trash me-2"></i>Remove
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-12 col-md-6">
+                        <label class="form-label">Unit Type</label>
+                        <select class="form-select form-select-lg" name="unit_types[${index}][type]" required>
+                            <option value="studio">Studio</option>
+                            <option value="1br">1 Bedroom</option>
+                            <option value="2br">2 Bedrooms</option>
+                            <option value="3br">3 Bedrooms</option>
+                            <option value="4br">4 Bedrooms</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label">Number of Units</label>
+                        <input type="number" class="form-control form-control-lg unit-count" 
+                               name="unit_types[${index}][count]" min="1" required>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label">Square Footage per Unit</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control form-control-lg" 
+                                   name="unit_types[${index}][square_footage]" required>
+                            <span class="input-group-text">sq ft</span>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label">Monthly Rent per Unit</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" class="form-control form-control-lg unit-rent" 
+                                   name="unit_types[${index}][rent]" required>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label">Number of Occupied Units</label>
+                        <input type="number" class="form-control form-control-lg unit-occupied" 
+                               name="unit_types[${index}][occupied]" min="0" required>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+`;
+
 // PadSplit-specific expenses template
 const padSplitExpensesHTML = `
     <div class="card mb-4">
@@ -1008,6 +1337,180 @@ window.analysisModule = {
         }
     `,
 
+    // KPI Metrics Configuration
+    KPI_CONFIGS: {
+        'Multi-Family': {
+            'noi': {
+                'label': 'Net Operating Income (per unit)',
+                'min': 0,
+                'max': 2000,
+                'threshold': 800,
+                'direction': 'min',
+                'format': 'money',
+                'info': 'Monthly NOI should be at least $800 per unit. Higher is better.'
+            },
+            'operatingExpenseRatio': {
+                'label': 'Operating Expense Ratio',
+                'min': 0,
+                'max': 100,
+                'threshold': 40,
+                'direction': 'max',
+                'format': 'percentage',
+                'info': 'Operating expenses should be at most 40% of income. Lower is better.'
+            },
+            'capRate': {
+                'label': 'Cap Rate',
+                'min': 3,
+                'max': 12,
+                'goodMin': 5,
+                'goodMax': 10,
+                'format': 'percentage',
+                'info': '5-10% indicates good value for multi-family.'
+            },
+            'dscr': {
+                'label': 'Debt Service Coverage Ratio',
+                'min': 0,
+                'max': 3,
+                'threshold': 1.25,
+                'direction': 'min',
+                'format': 'ratio',
+                'info': 'DSCR should be at least 1.25. Higher is better.'
+            },
+            'cashOnCash': {
+                'label': 'Cash-on-Cash Return',
+                'min': 0,
+                'max': 30,
+                'threshold': 10,
+                'direction': 'min',
+                'format': 'percentage',
+                'info': 'Cash-on-Cash return should be at least 10%. Higher is better.'
+            }
+        },
+        'LTR': {
+            'noi': {
+                'label': 'Net Operating Income (monthly)',
+                'min': 0,
+                'max': 2000,
+                'threshold': 800,
+                'direction': 'min',
+                'format': 'money',
+                'info': 'Monthly NOI should be at least $800. Higher is better.'
+            },
+            'operatingExpenseRatio': {
+                'label': 'Operating Expense Ratio',
+                'min': 0,
+                'max': 100,
+                'threshold': 40,
+                'direction': 'max',
+                'format': 'percentage',
+                'info': 'Operating expenses should be at most 40% of income. Lower is better.'
+            },
+            'capRate': {
+                'label': 'Cap Rate',
+                'min': 4,
+                'max': 14,
+                'goodMin': 6,
+                'goodMax': 12,
+                'format': 'percentage',
+                'info': '6-12% indicates good value for long-term rentals.'
+            },
+            'dscr': {
+                'label': 'Debt Service Coverage Ratio',
+                'min': 0,
+                'max': 3,
+                'threshold': 1.25,
+                'direction': 'min',
+                'format': 'ratio',
+                'info': 'DSCR should be at least 1.25. Higher is better.'
+            },
+            'cashOnCash': {
+                'label': 'Cash-on-Cash Return',
+                'min': 0,
+                'max': 30,
+                'threshold': 10,
+                'direction': 'min',
+                'format': 'percentage',
+                'info': 'Cash-on-Cash return should be at least 10%. Higher is better.'
+            }
+        },
+        'BRRRR': {
+            'noi': {
+                'label': 'Net Operating Income (monthly)',
+                'min': 0,
+                'max': 2000,
+                'threshold': 800,
+                'direction': 'min',
+                'format': 'money',
+                'info': 'Monthly NOI should be at least $800. Higher is better.'
+            },
+            'operatingExpenseRatio': {
+                'label': 'Operating Expense Ratio',
+                'min': 0,
+                'max': 100,
+                'threshold': 40,
+                'direction': 'max',
+                'format': 'percentage',
+                'info': 'Operating expenses should be at most 40% of income. Lower is better.'
+            },
+            'capRate': {
+                'label': 'Cap Rate',
+                'min': 5,
+                'max': 15,
+                'goodMin': 7,
+                'goodMax': 12,
+                'format': 'percentage',
+                'info': '7-12% indicates good value for BRRRR strategy.'
+            },
+            'dscr': {
+                'label': 'Debt Service Coverage Ratio',
+                'min': 0,
+                'max': 3,
+                'threshold': 1.25,
+                'direction': 'min',
+                'format': 'ratio',
+                'info': 'DSCR should be at least 1.25. Higher is better.'
+            },
+            'cashOnCash': {
+                'label': 'Cash-on-Cash Return',
+                'min': 0,
+                'max': 30,
+                'threshold': 10,
+                'direction': 'min',
+                'format': 'percentage',
+                'info': 'Cash-on-Cash return should be at least 10%. Higher is better.'
+            }
+        },
+        'Lease Option': {
+            'noi': {
+                'label': 'Net Operating Income (monthly)',
+                'min': 0,
+                'max': 2000,
+                'threshold': 800,
+                'direction': 'min',
+                'format': 'money',
+                'info': 'Monthly NOI should be at least $800. Higher is better.'
+            },
+            'operatingExpenseRatio': {
+                'label': 'Operating Expense Ratio',
+                'min': 0,
+                'max': 100,
+                'threshold': 40,
+                'direction': 'max',
+                'format': 'percentage',
+                'info': 'Operating expenses should be at most 40% of income. Lower is better.'
+            },
+            'cashOnCash': {
+                'label': 'Cash-on-Cash Return',
+                'min': 0,
+                'max': 30,
+                'threshold': 10,
+                'direction': 'min',
+                'format': 'percentage',
+                'info': 'Cash-on-Cash return should be at least 10%. Higher is better.'
+            }
+        }
+    },
+
     // Make sure init is directly on the module object
     async init() {
         console.log('Analysis module initializing');
@@ -1091,115 +1594,164 @@ window.analysisModule = {
             financialTab: !!financialTab 
         });
         
-        if (analysisType && financialTab) {
-            // Remove any existing event listeners by cloning
-            const newAnalysisType = analysisType.cloneNode(true);
-            analysisType.parentNode.replaceChild(newAnalysisType, analysisType);
-            
-            // Get the analysis ID from URL if it exists
-            const urlParams = new URLSearchParams(window.location.search);
-            const analysisId = urlParams.get('analysis_id');
-            console.log('AnalysisId in type handler:', analysisId);
-            
-            // Store initial value
-            this.initialAnalysisType = analysisId ? null : newAnalysisType.value;
-            console.log('Initial analysis type:', this.initialAnalysisType);
-            
-            // Load initial template if not editing existing analysis
-            if (!analysisId) {
-                console.log('Should load initial template for:', this.initialAnalysisType);
-                console.log('loadTemplateForType exists:', typeof this.loadTemplateForType === 'function');
+        if (!analysisType || !financialTab) {
+            console.error('Missing required elements');
+            return;
+        }
+    
+        // Remove existing event listeners by cloning
+        const newAnalysisType = analysisType.cloneNode(true);
+        analysisType.parentNode.replaceChild(newAnalysisType, analysisType);
+        
+        // Get analysis ID from URL if it exists
+        const urlParams = new URLSearchParams(window.location.search);
+        const analysisId = urlParams.get('analysis_id');
+        console.log('AnalysisId in type handler:', analysisId);
+        
+        // Store initial value
+        this.initialAnalysisType = analysisId ? null : newAnalysisType.value;
+        console.log('Initial analysis type:', this.initialAnalysisType);
+        
+        // Load initial template if not editing existing analysis
+        if (!analysisId) {
+            console.log('Loading initial template for type:', this.initialAnalysisType);
+            if (this.initialAnalysisType === 'Multi-Family') {
+                console.log('Loading Multi-Family template');
+                financialTab.innerHTML = getMultiFamilyHTML();
+                setTimeout(() => {
+                    console.log('Initializing Multi-Family handlers');
+                    this.initMultiFamilyHandlers();
+                }, 0);
+            } else {
                 this.loadTemplateForType(this.initialAnalysisType, financialTab);
             }
-                
-            // Set up event listener for changes
-            newAnalysisType.addEventListener('change', async (e) => {
-                console.log('Analysis type changed to:', e.target.value);
-                // Prevent multiple concurrent changes
-                if (this.typeChangeInProgress) {
-                    console.log('Type change already in progress');
-                    return;
-                }
-        
-                const newType = e.target.value;
-                console.log('Processing change to type:', newType);
-                
-                // Skip if initial type hasn't been set yet or if type hasn't actually changed
-                if (!this.initialAnalysisType || newType === this.initialAnalysisType) {
-                    console.log('Skipping - no initial type or no change');
-                    return;
-                }
-                
-                // If we're in create mode, just update the fields
-                if (!this.currentAnalysisId) {
-                    console.log('Create mode - updating template for type:', newType);
-                    this.loadTemplateForType(newType, financialTab);
-                    this.initialAnalysisType = newType;
-                    return;
-                }
-                
-                try {
-                    this.typeChangeInProgress = true;
-                    const confirmed = await this.confirmTypeChange(newType);
-                    
-                    if (!confirmed) {
-                        e.target.value = this.initialAnalysisType;
-                        return;
-                    }
-                    
-                    await this.handleTypeChange(newType);
-                    
-                } catch (error) {
-                    console.error('Error:', error);
-                    toastr.error(error.message);
-                    e.target.value = this.initialAnalysisType;
-                } finally {
-                    this.typeChangeInProgress = false;
-                }
-            });
         }
-    },
-
-    loadTemplateForType(type, container) {
-        console.log('Loading template for type:', type);
+            
+        // Set up event listener for changes
+        newAnalysisType.addEventListener('change', async (e) => {
+            console.log('Analysis type changed to:', e.target.value);
+            if (this.typeChangeInProgress) {
+                console.log('Type change already in progress');
+                return;
+            }
     
+            const newType = e.target.value;
+            console.log('Processing change to type:', newType);
+            
+            // Skip if initial type hasn't been set yet or if type hasn't actually changed
+            if (!this.initialAnalysisType || newType === this.initialAnalysisType) {
+                console.log('Skipping - no initial type or no change');
+                return;
+            }
+            
+            // Handle Multi-Family type change immediately
+            if (newType === 'Multi-Family') {
+                console.log('Loading Multi-Family template');
+                financialTab.innerHTML = getMultiFamilyHTML();
+                setTimeout(() => {
+                    console.log('Initializing Multi-Family handlers');
+                    this.initMultiFamilyHandlers();
+                }, 0);
+                this.initialAnalysisType = newType;
+                return;
+            }
+            
+            // If we're in create mode, just update the fields
+            if (!this.currentAnalysisId) {
+                console.log('Create mode - updating template for type:', newType);
+                this.loadTemplateForType(newType, financialTab);
+                this.initialAnalysisType = newType;
+                return;
+            }
+            
+            try {
+                this.typeChangeInProgress = true;
+                const confirmed = await this.confirmTypeChange(newType);
+                
+                if (!confirmed) {
+                    e.target.value = this.initialAnalysisType;
+                    return;
+                }
+                
+                await this.handleTypeChange(newType);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                toastr.error(error.message);
+                e.target.value = this.initialAnalysisType;
+            } finally {
+                this.typeChangeInProgress = false;
+            }
+        });
+    },
+    
+    // In the loadTemplateForType function:
+    loadTemplateForType(type, container) {
+        console.log('loadTemplateForType called with type:', type);
+        
         if (!container) {
             console.error('No container provided to loadTemplateForType');
             return;
         }
         
         try {
+            // Clear existing content
             container.innerHTML = '';
             
-            if (type === 'Lease Option') {
-                container.innerHTML = getLeaseOptionHTML();
-            } else if (type.includes('BRRRR')) {
-                container.innerHTML = getBRRRRHTML();
-            } else {
-                // For LTR-type analyses
-                const template = getLongTermRentalHTML();
-                container.innerHTML = template;
-                
-                // Initialize balloon payment handlers after template is loaded
-                setTimeout(() => {
-                    this.initBalloonPaymentHandlers();
-                }, 0);
+            // Get appropriate template based on type
+            let template;
+            switch(type) {
+                case 'Multi-Family':
+                    console.log('Using Multi-Family template');
+                    template = getMultiFamilyHTML();
+                    break;
+                case 'Lease Option':
+                    console.log('Using Lease Option template');
+                    template = getLeaseOptionHTML();
+                    break;
+                case 'BRRRR':
+                case 'PadSplit BRRRR':
+                    console.log('Using BRRRR template');
+                    template = getBRRRRHTML();
+                    break;
+                default:
+                    console.log('Using LTR template');
+                    template = getLongTermRentalHTML();
             }
-
+            
+            // Apply template
+            container.innerHTML = template;
+            console.log('Template applied successfully');
+            
+            // Initialize appropriate handlers
+            if (type === 'Multi-Family') {
+                console.log('Initializing Multi-Family handlers');
+                setTimeout(() => {
+                    this.initMultiFamilyHandlers();
+                }, 0);
+            } else {
+                if (!type.includes('BRRRR')) {
+                    setTimeout(() => {
+                        this.initBalloonPaymentHandlers();
+                    }, 0);
+                }
+                this.initLoanHandlers();
+                if (type.includes('BRRRR')) {
+                    this.initRefinanceCalculations();
+                }
+            }
+            
             // Add PadSplit expenses if needed
             if (type.includes('PadSplit')) {
+                console.log('Adding PadSplit expenses');
                 container.insertAdjacentHTML('beforeend', padSplitExpensesHTML);
             }
-
-            // Initialize other handlers
-            this.initLoanHandlers();
-            if (type.includes('BRRRR')) {
-                this.initRefinanceCalculations();
-            }
+            
             this.initNotesCounter();
             
         } catch (error) {
             console.error('Error in loadTemplateForType:', error);
+            console.error(error.stack);
             throw error;
         }
     },
@@ -1843,18 +2395,17 @@ window.analysisModule = {
         document.head.appendChild(style);
     },
 
-    async handleTypeChange(newType) {
+    handleTypeChange(newType) {
         const financialTab = document.getElementById('financial');
         if (!financialTab) return;
         
         try {
-            // Get current analysis data
+            // Get current form data
             const currentForm = document.getElementById('analysisForm');
             const analysisId = currentForm.getAttribute('data-analysis-id');
-            
             if (!analysisId) return;
     
-            // Create new analysis with the new type
+            // Create new analysis data
             const formData = new FormData(currentForm);
             const analysisData = {
                 ...Object.fromEntries(formData.entries()),
@@ -1862,56 +2413,64 @@ window.analysisModule = {
                 analysis_type: newType
             };
             
-            // Make API call to create new analysis
-            const response = await fetch('/analyses/update_analysis', {
+            // Make API call
+            return fetch('/analyses/update_analysis', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(analysisData)
-            });
-            
-            const data = await response.json();
-            if (data.success) {
-                // Update form with new template based on type
-                if (newType.includes('BRRRR')) {
-                    financialTab.innerHTML = getBRRRRHTML();
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => { throw err; });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Update form with new template
+                    if (newType === 'Multi-Family') {
+                        financialTab.innerHTML = getMultiFamilyHTML();
+                        this.initMultiFamilyHandlers();
+                    } else if (newType.includes('BRRRR')) {
+                        financialTab.innerHTML = getBRRRRHTML();
+                    } else {
+                        financialTab.innerHTML = getLongTermRentalHTML();
+                    }
+    
+                    // Add PadSplit expenses if needed
+                    if (newType.includes('PadSplit')) {
+                        financialTab.insertAdjacentHTML('beforeend', padSplitExpensesHTML);
+                    }
+    
+                    // Initialize appropriate handlers
+                    if (!newType.includes('BRRRR') && newType !== 'Multi-Family') {
+                        this.initBalloonPaymentHandlers();
+                    }
+                    if (newType !== 'Multi-Family') {
+                        this.initLoanHandlers();
+                    }
+                    if (newType.includes('BRRRR')) {
+                        this.initRefinanceCalculations();
+                    }
+    
+                    // Update form and populate fields
+                    currentForm.setAttribute('data-analysis-id', data.analysis.id);
+                    this.currentAnalysisId = data.analysis.id;
+                    setTimeout(() => {
+                        this.populateFormFields(data.analysis);
+                    }, 100);
+                    
+                    toastr.success(`Created new ${newType} analysis`);
                 } else {
-                    financialTab.innerHTML = getLongTermRentalHTML();
+                    throw new Error(data.message || 'Error creating new analysis');
                 }
-    
-                // Add PadSplit expenses if needed
-                if (newType.includes('PadSplit')) {
-                    financialTab.insertAdjacentHTML('beforeend', padSplitExpensesHTML);
-                }
-    
-                // Initialize handlers
-                this.initLoanHandlers();
-                if (newType.includes('BRRRR')) {
-                    this.initRefinanceCalculations();
-                }
-                
-                // Update form with new analysis data
-                currentForm.setAttribute('data-analysis-id', data.analysis.id);
-                this.currentAnalysisId = data.analysis.id;
-                
-                // Wait for DOM to be ready before populating fields
-                setTimeout(() => {
-                    this.populateFormFields(data.analysis);
-                }, 100);
-                
-                toastr.success(`Created new ${newType} analysis`);
-            } else {
-                throw new Error(data.message || 'Error creating new analysis');
-            }
+            });
         } catch (error) {
             console.error('Error:', error);
             toastr.error(error.message);
-            // Reset to original type
-            const analysisType = document.getElementById('analysis_type');
-            if (analysisType) {
-                analysisType.value = this.initialAnalysisType;
-            }
+            throw error;
         }
     },
 
@@ -2051,31 +2610,43 @@ window.analysisModule = {
                         analysisType.value = data.analysis.analysis_type;
                         this.initialAnalysisType = data.analysis.analysis_type;
                         
-                        // Load appropriate template based on analysis type
+                        // Load appropriate template
                         console.log('Loading template for type:', this.initialAnalysisType);
-                        if (this.initialAnalysisType === 'Lease Option') {
-                            financialTab.innerHTML = getLeaseOptionHTML();
-                        } else if (this.initialAnalysisType.includes('BRRRR')) {
-                            financialTab.innerHTML = getBRRRRHTML();
+                        if (this.initialAnalysisType === 'Multi-Family') {
+                            console.log('Setting Multi-Family template');
+                            financialTab.innerHTML = getMultiFamilyHTML();
+                            setTimeout(() => {
+                                this.initMultiFamilyHandlers();
+                                this.populateFormFields(data.analysis);
+                            }, 100);
                         } else {
-                            financialTab.innerHTML = getLongTermRentalHTML();
+                            if (this.initialAnalysisType === 'Lease Option') {
+                                financialTab.innerHTML = getLeaseOptionHTML();
+                            } else if (this.initialAnalysisType.includes('BRRRR')) {
+                                financialTab.innerHTML = getBRRRRHTML();
+                            } else {
+                                financialTab.innerHTML = getLongTermRentalHTML();
+                            }
+                            
+                            // Add PadSplit expenses if needed
+                            if (this.initialAnalysisType.includes('PadSplit')) {
+                                financialTab.insertAdjacentHTML('beforeend', padSplitExpensesHTML);
+                            }
+                            
+                            // Initialize handlers
+                            if (!this.initialAnalysisType.includes('BRRRR')) {
+                                this.initBalloonPaymentHandlers();
+                            }
+                            this.initLoanHandlers();
+                            if (this.initialAnalysisType.includes('BRRRR')) {
+                                this.initRefinanceCalculations();
+                            }
+                            
+                            // Wait for DOM to be ready before populating fields
+                            setTimeout(() => {
+                                this.populateFormFields(data.analysis);
+                            }, 100);
                         }
-                        
-                        // Add PadSplit expenses if needed
-                        if (this.initialAnalysisType.includes('PadSplit')) {
-                            financialTab.insertAdjacentHTML('beforeend', padSplitExpensesHTML);
-                        }
-                        
-                        // Initialize handlers
-                        this.initLoanHandlers();
-                        if (this.initialAnalysisType.includes('BRRRR')) {
-                            this.initRefinanceCalculations();
-                        }
-                        
-                        // Wait for DOM to be ready before populating fields
-                        setTimeout(() => {
-                            this.populateFormFields(data.analysis);
-                        }, 100);
                     } else {
                         console.error('Analysis type field or financial tab not found');
                     }
@@ -2148,7 +2719,7 @@ window.analysisModule = {
     },
 
     // Updated handleSubmit function for flat data structure
-    handleSubmit: function(event) {
+    handleSubmit(event) {
         event.preventDefault();
         
         if (this.isSubmitting) {
@@ -2176,6 +2747,19 @@ window.analysisModule = {
         // Get form data
         const formData = new FormData(form);
         const analysisData = {};
+
+        // First, set the analysis type
+        const analysisType = formData.get('analysis_type');
+        analysisData.analysis_type = analysisType;
+        
+        if (analysisType === 'Multi-Family') {
+            // Get unit types data
+            const unitTypes = this.getUnitTypesData();
+            analysisData.unit_types = JSON.stringify(unitTypes);
+            
+            // Don't include monthly_rent field for Multi-Family
+            formData.delete('monthly_rent');
+        }
         
         // First, set the balloon payment flag correctly
         const hasBalloon = form.querySelector('#has_balloon_payment')?.checked || false;
@@ -2210,6 +2794,14 @@ window.analysisModule = {
                 analysisData[key] = value || null;
             }
         });
+
+        // In handleSubmit before making the API call:
+        if (analysisType === 'Multi-Family') {
+            console.log('Sending Multi-Family data:', {
+                analysisData,
+                unitTypes: JSON.parse(analysisData.unit_types)
+            });
+        }
     
         // Make API call
         fetch('/analyses/create_analysis', {
@@ -2360,6 +2952,29 @@ window.analysisModule = {
         const analysisData = {
             id: analysisId
         };
+
+        // Handle Multi-Family unit types
+        if (currentAnalysisType === 'Multi-Family') {
+            const unitTypes = [];
+            let totalPotentialRent = 0;
+            
+            document.querySelectorAll('.unit-type-section').forEach(section => {
+                const count = parseInt(section.querySelector('.unit-count').value) || 0;
+                const rent = parseFloat(section.querySelector('.unit-rent').value) || 0;
+                totalPotentialRent += count * rent;
+                
+                unitTypes.push({
+                    type: section.querySelector('select').value || '',
+                    count: count,
+                    occupied: parseInt(section.querySelector('.unit-occupied').value) || 0,
+                    square_footage: parseInt(section.querySelector('input[name$="[square_footage]"]').value) || 0,
+                    rent: rent
+                });
+            });
+            
+            analysisData.unit_types = JSON.stringify(unitTypes);
+            analysisData.monthly_rent = totalPotentialRent; // Add total potential rent
+        }
     
         // First, set the balloon payment flag correctly - convert checkbox value to boolean
         const hasBalloon = form.querySelector('#has_balloon_payment')?.checked || false;
@@ -2508,14 +3123,17 @@ window.analysisModule = {
             const analysisType = analysisData.analysis_type || '';
             
             switch(analysisType) {
+                case 'Multi-Family':
+                    reportContent = this.getMultiFamilyReportContent(analysisData);
+                    break;
                 case 'BRRRR':
-                    reportContent = this.getBRRRRReportContent.call(this, analysisData);
+                    reportContent = this.getBRRRRReportContent(analysisData);
                     break;
                 case 'Lease Option':
-                    reportContent = this.getLeaseOptionReportContent.call(this, analysisData);
+                    reportContent = this.getLeaseOptionReportContent(analysisData);
                     break;
                 default:
-                    reportContent = this.getLTRReportContent.call(this, analysisData);
+                    reportContent = this.getLTRReportContent(analysisData);
             }
     
             const finalContent = `
@@ -2552,9 +3170,281 @@ window.analysisModule = {
                 </div>`;
         }
     },
+    
+    // Calculate KPIs
+    calculateOperatingExpenseRatio(analysis) {
+        const grossIncome = parseFloat(analysis.total_potential_income) || 0;
+        if (!grossIncome) return 0;
+        
+        const expenses = [
+            'property_taxes',
+            'insurance',
+            'common_area_maintenance',
+            'elevator_maintenance',
+            'staff_payroll',
+            'trash_removal',
+            'common_utilities'
+        ].reduce((total, field) => total + (parseFloat(analysis[field]) || 0), 0);
+    
+        // Add percentage-based expenses
+        const managementFee = grossIncome * (analysis.management_fee_percentage || 0) / 100;
+        const repairs = grossIncome * (analysis.repairs_percentage || 0) / 100;
+        const capex = grossIncome * (analysis.capex_percentage || 0) / 100;
+        
+        const totalExpenses = expenses + managementFee + repairs + capex;
+        return (totalExpenses * 12 / (grossIncome * 12)) * 100;
+    },
+    
+    calculateDSCR(analysis) {
+        // Calculate NOI
+        const annualNOI = parseFloat(analysis.calculated_metrics?.annual_noi) || 0;
+        if (!annualNOI) return 0;
+        
+        // Calculate annual debt service
+        let annualDebtService = 0;
+        ['loan1', 'loan2', 'loan3'].forEach(prefix => {
+            const payment = analysis.calculated_metrics?.[`${prefix}_loan_payment`];
+            if (payment) {
+                annualDebtService += parseFloat(payment.replace(/[^0-9.-]+/g, '')) * 12;
+            }
+        });
+    
+        return annualDebtService ? annualNOI / annualDebtService : 0;
+    },
 
+    // Add Multi-Family report content generator
+    getMultiFamilyReportContent(analysis) {
+        console.log('Generating Multi-Family report with data:', analysis);
+    
+        try {
+            // Parse unit types
+            const unitTypes = JSON.parse(analysis.unit_types || '[]');
+            const metrics = analysis.calculated_metrics || {};
+    
+            // Calculate gross potential rent
+            const grossPotentialRent = unitTypes.reduce((total, ut) => {
+                return total + (ut.count * ut.rent);
+            }, 0);
+    
+            // Calculate gross potential income including other income
+            const grossPotentialIncome = grossPotentialRent + (analysis.other_income || 0);
+    
+            // Calculate management fee
+            const managementFeePercentage = analysis.management_fee_percentage || 0;
+            const monthlyManagementFee = grossPotentialRent * (managementFeePercentage / 100);
+    
+            console.log('Management fee calculation:', {
+                grossPotentialRent,
+                managementFeePercentage,
+                monthlyManagementFee
+            });
+
+            // Add debugging for KPI configuration access
+            console.log('Analysis module:', this);
+            console.log('KPI_CONFIGS access:', this.KPI_CONFIGS);
+
+            // Add KPI card at the start of the content
+            const kpiCard = this.generateKPICard(analysis);
+            console.log('Generated KPI card:', kpiCard ? 'Success' : 'Empty');
+    
+            return `
+                <!-- Property Overview Card -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Property Overview</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group list-group-flush">
+                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                <span>Total Units</span>
+                                <strong>${analysis.total_units}</strong>
+                            </div>
+                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                <span>Occupied Units</span>
+                                <div class="text-end">
+                                    <strong>${analysis.occupied_units}</strong>
+                                    <div class="small text-muted">
+                                        ${metrics.occupancy_rate || '0%'} Occupancy
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                <span>Purchase Price</span>
+                                <div class="text-end">
+                                    <strong>${this.formatDisplayValue(analysis.purchase_price)}</strong>
+                                    <div class="small text-muted">
+                                        ${this.formatDisplayValue(metrics.price_per_unit)} per unit
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                <span>Square Footage</span>
+                                <strong>${analysis.square_footage.toLocaleString()} sq ft</strong>
+                            </div>
+                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                <span>Year Built</span>
+                                <strong>${analysis.year_built}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+    
+                <!-- Financial Performance Card -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Financial Performance</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group list-group-flush">
+                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                <span>Gross Potential Rent</span>
+                                <strong>${metrics.gross_potential_rent}</strong>
+                            </div>
+                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                <span>Other Income</span>
+                                <strong>${this.formatDisplayValue(analysis.other_income)}</strong>
+                            </div>
+                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                <span>Actual Gross Income</span>
+                                <strong>${metrics.actual_gross_income}</strong>
+                            </div>
+                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                <span class="d-flex align-items-center">
+                                    Net Operating Income
+                                    <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" 
+                                       title="Annual NOI before debt service">
+                                    </i>
+                                </span>
+                                <strong>${metrics.annual_noi}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KPIs Card -->
+                ${kpiCard}
+    
+                <!-- Unit Mix Card -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Unit Mix</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Type</th>
+                                        <th>Units</th>
+                                        <th>Occupied</th>
+                                        <th>Sq Ft</th>
+                                        <th>Rent</th>
+                                        <th>Total Potential</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${unitTypes.map(ut => `
+                                        <tr>
+                                            <td>${ut.type}</td>
+                                            <td>${ut.count}</td>
+                                            <td>${ut.occupied}</td>
+                                            <td>${ut.square_footage}</td>
+                                            <td>${this.formatDisplayValue(ut.rent)}</td>
+                                            <td>${this.formatDisplayValue(ut.rent * ut.count)}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+    
+                <!-- Operating Expenses Card -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Operating Expenses</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-0">
+                            <div class="col-12 col-md-6">
+                                <div class="list-group list-group-flush">
+                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                        <span>Property Taxes</span>
+                                        <strong>${this.formatDisplayValue(analysis.property_taxes)}</strong>
+                                    </div>
+                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                        <span>Insurance</span>
+                                        <strong>${this.formatDisplayValue(analysis.insurance)}</strong>
+                                    </div>
+                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                        <span>Common Area Maintenance</span>
+                                        <strong>${this.formatDisplayValue(analysis.common_area_maintenance)}</strong>
+                                    </div>
+                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                        <span>Elevator Maintenance</span>
+                                        <strong>${this.formatDisplayValue(analysis.elevator_maintenance)}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="list-group list-group-flush">
+                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                        <span>Staff Payroll</span>
+                                        <strong>${this.formatDisplayValue(analysis.staff_payroll)}</strong>
+                                    </div>
+                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                        <span>Trash Removal</span>
+                                        <strong>${this.formatDisplayValue(analysis.trash_removal)}</strong>
+                                    </div>
+                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                        <span>Common Utilities</span>
+                                        <strong>${this.formatDisplayValue(analysis.common_utilities)}</strong>
+                                    </div>
+                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                        <span>Management Fee</span>
+                                        <div class="text-end">
+                                            <div class="small text-muted">
+                                                ${this.formatDisplayValue(managementFeePercentage, 'percentage')}
+                                            </div>
+                                            <strong>${this.formatDisplayValue(monthlyManagementFee)}</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+    
+                <!-- Financing Details Card -->
+                ${this.getLoanDetailsContent(analysis)}
+    
+                ${this.createNotesSection(analysis.notes)}`;
+    
+        } catch (error) {
+            console.error('Error generating Multi-Family report:', error);
+            return `
+                <div class="alert alert-danger">
+                    Error generating report content: ${error.message}
+                </div>`;
+        }
+
+        // Initialize tooltips - add this after the content is added to DOM
+        setTimeout(() => {
+            const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+            tooltips.forEach(tooltip => new bootstrap.Tooltip(tooltip));
+        }, 0);
+    },
+        
     // New function for lease option report content
     getLeaseOptionReportContent(analysis) {
+        // Add debugging for KPI configuration access
+        console.log('Analysis module:', this);
+        console.log('KPI_CONFIGS access:', this.KPI_CONFIGS);
+
+        // Add KPI card at the start of the content
+        const kpiCard = this.generateKPICard(analysis);
+        console.log('Generated KPI card:', kpiCard ? 'Success' : 'Empty');
+        
         return `
             <!-- Option Details Card -->
             <div class="card mb-4">
@@ -2594,6 +3484,9 @@ window.analysisModule = {
                     </div>
                 </div>
             </div>
+            
+            <!-- KPIs Card -->
+            ${kpiCard}
     
             <!-- Financial Overview Card -->
             <div class="card mb-4">
@@ -2697,6 +3590,15 @@ window.analysisModule = {
     },
 
     getLTRReportContent(analysis) {
+        // Add debugging for KPI configuration access
+        console.log('Analysis module:', this);
+        console.log('KPI_CONFIGS access:', this.KPI_CONFIGS);
+
+        // Add KPI card at the start of the content
+        const kpiCard = this.generateKPICard(analysis);
+        console.log('Generated KPI card:', kpiCard ? 'Success' : 'Empty');
+        
+        // Your existing code...
         console.log('LTR Report Data:', {
             monthlyRent: analysis.monthly_rent,
             monthlyCashFlow: analysis.calculated_metrics?.monthly_cash_flow,
@@ -2776,6 +3678,9 @@ window.analysisModule = {
                     </div>
                 </div>
             </div>
+
+            <!-- KPIs Card -->
+            ${kpiCard}
     
             <!-- Financing Details Card -->
             <div class="card mb-4">
@@ -3102,21 +4007,22 @@ window.analysisModule = {
 
     // Updated getBRRRRReportContent function to handle flat schema and formatting
     getBRRRRReportContent(analysis) {
-        // Add debugging
         console.log('BRRRR Report Data:', {
-            initialLoanPayment: analysis.calculated_metrics?.initial_loan_payment,
-            refinanceLoanPayment: analysis.calculated_metrics?.refinance_loan_payment,
+            initialLoanPayment: analysis?.calculated_metrics?.initial_loan_payment,
+            refinanceLoanPayment: analysis?.calculated_metrics?.refinance_loan_payment,
             monthlyRent: analysis.monthly_rent,
             monthlyCashFlow: analysis.calculated_metrics?.monthly_cash_flow,
             annualCashFlow: analysis.calculated_metrics?.annual_cash_flow,
             fullMetrics: analysis.calculated_metrics
         });
     
-        // Check for required data
-        if (!analysis || !analysis.calculated_metrics) {
-            console.error('Missing required data for BRRRR report');
-            return '';
-        }
+        // Add debugging for module and KPI config access
+        console.log('Analysis module:', this);
+        console.log('KPI_CONFIGS access:', this.KPI_CONFIGS);
+    
+        // Generate KPI card
+        const kpiCard = this.generateKPICard(analysis);
+        console.log('Generated KPI card:', kpiCard ? 'Success' : 'Empty');
     
         return `
             <!-- Income & Returns Card -->
@@ -3132,28 +4038,36 @@ window.analysisModule = {
                         </div>
                         <div class="list-group-item d-flex justify-content-between align-items-center py-3">
                             <span>Monthly Cash Flow</span>
-                            <strong>${analysis.calculated_metrics.monthly_cash_flow}</strong>
+                            <strong>${analysis.calculated_metrics?.monthly_cash_flow || '$0.00'}</strong>
                         </div>
                         <div class="list-group-item d-flex justify-content-between align-items-center py-3">
                             <span>Annual Cash Flow</span>
-                            <strong>${analysis.calculated_metrics.annual_cash_flow}</strong>
+                            <strong>${analysis.calculated_metrics?.annual_cash_flow || '$0.00'}</strong>
                         </div>
                         <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                            <span>Cash-on-Cash Return</span>
-                            <strong>${analysis.calculated_metrics.cash_on_cash_return}</strong>
+                            <span>Cash on Cash Return</span>
+                            <strong>${analysis.calculated_metrics?.cash_on_cash_return || '0%'}</strong>
                         </div>
                         <div class="list-group-item d-flex justify-content-between align-items-center py-3">
                             <span>ROI</span>
-                            <strong>${analysis.calculated_metrics.roi}</strong>
+                            <strong>${analysis.calculated_metrics?.roi || '0%'}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Equity Captured</span>
+                            <strong>${analysis.calculated_metrics?.equity_captured || '$0.00'}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Cash Recouped</span>
+                            <strong>${analysis.calculated_metrics?.cash_recouped || '$0.00'}</strong>
                         </div>
                     </div>
                 </div>
             </div>
     
-            <!-- BRRRR Strategy Details Card -->
+            <!-- Financing Card -->
             <div class="card mb-4">
                 <div class="card-header">
-                    <h5 class="mb-0">BRRRR Strategy Details</h5>
+                    <h5 class="mb-0">Financing Details</h5>
                 </div>
                 <div class="card-body">
                     <div class="accordion" id="brrrFinancingAccordion">
@@ -3162,7 +4076,7 @@ window.analysisModule = {
                             <h6 class="accordion-header">
                                 <button class="accordion-button" type="button" data-bs-toggle="collapse" 
                                         data-bs-target="#initialLoanCollapse">
-                                    Initial Loan Details
+                                    Initial Hard Money Loan
                                 </button>
                             </h6>
                             <div id="initialLoanCollapse" class="accordion-collapse collapse show" 
@@ -3174,10 +4088,6 @@ window.analysisModule = {
                                             <strong>${this.formatDisplayValue(analysis.initial_loan_amount)}</strong>
                                         </div>
                                         <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                            <span>Monthly Payment</span>
-                                            <strong>${analysis.calculated_metrics.initial_loan_payment}</strong>
-                                        </div>
-                                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
                                             <span>Interest Rate</span>
                                             <strong>${this.formatDisplayValue(analysis.initial_loan_interest_rate, 'percentage')}</strong>
                                         </div>
@@ -3186,12 +4096,20 @@ window.analysisModule = {
                                             <strong>${analysis.initial_loan_term} months</strong>
                                         </div>
                                         <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                            <span>Down Payment</span>
-                                            <strong>${this.formatDisplayValue(analysis.initial_loan_down_payment)}</strong>
+                                            <span>Monthly Payment</span>
+                                            <strong>${analysis.calculated_metrics?.initial_loan_payment || '$0.00'}</strong>
                                         </div>
                                         <div class="list-group-item d-flex justify-content-between align-items-center py-3">
                                             <span>Interest Only</span>
                                             <strong>${analysis.initial_interest_only ? 'Yes' : 'No'}</strong>
+                                        </div>
+                                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                            <span>Down Payment</span>
+                                            <strong>${this.formatDisplayValue(analysis.initial_loan_down_payment)}</strong>
+                                        </div>
+                                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                            <span>Closing Costs</span>
+                                            <strong>${this.formatDisplayValue(analysis.initial_loan_closing_costs)}</strong>
                                         </div>
                                     </div>
                                 </div>
@@ -3203,7 +4121,7 @@ window.analysisModule = {
                             <h6 class="accordion-header">
                                 <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
                                         data-bs-target="#refinanceCollapse">
-                                    Refinance Details
+                                    Refinance Loan
                                 </button>
                             </h6>
                             <div id="refinanceCollapse" class="accordion-collapse collapse" 
@@ -3215,16 +4133,20 @@ window.analysisModule = {
                                             <strong>${this.formatDisplayValue(analysis.refinance_loan_amount)}</strong>
                                         </div>
                                         <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                            <span>Monthly Payment</span>
-                                            <strong>${analysis.calculated_metrics.refinance_loan_payment}</strong>
-                                        </div>
-                                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
                                             <span>Interest Rate</span>
                                             <strong>${this.formatDisplayValue(analysis.refinance_loan_interest_rate, 'percentage')}</strong>
                                         </div>
                                         <div class="list-group-item d-flex justify-content-between align-items-center py-3">
                                             <span>Term</span>
                                             <strong>${analysis.refinance_loan_term} months</strong>
+                                        </div>
+                                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                            <span>Monthly Payment</span>
+                                            <strong>${analysis.calculated_metrics?.refinance_loan_payment || '$0.00'}</strong>
+                                        </div>
+                                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                            <span>Down Payment</span>
+                                            <strong>${this.formatDisplayValue(analysis.refinance_loan_down_payment)}</strong>
                                         </div>
                                         <div class="list-group-item d-flex justify-content-between align-items-center py-3">
                                             <span>Closing Costs</span>
@@ -3237,6 +4159,9 @@ window.analysisModule = {
                     </div>
                 </div>
             </div>
+    
+            <!-- KPIs Card -->
+            ${kpiCard}
     
             <!-- Operating Expenses Card -->
             <div class="card mb-4">
@@ -3298,7 +4223,7 @@ window.analysisModule = {
                     </div>
                 </div>
             </div>
-            
+    
             ${this.createNotesSection(analysis.notes)}`;
     },
 
@@ -3525,6 +4450,281 @@ window.analysisModule = {
         return cleaned || '0';
     },
 
+    initMultiFamilyHandlers() {
+        console.log('Initializing Multi-Family handlers');
+        
+        const unitTypesContainer = document.getElementById('unit-types-container');
+        const addUnitTypeBtn = document.getElementById('add-unit-type-btn');
+        
+        if (!unitTypesContainer || !addUnitTypeBtn) {
+            console.log('Unit type elements not found');
+            return;
+        }
+        
+        // Initialize with one unit type if none exist
+        if (!unitTypesContainer.children.length) {
+            unitTypesContainer.insertAdjacentHTML('beforeend', getUnitTypeHTML(0));
+        }
+        
+        // Handle adding new unit types
+        addUnitTypeBtn.addEventListener('click', () => {
+            const nextIndex = unitTypesContainer.children.length;
+            if (nextIndex < 10) { // Limit to 10 unit types
+                unitTypesContainer.insertAdjacentHTML('beforeend', getUnitTypeHTML(nextIndex));
+                this.initUnitTypeCalculations();
+            } else {
+                toastr.warning('Maximum of 10 unit types allowed');
+            }
+        });
+        
+        // Handle removing unit types
+        unitTypesContainer.addEventListener('click', (e) => {
+            if (e.target.closest('.remove-unit-type-btn')) {
+                const unitSection = e.target.closest('.unit-type-section');
+                if (unitTypesContainer.children.length > 1) {
+                    unitSection.remove();
+                    this.reindexUnitTypes();
+                    this.updateTotalUnits();
+                    this.updateTotalIncome();
+                } else {
+                    toastr.warning('At least one unit type is required');
+                }
+            }
+        });
+        
+        this.initUnitTypeCalculations();
+        this.initMultiFamilyValidation();
+    },
+    
+    initUnitTypeCalculations() {
+        // Initialize listeners for unit count and rent changes
+        const unitInputs = document.querySelectorAll('.unit-count, .unit-rent, .unit-occupied');
+        unitInputs.forEach(input => {
+            input.removeEventListener('input', this.updateTotalUnits);
+            input.removeEventListener('input', this.updateTotalIncome);
+            input.addEventListener('input', () => {
+                this.updateTotalUnits();
+                this.updateTotalIncome();
+            });
+        });
+    },
+
+    updateTotalIncome() {
+        const totalPotentialIncomeInput = document.getElementById('total_potential_income');
+        const otherIncomeInput = document.getElementById('other_income');
+        
+        if (!totalPotentialIncomeInput) return;
+        
+        let totalRent = 0;
+        document.querySelectorAll('.unit-type-section').forEach(section => {
+            const count = parseInt(section.querySelector('.unit-count').value) || 0;
+            const rent = parseFloat(section.querySelector('.unit-rent').value) || 0;
+            totalRent += count * rent;
+        });
+        
+        const otherIncome = parseFloat(otherIncomeInput?.value) || 0;
+        totalPotentialIncomeInput.value = (totalRent + otherIncome).toFixed(2);
+    },
+
+    initMultiFamilyValidation() {
+        const form = document.getElementById('analysisForm');
+        if (!form) return;
+        
+        // Remove any existing submit event listeners
+        const newForm = form.cloneNode(true);
+        form.parentNode.replaceChild(newForm, form);
+        
+        // Add validation for unit mix only when it's Multi-Family
+        newForm.addEventListener('submit', (e) => {
+            const analysisType = document.getElementById('analysis_type')?.value;
+            if (analysisType === 'Multi-Family') {
+                if (!this.validateMultiFamilyData()) {
+                    e.preventDefault();
+                    return false;
+                }
+            }
+        });
+    },
+    
+    validateMultiFamilyData() {
+        try {
+            // Only validate unit types for Multi-Family
+            if (this.initialAnalysisType === 'Multi-Family') {
+                const unitTypes = this.getUnitTypesData();
+                let isValid = true;
+                let errors = [];
+    
+                // 1. Validate unit types exist
+                if (!unitTypes || unitTypes.length === 0) {
+                    errors.push('At least one unit type is required');
+                    isValid = false;
+                } else {
+                    // 2. Validate each unit type
+                    unitTypes.forEach((ut, index) => {
+                        const section = document.querySelector(`.unit-type-section[data-unit-index="${index}"]`);
+                        
+                        // Clear previous validation states
+                        if (section) {
+                            section.querySelectorAll('.is-invalid').forEach(field => {
+                                field.classList.remove('is-invalid');
+                            });
+                        }
+    
+                        // Basic unit type validation
+                        if (ut.count <= 0) {
+                            errors.push(`Unit Type ${index + 1}: Number of units must be greater than 0`);
+                            isValid = false;
+                            section?.querySelector('.unit-count')?.classList.add('is-invalid');
+                        }
+    
+                        if (ut.occupied > ut.count) {
+                            errors.push(`Unit Type ${index + 1}: Occupied units cannot exceed total units`);
+                            isValid = false;
+                            section?.querySelector('.unit-occupied')?.classList.add('is-invalid');
+                        }
+    
+                        if (ut.square_footage <= 0) {
+                            errors.push(`Unit Type ${index + 1}: Square footage must be greater than 0`);
+                            isValid = false;
+                            section?.querySelector('input[name$="[square_footage]"]')?.classList.add('is-invalid');
+                        }
+    
+                        if (ut.rent <= 0) {
+                            errors.push(`Unit Type ${index + 1}: Rent must be greater than 0`);
+                            isValid = false;
+                            section?.querySelector('.unit-rent')?.classList.add('is-invalid');
+                        }
+                    });
+                }
+    
+                // Validate building details if Multi-Family
+                const buildingFields = {
+                    'floors': {
+                        min: 1,
+                        max: 30,
+                        label: 'Number of floors',
+                        message: 'Number of floors must be between 1 and 30'
+                    },
+                    'year_built': {
+                        min: 1800,
+                        max: new Date().getFullYear(),
+                        label: 'Year built',
+                        message: `Year built must be between 1800 and ${new Date().getFullYear()}`
+                    }
+                };
+    
+                Object.entries(buildingFields).forEach(([fieldId, config]) => {
+                    const field = document.getElementById(fieldId);
+                    if (field) {
+                        const value = parseInt(field.value) || 0;
+                        if (value < config.min || value > config.max) {
+                            errors.push(config.message);
+                            isValid = false;
+                            field.classList.add('is-invalid');
+                            
+                            let errorDiv = field.nextElementSibling;
+                            if (!errorDiv || !errorDiv.classList.contains('invalid-feedback')) {
+                                errorDiv = document.createElement('div');
+                                errorDiv.className = 'invalid-feedback';
+                                field.parentNode.insertBefore(errorDiv, field.nextSibling);
+                            }
+                            errorDiv.textContent = config.message;
+                        } else {
+                            field.classList.remove('is-invalid');
+                        }
+                    }
+                });
+    
+                // Validate required operating expenses only for Multi-Family
+                const requiredExpenses = {
+                    'property_taxes': 'Property taxes',
+                    'insurance': 'Insurance',
+                    'common_area_maintenance': 'Common area maintenance'
+                };
+    
+                Object.entries(requiredExpenses).forEach(([fieldId, label]) => {
+                    const field = document.getElementById(fieldId);
+                    if (field) {
+                        const value = parseFloat(field.value) || 0;
+                        if (value <= 0) {
+                            errors.push(`${label} must be greater than 0`);
+                            isValid = false;
+                            field.classList.add('is-invalid');
+                        }
+                    }
+                });
+    
+                if (!isValid) {
+                    toastr.error(errors.join('<br>'), 'Validation Errors', {
+                        timeOut: 5000,
+                        extendedTimeOut: 2000,
+                        progressBar: true,
+                        closeButton: true,
+                        enableHtml: true,
+                        newestOnTop: false
+                    });
+                    return false;
+                }
+            }
+    
+            // If we get here, either validation passed or it's not a Multi-Family analysis
+            return true;
+    
+        } catch (error) {
+            console.error('Error validating Multi-Family data:', error);
+            toastr.error('Error validating form data');
+            return false;
+        }
+    },
+    
+    getUnitTypesData() {
+        const unitTypes = [];
+        document.querySelectorAll('.unit-type-section').forEach(section => {
+            unitTypes.push({
+                type: section.querySelector('select').value,
+                count: parseInt(section.querySelector('.unit-count').value) || 0,
+                occupied: parseInt(section.querySelector('.unit-occupied').value) || 0,
+                square_footage: parseInt(section.querySelector('input[name$="[square_footage]"]').value) || 0,
+                rent: parseFloat(section.querySelector('.unit-rent').value) || 0
+            });
+        });
+        return unitTypes;
+    },
+    
+    reindexUnitTypes() {
+        const unitSections = document.querySelectorAll('.unit-type-section');
+        unitSections.forEach((section, index) => {
+            section.dataset.unitIndex = index;
+            section.querySelector('.card-header h6').textContent = `Unit Type ${index + 1}`;
+            
+            // Update input names
+            section.querySelectorAll('input, select').forEach(input => {
+                const fieldName = input.name.split('[')[0];
+                input.name = `${fieldName}[${index}]${input.name.split(']')[1] || ''}`;
+            });
+        });
+    },
+    
+    updateTotalUnits() {
+        const totalUnitsInput = document.getElementById('total_units');
+        const occupiedUnitsInput = document.getElementById('occupied_units');
+        
+        if (!totalUnitsInput || !occupiedUnitsInput) return;
+        
+        let totalUnits = 0;
+        let occupiedUnits = 0;
+        
+        document.querySelectorAll('.unit-type-section').forEach(section => {
+            const count = parseInt(section.querySelector('.unit-count').value) || 0;
+            const occupied = parseInt(section.querySelector('.unit-occupied').value) || 0;
+            totalUnits += count;
+            occupiedUnits += Math.min(occupied, count); // Occupied cannot exceed total
+        });
+        
+        totalUnitsInput.value = totalUnits;
+        occupiedUnitsInput.value = occupiedUnits;
+    },
+
     // Updated populateFormFields function - uses raw values
     populateFormFields(analysis) {
         console.log('Populating form fields with:', analysis);
@@ -3570,6 +4770,57 @@ window.analysisModule = {
             setFieldValue('closing_costs', analysis.closing_costs);
             setFieldValue('assignment_fee', analysis.assignment_fee);
             setFieldValue('marketing_costs', analysis.marketing_costs);
+
+            // Handle Multi-Family specific fields
+            if (analysis.analysis_type === 'Multi-Family') {
+                try {
+                    // Set basic Multi-Family fields
+                    setFieldValue('total_units', analysis.total_units);
+                    setFieldValue('occupied_units', analysis.occupied_units);
+                    setFieldValue('floors', analysis.floors);
+                    setFieldValue('other_income', analysis.other_income);
+                    setFieldValue('total_potential_income', analysis.total_potential_income);
+                    
+                    // Set Multi-Family specific expenses
+                    setFieldValue('common_area_maintenance', analysis.common_area_maintenance);
+                    setFieldValue('elevator_maintenance', analysis.elevator_maintenance);
+                    setFieldValue('staff_payroll', analysis.staff_payroll);
+                    setFieldValue('trash_removal', analysis.trash_removal);
+                    setFieldValue('common_utilities', analysis.common_utilities);
+                    
+                    // Handle unit types
+                    const unitTypesContainer = document.getElementById('unit-types-container');
+                    if (unitTypesContainer) {
+                        // Clear existing unit types
+                        unitTypesContainer.innerHTML = '';
+                        
+                        // Parse unit types from stored JSON string
+                        const unitTypes = JSON.parse(analysis.unit_types || '[]');
+                        
+                        // Add each unit type
+                        unitTypes.forEach((unitType, index) => {
+                            unitTypesContainer.insertAdjacentHTML('beforeend', getUnitTypeHTML(index));
+                            
+                            // Set values for this unit type
+                            const section = unitTypesContainer.children[index];
+                            if (section) {
+                                section.querySelector('select').value = unitType.type;
+                                section.querySelector('.unit-count').value = unitType.count;
+                                section.querySelector('.unit-occupied').value = unitType.occupied;
+                                section.querySelector('input[name$="[square_footage]"]').value = unitType.square_footage;
+                                section.querySelector('.unit-rent').value = unitType.rent;
+                            }
+                        });
+                        
+                        // Initialize calculations
+                        this.initUnitTypeCalculations();
+                    }
+                    
+                } catch (error) {
+                    console.error('Error populating Multi-Family fields:', error);
+                    toastr.error('Error loading Multi-Family data');
+                }
+            }
 
             // Handle Lease Option fields
             if (analysis.analysis_type === 'Lease Option') {
@@ -3765,6 +5016,288 @@ window.analysisModule = {
             });
     },
 
+    parseNumericValue(value) {
+        if (value === null || value === undefined) return 0;
+        // Handle string values that might include currency symbols, commas, or percentage signs
+        if (typeof value === 'string') {
+            // Remove currency symbols, commas, and % signs
+            value = value.replace(/[$,\s%]+/g, '');
+        }
+        const parsed = parseFloat(value);
+        return isNaN(parsed) ? 0 : parsed;
+    },
+    
+    // Function to calculate KPIs for the analysis
+    calculateKPIs(analysis) {
+        const metrics = {};
+        
+        try {
+            console.log('Starting KPI calculations for:', analysis.analysis_type);
+    
+            // Get gross income
+            let grossIncome;
+            let totalUnits;
+            
+            if (analysis.analysis_type === 'Multi-Family') {
+                const unitTypes = JSON.parse(analysis.unit_types || '[]');
+                grossIncome = unitTypes.reduce((total, ut) => total + (ut.count * ut.rent), 0);
+                totalUnits = unitTypes.reduce((total, ut) => total + ut.count, 0);
+            } else {
+                grossIncome = this.parseNumericValue(analysis.monthly_rent);
+                totalUnits = 1;
+            }
+            
+            console.log('Gross Monthly Income:', grossIncome);
+            const annualGrossIncome = grossIncome * 12;
+            console.log('Annual Gross Income:', annualGrossIncome);
+    
+            // Calculate expenses
+            const expenseFields = [
+                'property_taxes',
+                'insurance',
+                'hoa_coa_coop',
+                'common_area_maintenance',
+                'elevator_maintenance',
+                'staff_payroll',
+                'trash_removal',
+                'common_utilities'
+            ];
+    
+            // Log each expense as it's calculated
+            const annualFixedExpenses = expenseFields.reduce((total, field) => {
+                const monthlyExpense = this.parseNumericValue(analysis[field]);
+                console.log(`${field} expense:`, monthlyExpense);
+                return total + (monthlyExpense * 12);
+            }, 0);
+    
+            console.log('Annual Fixed Expenses:', annualFixedExpenses);
+    
+            // Calculate percentage-based expenses
+            const percentageFields = {
+                management: this.parseNumericValue(analysis.management_fee_percentage),
+                capex: this.parseNumericValue(analysis.capex_percentage),
+                vacancy: this.parseNumericValue(analysis.vacancy_percentage),
+                repairs: this.parseNumericValue(analysis.repairs_percentage)
+            };
+    
+            console.log('Expense Percentages:', percentageFields);
+    
+            const annualPercentageExpenses = Object.entries(percentageFields).reduce((total, [name, percentage]) => {
+                const expense = annualGrossIncome * (percentage / 100);
+                console.log(`${name} expense (${percentage}%):`, expense);
+                return total + expense;
+            }, 0);
+    
+            console.log('Annual Percentage-based Expenses:', annualPercentageExpenses);
+    
+            // Calculate NOI
+            const totalExpenses = annualFixedExpenses + annualPercentageExpenses;
+            const noi = annualGrossIncome - totalExpenses;
+            console.log('NOI (annual):', noi);
+    
+            // Set NOI metric
+            if (analysis.analysis_type === 'Multi-Family') {
+                metrics.noi = noi / totalUnits / 12; // Monthly NOI per unit
+            } else {
+                metrics.noi = noi / 12; // Monthly NOI
+            }
+            console.log('NOI metric:', metrics.noi);
+    
+            // Calculate Operating Expense Ratio
+            if (annualGrossIncome > 0) {
+                metrics.operatingExpenseRatio = (totalExpenses / annualGrossIncome) * 100;
+                console.log('Operating Expense Ratio:', metrics.operatingExpenseRatio);
+            }
+    
+            // Calculate Cap Rate (except for Lease Option)
+            if (analysis.analysis_type !== 'Lease Option') {
+                const purchasePrice = this.parseNumericValue(analysis.purchase_price);
+                if (purchasePrice > 0) {
+                    metrics.capRate = (noi / purchasePrice) * 100;
+                    console.log('Cap Rate:', metrics.capRate);
+                }
+            }
+    
+            // Calculate DSCR (except for Lease Option)
+            if (analysis.analysis_type !== 'Lease Option') {
+                let annualDebtService = 0;
+                ['loan1', 'loan2', 'loan3'].forEach(prefix => {
+                    const payment = analysis.calculated_metrics?.[`${prefix}_loan_payment`];
+                    if (payment) {
+                        const monthlyPayment = this.parseNumericValue(payment);
+                        console.log(`${prefix} monthly payment:`, monthlyPayment);
+                        annualDebtService += monthlyPayment * 12;
+                    }
+                });
+    
+                console.log('Annual Debt Service:', annualDebtService);
+                if (annualDebtService > 0) {
+                    metrics.dscr = noi / annualDebtService;
+                    console.log('DSCR:', metrics.dscr);
+                }
+            }
+    
+            // Calculate Cash on Cash Return
+            const totalCashInvested = this.parseNumericValue(analysis.calculated_metrics?.total_cash_invested);
+            console.log('Total Cash Invested:', totalCashInvested);
+            
+            if (totalCashInvested > 0) {
+                const annualCashFlow = this.parseNumericValue(analysis.calculated_metrics?.annual_cash_flow);
+                console.log('Annual Cash Flow:', annualCashFlow);
+                
+                metrics.cashOnCash = (annualCashFlow / totalCashInvested) * 100;
+                console.log('Cash on Cash Return:', metrics.cashOnCash);
+            }
+    
+            console.log('Final calculated metrics:', metrics);
+            return metrics;
+    
+        } catch (error) {
+            console.error('Error calculating KPIs:', error);
+            console.error(error.stack);
+            return {};
+        }
+    },
+    
+    // Function to generate the KPI card HTML
+    generateKPICard(analysis) {
+        console.log('Generating KPI card for analysis:', {
+            type: analysis.analysis_type,
+            data: analysis
+        });
+        
+        const metrics = this.calculateKPIs(analysis);
+        console.log('Calculated KPI metrics:', metrics);
+        
+        // Handle PadSplit variants
+        const type = analysis.analysis_type.includes('PadSplit') ? 'LTR' : analysis.analysis_type;
+        console.log('Using KPI config for type:', type);
+        
+        const config = this.KPI_CONFIGS[type];
+        console.log('KPI Config:', config);
+    
+        if (!config) {
+            console.error('No KPI configuration found for type:', type);
+            return '';
+        }
+    
+        let html = `
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Key Performance Indicators</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead class="bg-primary text-white">
+                                <tr>
+                                    <th>KPI</th>
+                                    <th class="text-center">Target</th>
+                                    <th class="text-center">Current</th>
+                                    <th class="text-center">Assessment</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+    
+        let rowCount = 0;
+        // Add each applicable KPI
+        Object.entries(config).forEach(([key, kpiConfig]) => {
+            console.log(`Processing KPI ${key}:`, {
+                config: kpiConfig,
+                value: metrics[key]
+            });
+            
+            const value = metrics[key];
+            if (value !== undefined) {
+                rowCount++;
+                // Format the values appropriately
+                let formattedValue;
+                let threshold;
+                let isFavorable;
+    
+                // Format current value
+                if (kpiConfig.format === 'money') {
+                    formattedValue = `$${value.toFixed(2)}`;
+                } else if (kpiConfig.format === 'percentage') {
+                    formattedValue = `${value.toFixed(1)}%`;
+                } else {
+                    formattedValue = value.toFixed(2);
+                }
+    
+                // Format threshold and determine if favorable
+                if (kpiConfig.direction === 'min') {
+                    threshold = kpiConfig.format === 'money' ? 
+                        `≥ $${kpiConfig.threshold.toFixed(2)}` :
+                        kpiConfig.format === 'percentage' ?
+                        `≥ ${kpiConfig.threshold.toFixed(1)}%` :
+                        `≥ ${kpiConfig.threshold.toFixed(2)}`;
+                    isFavorable = value >= kpiConfig.threshold;
+                } else if (kpiConfig.direction === 'max') {
+                    threshold = kpiConfig.format === 'money' ?
+                        `≤ $${kpiConfig.threshold.toFixed(2)}` :
+                        kpiConfig.format === 'percentage' ?
+                        `≤ ${kpiConfig.threshold.toFixed(1)}%` :
+                        `≤ ${kpiConfig.threshold.toFixed(2)}`;
+                    isFavorable = value <= kpiConfig.threshold;
+                } else {
+                    // Range threshold (Cap Rate)
+                    threshold = `${kpiConfig.goodMin.toFixed(1)}% - ${kpiConfig.goodMax.toFixed(1)}%`;
+                    isFavorable = value >= kpiConfig.goodMin && value <= kpiConfig.goodMax;
+                }
+    
+                console.log(`Adding KPI row for ${key}:`, {
+                    formattedValue,
+                    threshold,
+                    isFavorable
+                });
+    
+                html += `
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                ${kpiConfig.label}
+                                <i class="bi bi-info-circle ms-2" 
+                                   data-bs-toggle="tooltip" 
+                                   data-bs-placement="right" 
+                                   title="${kpiConfig.info}"></i>
+                            </div>
+                        </td>
+                        <td class="text-center">${threshold}</td>
+                        <td class="text-center">${formattedValue}</td>
+                        <td class="text-center">
+                            <span class="badge ${isFavorable ? 'bg-success' : 'bg-danger'}">
+                                ${isFavorable ? 'Favorable' : 'Unfavorable'}
+                            </span>
+                        </td>
+                    </tr>`;
+            }
+        });
+    
+        console.log(`Generated ${rowCount} KPI rows`);
+    
+        html += `
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="small text-muted mt-3">
+                        Key Performance Indicators (KPIs) evaluate different aspects of the investment. 
+                        Each metric has a target threshold that indicates good performance. 
+                        'Favorable' means the metric meets or exceeds its performance target.
+                    </div>
+                </div>
+            </div>`;
+    
+        return html;
+    },
+    
+    // Initialize tooltips after adding KPI card
+    initKPITooltips() {
+        const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+        tooltips.forEach(tooltip => {
+            new bootstrap.Tooltip(tooltip);
+        });
+    },
+
     validateNumericRange(value, min, max = Infinity) {
         const num = this.toRawNumber(value);
         return !isNaN(num) && num >= min && num <= (max || Infinity);
@@ -3822,6 +5355,13 @@ window.analysisModule = {
             'bathrooms': { min: 0, message: 'Number of bathrooms must be 0 or greater' }
         };
     
+        // Only validate Multi-Family specific fields if it's a Multi-Family analysis
+        if (analysisType === 'Multi-Family') {
+            if (!this.validateMultiFamilyData()) {
+                isValid = false;
+            }
+        }
+
         // Add renovation fields if not Lease Option
         if (analysisType !== 'Lease Option') {
             Object.assign(numericFields, {

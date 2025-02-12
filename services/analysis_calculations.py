@@ -8,6 +8,7 @@ from math import ceil
 import logging
 import uuid
 import traceback
+import json
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -159,6 +160,9 @@ class Analysis(ABC):
 
     def _validate_base_requirements(self) -> None:
         """Validate base requirements common to all analysis types."""
+        logger.debug(f"Analysis type: {self.data.get('analysis_type')}")
+        logger.debug(f"Analysis data: {self.data}")
+
         try:
             # 1. Validate metadata fields
             required_meta = {
@@ -177,11 +181,11 @@ class Analysis(ABC):
                 if not isinstance(value, expected_type):
                     raise TypeError(f"Field {field} must be type {expected_type.__name__}")
 
-            # 2. Validate core calculation fields
-            for field in ['monthly_rent']:
-                value = self.data.get(field)
+            # 2. Validate core calculation fields - monthly_rent only for non-Multi-Family
+            if self.data.get('analysis_type') != 'Multi-Family':
+                value = self.data.get('monthly_rent')
                 if not value or not isinstance(value, (int, float)) or value < 0:
-                    raise ValueError(f"Invalid {field}: must be a positive number")
+                    raise ValueError(f"Invalid monthly_rent: must be a positive number")
 
             # 3. Validate percentage fields
             percentage_fields = [
@@ -1109,6 +1113,44 @@ class BRRRRAnalysis(Analysis):
         super().__init__(data)
         self._validate_brrrr_requirements()
 
+    def _calculate_loan_payments(self) -> Money:
+        """Calculate total monthly loan payments for BRRRR."""
+        try:
+            # For BRRRR, we calculate both initial and refinance payments
+            if self.data.get('analysis_type') == 'BRRRR':
+                # Store initial loan payment
+                initial_payment = self._calculate_single_loan_payment(
+                    amount=self._get_money('initial_loan_amount'),
+                    interest_rate=self._get_percentage('initial_loan_interest_rate'),
+                    term=self.data.get('initial_loan_term', 0),
+                    is_interest_only=self.data.get('initial_interest_only', False)
+                )
+                
+                # Store in calculated_metrics
+                self.data.setdefault('calculated_metrics', {})['initial_loan_payment'] = str(initial_payment)
+                
+                # Store refinance payment
+                refinance_payment = self._calculate_single_loan_payment(
+                    amount=self._get_money('refinance_loan_amount'),
+                    interest_rate=self._get_percentage('refinance_loan_interest_rate'),
+                    term=self.data.get('refinance_loan_term', 0),
+                    is_interest_only=False  # Refinance loans are always amortizing
+                )
+                
+                # Store in calculated_metrics
+                self.data['calculated_metrics']['refinance_loan_payment'] = str(refinance_payment)
+                
+                # Return refinance payment for monthly cash flow calculation
+                return refinance_payment
+                
+            # For non-BRRRR analyses, use parent class implementation
+            return super()._calculate_loan_payments()
+        
+        except Exception as e:
+            logger.error(f"Error calculating BRRRR loan payments: {str(e)}")
+            logger.error(traceback.format_exc())
+            return Money(0)
+
     def _validate_brrrr_requirements(self) -> None:
         """Validate fields specific to BRRRR analysis."""
         try:
@@ -1184,6 +1226,50 @@ class BRRRRAnalysis(Analysis):
             logger.error(f"Loan validation error: {str(e)}")
             raise ValueError(f"Loan validation failed: {str(e)}")
 
+    def get_report_data(self) -> Dict:
+        """Get analysis report data with calculated metrics."""
+        try:
+            # Ensure loan payments are calculated first
+            self._calculate_loan_payments()
+            
+            # Calculate monthly cash flow using the calculated payments
+            monthly_cf = self.calculate_monthly_cash_flow()
+            metrics = {
+                'monthly_cash_flow': str(monthly_cf),
+                'annual_cash_flow': str(monthly_cf * 12),
+                'total_cash_invested': str(self.calculate_total_cash_invested()),
+                'cash_on_cash_return': str(self.cash_on_cash_return),
+                'roi': str(self.roi)
+            }
+
+            # Add loan payments from calculated_metrics
+            calc_metrics = self.data.get('calculated_metrics', {})
+            if calc_metrics:
+                if 'initial_loan_payment' in calc_metrics:
+                    metrics['initial_loan_payment'] = calc_metrics['initial_loan_payment']
+                if 'refinance_loan_payment' in calc_metrics:
+                    metrics['refinance_loan_payment'] = calc_metrics['refinance_loan_payment']
+
+            # Handle BRRRR-specific metrics
+            if 'BRRRR' in self.data.get('analysis_type', ''):
+                arv = self._get_money('after_repair_value')
+                total_costs = sum([
+                    self._get_money('purchase_price'),
+                    self._get_money('renovation_costs')
+                ], Money(0))
+
+                metrics.update({
+                    'equity_captured': str(arv - total_costs),
+                    'cash_recouped': str(self._get_money('refinance_loan_amount'))
+                })
+
+            return {'metrics': metrics}
+            
+        except Exception as e:
+            logger.error(f"Error generating report data: {str(e)}")
+            logger.error(traceback.format_exc())
+            raise
+
     @property
     def holding_costs(self) -> Money:
         """Calculate holding costs during renovation period."""
@@ -1233,6 +1319,243 @@ class BRRRRAnalysis(Analysis):
             logger.error(f"Error calculating MAO: {str(e)}")
             raise
 
+class MultiFamilyAnalysis(Analysis):
+    """Multi-Family analysis implementation."""
+    
+    def __init__(self, data: Dict):
+        """Initialize with validation for multi-family specific requirements."""
+        if data.get('analysis_type') != 'Multi-Family':
+            raise ValueError("Invalid analysis type for multi-family analysis")
+            
+        super().__init__(data)
+        self._validate_multi_family_requirements()
+
+    def _validate_multi_family_requirements(self) -> None:
+        """Validate fields specific to multi-family analysis."""
+        try:
+            # Validate required numeric fields that must be greater than 0
+            required_positive_fields = {
+                'total_units': 'Total units',
+                'floors': 'Number of floors',
+                'property_taxes': 'Property taxes',
+                'insurance': 'Insurance'
+            }
+            
+            # Fields that must be present but can be 0
+            optional_expense_fields = {
+                'elevator_maintenance': 'Elevator maintenance',
+                'other_income': 'Other income',
+                'hoa_coa_coop': 'HOA/COA/COOP fees',
+                'staff_payroll': 'Staff payroll',  # Moved to optional
+                'common_area_maintenance': 'Common area maintenance',  # Could be 0 for some properties
+                'trash_removal': 'Trash removal',  # Could be included in other fees
+                'common_utilities': 'Common utilities'  # Could be 0 if tenants pay all utilities
+            }
+            
+            # Validate fields that must be present but can be 0
+            required_fields = {
+                'elevator_maintenance': 'Elevator maintenance',
+                'other_income': 'Other income',
+                'hoa_coa_coop': 'HOA/COA/COOP fees'
+            }
+            
+            for field, display_name in required_positive_fields.items():
+                value = self._get_money(field) if field not in ['total_units', 'floors'] \
+                    else self.data.get(field, 0)
+                if not value or (hasattr(value, 'dollars') and value.dollars <= 0) or \
+                (isinstance(value, (int, float)) and value <= 0):
+                    raise ValueError(f"{display_name} must be greater than 0")
+
+            # Just verify these fields exist (can be 0)
+            for field, display_name in required_fields.items():
+                if field not in self.data:
+                    raise ValueError(f"Missing required field: {display_name}")
+
+            # Validate unit types
+            unit_types = json.loads(self.data.get('unit_types', '[]'))
+            if not unit_types:
+                raise ValueError("At least one unit type must be defined")
+            
+            total_units = sum(ut.get('count', 0) for ut in unit_types)
+            if total_units != self.data.get('total_units', 0):
+                raise ValueError("Sum of units must match total units")
+
+            total_occupied = sum(ut.get('occupied', 0) for ut in unit_types)
+            if total_occupied != self.data.get('occupied_units', 0):
+                raise ValueError("Sum of occupied units must match total occupied units")
+
+            # Validate each unit type has required fields
+            for unit_type in unit_types:
+                if not all(key in unit_type for key in ['type', 'count', 'occupied', 'square_footage', 'rent']):
+                    raise ValueError("Invalid unit type structure")
+                if unit_type['rent'] <= 0:
+                    raise ValueError("Unit rent must be greater than 0")
+                if unit_type['count'] <= 0:
+                    raise ValueError("Unit count must be greater than 0")
+                if unit_type['occupied'] < 0 or unit_type['occupied'] > unit_type['count']:
+                    raise ValueError("Occupied units cannot exceed total units for a type")
+
+            # Validate percentage fields are reasonable
+            percentage_fields = {
+                'management_fee_percentage': (0, 15),  # Typical range 0-15%
+                'capex_percentage': (0, 15),          # Typical range 0-15%
+                'vacancy_percentage': (0, 20),        # Typical range 0-20%
+                'repairs_percentage': (0, 15)         # Typical range 0-15%
+            }
+            
+            for field, (min_val, max_val) in percentage_fields.items():
+                value = float(self._get_percentage(field).value)
+                if value < min_val or value > max_val:
+                    raise ValueError(f"{field} should be between {min_val}% and {max_val}%")
+
+        except Exception as e:
+            logger.error(f"Multi-family validation error: {str(e)}")
+            raise ValueError(f"Multi-family validation failed: {str(e)}")
+
+    @property
+    def gross_potential_rent(self) -> Money:
+        """Calculate gross potential rent from all units."""
+        try:
+            unit_types = json.loads(self.data.get('unit_types', '[]'))
+            total = sum(ut.get('count', 0) * ut.get('rent', 0) for ut in unit_types)
+            return Money(total)
+        except Exception as e:
+            logger.error(f"Error calculating gross potential rent: {str(e)}")
+            return Money(0)
+
+    @property
+    def actual_gross_income(self) -> Money:
+        """Calculate actual gross income including other income."""
+        try:
+            # Get occupied unit rent
+            unit_types = json.loads(self.data.get('unit_types', '[]'))
+            occupied_rent = sum(ut.get('occupied', 0) * ut.get('rent', 0) for ut in unit_types)
+            
+            # Add other income
+            other_income = self._get_money('other_income')
+            
+            return Money(occupied_rent) + other_income
+        except Exception as e:
+            logger.error(f"Error calculating actual gross income: {str(e)}")
+            return Money(0)
+
+    @property
+    def net_operating_income(self) -> Money:
+        """Calculate NOI (before debt service)."""
+        try:
+            # Get effective gross income
+            vacancy_loss = self.gross_potential_rent * self._get_percentage('vacancy_percentage')
+            effective_gross_income = self.gross_potential_rent - vacancy_loss + self._get_money('other_income')
+            
+            # Calculate operating expenses
+            operating_expenses = self._calculate_operating_expenses()
+            
+            return effective_gross_income - operating_expenses
+        except Exception as e:
+            logger.error(f"Error calculating NOI: {str(e)}")
+            return Money(0)
+
+    @property
+    def cap_rate(self) -> Percentage:
+        """Calculate capitalization rate."""
+        try:
+            purchase_price = self._get_money('purchase_price')
+            if purchase_price.dollars <= 0:
+                return Percentage(0)
+            
+            return Percentage((float(self.net_operating_income.dollars) * 12 / 
+                             float(purchase_price.dollars)) * 100)
+        except Exception as e:
+            logger.error(f"Error calculating cap rate: {str(e)}")
+            return Percentage(0)
+
+    @property
+    def gross_rent_multiplier(self) -> float:
+        """Calculate Gross Rent Multiplier."""
+        try:
+            annual_rent = float(self.gross_potential_rent.dollars) * 12
+            if annual_rent <= 0:
+                return 0
+            
+            return float(self._get_money('purchase_price').dollars) / annual_rent
+        except Exception as e:
+            logger.error(f"Error calculating GRM: {str(e)}")
+            return 0
+
+    def _calculate_operating_expenses(self) -> Money:
+        """Calculate total monthly operating expenses."""
+        try:
+            # Fixed expenses
+            fixed_expenses = sum([
+                self._get_money('property_taxes'),
+                self._get_money('insurance'),
+                self._get_money('common_area_maintenance'),
+                self._get_money('elevator_maintenance'),
+                self._get_money('staff_payroll'),
+                self._get_money('trash_removal'),
+                self._get_money('common_utilities')
+            ], Money(0))
+            
+            # Percentage-based expenses (based on gross potential rent)
+            rent_based_expenses = sum([
+                self.gross_potential_rent * self._get_percentage('management_fee_percentage'),
+                self.gross_potential_rent * self._get_percentage('capex_percentage'),
+                self.gross_potential_rent * self._get_percentage('repairs_percentage')
+            ], Money(0))
+            
+            return fixed_expenses + rent_based_expenses
+            
+        except Exception as e:
+            logger.error(f"Error calculating operating expenses: {str(e)}")
+            raise
+
+    def get_report_data(self) -> Dict:
+        """Get analysis report data with calculated metrics."""
+        try:
+            # Get base metrics from parent class
+            base_metrics = super().get_report_data()['metrics']
+            
+            # Add multi-family specific metrics
+            multi_family_metrics = {
+                'gross_potential_rent': str(self.gross_potential_rent),
+                'actual_gross_income': str(self.actual_gross_income),
+                'net_operating_income': str(self.net_operating_income),
+                'annual_noi': str(self.net_operating_income * 12),
+                'cap_rate': str(self.cap_rate),
+                'gross_rent_multiplier': str(self.gross_rent_multiplier),
+                'price_per_unit': str(Money(float(self._get_money('purchase_price').dollars) / 
+                                          float(self.data.get('total_units', 1)))),
+                'occupancy_rate': str(Percentage((float(self.data.get('occupied_units', 0)) / 
+                                                float(self.data.get('total_units', 1))) * 100))
+            }
+            
+            # Add unit type metrics
+            unit_types = json.loads(self.data.get('unit_types', '[]'))
+            unit_metrics = {
+                'unit_type_summary': {
+                    ut['type']: {
+                        'count': ut['count'],
+                        'occupied': ut['occupied'],
+                        'avg_sf': ut['square_footage'],
+                        'rent': str(Money(ut['rent'])),
+                        'total_potential_rent': str(Money(ut['rent'] * ut['count']))
+                    } for ut in unit_types
+                }
+            }
+            
+            metrics = {
+                **base_metrics,
+                **multi_family_metrics,
+                **unit_metrics
+            }
+            
+            return {'metrics': metrics}
+            
+        except Exception as e:
+            logger.error(f"Error generating report data: {str(e)}")
+            logger.error(traceback.format_exc())
+            raise
+
 def create_analysis(data: Dict) -> Analysis:
     """Factory function to create appropriate analysis instance"""
     analysis_types = {
@@ -1240,7 +1563,8 @@ def create_analysis(data: Dict) -> Analysis:
         'BRRRR': BRRRRAnalysis,
         'PadSplit LTR': LTRAnalysis,
         'PadSplit BRRRR': BRRRRAnalysis,
-        'Lease Option': LeaseOptionAnalysis  # Add this line
+        'Lease Option': LeaseOptionAnalysis,
+        'Multi-Family': MultiFamilyAnalysis  # Add this line
     }
     
     analysis_type = data.get('analysis_type')

@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from services.analysis_service import AnalysisService
 from utils.flash import flash_message
 import logging
+import json
 import traceback
 import os
 
@@ -19,6 +20,27 @@ def create_analysis():
             analysis_data = request.get_json()
             if not analysis_data:
                 return jsonify({"success": False, "message": "No analysis data provided"}), 400
+
+            # Add detailed logging for Multi-Family analysis
+            if analysis_data.get('analysis_type') == 'Multi-Family':
+                logger.debug("=== Processing Multi-Family Analysis ===")
+                logger.debug(f"Analysis data keys: {list(analysis_data.keys())}")
+                logger.debug(f"Unit types present: {'unit_types' in analysis_data}")
+                if 'unit_types' in analysis_data:
+                    logger.debug(f"Unit types type: {type(analysis_data['unit_types'])}")
+                    logger.debug(f"Unit types data: {analysis_data['unit_types']}")
+                    try:
+                        # Verify unit types can be parsed
+                        parsed_units = json.loads(analysis_data['unit_types']) if isinstance(analysis_data['unit_types'], str) else None
+                        logger.debug(f"Parsed unit types: {parsed_units}")
+                    except json.JSONDecodeError as e:
+                        logger.error(f"Error parsing unit types JSON: {e}")
+                        return jsonify({
+                            "success": False,
+                            "message": f"Invalid unit types data format: {str(e)}"
+                        }), 400
+                else:
+                    logger.error("No unit_types found in Multi-Family analysis data")
 
             results = analysis_service.create_analysis(analysis_data, current_user.id)
             return jsonify({

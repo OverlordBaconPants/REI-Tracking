@@ -1,6 +1,8 @@
 from datetime import datetime
-from typing import Dict, Optional, Any, List, Union
+from typing import Dict, Any, List
 import os
+import traceback
+import json
 import logging
 from io import BytesIO
 from reportlab.lib import colors
@@ -9,11 +11,183 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.lib.colors import HexColor
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
-from reportlab.platypus import Frame, PageTemplate, FrameBreak
-from reportlab.platypus.flowables import KeepTogether
-from reportlab.lib.enums import TA_RIGHT, TA_LEFT, TA_CENTER
+from reportlab.platypus import Frame, PageTemplate, FrameBreak, PageBreak
 
 logger = logging.getLogger(__name__)
+
+# KPI Configurations for different analysis types
+KPI_CONFIGS = {
+    'Multi-Family': {
+        'noi': {
+            'label': 'Net Operating Income (per unit)',
+            'min': 0,
+            'max': 2000,
+            'threshold': 800,
+            'direction': 'min',  # 'min' means "at least" - higher is better
+            'format': 'money',
+            'info': 'Monthly NOI should be at least $800 per unit. Higher is better.'
+        },
+        'operatingExpenseRatio': {
+            'label': 'Operating Expense Ratio',
+            'min': 0,
+            'max': 100,
+            'threshold': 40,
+            'direction': 'max',  # 'max' means "at most" - lower is better
+            'format': 'percentage',
+            'info': 'Operating expenses should be at most 40% of income. Lower is better.'
+        },
+        'capRate': {
+            'label': 'Cap Rate',
+            'min': 3,
+            'max': 12,
+            'goodMin': 5,
+            'goodMax': 10,
+            'format': 'percentage',
+            'info': '5-10% indicates good value for multi-family.'
+        },
+        'dscr': {
+            'label': 'Debt Service Coverage Ratio',
+            'min': 0,
+            'max': 3,
+            'threshold': 1.25,
+            'direction': 'min',
+            'format': 'ratio',
+            'info': 'DSCR should be at least 1.25. Higher is better.'
+        },
+        'cashOnCash': {
+            'label': 'Cash-on-Cash Return',
+            'min': 0,
+            'max': 30,
+            'threshold': 10,
+            'direction': 'min',
+            'format': 'percentage',
+            'info': 'Cash-on-Cash return should be at least 10%. Higher is better.'
+        }
+    },
+    'LTR': {
+        'noi': {
+            'label': 'Net Operating Income (monthly)',
+            'min': 0,
+            'max': 2000,
+            'threshold': 800,
+            'direction': 'min',
+            'format': 'money',
+            'info': 'Monthly NOI should be at least $800. Higher is better.'
+        },
+        'operatingExpenseRatio': {
+            'label': 'Operating Expense Ratio',
+            'min': 0,
+            'max': 100,
+            'threshold': 40,
+            'direction': 'max',
+            'format': 'percentage',
+            'info': 'Operating expenses should be at most 40% of income. Lower is better.'
+        },
+        'capRate': {
+            'label': 'Cap Rate',
+            'min': 4,
+            'max': 14,
+            'goodMin': 6,
+            'goodMax': 12,
+            'format': 'percentage',
+            'info': '6-12% indicates good value for long-term rentals.'
+        },
+        'dscr': {
+            'label': 'Debt Service Coverage Ratio',
+            'min': 0,
+            'max': 3,
+            'threshold': 1.25,
+            'direction': 'min',
+            'format': 'ratio',
+            'info': 'DSCR should be at least 1.25. Higher is better.'
+        },
+        'cashOnCash': {
+            'label': 'Cash-on-Cash Return',
+            'min': 0,
+            'max': 30,
+            'threshold': 10,
+            'direction': 'min',
+            'format': 'percentage',
+            'info': 'Cash-on-Cash return should be at least 10%. Higher is better.'
+        }
+    },
+    'BRRRR': {
+        'noi': {
+            'label': 'Net Operating Income (monthly)',
+            'min': 0,
+            'max': 2000,
+            'threshold': 800,
+            'direction': 'min',
+            'format': 'money',
+            'info': 'Monthly NOI should be at least $800. Higher is better.'
+        },
+        'operatingExpenseRatio': {
+            'label': 'Operating Expense Ratio',
+            'min': 0,
+            'max': 100,
+            'threshold': 40,
+            'direction': 'max',
+            'format': 'percentage',
+            'info': 'Operating expenses should be at most 40% of income. Lower is better.'
+        },
+        'capRate': {
+            'label': 'Cap Rate',
+            'min': 5,
+            'max': 15,
+            'goodMin': 7,
+            'goodMax': 12,
+            'format': 'percentage',
+            'info': '7-12% indicates good value for BRRRR strategy.'
+        },
+        'dscr': {
+            'label': 'Debt Service Coverage Ratio',
+            'min': 0,
+            'max': 3,
+            'threshold': 1.25,
+            'direction': 'min',
+            'format': 'ratio',
+            'info': 'DSCR should be at least 1.25. Higher is better.'
+        },
+        'cashOnCash': {
+            'label': 'Cash-on-Cash Return',
+            'min': 0,
+            'max': 30,
+            'threshold': 10,
+            'direction': 'min',
+            'format': 'percentage',
+            'info': 'Cash-on-Cash return should be at least 10%. Higher is better.'
+        }
+    },
+    'Lease Option': {
+        'noi': {
+            'label': 'Net Operating Income (monthly)',
+            'min': 0,
+            'max': 2000,
+            'threshold': 800,
+            'direction': 'min',
+            'format': 'money',
+            'info': 'Monthly NOI should be at least $800. Higher is better.'
+        },
+        'operatingExpenseRatio': {
+            'label': 'Operating Expense Ratio',
+            'min': 0,
+            'max': 100,
+            'threshold': 40,
+            'direction': 'max',
+            'format': 'percentage',
+            'info': 'Operating expenses should be at most 40% of income. Lower is better.'
+        },
+        'cashOnCash': {
+            'label': 'Cash-on-Cash Return',
+            'min': 0,
+            'max': 30,
+            'threshold': 10,
+            'direction': 'min',
+            'format': 'percentage',
+            'info': 'Cash-on-Cash return should be at least 10%. Higher is better.'
+        }
+    }
+}
 
 class ReportGenerator:
     """Generates PDF reports with refined layout."""
@@ -156,7 +330,7 @@ class ReportGenerator:
             return False
     
     def generate_report(self, data: Dict, report_type: str = 'analysis') -> BytesIO:
-        """Generate a PDF report from analysis data with lease option support."""
+        """Generate a PDF report with KPI analysis table."""
         try:
             buffer = BytesIO()
             doc = SimpleDocTemplate(
@@ -168,7 +342,7 @@ class ReportGenerator:
                 bottomMargin=0.5*inch
             )
             
-            # Add page template
+            # Add page templates
             doc.addPageTemplates([self._create_page_template(doc)])
             
             # Initialize story (content) for the PDF
@@ -187,7 +361,7 @@ class ReportGenerator:
                 # Force switch to right column
                 story.append(FrameBreak())
                 
-                # Right column content - financial overview and expenses
+                # Right column content
                 story.extend(self._create_financial_section(data))
                 story.extend(self._create_expenses_section(data))
             else:
@@ -198,6 +372,9 @@ class ReportGenerator:
                 story.append(FrameBreak())
                 story.extend(self._create_financial_section(data))
                 story.extend(self._create_expenses_section(data))
+            
+            # Add KPI table on new page
+            story.extend(self._create_kpi_table(data))
             
             # Build PDF
             doc.build(story)
@@ -263,7 +440,7 @@ class ReportGenerator:
                 ["Lot Size:", f"{data.get('lot_size', 0):,}"],
                 ["Year Built:", str(data.get('year_built', 'N/A'))],
                 ["Bedrooms:", str(data.get('bedrooms', 0))],
-                ["Bathrooms:", f"{data.get('bathrooms', 0):.1f}"]
+                ["Bathrooms:", f"{data.get('bathrooms') or 0:.1f}"]
             ]
         else:
             # Standard property details
@@ -272,7 +449,7 @@ class ReportGenerator:
                 ["After Repair Value:", f"${self._safe_number(data.get('after_repair_value'), 2):,.2f}"],
                 ["Renovation Costs:", f"${self._safe_number(data.get('renovation_costs'), 2):,.2f}"],
                 ["Bedrooms:", str(data.get('bedrooms', 0))],
-                ["Bathrooms:", f"{data.get('bathrooms', 0):.1f}"]
+                ["Bathrooms:", f"{data.get('bathrooms') or 0:.1f}"]
             ]
         
         table = Table(
@@ -333,7 +510,7 @@ class ReportGenerator:
                     ["Monthly Cash Flow:", metrics.get('pre_balloon_monthly_cash_flow', '$0.00')],
                     ["Annual Cash Flow:", metrics.get('pre_balloon_annual_cash_flow', '$0.00')],
                     ["Cash on Cash Return:", metrics.get('cash_on_cash_return', '0%')],
-                    ["Balloon Due Date:", datetime.fromisoformat(data['balloon_due_date']).strftime('%Y-%m-%d')]
+                    ["Balloon Due Date:", data.get('balloon_due_date', 'N/A') if data.get('balloon_due_date') else 'N/A']
                 ]
                 elements.append(self._create_metrics_table(pre_balloon_data))
                 elements.append(Spacer(1, 0.2*inch))
@@ -398,21 +575,271 @@ class ReportGenerator:
             logger.error(traceback.format_exc())
             return [Paragraph(f"Error creating financial section: {str(e)}", self.styles['Normal'])]
 
+    def _calculate_kpi_metrics(self, data: Dict) -> Dict:
+        """Calculate KPI metrics for the analysis."""
+        metrics = {}
+        
+        try:
+            # Get gross income
+            if data.get('analysis_type') == 'Multi-Family':
+                unit_types = json.loads(data.get('unit_types', '[]'))
+                gross_income = sum(ut.get('count', 0) * ut.get('rent', 0) for ut in unit_types)
+                total_units = sum(ut.get('count', 0) for ut in unit_types)
+            else:
+                gross_income = self._safe_number(data.get('monthly_rent', 0))
+                total_units = 1
+            
+            annual_gross_income = gross_income * 12
+            
+            # Calculate expenses
+            expenses = sum([
+                self._safe_number(data.get('property_taxes', 0)),
+                self._safe_number(data.get('insurance', 0)),
+                self._safe_number(data.get('hoa_coa_coop', 0)),
+                self._safe_number(data.get('common_area_maintenance', 0)),
+                self._safe_number(data.get('elevator_maintenance', 0)),
+                self._safe_number(data.get('staff_payroll', 0)),
+                self._safe_number(data.get('trash_removal', 0)),
+                self._safe_number(data.get('common_utilities', 0))
+            ]) * 12
+            
+            # Add percentage-based expenses
+            percentage_expenses = sum([
+                gross_income * self._safe_number(data.get('management_fee_percentage', 0)) / 100,
+                gross_income * self._safe_number(data.get('capex_percentage', 0)) / 100,
+                gross_income * self._safe_number(data.get('vacancy_percentage', 0)) / 100,
+                gross_income * self._safe_number(data.get('repairs_percentage', 0)) / 100
+            ]) * 12
+            
+            total_expenses = expenses + percentage_expenses
+            
+            # Calculate NOI
+            noi = annual_gross_income - total_expenses
+            if data.get('analysis_type') == 'Multi-Family':
+                metrics['noi'] = noi / total_units / 12  # Monthly NOI per unit
+            else:
+                metrics['noi'] = noi / 12  # Monthly NOI
+            
+            # Operating Expense Ratio
+            if annual_gross_income > 0:
+                metrics['operatingExpenseRatio'] = (total_expenses / annual_gross_income) * 100
+            
+            # Cap Rate
+            purchase_price = self._safe_number(data.get('purchase_price', 0))
+            if purchase_price > 0:
+                metrics['capRate'] = (noi / purchase_price) * 100
+            
+            # DSCR
+            annual_debt_service = 0
+            for prefix in ['loan1', 'loan2', 'loan3']:
+                payment_str = data.get('calculated_metrics', {}).get(f'{prefix}_loan_payment', '')
+                if payment_str:
+                    try:
+                        # Remove currency formatting
+                        payment = float(payment_str.replace('$', '').replace(',', ''))
+                        annual_debt_service += payment * 12
+                    except (ValueError, AttributeError):
+                        pass
+            
+            if annual_debt_service > 0:
+                metrics['dscr'] = noi / annual_debt_service
+            
+            # Cash on Cash Return
+            total_cash_invested = data.get('calculated_metrics', {}).get('total_cash_invested', '0')
+            if isinstance(total_cash_invested, str):
+                total_cash_invested = float(total_cash_invested.replace('$', '').replace(',', ''))
+                
+            if total_cash_invested > 0:
+                annual_cash_flow = data.get('calculated_metrics', {}).get('annual_cash_flow', '0')
+                if isinstance(annual_cash_flow, str):
+                    annual_cash_flow = float(annual_cash_flow.replace('$', '').replace(',', ''))
+                    
+                metrics['cashOnCash'] = (annual_cash_flow / total_cash_invested) * 100
+            
+            # For Lease Option properties, we don't calculate certain metrics
+            if data.get('analysis_type') == 'Lease Option':
+                metrics.pop('capRate', None)
+                metrics.pop('dscr', None)
+                
+                # Calculate option ROI
+                option_fee = self._safe_number(data.get('option_consideration_fee', 0))
+                if option_fee > 0:
+                    annual_cash_flow = self._safe_number(data.get('calculated_metrics', {}).get('annual_cash_flow', '0'))
+                    metrics['optionRoi'] = (annual_cash_flow / option_fee) * 100
+            
+        except Exception as e:
+            logger.error(f"Error calculating KPI metrics: {str(e)}")
+            logger.error(traceback.format_exc())
+        
+        return metrics
+
+    def _create_kpi_table(self, data: Dict) -> list:
+        """Create KPI analysis table with thresholds and assessments."""
+        elements = []
+        
+        # Add page break and header
+        elements.append(PageBreak())
+        elements.append(Paragraph("Key Performance Indicators", self.styles['SectionHeader']))
+        elements.append(Spacer(1, 0.2*inch))
+        
+        try:
+            # Get analysis type and handle PadSplit variants
+            analysis_type = data.get('analysis_type', '')
+            if analysis_type.startswith('PadSplit'):
+                analysis_type = 'LTR'
+                
+            # Get KPI config for this analysis type
+            kpi_config = KPI_CONFIGS.get(analysis_type, {})
+            if not kpi_config:
+                return elements
+                
+            # Calculate KPI values
+            metrics = self._calculate_kpi_metrics(data)
+            
+            # Create table data
+            table_data = [
+                ["KPI", "Target", "Current", "Assessment"]  # Header row
+            ]
+            
+            # Add style for header
+            style = [
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                ('BACKGROUND', (0, 0), (-1, 0), self.BRAND_NAVY),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('FONTSIZE', (0, 0), (-1, -1), 8),
+                ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('PADDING', (0, 0), (-1, -1), 4),
+                ('ALIGN', (1, 1), (-1, -1), 'CENTER'),  # Center-align all data columns
+            ]
+            
+            # Add each KPI row
+            row_index = 1
+            for key, config in kpi_config.items():
+                if key in metrics:
+                    value = metrics[key]
+                    
+                    # Format value based on type
+                    if config['format'] == 'money':
+                        formatted_value = f"${value:,.2f}"
+                    elif config['format'] == 'percentage':
+                        formatted_value = f"{value:.1f}%"
+                    else:  # ratio
+                        formatted_value = f"{value:.2f}"
+                    
+                    # Format threshold text and determine if favorable
+                    if config.get('direction') == 'min':
+                        # "At least" threshold
+                        threshold = f"≥ ${config['threshold']:,.2f}" if config['format'] == 'money' else \
+                                f"≥ {config['threshold']:.1f}%" if config['format'] == 'percentage' else \
+                                f"≥ {config['threshold']:.2f}"
+                        is_favorable = value >= config['threshold']
+                    elif config.get('direction') == 'max':
+                        # "At most" threshold
+                        threshold = f"≤ ${config['threshold']:,.2f}" if config['format'] == 'money' else \
+                                f"≤ {config['threshold']:.1f}%" if config['format'] == 'percentage' else \
+                                f"≤ {config['threshold']:.2f}"
+                        is_favorable = value <= config['threshold']
+                    else:
+                        # Range threshold (like Cap Rate)
+                        threshold = f"{config['goodMin']:.1f}% - {config['goodMax']:.1f}%"
+                        is_favorable = config['goodMin'] <= value <= config['goodMax']
+                    
+                    assessment = "Favorable" if is_favorable else "Unfavorable"
+                    assessment_color = colors.green if is_favorable else colors.red
+                    
+                    # Add row to table
+                    table_data.append([
+                        config['label'],
+                        threshold,
+                        formatted_value,
+                        assessment
+                    ])
+                    
+                    # Add row styling
+                    style.extend([
+                        ('BACKGROUND', (0, row_index), (0, row_index), colors.lightgrey),
+                        ('TEXTCOLOR', (-1, row_index), (-1, row_index), assessment_color)
+                    ])
+                    row_index += 1
+            
+            # Create table with appropriate column widths
+            table = Table(
+                table_data,
+                colWidths=[2.5*inch, 1.5*inch, 1.5*inch, 1*inch],
+                style=TableStyle(style)
+            )
+            
+            elements.append(table)
+            elements.append(Spacer(1, 0.2*inch))
+            
+            # Add explanation paragraph
+            explanation_style = ParagraphStyle(
+                'Explanation',
+                parent=self.styles['Normal'],
+                fontSize=8,
+                textColor=colors.grey,
+                leading=10
+            )
+            elements.append(Paragraph(
+                "Key Performance Indicators (KPIs) evaluate different aspects of the investment. "
+                "Each metric has a target threshold that indicates good performance. "
+                "'Favorable' means the metric meets or exceeds its performance target.",
+                explanation_style
+            ))
+            
+            return elements
+            
+        except Exception as e:
+            logger.error(f"Error creating KPI table: {str(e)}")
+            logger.error(traceback.format_exc())
+            elements.append(Paragraph("Error generating KPI analysis", self.styles['Normal']))
+            return elements
+
     def _create_loan_section(self, data: Dict) -> list:
-        """Create loan details section with balloon payment support."""
+        """
+        Create loan details section handling all analysis types:
+        - BRRRR (including PadSplit BRRRR)
+        - Balloon Payment Loans
+        - Regular Loans (LTR, PadSplit LTR)
+        - Lease Option
+        """
         try:
             elements = []
             elements.append(Paragraph("Loan Details", self.styles['SectionHeader']))
             metrics = data.get('calculated_metrics', {})
+            analysis_type = data.get('analysis_type', '')
 
-            # Check for balloon payment
-            has_balloon = bool(data.get('has_balloon_payment')) and all([
-                self._safe_number(data.get('balloon_refinance_loan_amount')) > 0,
-                data.get('balloon_due_date'),
-                self._safe_number(data.get('balloon_refinance_ltv_percentage')) > 0
-            ])
+            # Handle BRRRR analysis type (including PadSplit BRRRR)
+            if 'BRRRR' in analysis_type:
+                # Initial Hard Money Loan Details
+                initial_loan_data = [
+                    ["Initial Hard Money Loan", ""],
+                    ["Amount:", f"${self._safe_number(data.get('initial_loan_amount'), 2):,.2f}"],
+                    ["Interest Rate:", f"{self._safe_number(data.get('initial_loan_interest_rate'))}%"],
+                    ["Term:", f"{data.get('initial_loan_term', 0)} months"],
+                    ["Monthly Payment:", metrics.get('initial_loan_payment', '$0.00')],
+                    ["Interest Only:", "Yes" if data.get('initial_interest_only') else "No"],
+                    ["Down Payment:", f"${self._safe_number(data.get('initial_loan_down_payment'), 2):,.2f}"],
+                    ["Closing Costs:", f"${self._safe_number(data.get('initial_loan_closing_costs'), 2):,.2f}"]
+                ]
+                elements.append(self._create_metrics_table(initial_loan_data))
+                elements.append(Spacer(1, 0.2*inch))
 
-            if has_balloon:
+                # Refinance Loan Details
+                refinance_data = [
+                    ["Refinance Loan", ""],
+                    ["Amount:", f"${self._safe_number(data.get('refinance_loan_amount'), 2):,.2f}"],
+                    ["Interest Rate:", f"{self._safe_number(data.get('refinance_loan_interest_rate'))}%"],
+                    ["Term:", f"{data.get('refinance_loan_term', 0)} months"],
+                    ["Monthly Payment:", metrics.get('refinance_loan_payment', '$0.00')],
+                    ["Down Payment:", f"${self._safe_number(data.get('refinance_loan_down_payment'), 2):,.2f}"],
+                    ["Closing Costs:", f"${self._safe_number(data.get('refinance_loan_closing_costs'), 2):,.2f}"]
+                ]
+                elements.append(self._create_metrics_table(refinance_data))
+
+            # Handle Balloon Payment loans
+            elif self._check_balloon_payment(data):
                 # Pre-Balloon Loan Details
                 loan_data = [
                     ["Initial Loan (Pre-Balloon)", ""],
@@ -422,7 +849,9 @@ class ReportGenerator:
                     ["Monthly Payment:", metrics.get('pre_balloon_monthly_payment', '$0.00')],
                     ["Interest Only:", "Yes" if data.get('loan1_interest_only') else "No"],
                     ["Down Payment:", f"${self._safe_number(data.get('loan1_loan_down_payment'), 2):,.2f}"],
-                    ["Closing Costs:", f"${self._safe_number(data.get('loan1_loan_closing_costs'), 2):,.2f}"]
+                    ["Closing Costs:", f"${self._safe_number(data.get('loan1_loan_closing_costs'), 2):,.2f}"],
+                    ["Balloon Due Date:", datetime.fromisoformat(data.get('balloon_due_date', '')).strftime('%Y-%m-%d') 
+                        if data.get('balloon_due_date') else 'N/A']
                 ]
                 elements.append(self._create_metrics_table(loan_data))
                 elements.append(Spacer(1, 0.2*inch))
@@ -440,12 +869,42 @@ class ReportGenerator:
                 ]
                 elements.append(self._create_metrics_table(refinance_data))
 
-            else:
-                # Regular loans
+            # Handle Lease Option
+            elif analysis_type == 'Lease Option':
+                has_loans = False
+                
+                # Check for additional financing (up to 3 loans)
                 for i in range(1, 4):
                     prefix = f'loan{i}'
                     amount = self._safe_number(data.get(f'{prefix}_loan_amount'))
                     if amount > 0:
+                        has_loans = True
+                        loan_data = [
+                            [data.get(f'{prefix}_loan_name', '') or f"Additional Financing {i}", ""],
+                            ["Amount:", f"${amount:,.2f}"],
+                            ["Interest Rate:", f"{self._safe_number(data.get(f'{prefix}_loan_interest_rate'))}%"],
+                            ["Term:", f"{data.get(f'{prefix}_loan_term', 0)} months"],
+                            ["Monthly Payment:", metrics.get(f'{prefix}_loan_payment', '$0.00')],
+                            ["Interest Only:", "Yes" if data.get(f'{prefix}_interest_only') else "No"],
+                            ["Down Payment:", f"${self._safe_number(data.get(f'{prefix}_loan_down_payment'), 2):,.2f}"],
+                            ["Closing Costs:", f"${self._safe_number(data.get(f'{prefix}_loan_closing_costs'), 2):,.2f}"]
+                        ]
+                        elements.append(self._create_metrics_table(loan_data))
+                        elements.append(Spacer(1, 0.2*inch))
+                
+                if not has_loans:
+                    elements.append(Paragraph("No additional financing", self.styles['Normal']))
+
+            # Handle regular loans (LTR, PadSplit LTR)
+            else:
+                has_loans = False
+                
+                # Process up to 3 loans
+                for i in range(1, 4):
+                    prefix = f'loan{i}'
+                    amount = self._safe_number(data.get(f'{prefix}_loan_amount'))
+                    if amount > 0:
+                        has_loans = True
                         loan_data = [
                             [data.get(f'{prefix}_loan_name', '') or f"Loan {i}", ""],
                             ["Amount:", f"${amount:,.2f}"],
@@ -457,12 +916,18 @@ class ReportGenerator:
                             ["Closing Costs:", f"${self._safe_number(data.get(f'{prefix}_loan_closing_costs'), 2):,.2f}"]
                         ]
                         elements.append(self._create_metrics_table(loan_data))
-                        elements.append(Spacer(1, 0.2*inch))
+                        # Add spacing between loans, but not after the last one
+                        if i < 3 and self._safe_number(data.get(f'loan{i+1}_loan_amount')) > 0:
+                            elements.append(Spacer(1, 0.2*inch))
+                
+                if not has_loans:
+                    elements.append(Paragraph("No loans", self.styles['Normal']))
 
             return elements
 
         except Exception as e:
             logger.error(f"Error creating loan section: {str(e)}")
+            logger.error(traceback.format_exc())
             return [Paragraph(f"Error creating loan section: {str(e)}", self.styles['Normal'])]
 
     def _create_lease_option_details(self, data: Dict) -> list:

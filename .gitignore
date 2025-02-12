@@ -1,34 +1,41 @@
-# Existing ignores
+# Python
 __pycache__
 *.pyc
-config.py
+
+# Virtual Environment
 bin/*
-tree.txt
-app.log
 share/*
 share/jupyter/*
 etc/*
 lib/*
 lib64/*
 pyvenv.config
-import_statement.txt
 venv/*
+
+# Config and Env
+config.py
 .env
 
-/logs/*                 # Ignore everything in the logs directory
-!/logs/.gitkeep         # But keep the logs directory itself
+# Logs
+/logs/*
+!/logs/.gitkeep
 
-# Data directory handling
-/data/*                   # Ignore everything in data directory
-!/data/categories.json    # But keep categories.json
-!/data/uploads           # Don't ignore the uploads directory itself
-/data/uploads/*          # Ignore everything in uploads
-!/data/uploads/.gitkeep  # But keep the .gitkeep file
-!/data/uploads/reimbursements       # Don't ignore the reimbursements directory itself
-/data/uploads/reimbursements/*      # Ignore everything in reimbursements
-!/data/uploads/reimbursements/.gitkeep  # But keep the .gitkeep file
-!/data/analyses          # Don't ignore the analyses directory itself
-/data/analyses/*         # Ignore everything in analyses
-!/data/analyses/.gitkeep # But keep the .gitkeep filedata/transactions.json
+# Data
+/data/*
+!/data/categories.json
+!/data/uploads
+/data/uploads/*
+!/data/uploads/.gitkeep
+!/data/uploads/reimbursements
+/data/uploads/reimbursements/*
+!/data/uploads/reimbursements/.gitkeep
+!/data/analyses
+/data/analyses/*
+!/data/analyses/.gitkeep
 /data/users.json
 /data/transactions.json
+
+# Misc
+tree.txt
+app.log
+import_statement.txt

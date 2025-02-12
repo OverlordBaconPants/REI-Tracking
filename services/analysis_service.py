@@ -148,7 +148,28 @@ class AnalysisService:
             'type': 'integer',
             'optional': False,
             'description': 'Maximum total rent credit allowed'
-        }
+        },
+
+        # Multi-Family specific fields
+        'total_units': {'type': 'integer', 'optional': False},
+        'occupied_units': {'type': 'integer', 'optional': False},
+        'floors': {'type': 'integer', 'optional': False},
+        'other_income': {'type': 'integer', 'optional': True},
+        'total_potential_income': {'type': 'integer', 'optional': True},
+
+        # Multi-Family operating expenses
+        'common_area_maintenance': {'type': 'integer', 'optional': False},
+        'elevator_maintenance': {'type': 'integer', 'optional': True},
+        'staff_payroll': {'type': 'integer', 'optional': False},
+        'trash_removal': {'type': 'integer', 'optional': False},
+        'common_utilities': {'type': 'integer', 'optional': False},
+
+        # Unit Types array (will be handled as JSON string in storage)
+        'unit_types': {
+            'type': 'string',  # JSON string of unit type array
+            'optional': False,
+            'description': 'Array of unit types and their details'
+        },
     }
     
     def __init__(self):
@@ -335,22 +356,39 @@ class AnalysisService:
             # Validate required base fields
             required_fields = {
                 'analysis_type': str,
-                'analysis_name': str,
-                'monthly_rent': int
+                'analysis_name': str
             }
+
+            # Add monthly_rent requirement only for non-Multi-Family analyses
+            if data.get('analysis_type') != 'Multi-Family':
+                if 'monthly_rent' not in data or \
+                not isinstance(data['monthly_rent'], (int, float)) or \
+                data['monthly_rent'] <= 0:
+                    raise ValueError("Invalid monthly_rent: must be a positive number")
+            else:
+                # For Multi-Family, validate unit_types instead
+                if 'unit_types' not in data:
+                    raise ValueError("Missing unit_types for Multi-Family analysis")
+                try:
+                    unit_types = json.loads(data['unit_types'])
+                    if not isinstance(unit_types, list) or not unit_types:
+                        raise ValueError("unit_types must be a non-empty array")
+                        
+                    # Validate each unit type has required rent
+                    for unit in unit_types:
+                        if 'rent' not in unit or \
+                        not isinstance(unit['rent'], (int, float)) or \
+                        unit['rent'] <= 0:
+                            raise ValueError("Each unit type must have a positive rent value")
+                except json.JSONDecodeError:
+                    raise ValueError("Invalid unit_types format")
             
             for field, expected_type in required_fields.items():
-                value = self._get_value(data, field)
-                if value is None:
+                value = data.get(field)
+                if not value:
                     raise ValueError(f"Missing required field: {field}")
-                if not isinstance(value, expected_type) and value is not None:
-                    try:
-                        if expected_type in (int, float):
-                            self._convert_value(value, expected_type)
-                        else:
-                            raise TypeError
-                    except (ValueError, TypeError):
-                        raise ValueError(f"Field {field} must be of type {expected_type.__name__}")
+                if not isinstance(value, expected_type):
+                    raise ValueError(f"Invalid type for {field}: expected {expected_type.__name__}")
             
             # Validate field types for non-required fields
             for field, value in data.items():
