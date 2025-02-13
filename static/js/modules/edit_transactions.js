@@ -472,7 +472,7 @@ const editTransactionsModule = {
         this.updateReimbursementDetails();
     },
 
-    updateCollectorPayerOptions: function() {
+    updateCollectorPayerOptions: async function() {
         console.log('Updating collector/payer options');
         const propertySelect = document.getElementById('property_id');
         const collectorPayerSelect = document.getElementById('collector_payer');
@@ -483,7 +483,7 @@ const editTransactionsModule = {
         }
     
         // Clear existing options
-        collectorPayerSelect.innerHTML = '';
+        collectorPayerSelect.innerHTML = '<option value="">Select Partner</option>';
     
         const selectedProperty = propertySelect.options[propertySelect.selectedIndex];
         if (propertySelect.selectedIndex <= 0 || !propertySelect.value) {
@@ -513,6 +513,13 @@ const editTransactionsModule = {
                 collectorPayerSelect.appendChild(option);
                 console.log('Added partner option:', partner.name);
             });
+    
+            // Set the initial collector/payer value if it exists
+            if (this.transaction && this.transaction.collector_payer) {
+                console.log('Setting initial collector/payer:', this.transaction.collector_payer);
+                collectorPayerSelect.value = this.transaction.collector_payer;
+            }
+    
         } catch (error) {
             console.error('Error parsing property data:', error);
             console.log('Error details:', error.message);
