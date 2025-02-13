@@ -589,8 +589,6 @@ class AnalysisService:
             logger.error(traceback.format_exc())
             raise
 
-
-
     def get_analysis(self, analysis_id: str, user_id: str) -> Optional[Dict]:
         """Retrieve analysis with calculations."""
         try:

@@ -197,16 +197,28 @@ const viewEditAnalysisModule = {
                 const data = await response.json();
                 
                 if (data.success) {
-                    // Remove the row from the table
-                    const row = document.querySelector(`button[data-analysis-id="${analysisId}"]`).closest('tr');
-                    row.remove();
+                    // Handle both desktop and mobile views
+                    // Desktop view - remove table row
+                    const tableRow = document.querySelector(`tr [data-analysis-id="${analysisId}"]`)?.closest('tr');
+                    if (tableRow) {
+                        tableRow.remove();
+                    }
+                    
+                    // Mobile view - remove card
+                    const card = document.querySelector(`.card [data-analysis-id="${analysisId}"]`)?.closest('.card');
+                    if (card) {
+                        card.remove();
+                    }
                     
                     // Show success message
                     toastr.success('Analysis deleted successfully');
                     
-                    // If table is empty, refresh the page to show the "no analyses" message
-                    const tableBody = document.querySelector('tbody');
-                    if (tableBody && !tableBody.hasChildNodes()) {
+                    // Check if any analyses remain
+                    const hasTableRows = document.querySelector('tbody tr');
+                    const hasCards = document.querySelector('.d-md-none .card');
+                    
+                    // If no analyses remain, refresh to show empty state
+                    if (!hasTableRows && !hasCards) {
                         window.location.reload();
                     }
                 } else {

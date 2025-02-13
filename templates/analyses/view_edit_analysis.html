@@ -42,6 +42,7 @@
                                                         <i class="bi bi-pencil"></i>
                                                     </button>
                                                     <button type="button" class="btn btn-danger btn-sm"
+                                                            data-analysis-id="{{ analysis.id }}"
                                                             onclick="viewEditAnalysisModule.deleteAnalysis('{{ analysis.id }}', '{{ analysis.analysis_name }}')"
                                                             title="Delete Analysis">
                                                         <i class="bi bi-trash"></i>
@@ -75,6 +76,7 @@
                                             <i class="bi bi-pencil me-2"></i>Edit Analysis
                                         </button>
                                         <button type="button" class="btn btn-danger"
+                                                data-analysis-id="{{ analysis.id }}"
                                                 onclick="viewEditAnalysisModule.deleteAnalysis('{{ analysis.id }}', '{{ analysis.analysis_name }}')">
                                             <i class="bi bi-trash me-2"></i>Delete Analysis
                                         </button>
