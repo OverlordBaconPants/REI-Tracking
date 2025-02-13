@@ -1112,7 +1112,10 @@ def create_transactions_dash(flask_app):
             df['notes'] = df['notes'].fillna('')
 
             # Add action buttons
-            df['edit'] = df.apply(lambda row: f'<button class="btn btn-sm btn-warning m-1" onclick="window.parent.viewTransactionsModule.handleEditTransaction(\'{row.id}\', \'{row.description}\')">Edit<i class="bi bi-pencil"></i></button>', axis=1)
+            df['edit'] = df.apply(
+                lambda row: f'<button class="btn btn-sm btn-warning m-1" onclick="window.parent.viewTransactionsModule.handleEditTransaction(\'{row.id}\', \'{row.description}\', \'view\')">Edit<i class="bi bi-pencil"></i></button>', 
+                axis=1
+            )
             df['delete'] = df.apply(lambda row: f'<button class="btn btn-sm btn-danger m-1" onclick="window.parent.viewTransactionsModule.handleDeleteTransaction(\'{row.id}\', \'{row.description}\')">Delete<i class="bi bi-trash"></i></button>', axis=1)
 
             # Handle reimbursement data
@@ -1184,6 +1187,13 @@ def create_transactions_dash(flask_app):
                     'presentation': 'markdown',
                     'type': 'text',
                     'dangerously_allow_html': True,
+                    'sortable': False
+                },
+                {
+                    'name': 'Edit',
+                    'id': 'edit',
+                    'presentation': 'markdown',
+                    'type': 'text',
                     'sortable': False
                 }
             ])

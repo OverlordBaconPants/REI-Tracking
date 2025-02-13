@@ -1,4 +1,5 @@
 from utils.flash import flash_message
+from functools import wraps
 from flask import abort, Blueprint, render_template, request, redirect, url_for, current_app, send_from_directory, jsonify
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
@@ -15,6 +16,44 @@ import traceback
 import pandas as pd
 
 transactions_bp = Blueprint('transactions', __name__)
+
+def property_manager_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Get transaction ID from route parameters
+        transaction_id = kwargs.get('transaction_id')
+        if not transaction_id:
+            abort(400, description="Transaction ID required")
+            
+        # Get transaction
+        transaction = get_transaction_by_id(transaction_id)
+        if not transaction:
+            abort(404, description="Transaction not found")
+            
+        # Get properties to verify property manager status
+        properties = get_properties_for_user(current_user.id, current_user.name)
+        
+        # Find property for this transaction
+        property_data = next(
+            (prop for prop in properties if prop['address'] == transaction['property_id']),
+            None
+        )
+        
+        if not property_data:
+            abort(404, description="Property not found")
+            
+        # Check if user is property manager
+        is_property_manager = any(
+            partner['name'] == current_user.name and 
+            partner.get('is_property_manager', False)
+            for partner in property_data.get('partners', [])
+        )
+        
+        if not is_property_manager:
+            abort(403, description="Only Property Managers can edit transactions")
+            
+        return f(*args, **kwargs)
+    return decorated_function
 
 @transactions_bp.route('/')
 @login_required
@@ -306,7 +345,7 @@ def parse_nested_form_data(form_data):
 
 @transactions_bp.route('/edit/<int:transaction_id>', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@property_manager_required
 def edit_transactions(transaction_id):
     try:
         # Get filter state from URL
@@ -450,7 +489,7 @@ def edit_transactions(transaction_id):
 
 @transactions_bp.route('/remove', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@property_manager_required
 def remove_transactions():
     if request.method == 'POST':
         # Handle the form submission for removing a transaction

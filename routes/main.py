@@ -246,8 +246,8 @@ def main():
         if not user_properties:
             logger.warning(f"No properties found for user {user['email']}")
             return redirect(url_for('main.index'))
-        
-        # Calculate equity
+
+        # Calculate equity (existing code remains the same)
         for prop in user_properties:
             try:
                 equity = calculate_equity(prop['address'])
@@ -258,27 +258,53 @@ def main():
                 prop['last_month_equity'] = 0
                 prop['equity_gained_since_acquisition'] = 0
 
-        # Calculate totals
+        # Calculate totals (existing code remains the same)
         total_last_month_equity = sum(prop['last_month_equity'] for prop in user_properties)
         total_equity_gained_since_acquisition = sum(prop['equity_gained_since_acquisition'] for prop in user_properties)
 
-        # Get pending transactions
-        try:
-            pending_transactions = get_transactions_for_view(
-                user['email'], 
-                user['name'], 
-                reimbursement_status='pending'
-            )
-        except Exception as e:
-            logger.error(f"Error fetching pending transactions: {str(e)}")
-            pending_transactions = []
+        # Get properties where user is property manager
+        managed_properties = [
+            prop['address'] for prop in user_properties
+            if any(partner['name'] == user['name'] and partner.get('is_property_manager', False)
+                  for partner in prop.get('partners', []))
+        ]
 
-        # Calculate cumulative amortization
-        try:
-            cumulative_amortization = calculate_cumulative_amortization(user_properties)
-        except Exception as e:
-            logger.error(f"Error calculating cumulative amortization: {str(e)}")
-            cumulative_amortization = []
+        # Get all pending transactions
+        all_pending = get_transactions_for_view(
+            user['email'], 
+            user['name'], 
+            reimbursement_status='pending'
+        )
+
+        # Split into transactions pending user's action vs others' action
+        pending_your_action = []
+        pending_others_action = []
+
+        for transaction in all_pending:
+            # Get property data for this transaction
+            property_data = next(
+                (prop for prop in user_properties if prop['address'] == transaction['property_id']),
+                None
+            )
+            
+            if not property_data:
+                continue
+
+            # Find property manager for this transaction
+            property_manager = next(
+                (partner['name'] for partner in property_data.get('partners', [])
+                 if partner.get('is_property_manager', False)),
+                'Unknown'
+            )
+
+            # Add property manager to transaction data
+            transaction['property_manager'] = property_manager
+
+            # Sort into appropriate list
+            if transaction['property_id'] in managed_properties:
+                pending_your_action.append(transaction)
+            else:
+                pending_others_action.append(transaction)
 
         logger.debug("All dashboard data compiled successfully")
         return render_template('main/main.html', 
@@ -286,8 +312,9 @@ def main():
                             user_properties=user_properties,
                             total_last_month_equity=total_last_month_equity,
                             total_equity_gained_since_acquisition=total_equity_gained_since_acquisition,
-                            pending_transactions=pending_transactions,
-                            cumulative_amortization=cumulative_amortization)
+                            pending_your_action=pending_your_action,
+                            pending_others_action=pending_others_action,
+                            cumulative_amortization=calculate_cumulative_amortization(user_properties))
                             
     except Exception as e:
         logger.error(f"Error loading main dashboard: {str(e)}")

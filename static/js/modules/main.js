@@ -5,6 +5,7 @@ const mainModule = {
         console.log('Initializing main dashboard module');
         try {
             await this.initializeDashboard();
+            this.handleUrlParameters();
             window.showNotification('Dashboard loaded successfully', 'success');
         } catch (error) {
             console.error('Error initializing dashboard:', error);
@@ -21,6 +22,18 @@ const mainModule = {
         this.setupMessageHandler();
     },
 
+    initializeTooltips: function() {
+        // Initialize Bootstrap tooltips if available
+        if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+            const tooltipTriggerList = [].slice.call(
+                document.querySelectorAll('[data-bs-toggle="tooltip"]')
+            );
+            tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        }
+    },
+
     setupMessageHandler: function() {
         window.addEventListener('message', (event) => {
             // Handle messages from Dash components
@@ -28,12 +41,6 @@ const mainModule = {
                 this.handleDashboardUpdate(event.data);
             }
         });
-    },
-
-    handleDashboardUpdate: function(data) {
-        if (data.target === 'totalEquity') {
-            this.updateTotalEquity();
-        }
     },
 
     setupEventListeners: function() {
@@ -64,16 +71,42 @@ const mainModule = {
         }
     },
 
-    initializeTooltips: function() {
-        // Initialize Bootstrap tooltips if available
-        if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
-            const tooltipTriggerList = [].slice.call(
-                document.querySelectorAll('[data-bs-toggle="tooltip"]')
-            );
-            tooltipTriggerList.map(function (tooltipTriggerEl) {
-                return new bootstrap.Tooltip(tooltipTriggerEl);
-            });
+    handleDashboardUpdate: function(data) {
+        if (data.target === 'totalEquity') {
+            this.updateTotalEquity();
         }
+    },
+
+    handleUrlParameters: function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        // Handle status messages
+        const status = urlParams.get('status');
+        const message = urlParams.get('message');
+        if (status && message) {
+            switch(status) {
+                case 'success':
+                    toastr.success(message);
+                    break;
+                case 'error':
+                    toastr.error(message);
+                    break;
+                case 'info':
+                    toastr.info(message);
+                    break;
+            }
+        }
+
+        // Handle scrolling
+        const scrollTo = urlParams.get('scroll_to');
+        const transactionId = urlParams.get('transaction_id');
+        
+        if (scrollTo) {
+            this.scrollToSection(scrollTo, transactionId);
+        }
+
+        // Clean up URL after handling parameters
+        window.history.replaceState({}, document.title, window.location.pathname);
     },
 
     handlePropertyRowClick: function(event) {
@@ -128,6 +161,24 @@ const mainModule = {
         // This will trigger any Dash callbacks listening for data changes
         const event = new CustomEvent('dashboardDataUpdate', { detail: data });
         window.dispatchEvent(event);
+    },
+
+    scrollToSection: function(sectionId, transactionId = null) {
+        const section = document.getElementById(sectionId);
+        if (section) {
+            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            // If we have a transaction ID, highlight that row briefly
+            if (transactionId) {
+                const transactionRow = document.querySelector(`tr[data-transaction-id="${transactionId}"]`);
+                if (transactionRow) {
+                    transactionRow.classList.add('highlight-row');
+                    setTimeout(() => {
+                        transactionRow.classList.remove('highlight-row');
+                    }, 3000); // Remove highlight after 3 seconds
+                }
+            }
+        }
     },
 
     formatCurrency: function(value) {

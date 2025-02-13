@@ -945,8 +945,23 @@ const editTransactionsModule = {
                 return;
             }
     
+            // Check if user is property manager
+            const propertySelect = document.getElementById('property_id');
+            const selectedOption = propertySelect.options[propertySelect.selectedIndex];
+            if (!selectedOption) {
+                throw new Error('No property selected');
+            }
+    
+            const propertyData = JSON.parse(selectedOption.dataset.property);
+            const isPropertyManager = propertyData.partners.some(partner => 
+                partner.name === currentUser.name && partner.is_property_manager
+            );
+    
+            if (!isPropertyManager) {
+                throw new Error('Only Property Managers can edit transactions');
+            }
+    
             const formData = new FormData(this.form);
-            
             const response = await fetch(this.form.action, {
                 method: 'POST',
                 body: formData
@@ -956,15 +971,28 @@ const editTransactionsModule = {
                 throw new Error('Network response was not ok');
             }
     
-            const filters = document.querySelector('form').dataset.filters || '{}';
-    
-            toastr.success('Transaction Successfully Edited', '', {
-                timeOut: 2000,
-                onHidden: () => {
-                    const timestamp = new Date().getTime();
-                    window.location.href = `/transactions/view/?filters=${encodeURIComponent(filters)}&refresh=${timestamp}`;
-                }
+            // Get the referrer information from the form's data attribute
+            const referrer = this.form.dataset.referrer || 'main';
+            
+            // Build success parameters
+            const params = new URLSearchParams({
+                status: 'success',
+                message: 'Transaction updated successfully'
             });
+    
+            // Add scroll and transaction parameters only if returning to main dashboard
+            if (referrer === 'main') {
+                params.append('scroll_to', 'pending-your-action');
+                params.append('transaction_id', this.transaction.id);
+                window.location.href = '/main?' + params.toString();
+            } else {
+                // Get existing filters if any
+                const filters = this.form.dataset.filters || '{}';
+                
+                // Return to view transactions page with success message and existing filters
+                const timestamp = new Date().getTime();
+                window.location.href = `/transactions/view/?filters=${encodeURIComponent(filters)}&${params.toString()}&refresh=${timestamp}`;
+            }
     
         } catch (error) {
             console.error('Error in form submission:', error);
@@ -990,36 +1018,26 @@ const editTransactionsModule = {
     },
 
     handleCancel: function() {
-        // Get raw filters value
-        let filters = document.querySelector('form').dataset.filters || '{}';
+        // Get the referrer information
+        const referrer = this.form.dataset.referrer || 'main';
         
-        // Ensure we're working with a clean, decoded value
-        try {
-            // First decode any existing encoding
-            while (filters.includes('%')) {
-                filters = decodeURIComponent(filters);
-            }
-            
-            // Remove any extra quotes
-            filters = filters.replace(/^["']+|["']+$/g, '');
-            
-            // Verify it's valid JSON, if not, use empty object
-            JSON.parse(filters);
-        } catch (e) {
-            console.warn('Invalid filters format, using default', e);
-            filters = '{}';
-        }
-    
-        // Show cancellation notification
-        toastr.info('Transaction Edit Canceled. Refreshing Transactions...', '', {
-            timeOut: 1200,
-            onHidden: () => {
-                // Add timestamp and encode filters once
-                const timestamp = new Date().getTime();
-                const encodedFilters = encodeURIComponent(filters);
-                window.location.href = `/transactions/view/?filters=${encodedFilters}&refresh=${timestamp}`;
-            }
+        const params = new URLSearchParams({
+            status: 'info',
+            message: 'Transaction edit cancelled'
         });
+    
+        if (referrer === 'main') {
+            // Return to main dashboard with cancel message
+            params.append('scroll_to', 'pending-your-action');
+            window.location.href = '/main?' + params.toString();
+        } else {
+            // Get existing filters if any
+            const filters = this.form.dataset.filters || '{}';
+            
+            // Return to view transactions page with cancel message and existing filters
+            const timestamp = new Date().getTime();
+            window.location.href = `/transactions/view/?filters=${encodeURIComponent(filters)}&${params.toString()}&refresh=${timestamp}`;
+        }
     }
 };
 

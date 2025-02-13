@@ -61,35 +61,99 @@
                                 </div>
                             </div>
 
-                        <!-- Transactions Card -->
-                        <div class="col-12 col-lg-6">
+                        <!-- Transactions Pending Your Action -->
+                        <div id="pending-your-action" class="col-12 col-lg-6">
                             <div class="card h-100">
                                 <div class="card-header bg-navy">
-                                    <h5 class="mb-0">Pending Reimbursements</h5>
+                                    <h5 class="mb-0">Transactions Pending Your Action</h5>
                                 </div>
                                 <div class="card-body p-0">
-                                    <div class="table-responsive">
-                                        <table class="table table-striped mb-0">
-                                            <thead>
-                                                <tr>
-                                                    <th>Property</th>
-                                                    <th>Type</th>
-                                                    <th>Amount</th>
-                                                    <th>Date</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {% for transaction in pending_transactions %}
-                                                <tr>
-                                                    <td>{{ truncate_address(transaction.property_id) }}</td>
-                                                    <td>{{ transaction.type|capitalize }}</td>
-                                                    <td>${{ "{:,.2f}".format(transaction.amount) }}</td>
-                                                    <td>{{ transaction.date }}</td>
-                                                </tr>
-                                                {% endfor %}
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                    {% if pending_your_action %}
+                                        <div class="table-responsive">
+                                            <table class="table table-striped mb-0">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Property</th>
+                                                        <th>Type</th>
+                                                        <th>Description</th>
+                                                        <th>Amount</th>
+                                                        <th>Date</th>
+                                                        <th>Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for transaction in pending_your_action %}
+                                                    <tr data-transaction-id="{{ transaction.id }}">
+                                                        <td>{{ truncate_address(transaction.property_id) }}</td>
+                                                        <td>{{ transaction.type|capitalize }}</td>
+                                                        <td>{{ transaction.description }}</td>
+                                                        <td class="{% if transaction.type == 'income' %}text-success{% else %}text-danger{% endif %}">
+                                                            ${{ "{:,.2f}".format(transaction.amount) }}
+                                                        </td>
+                                                        <td>{{ transaction.date }}</td>
+                                                        <td>
+                                                            <a href="{{ url_for('transactions.edit_transactions', transaction_id=transaction.id, referrer='main') }}" 
+                                                            class="btn btn-primary btn-sm">
+                                                                <i class="bi bi-pencil"></i> Edit
+                                                            </a>
+                                                        </td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    {% else %}
+                                        <div class="alert alert-info m-3">
+                                            <i class="bi bi-info-circle me-2"></i>
+                                            No transactions pending your action.
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Transactions Pending Others' Action -->
+                        <div id="pending-others-action" class="col-12 col-lg-6">
+                            <div class="card h-100">
+                                <div class="card-header bg-navy">
+                                    <h5 class="mb-0">Transactions Pending Others' Action</h5>
+                                </div>
+                                <div class="card-body p-0">
+                                    {% if pending_others_action %}
+                                        <div class="table-responsive">
+                                            <table class="table table-striped mb-0">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Property</th>
+                                                        <th>Type</th>
+                                                        <th>Description</th>
+                                                        <th>Amount</th>
+                                                        <th>Date</th>
+                                                        <th>Property Manager</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for transaction in pending_others_action %}
+                                                    <tr data-transaction-id="{{ transaction.id }}">
+                                                        <td>{{ truncate_address(transaction.property_id) }}</td>
+                                                        <td>{{ transaction.type|capitalize }}</td>
+                                                        <td>{{ transaction.description }}</td>
+                                                        <td class="{% if transaction.type == 'income' %}text-success{% else %}text-danger{% endif %}">
+                                                            ${{ "{:,.2f}".format(transaction.amount) }}
+                                                        </td>
+                                                        <td>{{ transaction.date }}</td>
+                                                        <td>{{ transaction.property_manager }}</td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    {% else %}
+                                        <div class="alert alert-info m-3">
+                                            <i class="bi bi-info-circle me-2"></i>
+                                            No transactions pending others' action.
+                                        </div>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>

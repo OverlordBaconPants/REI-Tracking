@@ -367,6 +367,25 @@ input[type="file"],
     }
 }
 
+/* ===== Transaction Highlighting ===== */
+.highlight-row {
+    animation: highlightFade 3s ease-out;
+}
+
+@keyframes highlightFade {
+    0% {
+        background-color: rgba(255, 243, 205, 1);  /* Bootstrap warning background */
+    }
+    100% {
+        background-color: transparent;
+    }
+}
+
+/* Ensure table rows can show the highlight */
+.table tbody tr {
+    transition: background-color var(--transition-speed) ease;
+}
+
 /* ===== Utility Classes ===== */
 .bg-navy {
     background-color: var(--navy-color) !important;
