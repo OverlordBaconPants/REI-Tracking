@@ -1,7 +1,5 @@
 from flask import Blueprint, render_template, current_app
-from flask_login import login_required, current_user
-from services.transaction_service import get_properties_for_user
-import json
+from flask_login import login_required
 
 dashboards_bp = Blueprint('dashboards', __name__)
 

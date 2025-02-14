@@ -1,14 +1,12 @@
 from flask import Flask
-from flask_login import LoginManager, login_required, UserMixin
+from flask_login import LoginManager, UserMixin
 from config import get_config
 import os
-import dash
 import logging
 from logging.handlers import RotatingFileHandler
 from dash_apps.dash_transactions import create_transactions_dash
 from dash_apps.dash_amortization import create_amortization_dash
 from dash_apps.dash_portfolio import create_portfolio_dash
-from flask.helpers import get_root_path
 
 # Make User available for import from this module
 __all__ = ['User', 'create_app']
