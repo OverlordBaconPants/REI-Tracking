@@ -4,7 +4,6 @@ import logging
 import traceback
 from flask import Blueprint, render_template, request, current_app, jsonify
 from flask_login import login_required, current_user
-from utils.utils import admin_required
 from services.transaction_service import get_partners_for_property, get_properties_for_user
 from typing import Dict, List, Any, Optional, Tuple, Set
 from datetime import datetime
@@ -47,7 +46,6 @@ def validate_property_data(property_data: Dict[str, Any]) -> Tuple[bool, List[st
         'primary_loan_start_date': str,      # Changed from loan_start_date
         'partners': list
     }
-    
     # Check required fields
     for field, expected_type in required_fields.items():
         if field not in property_data:
