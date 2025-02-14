@@ -5,6 +5,7 @@ from typing import Dict, Any, List, Optional, Tuple
 from urllib.parse import quote_plus
 import re
 from dataclasses import dataclass
+from datetime import datetime, timezone
 
 api_bp = Blueprint('api', __name__)
    
@@ -290,7 +291,7 @@ def test():
         return jsonify({
             "status": "success",
             "message": "API is working",
-            "timestamp": datetime.datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         })
     except Exception as e:
         current_app.logger.error(f"Error in test endpoint: {str(e)}")
