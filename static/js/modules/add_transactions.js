@@ -183,7 +183,12 @@ const addTransactionsModule = {
             categorySelect.innerHTML = '<option value="">Select a category</option>';
             
             if (this.categories && this.categories[type]) {
-                this.categories[type].forEach(category => {
+                // Sort the categories alphabetically
+                const sortedCategories = [...this.categories[type]].sort((a, b) => 
+                    a.toLowerCase().localeCompare(b.toLowerCase())
+                );
+                
+                sortedCategories.forEach(category => {
                     const option = document.createElement('option');
                     option.value = category;
                     option.textContent = category;
@@ -328,26 +333,6 @@ const addTransactionsModule = {
         } catch (error) {
             console.error('Error checking for partners:', error);
             return false;
-        }
-    },
-
-    updateCategories: function(type) {
-        console.log('Updating categories for type:', type);
-        const categorySelect = document.getElementById('category');
-        if (categorySelect) {
-            categorySelect.innerHTML = '<option value="">Select a category</option>';
-            if (this.categories && this.categories[type]) {
-                this.categories[type].forEach(category => {
-                    const option = document.createElement('option');
-                    option.value = category;
-                    option.textContent = category;
-                    categorySelect.appendChild(option);
-                });
-            } else {
-                console.error('Categories not found for type:', type);
-            }
-        } else {
-            console.error('Category select element not found');
         }
     },
 
