@@ -57,6 +57,34 @@ class AuthValidator:
         
         self.errors: List[Tuple[str, str]] = []
 
+    def check_password_strength(self, password: str) -> PasswordStrength:
+                """Check password strength"""
+                score = 0
+                
+                # Length check
+                if len(password) >= 12:
+                    score += 2
+                elif len(password) >= 8:
+                    score += 1
+                    
+                # Complexity checks
+                if re.search(r'[A-Z]', password): score += 1
+                if re.search(r'[a-z]', password): score += 1
+                if re.search(r'\d', password): score += 1
+                if re.search(r'[!@#$%^&*(),.?":{}|<>]', password): score += 1
+                
+                # Additional complexity
+                if re.search(r'[^A-Za-z0-9]', password): score += 1
+                if len(set(password)) >= 8: score += 1
+                
+                # Determine strength
+                if score >= 6:
+                    return PasswordStrength.STRONG
+                elif score >= 4:
+                    return PasswordStrength.MEDIUM
+                else:
+                    return PasswordStrength.WEAK
+
     def validate_email(self, email: Optional[str]) -> str:
         """Validate email format"""
         if not email:
@@ -104,34 +132,6 @@ class AuthValidator:
             self.errors.append((field_name, 'Password must contain at least one lowercase letter'))
             
         return password if not self.errors else ''
-
-    def check_password_strength(self, password: str) -> PasswordStrength:
-            """Check password strength"""
-            score = 0
-            
-            # Length check
-            if len(password) >= 12:
-                score += 2
-            elif len(password) >= 8:
-                score += 1
-                
-            # Complexity checks
-            if re.search(r'[A-Z]', password): score += 1
-            if re.search(r'[a-z]', password): score += 1
-            if re.search(r'\d', password): score += 1
-            if re.search(r'[!@#$%^&*(),.?":{}|<>]', password): score += 1
-            
-            # Additional complexity
-            if re.search(r'[^A-Za-z0-9]', password): score += 1
-            if len(set(password)) >= 8: score += 1
-            
-            # Determine strength
-            if score >= 6:
-                return PasswordStrength.STRONG
-            elif score >= 4:
-                return PasswordStrength.MEDIUM
-            else:
-                return PasswordStrength.WEAK
 
     def validate_name(self, name: Optional[str], field_name: str) -> str:
         """Validate name format"""
