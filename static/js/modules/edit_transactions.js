@@ -12,6 +12,12 @@ const editTransactionsModule = {
         this.form = document.getElementById('edit-transaction-form');
         this.reimbursementSection = document.getElementById('reimbursement-section');
         
+        // Log the referrer information
+        if (this.form) {
+            const referrer = this.form.dataset.referrer;
+            console.log('Form referrer:', referrer);
+        }
+
         // Load transaction data from form with better error handling
         try {
             const transactionData = this.form ? this.form.dataset.transaction : null;
@@ -293,77 +299,75 @@ const editTransactionsModule = {
             });
         }
     },
-    
-    initDocumentRemovalHandlers: function() {
-        console.log('Initializing document removal handlers');
-        
-        // Clean up existing event listeners first
-        const oldConfirmButton = document.getElementById('confirmDocumentRemoval');
-        const newConfirmButton = oldConfirmButton.cloneNode(true);
-        oldConfirmButton.parentNode.replaceChild(newConfirmButton, oldConfirmButton);
-        
-        // Add new click listener to confirm button
-        newConfirmButton.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('Confirm button clicked');
-            this.confirmDocumentRemoval();
-        });
-        console.log('Added click listener to confirm button');
 
-        // Clean up and reinitialize remove buttons
-        document.querySelectorAll('.document-remove-btn').forEach(button => {
-            const newButton = button.cloneNode(true);
-            button.parentNode.replaceChild(newButton, button);
+    getStreetAddress: function(fullAddress) {
+        // Extract just the house number and street name
+        if (!fullAddress) return '';
+        
+        // Split on first comma and trim
+        const streetPart = fullAddress.split(',')[0].trim();
+        console.log('Extracted street address:', streetPart);
+        return streetPart;
+    },
+
+    populateCategories: async function(type) {
+        if (!type) {
+            type = document.querySelector('input[name="type"]:checked')?.value || 'expense';
+        }
+        
+        console.log('Fetching categories for type:', type);
+        try {
+            const response = await fetch(`/api/categories?type=${type}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
             
-            newButton.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const documentType = newButton.getAttribute('data-document-type');
-                console.log('Remove button clicked for:', documentType);
-                this.handleDocumentRemoval(documentType);
-            });
-
-            // Remove the inline onclick attribute
-            newButton.removeAttribute('onclick');
-        });
-    },
-    
-    setupEventListeners: function() {
-        // Type radio buttons change event
-        const typeRadios = document.querySelectorAll('input[name="type"]');
-        typeRadios.forEach(radio => {
-            radio.addEventListener('change', (event) => {
-                this.populateCategories(event.target.value);
-                this.updateCollectorPayerLabel(event.target.value);
-            });
-        });
-
-        // Add date input change listener to update hidden date_shared
-        const dateInput = document.getElementById('date');
-        if (dateInput) {
-            dateInput.addEventListener('change', (event) => {
-                const dateSharedInput = document.getElementById('date_shared');
-                if (dateSharedInput && !this.hasPartners()) {
-                    dateSharedInput.value = event.target.value;
+            const categories = await response.json();
+            const categorySelect = document.getElementById('category');
+            
+            if (categorySelect) {
+                // Clear existing options
+                categorySelect.innerHTML = '<option value="">Select a category</option>';
+                
+                // Add new options
+                categories.forEach(category => {
+                    const option = document.createElement('option');
+                    option.value = category;
+                    option.textContent = category;
+                    categorySelect.appendChild(option);
+                });
+                
+                // Restore initial value if exists and matches available options
+                if (this.initialValues.categoryDataset) {
+                    const matchingOption = Array.from(categorySelect.options)
+                        .find(option => option.value === this.initialValues.categoryDataset);
+                    if (matchingOption) {
+                        categorySelect.value = this.initialValues.categoryDataset;
+                    }
                 }
-            });
-        }
-
-        // Property select change event
-        if (this.elements.property) {
-            this.elements.property.addEventListener('change', (event) => {
-                console.log('Property selection changed');
-                this.updateCollectorPayerOptions();
-            });
-        }
-
-        // Form submission handling
-        if (this.form) {
-            this.form.addEventListener('submit', this.handleSubmit.bind(this));
+            } else {
+                console.error('Category select element not found');
+            }
+        } catch (error) {
+            console.error('Error in populateCategories:', error);
+            toastr.error('Error loading categories');
         }
     },
- 
+
+    updateCollectorPayerLabel: function(type) {
+        if (!type) {
+            type = document.querySelector('input[name="type"]:checked')?.value || 'expense';
+        }
+        
+        console.log('Updating collector/payer label for type:', type);
+        const label = document.querySelector('label[for="collector_payer"]');
+        if (label) {
+            label.textContent = type === 'income' ? 'Received by:' : 'Paid by:';
+        } else {
+            console.error('Collector/Payer label element not found');
+        }
+    },
+
     createReimbursementSection: function(transactionData) {
         const section = document.createElement('div');
         section.id = 'reimbursement-section';
@@ -474,130 +478,6 @@ const editTransactionsModule = {
         this.updateReimbursementDetails();
     },
 
-    getStreetAddress: function(fullAddress) {
-        // Extract just the house number and street name
-        if (!fullAddress) return '';
-        
-        // Split on first comma and trim
-        const streetPart = fullAddress.split(',')[0].trim();
-        console.log('Extracted street address:', streetPart);
-        return streetPart;
-    },
-
-    populateCategories: async function(type) {
-        if (!type) {
-            type = document.querySelector('input[name="type"]:checked')?.value || 'expense';
-        }
-        
-        console.log('Fetching categories for type:', type);
-        try {
-            const response = await fetch(`/api/categories?type=${type}`);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            const categories = await response.json();
-            const categorySelect = document.getElementById('category');
-            
-            if (categorySelect) {
-                // Clear existing options
-                categorySelect.innerHTML = '<option value="">Select a category</option>';
-                
-                // Sort categories alphabetically, case-insensitive
-                const sortedCategories = [...categories].sort((a, b) => 
-                    a.toLowerCase().localeCompare(b.toLowerCase())
-                );
-                
-                // Add new options
-                sortedCategories.forEach(category => {
-                    const option = document.createElement('option');
-                    option.value = category;
-                    option.textContent = category;
-                    categorySelect.appendChild(option);
-                });
-                
-                // Restore initial value if exists and matches available options
-                if (this.initialValues.categoryDataset) {
-                    const matchingOption = Array.from(categorySelect.options)
-                        .find(option => option.value === this.initialValues.categoryDataset);
-                    if (matchingOption) {
-                        categorySelect.value = this.initialValues.categoryDataset;
-                    }
-                }
-            } else {
-                console.error('Category select element not found');
-            }
-        } catch (error) {
-            console.error('Error in populateCategories:', error);
-            toastr.error('Error loading categories');
-        }
-    },
-
-    hasPartners: function() {
-        const propertySelect = document.getElementById('property_id');
-        if (!propertySelect || propertySelect.selectedIndex <= 0) return false;
-
-        try {
-            const selectedProperty = propertySelect.options[propertySelect.selectedIndex];
-            const propertyData = JSON.parse(selectedProperty.dataset.property);
-            return (propertyData.partners || []).length > 1;
-        } catch (error) {
-            console.error('Error checking for partners:', error);
-            return false;
-        }
-    },
-
-    populatePartners: async function(propertyId) {
-        if (!propertyId) return;
-        
-        console.log('Fetching partners for property:', propertyId);
-        
-        try {
-            const response = await fetch(`/api/partners?property_id=${encodeURIComponent(propertyId)}`);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            const partners = await response.json();
-            const partnerSelect = this.elements.collectorPayer;
-            
-            if (partnerSelect) {
-                // Clear existing options
-                partnerSelect.innerHTML = '<option value="">Select a partner</option>';
-                
-                // Add new options
-                partners.forEach(partner => {
-                    const option = document.createElement('option');
-                    option.value = partner;
-                    option.textContent = partner;
-                    
-                    // Select the option if it matches the initial value
-                    if (partner === this.initialValues.collectorPayerDataset) {
-                        option.selected = true;
-                    }
-                    
-                    partnerSelect.appendChild(option);
-                });
-            }
-        } catch (error) {
-            console.error('Error in populatePartners:', error);
-        }
-    },
-
-    updateCollectorPayerLabel: function(type) {
-        if (!type) {
-            type = document.querySelector('input[name="type"]:checked')?.value || 'expense';
-        }
-        
-        console.log('Updating collector/payer label for type:', type);
-        const label = document.querySelector('label[for="collector_payer"]');
-        if (label) {
-            label.textContent = type === 'income' ? 'Received by:' : 'Paid by:';
-        } else {
-            console.error('Collector/Payer label element not found');
-        }
-    },
-    
     updateCollectorPayerOptions: async function() {
         console.log('Updating collector/payer options');
         const propertySelect = document.getElementById('property_id');
@@ -650,6 +530,92 @@ const editTransactionsModule = {
             console.error('Error parsing property data:', error);
             console.log('Error details:', error.message);
             collectorPayerSelect.innerHTML = '<option value="">Error loading partners</option>';
+        }
+    },
+
+    populatePartners: async function(propertyId) {
+        if (!propertyId) return;
+        
+        console.log('Fetching partners for property:', propertyId);
+        
+        try {
+            const response = await fetch(`/api/partners?property_id=${encodeURIComponent(propertyId)}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const partners = await response.json();
+            const partnerSelect = this.elements.collectorPayer;
+            
+            if (partnerSelect) {
+                // Clear existing options
+                partnerSelect.innerHTML = '<option value="">Select a partner</option>';
+                
+                // Add new options
+                partners.forEach(partner => {
+                    const option = document.createElement('option');
+                    option.value = partner;
+                    option.textContent = partner;
+                    
+                    // Select the option if it matches the initial value
+                    if (partner === this.initialValues.collectorPayerDataset) {
+                        option.selected = true;
+                    }
+                    
+                    partnerSelect.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('Error in populatePartners:', error);
+        }
+    },
+
+    setupEventListeners: function() {
+        // Type radio buttons change event
+        const typeRadios = document.querySelectorAll('input[name="type"]');
+        typeRadios.forEach(radio => {
+            radio.addEventListener('change', (event) => {
+                this.populateCategories(event.target.value);
+                this.updateCollectorPayerLabel(event.target.value);
+            });
+        });
+
+        // Add date input change listener to update hidden date_shared
+        const dateInput = document.getElementById('date');
+        if (dateInput) {
+            dateInput.addEventListener('change', (event) => {
+                const dateSharedInput = document.getElementById('date_shared');
+                if (dateSharedInput && !this.hasPartners()) {
+                    dateSharedInput.value = event.target.value;
+                }
+            });
+        }
+
+        // Property select change event
+        if (this.elements.property) {
+            this.elements.property.addEventListener('change', (event) => {
+                console.log('Property selection changed');
+                this.updateCollectorPayerOptions();
+            });
+        }
+
+        // Form submission handling
+        if (this.form) {
+            this.form.addEventListener('submit', this.handleSubmit.bind(this));
+        }
+    },
+
+    hasPartners: function() {
+        const propertySelect = document.getElementById('property_id');
+        if (!propertySelect || propertySelect.selectedIndex <= 0) return false;
+
+        try {
+            const selectedProperty = propertySelect.options[propertySelect.selectedIndex];
+            const propertyData = JSON.parse(selectedProperty.dataset.property);
+            return (propertyData.partners || []).length > 1;
+        } catch (error) {
+            console.error('Error checking for partners:', error);
+            return false;
         }
     },
 
@@ -804,20 +770,39 @@ const editTransactionsModule = {
         return isValid;
     },
 
-    validateReimbursementStatus: function(formData) {
-        const reimbursementStatus = formData.get('reimbursement_status');
-        const reimbursementDoc = formData.get('reimbursement_documentation');
-        const existingDoc = document.querySelector('[data-existing-reimbursement-doc]')?.dataset.existingReimbursementDoc;
-        const removeReimbDoc = formData.get('remove_reimbursement_documentation');
-    
-        // Only validate if status is 'completed' and document is being required
-        if (reimbursementStatus === 'completed' && !removeReimbDoc) {
-            if (!reimbursementDoc && !existingDoc) {
-                toastr.error('Supporting reimbursement documentation required to mark this as Complete');
-                return false;
-            }
-        }
-        return true;
+    initDocumentRemovalHandlers: function() {
+        console.log('Initializing document removal handlers');
+        
+        // Clean up existing event listeners first
+        const oldConfirmButton = document.getElementById('confirmDocumentRemoval');
+        const newConfirmButton = oldConfirmButton.cloneNode(true);
+        oldConfirmButton.parentNode.replaceChild(newConfirmButton, oldConfirmButton);
+        
+        // Add new click listener to confirm button
+        newConfirmButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Confirm button clicked');
+            this.confirmDocumentRemoval();
+        });
+        console.log('Added click listener to confirm button');
+
+        // Clean up and reinitialize remove buttons
+        document.querySelectorAll('.document-remove-btn').forEach(button => {
+            const newButton = button.cloneNode(true);
+            button.parentNode.replaceChild(newButton, button);
+            
+            newButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const documentType = newButton.getAttribute('data-document-type');
+                console.log('Remove button clicked for:', documentType);
+                this.handleDocumentRemoval(documentType);
+            });
+
+            // Remove the inline onclick attribute
+            newButton.removeAttribute('onclick');
+        });
     },
 
     handleDocumentRemoval: function(documentType) {
@@ -938,6 +923,22 @@ const editTransactionsModule = {
         console.log('Document removal process completed for:', documentType);
     },
 
+    validateReimbursementStatus: function(formData) {
+        const reimbursementStatus = formData.get('reimbursement_status');
+        const reimbursementDoc = formData.get('reimbursement_documentation');
+        const existingDoc = document.querySelector('[data-existing-reimbursement-doc]')?.dataset.existingReimbursementDoc;
+        const removeReimbDoc = formData.get('remove_reimbursement_documentation');
+    
+        // Only validate if status is 'completed' and document is being required
+        if (reimbursementStatus === 'completed' && !removeReimbDoc) {
+            if (!reimbursementDoc && !existingDoc) {
+                toastr.error('Supporting reimbursement documentation required to mark this as Complete');
+                return false;
+            }
+        }
+        return true;
+    },
+
     handleSubmit: async function(event) {
         event.preventDefault();
         
@@ -958,8 +959,15 @@ const editTransactionsModule = {
             }
     
             const propertyData = JSON.parse(selectedOption.dataset.property);
+            
+            // Get the current user's name from the form's data attribute
+            const currentUserName = this.form.dataset.username;
+            if (!currentUserName) {
+                throw new Error('Current user information not available');
+            }
+    
             const isPropertyManager = propertyData.partners.some(partner => 
-                partner.name === currentUser.name && partner.is_property_manager
+                partner.name === currentUserName && partner.is_property_manager
             );
     
             if (!isPropertyManager) {
@@ -967,6 +975,12 @@ const editTransactionsModule = {
             }
     
             const formData = new FormData(this.form);
+
+            // Log all form data for debugging
+            console.log('Form referrer from dataset:', this.form.dataset.referrer);
+            console.log('Form referrer from hidden input:', formData.get('referrer'));
+            console.log('URL parameters:', new URLSearchParams(window.location.search).toString());
+            
             const response = await fetch(this.form.action, {
                 method: 'POST',
                 body: formData

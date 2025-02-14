@@ -348,6 +348,10 @@ def parse_nested_form_data(form_data):
 @property_manager_required
 def edit_transactions(transaction_id):
     try:
+        # Get and log referrer information
+        referrer = request.args.get('referrer', 'main')
+        current_app.logger.debug(f"Initial referrer from URL params: {referrer}")
+        
         # Get filter state from URL
         filters = request.args.get('filters', '{}')
         current_app.logger.debug(f"Filters received: {filters}")
@@ -390,6 +394,11 @@ def edit_transactions(transaction_id):
                 
                 # Get and parse form data
                 form_data = request.form.to_dict()
+
+                # Log all relevant referrer information
+                current_app.logger.debug(f"Form data referrer: {form_data.get('referrer')}")
+                current_app.logger.debug(f"URL params referrer: {request.args.get('referrer')}")
+                current_app.logger.debug(f"Final referrer value: {referrer}")
                 current_app.logger.debug(f"Received form data: {json.dumps(form_data, indent=2)}")
                 
                 # Extract reimbursement data
@@ -453,10 +462,39 @@ def edit_transactions(transaction_id):
                 # Update the transaction
                 update_transaction(updated_transaction)
                 
-                # Redirect with success message
-                success_url = url_for('transactions.view_transactions') + \
-                    f'?filters={filters}&message=Transaction updated successfully&message_type=success'
-                return redirect(success_url)
+                # Get the referrer information
+                current_app.logger.debug(f"All form data: {json.dumps(form_data, indent=2)}")
+                # Check if referrer is in query parameters first
+                referrer = request.args.get('referrer') or form_data.get('referrer', 'main')
+                current_app.logger.debug(f"Referrer value: {referrer}")
+                
+                # Build success parameters
+                params = {
+                    'message': 'Transaction updated successfully',
+                    'message_type': 'success'
+                }
+                
+                # Build redirect URL with appropriate parameters
+                if referrer == 'main':
+                    redirect_url = url_for('main.index')
+                    params = {
+                        'message': 'Transaction updated successfully',
+                        'message_type': 'success',
+                        'scroll_to': 'pending-your-action',
+                        'transaction_id': transaction_id
+                    }
+                else:
+                    redirect_url = url_for('transactions.view_transactions')
+                    params = {
+                        'message': 'Transaction updated successfully',
+                        'message_type': 'success',
+                        'filters': filters
+                    }
+                
+                param_string = '&'.join(f"{k}={v}" for k, v in params.items())
+                final_url = f"{redirect_url}?{param_string}"
+                current_app.logger.debug(f"Redirecting to: {final_url}")
+                return redirect(final_url)
 
             except Exception as e:
                 current_app.logger.error(f"Error updating transaction: {str(e)}")
@@ -466,19 +504,24 @@ def edit_transactions(transaction_id):
                     transaction_id=transaction_id, 
                     filters=filters))
 
-        # For GET request: render template with debug info
+        # For GET request: prepare template data
         template_data = {
             'transaction': transaction,
             'properties': properties,
-            'filters': filters
+            'filters': filters,
+            'referrer': referrer,  # Add this explicitly
+            'current_user': {
+                'name': current_user.name,
+                'id': current_user.id,
+                'role': current_user.role
+            }
         }
+        
         current_app.logger.debug(f"Data being passed to template: {json.dumps(template_data, indent=2)}")
         
         return render_template(
             'transactions/edit_transactions.html',
-            transaction=transaction,
-            properties=properties,
-            filters=filters
+            **template_data
         )
 
     except Exception as e:

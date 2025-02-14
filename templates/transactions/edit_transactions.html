@@ -16,8 +16,12 @@
                         enctype="multipart/form-data" 
                         data-filters='{{ filters|tojson }}'
                         data-transaction='{{ transaction|tojson }}'
-                        data-referrer='{{ request.args.get("referrer", "main") }}'
-                        action="{{ url_for('transactions.edit_transactions', transaction_id=transaction.id) }}">
+                        data-referrer='{{ referrer }}'
+                        data-username='{{ current_user.name }}'
+                        action="{{ url_for('transactions.edit_transactions', transaction_id=transaction.id, referrer=referrer) }}">
+                        
+                        <!-- Add a hidden input for the referrer -->
+                        <input type="hidden" name="referrer" value="{{ referrer }}">
                         
                         <!-- Hidden Fields -->
                         <input type="hidden" id="remove_transaction_documentation" name="remove_transaction_documentation" value="false">

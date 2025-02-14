@@ -1113,7 +1113,7 @@ def create_transactions_dash(flask_app):
 
             # Add action buttons
             df['edit'] = df.apply(
-                lambda row: f'<button class="btn btn-sm btn-warning m-1" onclick="window.parent.viewTransactionsModule.handleEditTransaction(\'{row.id}\', \'{row.description}\', \'view\')">Edit<i class="bi bi-pencil"></i></button>', 
+                lambda row: f'<a href="/transactions/edit/{row.id}?referrer=view" target="_parent" class="btn btn-sm btn-warning m-1">Edit<i class="bi bi-pencil ms-1"></i></a>',
                 axis=1
             )
             df['delete'] = df.apply(lambda row: f'<button class="btn btn-sm btn-danger m-1" onclick="window.parent.viewTransactionsModule.handleDeleteTransaction(\'{row.id}\', \'{row.description}\')">Delete<i class="bi bi-trash"></i></button>', axis=1)
