@@ -20,7 +20,9 @@
 }
 
 .loan-term-container input[type="number"] {
-    -moz-appearance: textfield;
+    -webkit-appearance: none;
+    appearance: none;
+    margin: 0;
 }
 
 /* ===== Base Styles ===== */
@@ -136,6 +138,7 @@ input[type="file"],
     transition: border-color var(--transition-speed) ease;
     box-shadow: none;
     -webkit-appearance: none;
+    appearance: none;
 }
 
 .form-control:focus {
