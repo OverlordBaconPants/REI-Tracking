@@ -25,9 +25,9 @@ const editPropertiesModule = {
             
             // Then initialize the form
             this.initializeForm();
-
+    
             // Initialize loan term toggles
-            LoanTermToggle.init('primary_loan_term', 'secondary_loan_term');
+            this.initializeLoanTerms();
             
             // After form is initialized, initialize the partners section
             await this.initPartnersSection();
@@ -99,6 +99,65 @@ const editPropertiesModule = {
     
         this.initCalculations();
         console.log('Income/expense calculations initialized');
+    },
+
+    initializeLoanTerms: function() {
+        // Add the required HTML structure if it doesn't exist
+        this.ensureLoanTermStructure('primary_loan_term');
+        this.ensureLoanTermStructure('secondary_loan_term');
+        
+        // Initialize the toggle functionality
+        LoanTermToggle.init('primary_loan_term', 'secondary_loan_term');
+    },
+
+    ensureLoanTermStructure: function(termId) {
+        const input = document.getElementById(termId);
+        if (!input) {
+            console.error(`${termId} input not found`);
+            return;
+        }
+    
+        // Check if container already exists
+        let container = document.getElementById(`${termId}-container`);
+        if (!container) {
+            // Create container
+            container = document.createElement('div');
+            container.id = `${termId}-container`;
+            container.className = 'loan-term-container';
+    
+            // Create years input
+            const yearsInput = document.createElement('input');
+            yearsInput.type = 'number';
+            yearsInput.id = `${termId}-years`;
+            yearsInput.className = 'form-control';
+            yearsInput.min = '0';
+            yearsInput.step = '0.1';
+            yearsInput.value = input.value ? (parseFloat(input.value) / 12).toString() : '0';
+    
+            // Create months input
+            const monthsInput = document.createElement('input');
+            monthsInput.type = 'number';
+            monthsInput.id = `${termId}-months`;
+            monthsInput.className = 'form-control';
+            monthsInput.min = '0';
+            monthsInput.step = '1';
+            monthsInput.value = input.value || '0';
+    
+            // Create toggle button
+            const toggleBtn = document.createElement('button');
+            toggleBtn.type = 'button';
+            toggleBtn.id = `${termId}-toggle`;
+            toggleBtn.className = 'btn btn-secondary mt-2';
+            toggleBtn.textContent = 'Switch to Months';
+    
+            // Add elements to container
+            container.appendChild(yearsInput);
+            container.appendChild(monthsInput);
+            container.appendChild(toggleBtn);
+    
+            // Replace original input with container
+            input.parentNode.replaceChild(container, input);
+        }
     },
 
     // Income and Expense Calculations
@@ -227,7 +286,7 @@ const editPropertiesModule = {
         try {
             console.log('Starting to populate form with property:', property);
     
-            // Add the new select handling code here, right after the console.log
+            // Add the property select handling
             const propertySelect = document.getElementById('property_select');
             if (propertySelect) {
                 const options = propertySelect.options;
@@ -249,7 +308,6 @@ const editPropertiesModule = {
             };
      
             // Basic Property Information
-            setInputValue('property_address', property.address);
             setInputValue('purchase_date', property.purchase_date);
             setInputValue('purchase_price', property.purchase_price);
             setInputValue('down_payment', property.down_payment);
@@ -261,12 +319,26 @@ const editPropertiesModule = {
             setInputValue('primary_loan_amount', property.primary_loan_amount);
             setInputValue('primary_loan_start_date', property.primary_loan_start_date);
             setInputValue('primary_loan_rate', property.primary_loan_rate);
-            LoanTermToggle.setValue('primary_loan_term', property.primary_loan_term);
+            
+            // Initialize loan terms
+            try {
+                // Ensure the containers exist first
+                this.ensureLoanTermStructure('primary_loan_term');
+                this.ensureLoanTermStructure('secondary_loan_term');
+                
+                // First, set the values
+                LoanTermToggle.setValue('primary_loan_term', property.primary_loan_term || 0);
+                LoanTermToggle.setValue('secondary_loan_term', property.secondary_loan_term || 0);
+
+                // Then reinitialize the toggle functionality
+                LoanTermToggle.init('primary_loan_term', 'secondary_loan_term');
+            } catch (e) {
+                console.error('Error setting loan terms:', e);
+            }
             
             // Secondary Loan Information
             setInputValue('secondary_loan_amount', property.secondary_loan_amount);
             setInputValue('secondary_loan_rate', property.secondary_loan_rate);
-            LoanTermToggle.setValue('secondary_loan_term', property.secondary_loan_term);
      
             // Monthly Income
             if (property.monthly_income) {
@@ -316,10 +388,10 @@ const editPropertiesModule = {
                     console.error('Partners container not found');
                     return;
                 }
-
+    
                 // Clear existing partners
                 partnersContainer.innerHTML = '';
-
+    
                 // Add each partner with their data
                 property.partners.forEach((partner, index) => {
                     console.log(`Adding partner ${index}:`, partner);
@@ -365,12 +437,11 @@ const editPropertiesModule = {
                                     </div>
                                     <div class="col-12 col-md-3">
                                         <div class="form-group">
-                                            <label class="d-block"></label>
                                             <div class="form-check">
                                                 <input type="checkbox" 
                                                     id="partners[${index}][is_property_manager]" 
                                                     name="partners[${index}][is_property_manager]" 
-                                                    class="form-check-input project-manager-check"
+                                                    class="form-check-input property-manager-check"
                                                     ${partner.is_property_manager ? 'checked' : ''}>
                                                 <label class="form-check-label" for="partners[${index}][is_property_manager]">
                                                     Property Manager
@@ -379,7 +450,6 @@ const editPropertiesModule = {
                                         </div>
                                     </div>
                                     <div class="col-12 col-md-2">
-                                        <label class="d-block"></label>
                                         <button type="button" class="btn btn-danger remove-partner">
                                             <i class="bi bi-trash me-2"></i>Remove
                                         </button>
@@ -390,15 +460,15 @@ const editPropertiesModule = {
                     `;
                     partnersContainer.insertAdjacentHTML('beforeend', partnerHtml);
                 });
-
+    
                 // Update total equity after all partners are added
                 this.updateTotalEquity();
             }
-
+    
             // Update calculations after all fields are populated
             this.updateTotalIncome();
             this.updateTotalExpenses();
-
+    
             console.log('Form population complete');
         } catch (error) {
             console.error('Error populating form:', error);

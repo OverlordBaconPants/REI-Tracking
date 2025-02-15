@@ -115,108 +115,155 @@
       </div>
       <!-- Loan Information -->
       <div class="card mb-4">
-       <div class="card-header bg-navy">
-        <h5 class="mb-0">
-         Loan Information
-        </h5>
-       </div>
-       <div class="card-body">
-        <div class="row g-3">
-         <div class="col-12 col-md-6">
-          <div class="form-group">
-           <label class="form-label" for="primary_loan_amount">
-            Primary Loan Amount
-           </label>
-           <div class="input-group">
-            <span class="input-group-text">
-             $
-            </span>
-            <input class="form-control" id="primary_loan_amount" name="primary_loan_amount" required="" type="number"/>
-           </div>
-          </div>
-         </div>
-         <div class="col-12 col-md-6">
-          <div class="form-group">
-           <label class="form-label" for="primary_loan_start_date">
-            Loan Start Date
-           </label>
-           <input class="form-control" id="primary_loan_start_date" name="primary_loan_start_date" required="" type="date"/>
-          </div>
-         </div>
-         <div class="col-12 col-md-6">
-          <div class="form-group">
-           <label class="form-label" for="primary_loan_rate">
-            Primary Loan Rate
-           </label>
-           <div class="input-group">
-            <input class="form-control" id="primary_loan_rate" name="primary_loan_rate" required="" step="0.01" type="number"/>
-            <span class="input-group-text">
-             %
-            </span>
-           </div>
-          </div>
-         </div>
-         <div class="col-12 col-md-6">
-            <div class="form-group">
-              <label class="form-label" for="primary_loan_term">Primary Loan Term</label>
-              <input 
-                type="number" 
-                class="form-control" 
-                id="primary_loan_term" 
-                name="primary_loan_term" 
-                required
-                min="0"
-                value="360"
-              />
-            </div>
-          </div>
-         <!-- Secondary Financing Section -->
-         <div class="col-12">
-          <h6>
-           Secondary Financing
-          </h6>
-         </div>
-         <div class="col-12 col-md-4">
-          <div class="form-group">
-           <label class="form-label" for="secondary_loan_amount">
-            Secondary Loan Amount
-           </label>
-           <div class="input-group">
-            <span class="input-group-text">
-             $
-            </span>
-            <input class="form-control" id="secondary_loan_amount" name="secondary_loan_amount" type="number" value="0"/>
-           </div>
-          </div>
-         </div>
-         <div class="col-12 col-md-4">
-          <div class="form-group">
-           <label class="form-label" for="secondary_loan_rate">
-            Secondary Loan Rate
-           </label>
-           <div class="input-group">
-            <input class="form-control" id="secondary_loan_rate" name="secondary_loan_rate" step="0.01" type="number" value="0"/>
-            <span class="input-group-text">
-             %
-            </span>
-           </div>
-          </div>
-         </div>
-         <div class="col-12 col-md-4">
-            <div class="form-group">
-              <label class="form-label" for="secondary_loan_term">Secondary Loan Term</label>
-              <input 
-                type="number" 
-                class="form-control" 
-                id="secondary_loan_term" 
-                name="secondary_loan_term" 
-                min="0"
-                value="0"
-              />
-            </div>
-          </div>          
+        <div class="card-header bg-navy">
+            <h5 class="mb-0">Loan Information</h5>
         </div>
-       </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <!-- Primary Loan Amount -->
+                <div class="col-12 col-md-6">
+                    <div class="form-group">
+                        <label class="form-label" for="primary_loan_amount">Primary Loan Amount</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input class="form-control" id="primary_loan_amount" name="primary_loan_amount" required type="number"/>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loan Start Date -->
+                <div class="col-12 col-md-6">
+                    <div class="form-group">
+                        <label class="form-label" for="primary_loan_start_date">Loan Start Date</label>
+                        <input class="form-control" id="primary_loan_start_date" name="primary_loan_start_date" required type="date"/>
+                    </div>
+                </div>
+
+                <!-- Primary Loan Rate -->
+                <div class="col-12 col-md-6">
+                    <div class="form-group">
+                        <label class="form-label" for="primary_loan_rate">Primary Loan Rate</label>
+                        <div class="input-group">
+                            <input class="form-control" id="primary_loan_rate" name="primary_loan_rate" required step="0.01" type="number"/>
+                            <span class="input-group-text">%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Primary Loan Term with Toggle -->
+                <div class="col-12 col-md-6">
+                    <div class="form-group">
+                        <label class="form-label" for="primary_loan_term">Primary Loan Term</label>
+                        <div id="primary_loan_term-container" class="loan-term-container">
+                            <input 
+                                type="number" 
+                                class="form-control"
+                                id="primary_loan_term-years"
+                                name="primary_loan_term_years"
+                                min="0"
+                                step="0.1"
+                                value="30"
+                                required
+                            />
+                            <input 
+                                type="number" 
+                                class="form-control"
+                                id="primary_loan_term-months"
+                                name="primary_loan_term_months"
+                                min="0"
+                                step="1"
+                                value="360"
+                                required
+                                style="display: none;"
+                            />
+                            <button 
+                                type="button" 
+                                id="primary_loan_term-toggle"
+                                class="btn btn-secondary mt-2"
+                            >
+                                Switch to Months
+                            </button>
+                            <!-- Hidden input for form submission -->
+                            <input 
+                                type="hidden"
+                                id="primary_loan_term"
+                                name="primary_loan_term"
+                                value="360"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Secondary Financing Section -->
+                <div class="col-12">
+                    <h6>Secondary Financing</h6>
+                </div>
+
+                <!-- Secondary Loan Amount -->
+                <div class="col-12 col-md-4">
+                    <div class="form-group">
+                        <label class="form-label" for="secondary_loan_amount">Secondary Loan Amount</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input class="form-control" id="secondary_loan_amount" name="secondary_loan_amount" type="number" value="0"/>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Secondary Loan Rate -->
+                <div class="col-12 col-md-4">
+                    <div class="form-group">
+                        <label class="form-label" for="secondary_loan_rate">Secondary Loan Rate</label>
+                        <div class="input-group">
+                            <input class="form-control" id="secondary_loan_rate" name="secondary_loan_rate" step="0.01" type="number" value="0"/>
+                            <span class="input-group-text">%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Secondary Loan Term with Toggle -->
+                <div class="col-12 col-md-4">
+                    <div class="form-group">
+                        <label class="form-label" for="secondary_loan_term">Secondary Loan Term</label>
+                        <div id="secondary_loan_term-container" class="loan-term-container">
+                            <input 
+                                type="number" 
+                                class="form-control"
+                                id="secondary_loan_term-years"
+                                name="secondary_loan_term_years"
+                                min="0"
+                                step="0.1"
+                                value="0"
+                            />
+                            <input 
+                                type="number" 
+                                class="form-control"
+                                id="secondary_loan_term-months"
+                                name="secondary_loan_term_months"
+                                min="0"
+                                step="1"
+                                value="0"
+                                style="display: none;"
+                            />
+                            <button 
+                                type="button" 
+                                id="secondary_loan_term-toggle"
+                                class="btn btn-secondary mt-2"
+                            >
+                                Switch to Months
+                            </button>
+                            <!-- Hidden input for form submission -->
+                            <input 
+                                type="hidden"
+                                id="secondary_loan_term"
+                                name="secondary_loan_term"
+                                value="0"
+                            />
+                        </div>
+                    </div>
+                </div>          
+            </div>
+        </div>
       </div>
       <!-- Monthly Income -->
       <div class="card mb-4">
@@ -665,12 +712,16 @@
 
 {% block extra_js %}
 <script type="module">
- import { init } from '/static/js/main.js';
+    // Import the module directly
     import addPropertiesModule from '/static/js/modules/add_properties.js';
-
-    document.addEventListener('DOMContentLoaded', function() {
-        if (window.mainInit) {
-            window.mainInit();
+    
+    // Initialize when DOM is ready
+    document.addEventListener('DOMContentLoaded', async function() {
+        try {
+            // Initialize the module directly
+            await addPropertiesModule.init();
+        } catch (error) {
+            console.error('Error initializing add properties module:', error);
         }
     });
 </script>

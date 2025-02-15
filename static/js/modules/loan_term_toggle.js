@@ -1,192 +1,113 @@
-const LoanTermToggle = {
-    init: function(primaryInputId, secondaryInputId) {
-        this.setupToggle(primaryInputId);
-        if (secondaryInputId) {
-            this.setupToggle(secondaryInputId);
-        }
-    },
+// loan_term_toggle.js
 
-    setupToggle: function(inputId) {
-        const originalInput = document.getElementById(inputId);
-        if (!originalInput) return;
-
-        // Create container div
-        const container = document.createElement('div');
-        container.className = 'input-group';
-        originalInput.parentNode.insertBefore(container, originalInput);
-
-        // Create number input
-        const numberInput = document.createElement('input');
-        numberInput.type = 'number';
-        numberInput.className = 'form-control';
-        numberInput.name = originalInput.name;
-        numberInput.id = originalInput.id;
-        numberInput.required = originalInput.required;
-        numberInput.value = originalInput.value;
-        numberInput.min = '0';
-
-        // Create toggle button
-        const toggleButton = document.createElement('button');
-        toggleButton.type = 'button';
-        toggleButton.className = 'btn btn-outline-secondary';
-        toggleButton.textContent = 'Months';
-        toggleButton.dataset.mode = 'months';
-
-        // Add elements to container
-        container.appendChild(numberInput);
-        container.appendChild(toggleButton);
-
-        // Remove original input
-        originalInput.remove();
-
-        // Add event listeners
-        toggleButton.addEventListener('click', function() {
-            const currentValue = parseFloat(numberInput.value) || 0;
-            const isMonths = toggleButton.dataset.mode === 'months';
-
-            if (isMonths) {
-                // Converting from months to years
-                numberInput.value = Math.round(currentValue / 12);
-                toggleButton.textContent = 'Years';
-                toggleButton.dataset.mode = 'years';
-            } else {
-                // Converting from years to months
-                numberInput.value = currentValue * 12;
-                toggleButton.textContent = 'Months';
-                toggleButton.dataset.mode = 'months';
+const LoanTermToggleModule = {
+    init: function(primaryTermId, secondaryTermId) {
+        // Add a small delay to ensure DOM elements are ready
+        setTimeout(() => {
+            this.initToggle(primaryTermId);
+            if (secondaryTermId) {
+                this.initToggle(secondaryTermId);
             }
-
-            // Trigger change event for form validation
-            const event = new Event('input', { bubbles: true });
-            numberInput.dispatchEvent(event);
-        });
-
-        numberInput.addEventListener('input', function() {
-            // Ensure value is non-negative
-            if (this.value < 0) this.value = 0;
-        });
-
-        return container;
+        }, 0);
     },
 
-    // Helper function to get value in months
-    getValueInMonths: function(inputId) {
-        const container = document.getElementById(inputId).parentNode;
-        const input = document.getElementById(inputId);
-        const toggle = container.querySelector('button');
-        const value = parseFloat(input.value) || 0;
-
-        return toggle.dataset.mode === 'years' ? value * 12 : value;
-    },
-
-    // Helper function to set value (in months)
-    setValue: function(inputId, monthsValue) {
-        const container = document.getElementById(inputId).parentNode;
-        const input = document.getElementById(inputId);
-        const toggle = container.querySelector('button');
-        
-        if (toggle.dataset.mode === 'years') {
-            input.value = Math.round(monthsValue / 12);
-        } else {
-            input.value = monthsValue;
+    initToggle: function(termId) {
+        const container = document.getElementById(`${termId}-container`);
+        if (!container) {
+            console.warn(`Container for ${termId} not found, will try again later`);
+            // Add retry logic
+            setTimeout(() => this.initToggle(termId), 100);
+            return;
         }
+
+        const yearInput = document.getElementById(`${termId}-years`);
+        const monthInput = document.getElementById(`${termId}-months`);
+        const toggleBtn = document.getElementById(`${termId}-toggle`);
+
+        if (!yearInput || !monthInput || !toggleBtn) {
+            console.warn(`Required elements for ${termId} not found, will try again later`);
+            setTimeout(() => this.initToggle(termId), 100);
+            return;
+        }
+
+        // Initialize with years view
+        yearInput.style.display = 'block';
+        monthInput.style.display = 'none';
+        toggleBtn.textContent = 'Switch to Months';
+
+        // Set up event listeners
+        toggleBtn.addEventListener('click', () => {
+            const isYearsView = yearInput.style.display === 'block';
+            
+            // Toggle visibility
+            yearInput.style.display = isYearsView ? 'none' : 'block';
+            monthInput.style.display = isYearsView ? 'block' : 'none';
+            toggleBtn.textContent = isYearsView ? 'Switch to Years' : 'Switch to Months';
+
+            // Convert and update value
+            if (isYearsView) {
+                // Converting from years to months
+                const years = parseFloat(yearInput.value) || 0;
+                monthInput.value = (years * 12).toString();
+            } else {
+                // Converting from months to years
+                const months = parseFloat(monthInput.value) || 0;
+                yearInput.value = (months / 12).toString();
+            }
+        });
+
+        // Handle input changes
+        yearInput.addEventListener('input', () => {
+            const years = parseFloat(yearInput.value) || 0;
+            monthInput.value = (years * 12).toString();
+        });
+
+        monthInput.addEventListener('input', () => {
+            const months = parseFloat(monthInput.value) || 0;
+            yearInput.value = (months / 12).toString();
+        });
+    },
+
+    getValueInMonths: function(termId) {
+        const yearInput = document.getElementById(`${termId}-years`);
+        const monthInput = document.getElementById(`${termId}-months`);
+        
+        if (!yearInput || !monthInput) {
+            console.warn(`Inputs for ${termId} not found`);
+            return 0;
+        }
+
+        // Return value from whichever input is currently visible
+        if (yearInput.style.display === 'block') {
+            const years = parseFloat(yearInput.value) || 0;
+            return years * 12;
+        } else {
+            return parseFloat(monthInput.value) || 0;
+        }
+    },
+
+    setValue: function(termId, months) {
+        console.log(`Setting value for ${termId} to ${months} months`);
+        const yearInput = document.getElementById(`${termId}-years`);
+        const monthInput = document.getElementById(`${termId}-months`);
+        const hiddenInput = document.getElementById(termId);
+        
+        if (!yearInput || !monthInput) {
+            console.warn(`Inputs for ${termId} not found when setting value`);
+            return false;
+        }
+
+        const monthValue = parseFloat(months) || 0;
+        const yearValue = monthValue / 12;
+
+        yearInput.value = yearValue.toString();
+        monthInput.value = monthValue.toString();
+        if (hiddenInput) {
+            hiddenInput.value = monthValue.toString();
+        }
+
+        return true;
     }
 };
 
-export default LoanTermToggle;
-const LoanTermToggle = {
-    init: function(primaryInputId, secondaryInputId) {
-        this.setupToggle(primaryInputId);
-        if (secondaryInputId) {
-            this.setupToggle(secondaryInputId);
-        }
-    },
-
-    setupToggle: function(inputId) {
-        const originalInput = document.getElementById(inputId);
-        if (!originalInput) return;
-
-        // Create container div
-        const container = document.createElement('div');
-        container.className = 'input-group';
-        originalInput.parentNode.insertBefore(container, originalInput);
-
-        // Create number input
-        const numberInput = document.createElement('input');
-        numberInput.type = 'number';
-        numberInput.className = 'form-control';
-        numberInput.name = originalInput.name;
-        numberInput.id = originalInput.id;
-        numberInput.required = originalInput.required;
-        numberInput.value = originalInput.value;
-        numberInput.min = '0';
-
-        // Create toggle button
-        const toggleButton = document.createElement('button');
-        toggleButton.type = 'button';
-        toggleButton.className = 'btn btn-outline-secondary';
-        toggleButton.textContent = 'Months';
-        toggleButton.dataset.mode = 'months';
-
-        // Add elements to container
-        container.appendChild(numberInput);
-        container.appendChild(toggleButton);
-
-        // Remove original input
-        originalInput.remove();
-
-        // Add event listeners
-        toggleButton.addEventListener('click', function() {
-            const currentValue = parseFloat(numberInput.value) || 0;
-            const isMonths = toggleButton.dataset.mode === 'months';
-
-            if (isMonths) {
-                // Converting from months to years
-                numberInput.value = Math.round(currentValue / 12);
-                toggleButton.textContent = 'Years';
-                toggleButton.dataset.mode = 'years';
-            } else {
-                // Converting from years to months
-                numberInput.value = currentValue * 12;
-                toggleButton.textContent = 'Months';
-                toggleButton.dataset.mode = 'months';
-            }
-
-            // Trigger change event for form validation
-            const event = new Event('input', { bubbles: true });
-            numberInput.dispatchEvent(event);
-        });
-
-        numberInput.addEventListener('input', function() {
-            // Ensure value is non-negative
-            if (this.value < 0) this.value = 0;
-        });
-
-        return container;
-    },
-
-    // Helper function to get value in months
-    getValueInMonths: function(inputId) {
-        const container = document.getElementById(inputId).parentNode;
-        const input = document.getElementById(inputId);
-        const toggle = container.querySelector('button');
-        const value = parseFloat(input.value) || 0;
-
-        return toggle.dataset.mode === 'years' ? value * 12 : value;
-    },
-
-    // Helper function to set value (in months)
-    setValue: function(inputId, monthsValue) {
-        const container = document.getElementById(inputId).parentNode;
-        const input = document.getElementById(inputId);
-        const toggle = container.querySelector('button');
-        
-        if (toggle.dataset.mode === 'years') {
-            input.value = Math.round(monthsValue / 12);
-        } else {
-            input.value = monthsValue;
-        }
-    }
-};
-
-export default LoanTermToggle;
+export default LoanTermToggleModule;

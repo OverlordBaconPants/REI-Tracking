@@ -1,9 +1,10 @@
 
 // add_properties.js
 
-import LoanTermToggle from './loan_term_toggle.js';
+import LoanTermToggle from './loan_term_toggle.js'; 
 
 const addPropertiesModule = {
+    initialized: false,
 
     getNumericValue: function(formData, fieldName, defaultValue = 0) {
         const value = formData.get(fieldName);
@@ -31,11 +32,12 @@ const addPropertiesModule = {
                 this.initPartnersSection();
                 this.initCalculations();
                 
-                // Initialize loan term toggles
-                LoanTermToggle.init('primary_loan_term', 'secondary_loan_term');
+                // Wait for DOM to be ready before initializing loan term toggles
+                this.initializeLoanTerms();
                 
                 form.addEventListener('submit', this.handleSubmit.bind(this));
                 console.log('Add Properties form initialized');
+                this.initialized = true;
             } else {
                 console.error('Add Properties form not found');
             }
@@ -125,6 +127,65 @@ const addPropertiesModule = {
             });
         } else {
             console.error('Property address input not found');
+        }
+    },
+
+    initializeLoanTerms: function() {
+        // Add the required HTML structure if it doesn't exist
+        this.ensureLoanTermStructure('primary_loan_term');
+        this.ensureLoanTermStructure('secondary_loan_term');
+        
+        // Initialize the toggle functionality
+        LoanTermToggle.init('primary_loan_term', 'secondary_loan_term');
+    },
+
+    ensureLoanTermStructure: function(termId) {
+        const input = document.getElementById(termId);
+        if (!input) {
+            console.error(`${termId} input not found`);
+            return;
+        }
+
+        // Check if container already exists
+        let container = document.getElementById(`${termId}-container`);
+        if (!container) {
+            // Create container
+            container = document.createElement('div');
+            container.id = `${termId}-container`;
+            container.className = 'loan-term-container';
+
+            // Create years input
+            const yearsInput = document.createElement('input');
+            yearsInput.type = 'number';
+            yearsInput.id = `${termId}-years`;
+            yearsInput.className = 'form-control';
+            yearsInput.min = '0';
+            yearsInput.step = '0.1';
+            yearsInput.value = input.value || '0';
+
+            // Create months input
+            const monthsInput = document.createElement('input');
+            monthsInput.type = 'number';
+            monthsInput.id = `${termId}-months`;
+            monthsInput.className = 'form-control';
+            monthsInput.min = '0';
+            monthsInput.step = '1';
+            monthsInput.value = (parseFloat(input.value || '0') * 12).toString();
+
+            // Create toggle button
+            const toggleBtn = document.createElement('button');
+            toggleBtn.type = 'button';
+            toggleBtn.id = `${termId}-toggle`;
+            toggleBtn.className = 'btn btn-secondary mt-2';
+            toggleBtn.textContent = 'Switch to Months';
+
+            // Add elements to container
+            container.appendChild(yearsInput);
+            container.appendChild(monthsInput);
+            container.appendChild(toggleBtn);
+
+            // Replace original input with container
+            input.parentNode.replaceChild(container, input);
         }
     },
 

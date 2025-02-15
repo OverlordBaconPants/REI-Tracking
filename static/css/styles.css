@@ -1,3 +1,28 @@
+/* Add this to your CSS */
+.loan-term-container {
+    position: relative;
+}
+
+.loan-term-container input[type="number"] {
+    width: 100%;
+    margin-bottom: 0.5rem;
+}
+
+.loan-term-container button {
+    width: 100%;
+}
+
+/* Hide number input spinners for a cleaner look */
+.loan-term-container input[type="number"]::-webkit-inner-spin-button,
+.loan-term-container input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.loan-term-container input[type="number"] {
+    -moz-appearance: textfield;
+}
+
 /* ===== Base Styles ===== */
 :root {
     --navbar-height: 56px;
