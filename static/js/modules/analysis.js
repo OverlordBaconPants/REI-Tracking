@@ -4764,13 +4764,13 @@ window.analysisModule = {
             setFieldValue('after_repair_value', analysis.after_repair_value);
             setFieldValue('renovation_costs', analysis.renovation_costs);
             setFieldValue('renovation_duration', analysis.renovation_duration);
-                      
+                        
             // Purchase closing details
             setFieldValue('cash_to_seller', analysis.cash_to_seller);
             setFieldValue('closing_costs', analysis.closing_costs);
             setFieldValue('assignment_fee', analysis.assignment_fee);
             setFieldValue('marketing_costs', analysis.marketing_costs);
-
+    
             // Handle Multi-Family specific fields
             if (analysis.analysis_type === 'Multi-Family') {
                 try {
@@ -4821,7 +4821,7 @@ window.analysisModule = {
                     toastr.error('Error loading Multi-Family data');
                 }
             }
-
+    
             // Handle Lease Option fields
             if (analysis.analysis_type === 'Lease Option') {
                 // Clear any irrelevant fields that might be present
@@ -4836,46 +4836,44 @@ window.analysisModule = {
                 setFieldValue('strike_price', analysis.strike_price);
                 setFieldValue('monthly_rent_credit_percentage', analysis.monthly_rent_credit_percentage);
                 setFieldValue('rent_credit_cap', analysis.rent_credit_cap);
-                
-                // Handle loan fields
-                const loansContainer = document.getElementById('loans-container');
-                if (loansContainer) {
-                    // Clear existing loans
-                    loansContainer.innerHTML = '';
-                    
-                    // Add each existing loan
-                    for (let i = 1; i <= 3; i++) {
-                        const prefix = `loan${i}`;
-                        if (analysis[`${prefix}_loan_amount`] > 0) {
-                            // Insert loan HTML
-                            loansContainer.insertAdjacentHTML('beforeend', getLoanFieldsHTML(i));
-                            
-                            // Populate loan fields
-                            setFieldValue(`${prefix}_loan_name`, analysis[`${prefix}_loan_name`]);
-                            setFieldValue(`${prefix}_loan_amount`, analysis[`${prefix}_loan_amount`]);
-                            setFieldValue(`${prefix}_loan_interest_rate`, analysis[`${prefix}_loan_interest_rate`]);
-                            setFieldValue(`${prefix}_loan_term`, analysis[`${prefix}_loan_term`]);
-                            setFieldValue(`${prefix}_loan_down_payment`, analysis[`${prefix}_loan_down_payment`]);
-                            setFieldValue(`${prefix}_loan_closing_costs`, analysis[`${prefix}_loan_closing_costs`]);
-                            
-                            // Handle interest-only checkbox
-                            const interestOnlyCheckbox = document.getElementById(`${prefix}_interest_only`);
-                            if (interestOnlyCheckbox) {
-                                interestOnlyCheckbox.checked = Boolean(analysis[`${prefix}_interest_only`]);
-                                interestOnlyCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
-                                console.log(`Setting ${prefix}_interest_only to:`, Boolean(analysis[`${prefix}_interest_only`]));
-                            }
-                        }
-                    }
-                }
-                
-                // Initialize loan handlers after populating fields
-                this.initLoanHandlers();
             }
-
-            // Initialize balloon payment handlers AFTER setting values
-            this.initBalloonPaymentHandlers(true);  // Pass true to skip toggle init
-
+    
+            // Handle balloon payment configuration
+            const hasBalloon = analysis.has_balloon_payment || (
+                analysis.balloon_refinance_loan_amount > 0 && 
+                analysis.balloon_due_date && 
+                analysis.balloon_refinance_ltv_percentage > 0
+            );
+    
+            // Set balloon toggle state
+            const balloonToggle = document.getElementById('has_balloon_payment');
+            const balloonDetails = document.getElementById('balloon-payment-details');
+            
+            if (balloonToggle && balloonDetails) {
+                balloonToggle.checked = hasBalloon;
+                if (hasBalloon) {
+                    balloonDetails.style.display = 'block';
+                    const balloonInputs = balloonDetails.querySelectorAll('input:not([type="checkbox"])');
+                    balloonInputs.forEach(input => {
+                        input.required = true;
+                    });
+                } else {
+                    balloonDetails.style.display = 'none';
+                    this.clearBalloonPaymentFields();
+                }
+            }
+    
+            // Set balloon payment fields if enabled
+            if (hasBalloon) {
+                setFieldValue('balloon_due_date', analysis.balloon_due_date);
+                setFieldValue('balloon_refinance_ltv_percentage', analysis.balloon_refinance_ltv_percentage);
+                setFieldValue('balloon_refinance_loan_amount', analysis.balloon_refinance_loan_amount);
+                setFieldValue('balloon_refinance_loan_interest_rate', analysis.balloon_refinance_loan_interest_rate);
+                setFieldValue('balloon_refinance_loan_term', analysis.balloon_refinance_loan_term);
+                setFieldValue('balloon_refinance_loan_down_payment', analysis.balloon_refinance_loan_down_payment);
+                setFieldValue('balloon_refinance_loan_closing_costs', analysis.balloon_refinance_loan_closing_costs);
+            }
+    
             // Handle existing loans
             const loansContainer = document.getElementById('loans-container');
             if (loansContainer) {
@@ -4898,18 +4896,18 @@ window.analysisModule = {
                         setFieldValue(`${prefix}_loan_closing_costs`, analysis[`${prefix}_loan_closing_costs`]);
                         
                         // Handle interest-only checkbox specifically
-                        const interestOnlyCheckbox = document.getElementById(`loan${i}_interest_only`);
+                        const interestOnlyCheckbox = document.getElementById(`${prefix}_interest_only`);
                         if (interestOnlyCheckbox) {
                             // Convert the value to boolean and set it
-                            interestOnlyCheckbox.checked = Boolean(analysis[`loan${i}_interest_only`]);
+                            interestOnlyCheckbox.checked = Boolean(analysis[`${prefix}_interest_only`]);
                             // Dispatch change event to trigger any listeners
                             interestOnlyCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
-                            console.log(`Setting loan${i}_interest_only to:`, Boolean(analysis[`loan${i}_interest_only`]));
+                            console.log(`Setting ${prefix}_interest_only to:`, Boolean(analysis[`${prefix}_interest_only`]));
                         }
                     }
                 }
             }
-
+    
             setFieldValue('monthly_rent', analysis.monthly_rent);
             
             // Set operating expenses - now handles zero values
@@ -4920,7 +4918,7 @@ window.analysisModule = {
             setFieldValue('capex_percentage', analysis.capex_percentage);
             setFieldValue('vacancy_percentage', analysis.vacancy_percentage);
             setFieldValue('repairs_percentage', analysis.repairs_percentage);
-
+    
             // Set Notes
             setFieldValue('notes', analysis.notes || '');
             
@@ -4957,6 +4955,9 @@ window.analysisModule = {
                 setFieldValue('pest_control', analysis.pest_control);
                 setFieldValue('landscaping', analysis.landscaping);
             }
+    
+            // Initialize balloon payment handlers after setting all values
+            this.initBalloonPaymentHandlers(true);  // Pass true to skip toggle init
             
         } catch (error) {
             console.error('Error populating form fields:', error);
