@@ -776,6 +776,7 @@ const getLongTermRentalHTML = () => `
                         <span class="input-group-text">months</span>
                     </div>
                 </div>
+                <!-- Add Furnishing Costs field for PadSplit -->
                 <div class="col-12 col-md-6 padsplit-field" style="display: none;">
                     <label for="furnishing_costs" class="form-label">Furnishing Costs</label>
                     <div class="input-group">
@@ -1058,6 +1059,7 @@ const getBRRRRHTML = () => `
                         <span class="input-group-text">months</span>
                     </div>
                 </div>
+                <!-- Add Furnishing Costs field for PadSplit -->
                 <div class="col-12 col-md-6 padsplit-field" style="display: none;">
                     <label for="furnishing_costs" class="form-label">Furnishing Costs</label>
                     <div class="input-group">
@@ -1645,7 +1647,11 @@ window.analysisModule = {
             
         // Set up event listener for changes
         newAnalysisType.addEventListener('change', async (e) => {
-            console.log('Analysis type changed to:', e.target.value);
+            console.log('Analysis type change detected:', {
+                newType: e.target.value,
+                isPadSplit: e.target.value.includes('PadSplit'),
+                padSplitFields: document.querySelectorAll('.padsplit-field')
+            });
             if (this.typeChangeInProgress) {
                 console.log('Type change already in progress');
                 return;
@@ -1731,6 +1737,8 @@ window.analysisModule = {
             
             // Get appropriate template based on type
             let template;
+            const isPadSplit = type.includes('PadSplit');
+
             switch(type) {
                 case 'Multi-Family':
                     console.log('Using Multi-Family template');
@@ -1753,6 +1761,22 @@ window.analysisModule = {
             // Apply template
             container.innerHTML = template;
             console.log('Template applied successfully');
+
+            // Handle PadSplit fields visibility
+            console.log('Checking PadSplit fields for type:', type);
+            const padSplitFields = container.querySelectorAll('.padsplit-field');
+            console.log('Found PadSplit fields:', padSplitFields.length);
+            
+            padSplitFields.forEach(field => {
+                field.style.display = isPadSplit ? 'block' : 'none';
+                const inputs = field.querySelectorAll('input');
+                inputs.forEach(input => {
+                    input.required = isPadSplit;
+                    if (!isPadSplit) {
+                        input.value = '';
+                    }
+                });
+            });
             
             // Initialize appropriate handlers
             if (type === 'Multi-Family') {
