@@ -54,6 +54,7 @@ class AnalysisService:
         'closing_costs': {'type': 'integer'},
         'assignment_fee': {'type': 'integer'},
         'marketing_costs': {'type': 'integer'},
+        'furnishing_costs': {'type': 'integer','optional': True},
 
         # Income
         'monthly_rent': {'type': 'integer'},

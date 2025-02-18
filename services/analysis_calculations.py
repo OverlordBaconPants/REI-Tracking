@@ -444,7 +444,11 @@ class Analysis(ABC):
                     self._get_money(f'{prefix}_loan_down_payment'),
                     self._get_money(f'{prefix}_loan_closing_costs')
                 ], Money(0))
-            
+
+            # Add furnishing costs for PadSplit
+            if 'PadSplit' in self.data.get('analysis_type', ''):
+                total_cash += self._get_money('furnishing_costs')
+
             # For BRRRR deals, calculate net cash position
             if 'BRRRR' in self.data.get('analysis_type', ''):
                 # Add initial costs

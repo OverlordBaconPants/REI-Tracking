@@ -776,6 +776,14 @@ const getLongTermRentalHTML = () => `
                         <span class="input-group-text">months</span>
                     </div>
                 </div>
+                <div class="col-12 col-md-6 padsplit-field" style="display: none;">
+                    <label for="furnishing_costs" class="form-label">Furnishing Costs</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control form-control-lg" id="furnishing_costs" 
+                            name="furnishing_costs" placeholder="PadSplit furnishing costs" required>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -1048,6 +1056,14 @@ const getBRRRRHTML = () => `
                         <input type="number" class="form-control form-control-lg" id="renovation_duration" 
                                name="renovation_duration" placeholder="Duration" required>
                         <span class="input-group-text">months</span>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6 padsplit-field" style="display: none;">
+                    <label for="furnishing_costs" class="form-label">Furnishing Costs</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control form-control-lg" id="furnishing_costs" 
+                            name="furnishing_costs" placeholder="PadSplit furnishing costs" required>
                     </div>
                 </div>
             </div>
@@ -1634,9 +1650,24 @@ window.analysisModule = {
                 console.log('Type change already in progress');
                 return;
             }
-    
+        
             const newType = e.target.value;
             console.log('Processing change to type:', newType);
+            
+            // Add PadSplit field handling
+            const isPadSplit = newType.includes('PadSplit');
+            const padSplitFields = document.querySelectorAll('.padsplit-field');
+            
+            padSplitFields.forEach(field => {
+                field.style.display = isPadSplit ? 'block' : 'none';
+                const inputs = field.querySelectorAll('input');
+                inputs.forEach(input => {
+                    input.required = isPadSplit;
+                    if (!isPadSplit) {
+                        input.value = '';
+                    }
+                });
+            });
             
             // Skip if initial type hasn't been set yet or if type hasn't actually changed
             if (!this.initialAnalysisType || newType === this.initialAnalysisType) {
@@ -2747,7 +2778,7 @@ window.analysisModule = {
         // Get form data
         const formData = new FormData(form);
         const analysisData = {};
-
+    
         // First, set the analysis type
         const analysisType = formData.get('analysis_type');
         analysisData.analysis_type = analysisType;
@@ -2794,8 +2825,16 @@ window.analysisModule = {
                 analysisData[key] = value || null;
             }
         });
-
-        // In handleSubmit before making the API call:
+    
+        // Handle PadSplit furnishing costs
+        if (analysisType.includes('PadSplit')) {
+            const furnishingCosts = formData.get('furnishing_costs');
+            analysisData.furnishing_costs = furnishingCosts ? this.toRawNumber(furnishingCosts) : 0;
+        } else {
+            analysisData.furnishing_costs = 0;
+        }
+    
+        // Log data before sending
         if (analysisType === 'Multi-Family') {
             console.log('Sending Multi-Family data:', {
                 analysisData,
@@ -2952,7 +2991,7 @@ window.analysisModule = {
         const analysisData = {
             id: analysisId
         };
-
+    
         // Handle Multi-Family unit types
         if (currentAnalysisType === 'Multi-Family') {
             const unitTypes = [];
@@ -3004,6 +3043,14 @@ window.analysisModule = {
                 analysisData[key] = value || null;  // Convert empty strings to null
             }
         });
+    
+        // Handle PadSplit furnishing costs
+        if (currentAnalysisType.includes('PadSplit')) {
+            const furnishingCosts = formData.get('furnishing_costs');
+            analysisData.furnishing_costs = furnishingCosts ? this.toRawNumber(furnishingCosts) : 0;
+        } else {
+            analysisData.furnishing_costs = 0;
+        }
     
         // If balloon payment is false, ensure all balloon-related fields are 0 or null
         if (!hasBalloon) {
@@ -3586,6 +3633,18 @@ window.analysisModule = {
                     </div>
                 </div>
             </div>
+
+            <!-- Financing Details Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Financing Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="accordion" id="loanDetailsAccordion">
+                        ${this.getLoanDetailsContent(analysis)}
+                    </div>
+                </div>
+            </div>
             ${this.createNotesSection(analysis.notes)}`;
     },
 
@@ -3681,19 +3740,7 @@ window.analysisModule = {
 
             <!-- KPIs Card -->
             ${kpiCard}
-    
-            <!-- Financing Details Card -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Financing Details</h5>
-                </div>
-                <div class="card-body">
-                    <div class="accordion" id="loanDetailsAccordion">
-                        ${this.getLoanDetailsContent(analysis)}
-                    </div>
-                </div>
-            </div>
-    
+       
             <!-- Operating Expenses Card -->
             <div class="card mb-4">
                 <div class="card-header">
@@ -3781,6 +3828,18 @@ window.analysisModule = {
                                 ` : ''}
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Financing Details Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Financing Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="accordion" id="loanDetailsAccordion">
+                        ${this.getLoanDetailsContent(analysis)}
                     </div>
                 </div>
             </div>
@@ -4955,6 +5014,25 @@ window.analysisModule = {
                 setFieldValue('pest_control', analysis.pest_control);
                 setFieldValue('landscaping', analysis.landscaping);
             }
+
+            // Handle PadSplit-specific fields
+            if (analysis.analysis_type?.includes('PadSplit')) {
+                setFieldValue('furnishing_costs', analysis.furnishing_costs || 0);
+                document.querySelectorAll('.padsplit-field').forEach(field => {
+                    field.style.display = 'block';
+                    field.querySelectorAll('input').forEach(input => {
+                        input.required = true;
+                    });
+                });
+            } else {
+                document.querySelectorAll('.padsplit-field').forEach(field => {
+                    field.style.display = 'none';
+                    field.querySelectorAll('input').forEach(input => {
+                        input.required = false;
+                        input.value = '';
+                    });
+                });
+            }
     
             // Initialize balloon payment handlers after setting all values
             this.initBalloonPaymentHandlers(true);  // Pass true to skip toggle init
@@ -5383,6 +5461,7 @@ window.analysisModule = {
         // Validate PadSplit-specific fields if applicable
         if (analysisType?.includes('PadSplit')) {
             Object.assign(numericFields, {
+                'furnishing_costs': { min: 0, message: 'Furnishing costs must be 0 or greater' },
                 'utilities': { min: 0, message: 'Utilities must be 0 or greater' },
                 'internet': { min: 0, message: 'Internet must be 0 or greater' },
                 'cleaning': { min: 0, message: 'Cleaning costs must be 0 or greater' },

@@ -443,14 +443,24 @@ class ReportGenerator:
                 ["Bathrooms:", f"{data.get('bathrooms') or 0:.1f}"]
             ]
         else:
-            # Standard property details
+            # Standard property details with conditional furnishing costs for PadSplit
             property_data = [
                 ["Purchase Price:", f"${self._safe_number(data.get('purchase_price'), 2):,.2f}"],
                 ["After Repair Value:", f"${self._safe_number(data.get('after_repair_value'), 2):,.2f}"],
-                ["Renovation Costs:", f"${self._safe_number(data.get('renovation_costs'), 2):,.2f}"],
+                ["Renovation Costs:", f"${self._safe_number(data.get('renovation_costs'), 2):,.2f}"]
+            ]
+
+            # Add furnishing costs for PadSplit
+            if 'PadSplit' in data.get('analysis_type', ''):
+                property_data.append(
+                    ["Furnishing Costs:", f"${self._safe_number(data.get('furnishing_costs'), 2):,.2f}"]
+                )
+
+            # Add remaining standard fields
+            property_data.extend([
                 ["Bedrooms:", str(data.get('bedrooms', 0))],
                 ["Bathrooms:", f"{data.get('bathrooms') or 0:.1f}"]
-            ]
+            ])
         
         table = Table(
             property_data,

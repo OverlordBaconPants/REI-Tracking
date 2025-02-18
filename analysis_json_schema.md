@@ -18,6 +18,7 @@
 - after_repair_value: integer
 - renovation_costs: integer
 - renovation_duration: integer
+- furnishing_costs: integer  // One-time expense for PadSplit furnishing
 - cash_to_seller: integer
 - closing_costs: integer
 - assignment_fee: integer
