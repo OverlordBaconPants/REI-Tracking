@@ -428,13 +428,14 @@ class ReportGenerator:
         return elements
 
     def _create_property_section(self, data: Dict) -> list:
-        """Create property details section with lease option support."""
+        """Create property details section with property type."""
         elements = []
         
         elements.append(Paragraph("Property Details", self.styles['SectionHeader']))
         
         if data.get('analysis_type') == 'Lease Option':
             property_data = [
+                ["Property Type:", str(data.get('property_type', 'Not Specified'))],  # Add property type
                 ["Purchase Price:", f"${self._safe_number(data.get('purchase_price'), 2):,.2f}"],
                 ["Square Footage:", f"{data.get('square_footage', 0):,}"],
                 ["Lot Size:", f"{data.get('lot_size', 0):,}"],
@@ -445,6 +446,7 @@ class ReportGenerator:
         else:
             # Standard property details with conditional furnishing costs for PadSplit
             property_data = [
+                ["Property Type:", str(data.get('property_type', 'Not Specified'))],  # Add property type
                 ["Purchase Price:", f"${self._safe_number(data.get('purchase_price'), 2):,.2f}"],
                 ["After Repair Value:", f"${self._safe_number(data.get('after_repair_value'), 2):,.2f}"],
                 ["Renovation Costs:", f"${self._safe_number(data.get('renovation_costs'), 2):,.2f}"]

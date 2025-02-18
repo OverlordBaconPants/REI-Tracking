@@ -7,6 +7,16 @@ const getMultiFamilyHTML = () => `
         </div>
         <div class="card-body">
             <div class="row g-3">
+                <div class="col-12 col-md-6">
+                    <label for="property_type" class="form-label">Property Type</label>
+                    <select class="form-select form-select-lg" id="property_type" name="property_type" required>
+                        <option value="">Select Property Type</option>
+                        <option value="Single Family">Single Family</option>
+                        <option value="Condo">Condo</option>
+                        <option value="Townhouse">Townhouse</option>
+                        <option value="Manufactured">Manufactured</option>
+                    </select>
+                </div>
                 <div class="col-12 col-md-4">
                     <label for="square_footage" class="form-label">Total Square Footage</label>
                     <div class="input-group">
@@ -470,6 +480,16 @@ const getLeaseOptionHTML = () => `
         </div>
         <div class="card-body">
             <div class="row g-3">
+                <div class="col-12 col-md-6">
+                    <label for="property_type" class="form-label">Property Type</label>
+                    <select class="form-select form-select-lg" id="property_type" name="property_type" required>
+                        <option value="">Select Property Type</option>
+                        <option value="Single Family">Single Family</option>
+                        <option value="Condo">Condo</option>
+                        <option value="Townhouse">Townhouse</option>
+                        <option value="Manufactured">Manufactured</option>
+                    </select>
+                </div>
                 <div class="col-12 col-md-4">
                     <label for="square_footage" class="form-label">Square Footage</label>
                     <div class="input-group">
@@ -702,6 +722,16 @@ const getLongTermRentalHTML = () => `
             </div>
             <div class="card-body">
                 <div class="row g-3">
+                    <div class="col-12 col-md-6">
+                        <label for="property_type" class="form-label">Property Type</label>
+                        <select class="form-select form-select-lg" id="property_type" name="property_type" required>
+                            <option value="">Select Property Type</option>
+                            <option value="Single Family">Single Family</option>
+                            <option value="Condo">Condo</option>
+                            <option value="Townhouse">Townhouse</option>
+                            <option value="Manufactured">Manufactured</option>
+                        </select>
+                    </div>
                     <div class="col-12 col-md-4">
                         <label for="square_footage" class="form-label">Square Footage</label>
                         <div class="input-group">
@@ -985,6 +1015,16 @@ const getBRRRRHTML = () => `
         </div>
         <div class="card-body">
             <div class="row g-3">
+                <div class="col-12 col-md-6">
+                    <label for="property_type" class="form-label">Property Type</label>
+                    <select class="form-select form-select-lg" id="property_type" name="property_type" required>
+                        <option value="">Select Property Type</option>
+                        <option value="Single Family">Single Family</option>
+                        <option value="Condo">Condo</option>
+                        <option value="Townhouse">Townhouse</option>
+                        <option value="Manufactured">Manufactured</option>
+                    </select>
+                </div>
                 <div class="col-12 col-md-4">
                     <label for="square_footage" class="form-label">Square Footage</label>
                     <div class="input-group">
@@ -1721,6 +1761,48 @@ window.analysisModule = {
             }
         });
     },
+
+    initPropertyTypeHandler() {
+        console.log('Initializing property type handler');
+        const analysisType = document.getElementById('analysis_type');
+        const propertyType = document.getElementById('property_type');
+        
+        if (!analysisType || !propertyType) {
+            console.log('Required elements not found:', { analysisType: !!analysisType, propertyType: !!propertyType });
+            return;
+        }
+    
+        // Function to manage property type options
+        const updatePropertyTypeOptions = (type) => {
+            console.log('Updating property type options for:', type);
+            
+            // First, reset to default options
+            propertyType.innerHTML = `
+                <option value="">Select Property Type</option>
+                <option value="Single Family">Single Family</option>
+                <option value="Condo">Condo</option>
+                <option value="Townhouse">Townhouse</option>
+                <option value="Manufactured">Manufactured</option>
+            `;
+            
+            // Handle Multi-Family case
+            if (type === 'Multi-Family') {
+                propertyType.innerHTML = '<option value="Multi-Family">Multi-Family</option>';
+                propertyType.value = 'Multi-Family';
+                propertyType.disabled = true;
+            } else {
+                propertyType.disabled = false;
+            }
+        };
+    
+        // Initial setup
+        updatePropertyTypeOptions(analysisType.value);
+    
+        // Handle analysis type changes
+        analysisType.addEventListener('change', (e) => {
+            updatePropertyTypeOptions(e.target.value);
+        });
+    },
     
     // In the loadTemplateForType function:
     loadTemplateForType(type, container) {
@@ -1761,6 +1843,10 @@ window.analysisModule = {
             // Apply template
             container.innerHTML = template;
             console.log('Template applied successfully');
+
+            setTimeout(() => {
+                this.initPropertyTypeHandler();
+            }, 0);
 
             // Handle PadSplit fields visibility
             console.log('Checking PadSplit fields for type:', type);
@@ -2806,6 +2892,10 @@ window.analysisModule = {
         // First, set the analysis type
         const analysisType = formData.get('analysis_type');
         analysisData.analysis_type = analysisType;
+
+        // Add property type handling
+        const propertyType = formData.get('property_type');
+        analysisData.property_type = propertyType || null;  // Allow null for backward compatibility
         
         if (analysisType === 'Multi-Family') {
             // Get unit types data
@@ -2904,81 +2994,6 @@ window.analysisModule = {
         });
     },
 
-    // Updated isNumericField function for flat schema
-    isNumericField(fieldName) {
-        const moneyFields = [
-            'purchase_price',
-            'after_repair_value',
-            'renovation_costs',
-            'renovation_duration',
-            'cash_to_seller',
-            'closing_costs',
-            'assignment_fee',
-            'marketing_costs',
-            'monthly_rent',
-            'property_taxes',
-            'insurance',
-            'hoa_coa_coop',
-            'utilities',
-            'internet',
-            'cleaning',
-            'pest_control',
-            'landscaping',
-            'square_footage',
-            'lot_size',
-            'year_built',
-            'bedrooms',
-            'option_consideration_fee',
-            'strike_price',
-            'rent_credit_cap'
-        ];
-    
-        const decimalFields = [
-            'bathrooms'
-        ];
-    
-        const percentageFields = [
-            'management_fee_percentage',
-            'capex_percentage',
-            'vacancy_percentage',
-            'repairs_percentage',
-            'padsplit_platform_percentage',
-            'monthly_rent_credit_percentage'
-        ];
-    
-        const loanFields = [
-            'initial_loan_amount',
-            'initial_loan_down_payment',
-            'initial_loan_interest_rate',
-            'initial_loan_term',
-            'initial_loan_closing_costs',
-            'refinance_loan_amount',
-            'refinance_loan_down_payment',
-            'refinance_loan_interest_rate',
-            'refinance_loan_term',
-            'refinance_loan_closing_costs',
-            'loan1_loan_amount',
-            'loan1_loan_down_payment',
-            'loan1_loan_interest_rate',
-            'loan1_loan_term',
-            'loan1_loan_closing_costs',
-            'loan2_loan_amount',
-            'loan2_loan_down_payment',
-            'loan2_loan_interest_rate',
-            'loan2_loan_term',
-            'loan2_loan_closing_costs',
-            'loan3_loan_amount',
-            'loan3_loan_down_payment',
-            'loan3_loan_interest_rate',
-            'loan3_loan_term',
-            'loan3_loan_closing_costs'
-        ];
-    
-        return moneyFields.includes(fieldName) || 
-               percentageFields.includes(fieldName) || 
-               loanFields.includes(fieldName);
-    },
-
     // Updated handleEditSubmit function for flat schema
     handleEditSubmit: function(event, analysisId) {
         event.preventDefault();
@@ -3015,6 +3030,10 @@ window.analysisModule = {
         const analysisData = {
             id: analysisId
         };
+
+        // Add property type handling
+        const propertyType = formData.get('property_type');
+        analysisData.property_type = propertyType || null;  // Allow null for backward compatibility
     
         // Handle Multi-Family unit types
         if (currentAnalysisType === 'Multi-Family') {
@@ -3160,6 +3179,81 @@ window.analysisModule = {
             }
         });
     },
+
+    // Updated isNumericField function for flat schema
+    isNumericField(fieldName) {
+        const moneyFields = [
+            'purchase_price',
+            'after_repair_value',
+            'renovation_costs',
+            'renovation_duration',
+            'cash_to_seller',
+            'closing_costs',
+            'assignment_fee',
+            'marketing_costs',
+            'monthly_rent',
+            'property_taxes',
+            'insurance',
+            'hoa_coa_coop',
+            'utilities',
+            'internet',
+            'cleaning',
+            'pest_control',
+            'landscaping',
+            'square_footage',
+            'lot_size',
+            'year_built',
+            'bedrooms',
+            'option_consideration_fee',
+            'strike_price',
+            'rent_credit_cap'
+        ];
+    
+        const decimalFields = [
+            'bathrooms'
+        ];
+    
+        const percentageFields = [
+            'management_fee_percentage',
+            'capex_percentage',
+            'vacancy_percentage',
+            'repairs_percentage',
+            'padsplit_platform_percentage',
+            'monthly_rent_credit_percentage'
+        ];
+    
+        const loanFields = [
+            'initial_loan_amount',
+            'initial_loan_down_payment',
+            'initial_loan_interest_rate',
+            'initial_loan_term',
+            'initial_loan_closing_costs',
+            'refinance_loan_amount',
+            'refinance_loan_down_payment',
+            'refinance_loan_interest_rate',
+            'refinance_loan_term',
+            'refinance_loan_closing_costs',
+            'loan1_loan_amount',
+            'loan1_loan_down_payment',
+            'loan1_loan_interest_rate',
+            'loan1_loan_term',
+            'loan1_loan_closing_costs',
+            'loan2_loan_amount',
+            'loan2_loan_down_payment',
+            'loan2_loan_interest_rate',
+            'loan2_loan_term',
+            'loan2_loan_closing_costs',
+            'loan3_loan_amount',
+            'loan3_loan_down_payment',
+            'loan3_loan_interest_rate',
+            'loan3_loan_term',
+            'loan3_loan_closing_costs'
+        ];
+    
+        return moneyFields.includes(fieldName) || 
+               percentageFields.includes(fieldName) || 
+               loanFields.includes(fieldName);
+    },    
 
     calculateMAO(analysis) {
         try {
@@ -3326,6 +3420,10 @@ window.analysisModule = {
                     </div>
                     <div class="card-body">
                         <div class="list-group list-group-flush">
+                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                <span>Property Type</span>
+                                <strong>${analysis.property_type || 'Not Specified'}</strong>
+                            </div>
                             <div class="list-group-item d-flex justify-content-between align-items-center py-3">
                                 <span>Total Units</span>
                                 <strong>${analysis.total_units}</strong>
@@ -3524,6 +3622,10 @@ window.analysisModule = {
                 </div>
                 <div class="card-body">
                     <div class="list-group list-group-flush">
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Property Type</span>
+                            <strong>${analysis.property_type || 'Not Specified'}</strong>
+                        </div>
                         <div class="list-group-item d-flex justify-content-between align-items-center py-3">
                             <span>Option Fee</span>
                             <strong>${this.formatDisplayValue(analysis.option_consideration_fee)}</strong>
@@ -4115,6 +4217,10 @@ window.analysisModule = {
                 </div>
                 <div class="card-body">
                     <div class="list-group list-group-flush">
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Property Type</span>
+                            <strong>${analysis.property_type || 'Not Specified'}</strong>
+                        </div>
                         <div class="list-group-item d-flex justify-content-between align-items-center py-3">
                             <span>Monthly Rent</span>
                             <strong>${this.formatDisplayValue(analysis.monthly_rent)}</strong>
@@ -4870,6 +4976,21 @@ window.analysisModule = {
                     setFieldValue('staff_payroll', analysis.staff_payroll);
                     setFieldValue('trash_removal', analysis.trash_removal);
                     setFieldValue('common_utilities', analysis.common_utilities);
+                    
+                    // Add property type handling
+                    const propertyType = document.getElementById('property_type');
+                    if (propertyType) {
+                        if (analysis.analysis_type === 'Multi-Family') {
+                            propertyType.innerHTML = '<option value="Multi-Family">Multi-Family</option>';
+                            propertyType.value = 'Multi-Family';
+                            propertyType.disabled = true;
+                        } else {
+                            propertyType.disabled = false;
+                            if (analysis.property_type) {
+                                propertyType.value = analysis.property_type;
+                            }
+                        }
+                    }
                     
                     // Handle unit types
                     const unitTypesContainer = document.getElementById('unit-types-container');

@@ -29,6 +29,15 @@ class AnalysisService:
 
         # Property details
         'address': {'type': 'string'},
+        'property_type': {'type': 'string', 'optional': True, 
+            'allowed_values': [
+                'Single Family',
+                'Condo',
+                'Townhouse',
+                'Manufactured',
+                'Multi-Family'
+            ]
+        },
         'square_footage': {'type': 'integer', 'optional': True},  # Add optional flag
         'lot_size': {'type': 'integer', 'optional': True},
         'year_built': {'type': 'integer', 'optional': True},
