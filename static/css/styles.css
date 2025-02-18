@@ -1,3 +1,61 @@
+/* KPI Dashboard Styles */
+.kpi-dashboard .card {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: box-shadow 0.3s ease;
+}
+
+.kpi-dashboard .card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.kpi-dashboard .card-title {
+    color: #666;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.kpi-value {
+    text-align: center;
+    padding: 0.5rem;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+}
+
+.kpi-value .value {
+    display: block;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.kpi-value .period {
+    display: block;
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.kpi-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.kpi-controls .form-select {
+    background-color: white;
+    border-color: #dee2e6;
+}
+
+#data-quality-alert {
+    font-size: 0.9rem;
+    margin-bottom: 0;
+}
+
+#data-quality-alert .alert-heading {
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+}
+
 /* Add this to your CSS */
 .loan-term-container {
     position: relative;

@@ -1,10 +1,12 @@
 from flask_login import login_required, current_user
 from services.user_service import get_user_by_email
 from services.transaction_service import get_properties_for_user, get_transactions_for_view
+from services.property_kpi_service import PropertyKPIService
 from datetime import datetime, date
 from dateutil.relativedelta import relativedelta
 import logging
 from typing import Dict, List, Any
+import json
 import pandas as pd
 from flask import Blueprint, render_template, redirect, url_for
 from utils.flash import flash_success, flash_error, flash_warning, flash_info
@@ -233,21 +235,58 @@ def main():
     logger.info(f"Main dashboard accessed by user: {current_user.email}")
     
     try:
+        # Get user data
         user = get_user_by_email(current_user.email)
         if not user:
             logger.error(f"User not found: {current_user.email}")
             flash_error("Unable to load user data")
-            return redirect(url_for('main.index'))
+            return redirect(url_for('auth.login'))
         
         # Get user properties
         user_properties = get_properties_for_user(user['email'], user['name'])
         logger.debug(f"Found {len(user_properties)} properties for user")
         
+        # Initialize empty KPI structure
+        empty_kpi_structure = {
+            'year_to_date': {
+                'net_operating_income': {'monthly': 0, 'annual': 0},
+                'total_income': {'monthly': 0, 'annual': 0},
+                'total_expenses': {'monthly': 0, 'annual': 0},
+                'operating_expense_ratio': 0,
+                'cap_rate': 0,
+                'cash_on_cash_return': 0,
+                'debt_service_coverage_ratio': 0
+            },
+            'since_acquisition': {
+                'net_operating_income': {'monthly': 0, 'annual': 0},
+                'total_income': {'monthly': 0, 'annual': 0},
+                'total_expenses': {'monthly': 0, 'annual': 0},
+                'operating_expense_ratio': 0,
+                'cap_rate': 0,
+                'cash_on_cash_return': 0,
+                'debt_service_coverage_ratio': 0
+            },
+            'analysis_comparison': None,
+            'metadata': {
+                'has_complete_history': False,
+                'available_analyses': []
+            }
+        }
+        
         if not user_properties:
             logger.warning(f"No properties found for user {user['email']}")
-            return redirect(url_for('main.index'))
+            flash_info("Please add some properties to get started")
+            return render_template('main/main.html', 
+                                name=user['name'],
+                                user_properties=[],
+                                total_last_month_equity=0,
+                                total_equity_gained_since_acquisition=0,
+                                pending_your_action=[],
+                                pending_others_action=[],
+                                cumulative_amortization=[],
+                                property_kpis={'default': empty_kpi_structure})
 
-        # Calculate equity (existing code remains the same)
+        # Calculate equity
         for prop in user_properties:
             try:
                 equity = calculate_equity(prop['address'])
@@ -258,7 +297,7 @@ def main():
                 prop['last_month_equity'] = 0
                 prop['equity_gained_since_acquisition'] = 0
 
-        # Calculate totals (existing code remains the same)
+        # Calculate totals
         total_last_month_equity = sum(prop['last_month_equity'] for prop in user_properties)
         total_equity_gained_since_acquisition = sum(prop['equity_gained_since_acquisition'] for prop in user_properties)
 
@@ -275,6 +314,9 @@ def main():
             user['name'], 
             reimbursement_status='pending'
         )
+
+        # Get all transactions for KPI calculations
+        all_transactions = get_transactions_for_view(user['email'], user['name'])
 
         # Split into transactions pending user's action vs others' action
         pending_your_action = []
@@ -306,7 +348,42 @@ def main():
             else:
                 pending_others_action.append(transaction)
 
+        try:
+            # Initialize KPI service and calculate KPIs
+            kpi_service = PropertyKPIService(user_properties)
+            property_kpis = {}
+            
+            # Get transactions for KPI calculations 
+            all_transactions = get_transactions_for_view(user['email'], user['name'])
+            
+            # Calculate KPIs for each property
+            for property_data in user_properties:
+                property_id = property_data['address']
+                try:
+                    # This will now include available analyses in the metadata
+                    property_kpis[property_id] = kpi_service.get_kpi_dashboard_data(
+                        property_id=property_id,
+                        transactions=all_transactions
+                    )
+                    # Log found analyses for debugging
+                    analyses = property_kpis[property_id].get('metadata', {}).get('available_analyses', [])
+                    logger.debug(f"Found {len(analyses)} matching analyses for {property_id}")
+                    
+                except Exception as e:
+                    logger.error(f"Error calculating KPIs for property {property_id}: {str(e)}")
+                    property_kpis[property_id] = empty_kpi_structure.copy()
+                    
+        except Exception as e:
+            logger.error(f"Error initializing KPI service: {str(e)}")
+            # Initialize empty KPIs for all properties
+            for property_data in user_properties:
+                empty_kpi = empty_kpi_structure.copy()
+                empty_kpi['property_details'] = property_data
+                property_kpis[property_data['address']] = empty_kpi
+
         logger.debug("All dashboard data compiled successfully")
+        logger.debug(f"Property KPIs structure: {json.dumps(property_kpis, indent=2)}")
+
         return render_template('main/main.html', 
                             name=user['name'],
                             user_properties=user_properties,
@@ -314,12 +391,21 @@ def main():
                             total_equity_gained_since_acquisition=total_equity_gained_since_acquisition,
                             pending_your_action=pending_your_action,
                             pending_others_action=pending_others_action,
-                            cumulative_amortization=calculate_cumulative_amortization(user_properties))
+                            cumulative_amortization=calculate_cumulative_amortization(user_properties),
+                            property_kpis=property_kpis)
                             
     except Exception as e:
         logger.error(f"Error loading main dashboard: {str(e)}")
         flash_error("An error occurred while loading the dashboard")
-        return redirect(url_for('main.index'))
+        return render_template('main/main.html',
+                            name=current_user.name,
+                            user_properties=[],
+                            total_last_month_equity=0,
+                            total_equity_gained_since_acquisition=0,
+                            pending_your_action=[],
+                            pending_others_action=[],
+                            cumulative_amortization=[],
+                            property_kpis={'default': empty_kpi_structure})
 
 @main_bp.route('/properties')
 @login_required

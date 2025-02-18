@@ -1,10 +1,24 @@
 // /static/js/modules/main.js
 
+import kpiDashboardModule from './kpi_dashboard.js';
+
 const mainModule = {
     init: async function() {
         console.log('Initializing main dashboard module');
         try {
             await this.initializeDashboard();
+            
+            // Safely parse the property data
+            if (typeof window.propertyData === 'string') {
+                try {
+                    window.propertyData = JSON.parse(window.propertyData);
+                } catch (e) {
+                    console.error('Error parsing property data:', e);
+                    window.propertyData = {};
+                }
+            }
+            
+            kpiDashboardModule.init();
             this.handleUrlParameters();
             window.showNotification('Dashboard loaded successfully', 'success');
         } catch (error) {
