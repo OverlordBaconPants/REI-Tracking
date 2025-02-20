@@ -62,7 +62,7 @@ class Config:
     
     # File upload settings with documentation
     ALLOWED_EXTENSIONS = {'png', 'svg', 'pdf', 'jpg', 'jpeg', 'csv', 'xls', 'xlsx'}
-    ALLOWED_DOCUMENTATION_EXTENSIONS = {'png', 'svg', 'pdf', 'jpg', 'jpeg'}  # Added jpeg
+    ALLOWED_DOCUMENTATION_EXTENSIONS = {'png', 'svg', 'pdf', 'jpg', 'jpeg'}
     ALLOWED_IMPORT_EXTENSIONS = {'csv', 'xls', 'xlsx'}
     
     # Load max content length from environment variable
@@ -72,7 +72,7 @@ class Config:
     GEOAPIFY_API_KEY = os.environ.get('GEOAPIFY_API_KEY')
     if not GEOAPIFY_API_KEY:
         raise ValueError("No GEOAPIFY_API_KEY set in environment variables")
-    
+
     def __init__(self):
         # Directory structure - simplified to one uploads directory
         self.DATA_DIR = os.path.join(self.BASE_DIR, 'data')
@@ -85,6 +85,29 @@ class Config:
         self.TRANSACTIONS_FILE = os.path.join(self.DATA_DIR, 'transactions.json')
         self.CATEGORIES_FILE = os.path.join(self.DATA_DIR, 'categories.json')
         
+        # Add comps data directory
+        self.COMPS_DIR = os.path.join(self.DATA_DIR, 'comps')
+
+        # RentCast API Configuration
+        self.RENTCAST_API_KEY = os.environ.get('RENTCASTCOMPS_KEY')
+        if not self.RENTCAST_API_KEY:
+            raise ValueError("No RENTCASTCOMPS_KEY set in environment variables")
+        
+        self.RENTCAST_API_BASE_URL = "https://api.rentcast.io/v1"
+        self.RENTCAST_COMP_DEFAULTS = {
+            'maxRadius': 1.0,  # 1 mile radius
+            'daysOld': 180,    # Last 6 months
+            'compCount': 5     # Number of comps to return
+        }
+
+        print("Loaded RentCast Configuration:")
+        print(f"API Base URL: {self.RENTCAST_API_BASE_URL}")
+        print(f"API Key Present: {'Yes' if self.RENTCAST_API_KEY else 'No'}")
+        print(f"Comp Defaults: {self.RENTCAST_COMP_DEFAULTS}")
+
+        # Session limits for comps
+        self.MAX_COMP_RUNS_PER_SESSION = 3
+
         # Create necessary directories if not in production
         if not os.environ.get('RENDER'):
             self.create_directories()

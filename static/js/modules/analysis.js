@@ -1,3 +1,5 @@
+import compsHandler from './comps_handler.js';
+
 // Add new template for Multi-Family analysis
 const getMultiFamilyHTML = () => `
     <!-- Property Details Card -->
@@ -1299,6 +1301,95 @@ const getBRRRRHTML = () => `
     </div>
 `;
 
+const getCompsHTML = (hasExistingComps = false) => `
+    <!-- Comps Card -->
+    <div class="card mb-4" id="compsCard">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Property Comparables</h5>
+            <div>
+                <span id="compsRunCount" class="badge bg-info me-2" style="display: none;">
+                    Runs: <span id="runCountValue">0</span>/3
+                </span>
+                <button type="button" class="btn btn-primary" id="runCompsBtn">
+                    <i class="bi bi-arrow-repeat me-2"></i>${hasExistingComps ? 'Re-Run Comps' : 'Run Comps'}
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <!-- Estimated Value Section -->
+            <div id="estimatedValueSection" style="display: none;">
+                <div class="alert alert-info mb-4">
+                    <div class="row align-items-center">
+                        <div class="col-12 col-md-4 mb-3 mb-md-0">
+                            <h6 class="mb-0">Estimated Value:</h6>
+                            <h4 class="mb-0" id="estimatedValue">$0</h4>
+                        </div>
+                        <div class="col-12 col-md-8">
+                            <h6 class="mb-0">Value Range:</h6>
+                            <div class="d-flex align-items-center">
+                                <span id="valueLow" class="h5 mb-0">$0</span>
+                                <div class="mx-3 flex-grow-1">
+                                    <div class="progress">
+                                        <div class="progress-bar bg-success" role="progressbar" style="width: 100%"></div>
+                                    </div>
+                                </div>
+                                <span id="valueHigh" class="h5 mb-0">$0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comps Table Section -->
+            <div id="compsTableSection" style="display: none;">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Address</th>
+                                <th>Price</th>
+                                <th>Bed/Bath</th>
+                                <th>Sq Ft</th>
+                                <th>Year Built</th>
+                                <th>Date Sold</th>
+                                <th>Distance</th>
+                            </tr>
+                        </thead>
+                        <tbody id="compsTableBody">
+                            <!-- Comps will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Initial State Message -->
+            <div id="initialCompsMessage" class="text-center py-4" ${hasExistingComps ? 'style="display: none;"' : ''}>
+                <p class="text-muted mb-0">Click "${hasExistingComps ? 'Re-Run Comps' : 'Run Comps'}" to fetch comparable properties</p>
+            </div>
+
+            <!-- Loading State -->
+            <div id="compsLoading" class="text-center py-4" style="display: none;">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2 mb-0">Fetching comparable properties...</p>
+            </div>
+
+            <!-- Error State -->
+            <div id="compsError" class="alert alert-danger mb-0" style="display: none;">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <span id="compsErrorMessage">Error fetching comps</span>
+            </div>
+
+            <!-- No Comps Found State -->
+            <div id="noCompsFound" class="alert alert-warning mb-0" style="display: none;">
+                <i class="bi bi-info-circle me-2"></i>
+                No comparable properties found within the search criteria
+            </div>
+        </div>
+    </div>
+`;
+
 'use strict';
 
 window.analysisModule = {
@@ -1600,11 +1691,16 @@ window.analysisModule = {
                 if (analysisId) {
                     console.log('Loading existing analysis:', analysisId);
                     this.currentAnalysisId = analysisId;
+                    compsHandler.init(analysisId);
                     analysisForm.setAttribute('data-analysis-id', analysisId);
                     analysisForm.addEventListener('submit', (event) => {
                         this.handleEditSubmit(event, analysisId);
                     });
                     await this.loadAnalysisData(analysisId);
+                    
+                    // Initialize comps handler for existing analysis
+                    console.log('Initializing comps handler for existing analysis');
+                    compsHandler.init(analysisId);
                 } else {
                     console.log('Creating new analysis');
                     const analysisDataElement = document.getElementById('analysis-data');
@@ -1612,6 +1708,12 @@ window.analysisModule = {
                         try {
                             const analysisData = JSON.parse(analysisDataElement.textContent);
                             this.populateFormFields(analysisData);
+                            
+                            // Initialize comps handler if analysis data exists
+                            if (analysisData.id) {
+                                console.log('Initializing comps handler for analysis:', analysisData.id);
+                                compsHandler.init(analysisData.id);
+                            }
                         } catch (error) {
                             console.error('Error parsing analysis data:', error);
                         }
@@ -1632,6 +1734,20 @@ window.analysisModule = {
                 console.log('Initializing tab handling');
                 this.initTabHandling();
                 console.log('Form initialization complete');
+            } else {
+                // Check if we're on a view-only page that might need comps
+                const analysisDataElement = document.getElementById('analysis-data');
+                if (analysisDataElement) {
+                    try {
+                        const analysisData = JSON.parse(analysisDataElement.textContent);
+                        if (analysisData.id) {
+                            console.log('Initializing comps handler for view-only analysis:', analysisData.id);
+                            compsHandler.init(analysisData.id);
+                        }
+                    } catch (error) {
+                        console.error('Error parsing analysis data for comps:', error);
+                    }
+                }
             }
     
             console.log('Analysis module initialized successfully');
@@ -1762,19 +1878,31 @@ window.analysisModule = {
         });
     },
 
-    initPropertyTypeHandler() {
-        console.log('Initializing property type handler');
+    debugPropertyType(message, data = {}) {
+        console.log(`[Property Type Debug] ${message}`, data);
+    },
+    
+    // Modified property type initialization
+    initPropertyTypeHandler(analysis = null) {
+        this.debugPropertyType('Initializing property type handler', { analysis });
+        
         const analysisType = document.getElementById('analysis_type');
         const propertyType = document.getElementById('property_type');
         
         if (!analysisType || !propertyType) {
-            console.log('Required elements not found:', { analysisType: !!analysisType, propertyType: !!propertyType });
+            this.debugPropertyType('Required elements not found', { 
+                analysisType: !!analysisType, 
+                propertyType: !!propertyType 
+            });
             return;
         }
     
         // Function to manage property type options
-        const updatePropertyTypeOptions = (type) => {
-            console.log('Updating property type options for:', type);
+        const updatePropertyTypeOptions = (type, savedPropertyType = null) => {
+            this.debugPropertyType('Updating property type options', { 
+                type, 
+                savedPropertyType 
+            });
             
             // First, reset to default options
             propertyType.innerHTML = `
@@ -1792,15 +1920,592 @@ window.analysisModule = {
                 propertyType.disabled = true;
             } else {
                 propertyType.disabled = false;
+                
+                // Set saved value if exists
+                if (savedPropertyType) {
+                    this.debugPropertyType('Setting saved property type', { savedPropertyType });
+                    propertyType.value = savedPropertyType;
+                }
             }
+            
+            this.debugPropertyType('Final property type value', { value: propertyType.value });
         };
     
         // Initial setup
-        updatePropertyTypeOptions(analysisType.value);
+        if (analysis && analysis.property_type) {
+            updatePropertyTypeOptions(analysisType.value, analysis.property_type);
+        } else {
+            updatePropertyTypeOptions(analysisType.value);
+        }
     
         // Handle analysis type changes
         analysisType.addEventListener('change', (e) => {
             updatePropertyTypeOptions(e.target.value);
+        });
+    },
+
+    // Add mobile interaction methods
+    initializeMobileInteractions() {
+        this.initAccordionScrolling();
+        this.initTouchFeedback();
+        this.initResponsiveTables();
+        this.initMobileTooltips();
+    },
+
+    initAccordionScrolling() {
+        const accordions = document.querySelectorAll('.accordion');
+        accordions.forEach(accordion => {
+            accordion.addEventListener('shown.bs.collapse', (e) => {
+                const targetElement = e.target;
+                const offset = targetElement.getBoundingClientRect().top + window.pageYOffset - 80;
+                window.scrollTo({
+                    top: offset,
+                    behavior: 'smooth'
+                });
+            });
+        });
+    },
+
+    initTouchFeedback() {
+        const interactiveElements = document.querySelectorAll(
+            '.list-group-item, .accordion-button, .btn'
+        );
+        
+        interactiveElements.forEach(element => {
+            element.addEventListener('touchstart', function() {
+                this.style.backgroundColor = 'rgba(0,0,0,0.05)';
+            });
+            
+            element.addEventListener('touchend', function() {
+                this.style.backgroundColor = '';
+            });
+        });
+    },
+
+    initResponsiveTables() {
+        const tables = document.querySelectorAll('.table:not(.responsive-handled)');
+        tables.forEach(table => {
+            if (!table.parentElement.classList.contains('table-responsive')) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'table-responsive';
+                table.parentNode.insertBefore(wrapper, table);
+                wrapper.appendChild(table);
+                table.classList.add('responsive-handled');
+            }
+        });
+    },
+
+    // New method for mobile-specific event handlers
+    initMobileSpecificHandlers() {
+        // Handle form submission on mobile
+        this.initMobileFormSubmission();
+        
+        // Handle mobile scroll behavior
+        this.initMobileScrolling();
+        
+        // Initialize mobile-friendly tooltips
+        this.initMobileTooltips();
+        
+        // Handle mobile keyboard adjustments
+        this.initMobileKeyboardHandling();
+    },
+
+    // Optimize form submission for mobile
+    initMobileFormSubmission() {
+        const form = document.getElementById('analysisForm');
+        if (form) {
+            // Prevent double submission on mobile
+            let isSubmitting = false;
+            
+            form.addEventListener('submit', (e) => {
+                if (isSubmitting) {
+                    e.preventDefault();
+                    return;
+                }
+                
+                isSubmitting = true;
+                const submitBtn = form.querySelector('button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                }
+                
+                // Reset submission state after delay
+                setTimeout(() => {
+                    isSubmitting = false;
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                    }
+                }, 2000);
+            });
+        }
+    },
+
+    // Handle mobile scrolling behavior
+    initMobileScrolling() {
+        // Smooth scrolling for mobile
+        const contentArea = document.querySelector('.content-area');
+        if (contentArea) {
+            contentArea.style.overscrollBehavior = 'contain';
+            contentArea.classList.add('touch-scroll');
+        }
+
+        // Handle fixed position elements when virtual keyboard is visible
+        const inputs = document.querySelectorAll('input, textarea');
+        inputs.forEach(input => {
+            input.addEventListener('focus', () => {
+                if (window.innerWidth < 768) {
+                    document.body.classList.add('keyboard-visible');
+                }
+            });
+            
+            input.addEventListener('blur', () => {
+                document.body.classList.remove('keyboard-visible');
+            });
+        });
+    },
+
+    initMobileTooltips() {
+        const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+        tooltips.forEach(tooltip => {
+            const instance = bootstrap.Tooltip.getInstance(tooltip);
+            if (instance) {
+                instance.dispose();
+            }
+            new bootstrap.Tooltip(tooltip, {
+                trigger: window.innerWidth < 768 ? 'click' : 'hover',
+                placement: window.innerWidth < 768 ? 'bottom' : 'auto'
+            });
+        });
+    },
+
+    // Handle mobile keyboard behavior
+    initMobileKeyboardHandling() {
+        // Detect virtual keyboard
+        let originalHeight = window.innerHeight;
+        
+        window.addEventListener('resize', () => {
+            if (window.innerWidth < 768) {
+                const heightDiff = originalHeight - window.innerHeight;
+                if (heightDiff > 150) {
+                    // Keyboard is likely visible
+                    document.body.classList.add('keyboard-visible');
+                } else {
+                    document.body.classList.remove('keyboard-visible');
+                }
+            }
+        });
+
+        // Improve input behavior on mobile
+        const numericInputs = document.querySelectorAll('input[type="number"]');
+        numericInputs.forEach(input => {
+            input.addEventListener('focus', function() {
+                if (window.innerWidth < 768) {
+                    this.type = 'tel';  // Better numeric keyboard on mobile
+                }
+            });
+            
+            input.addEventListener('blur', function() {
+                this.type = 'number';
+            });
+        });
+    },
+
+    // Mobile-friendly form validation
+    initMobileValidation() {
+        const form = document.getElementById('analysisForm');
+        if (form) {
+            // Show validation messages immediately on mobile
+            form.addEventListener('input', (e) => {
+                if (window.innerWidth < 768) {
+                    const input = e.target;
+                    if (input.checkValidity()) {
+                        input.classList.remove('is-invalid');
+                        input.classList.add('is-valid');
+                    } else {
+                        input.classList.remove('is-valid');
+                        input.classList.add('is-invalid');
+                    }
+                }
+            });
+        }
+    },
+
+    // Initialize mobile-friendly dropdowns
+    initMobileDropdowns() {
+        const dropdowns = document.querySelectorAll('.dropdown-toggle');
+        dropdowns.forEach(dropdown => {
+            new bootstrap.Dropdown(dropdown, {
+                display: 'static'  // Prevent dropdown from being cut off on mobile
+            });
+        });
+    },
+
+    // Enhanced form responsiveness
+    initFormResponsiveness() {
+        // Handle form layout on mobile
+        this.adjustFormLayout();
+        
+        // Handle form validation display
+        this.initMobileValidation();
+        
+        // Initialize mobile-friendly dropdowns
+        this.initMobileDropdowns();
+    },
+
+    // Add viewport change handler
+    initViewportHandler() {
+        window.addEventListener('resize', _.debounce(() => {
+            this.initializeMobileInteractions();
+        }, 250));
+    },
+
+    initButtonHandlers() {
+        const reEditButton = document.getElementById('reEditButton');
+        if (reEditButton) {
+            reEditButton.addEventListener('click', () => {
+                this.switchToFinancialTab();
+            });
+        }
+    },
+
+    // Updated initRefinanceCalculations for flat 
+    initRefinanceCalculations() {
+        const arvInput = document.getElementById('after_repair_value');
+        const ltvInput = document.getElementById('refinance_ltv_percentage');
+        const loanAmountInput = document.getElementById('refinance_loan_amount');
+        const downPaymentInput = document.getElementById('refinance_loan_down_payment');
+        const closingCostsInput = document.getElementById('refinance_loan_closing_costs');
+
+        const updateRefinanceCalcs = () => {
+            const arv = toRawNumber(arvInput.value);
+            const ltv = toRawNumber(ltvInput.value);
+
+            // Calculate loan amount
+            const loanAmount = (arv * ltv) / 100;
+            loanAmountInput.value = loanAmount.toFixed(2);
+
+            // Calculate down payment
+            const downPayment = (arv * (100 - ltv)) / 100;
+            downPaymentInput.value = downPayment.toFixed(2);
+
+            // Calculate closing costs (5%)
+            const closingCosts = loanAmount * 0.05;
+            closingCostsInput.value = closingCosts.toFixed(2);
+        };
+
+        if (arvInput && ltvInput) {
+            arvInput.addEventListener('input', updateRefinanceCalcs);
+            ltvInput.addEventListener('input', updateRefinanceCalcs);
+        }
+    },
+
+    // Configure toastr options
+    initToastr() {
+        toastr.options = {
+            closeButton: true,
+            progressBar: true,
+            positionClass: 'toast-top-right',
+            preventDuplicates: true,
+            timeOut: 3000,
+            extendedTimeOut: 1000,
+            showEasing: 'swing',
+            hideEasing: 'linear',
+            showMethod: 'fadeIn',
+            hideMethod: 'fadeOut'
+        };
+    },
+
+    initTabHandling() {
+        // Use this.getAnalysisIdFromUrl() instead
+        const analysisId = this.getAnalysisIdFromUrl();
+        if (!analysisId) return;
+    
+        const reportTab = document.getElementById('reports-tab');
+        const financialTab = document.getElementById('financial-tab');
+    
+        if (reportTab) {
+            reportTab.addEventListener('click', () => {
+                this.currentAnalysisId = analysisId;
+                console.log('Report tab clicked, analysis ID:', this.currentAnalysisId);
+            });
+        }
+    
+        if (financialTab) {
+            financialTab.addEventListener('click', () => {
+                this.currentAnalysisId = analysisId;
+                console.log('Financial tab clicked, analysis ID:', this.currentAnalysisId);
+            });
+        }
+    },
+
+    // Update initAddressAutocomplete in the analysisModule
+    initAddressAutocomplete() {
+        console.log('Initializing address autocomplete');
+        const addressInput = document.getElementById('address');
+        
+        if (!addressInput) {
+            console.error('Address input not found');
+            return;
+        }
+
+        // Create results list element
+        const resultsList = document.createElement('ul');
+        resultsList.className = 'autocomplete-results list-group position-absolute w-100 shadow-sm';
+        resultsList.style.zIndex = '1000';
+        
+        // Insert the results list after the input
+        addressInput.parentNode.appendChild(resultsList);
+        
+        let timeoutId;
+        
+        // Add input event listener
+        addressInput.addEventListener('input', function() {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                const query = this.value;
+                if (query.length > 2) {
+                    console.log('Making API call for:', query);
+                    fetch(`/api/autocomplete?query=${encodeURIComponent(query)}`)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            console.log('API response:', data);
+                            resultsList.innerHTML = '';
+                            
+                            if (data.status === 'success' && data.data && Array.isArray(data.data)) {
+                                data.data.forEach(result => {
+                                    const li = document.createElement('li');
+                                    li.className = 'list-group-item list-group-item-action';
+                                    li.textContent = result.formatted;
+                                    li.style.cursor = 'pointer';
+                                    
+                                    li.addEventListener('click', function() {
+                                        addressInput.value = this.textContent;
+                                        resultsList.innerHTML = '';
+                                    });
+                                    
+                                    resultsList.appendChild(li);
+                                });
+                                
+                                if (data.data.length === 0) {
+                                    const li = document.createElement('li');
+                                    li.className = 'list-group-item disabled';
+                                    li.textContent = 'No matches found';
+                                    resultsList.appendChild(li);
+                                }
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            resultsList.innerHTML = `
+                                <li class="list-group-item text-danger">
+                                    Error fetching results: ${error.message}
+                                </li>
+                            `;
+                        });
+                } else {
+                    resultsList.innerHTML = '';
+                }
+            }, 300);
+        });
+
+        // Close suggestions when clicking outside
+        document.addEventListener('click', function(e) {
+            if (e.target !== addressInput && e.target !== resultsList) {
+                resultsList.innerHTML = '';
+            }
+        });
+
+        // Prevent form submission when selecting from dropdown
+        resultsList.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+
+        // Add some basic styling for the autocomplete
+        const style = document.createElement('style');
+        style.textContent = `
+            .autocomplete-results {
+                max-height: 200px;
+                overflow-y: auto;
+                background: white;
+            }
+            .autocomplete-results .list-group-item:hover {
+                background-color: #f8f9fa;
+            }
+        `;
+        document.head.appendChild(style);
+    },
+
+    initAnalysisTypeHandler() {
+        console.log('Starting initAnalysisTypeHandler');
+        const analysisType = document.getElementById('analysis_type');
+        const financialTab = document.getElementById('financial');
+        console.log('Found elements:', { 
+            analysisTypeExists: !!analysisType, 
+            analysisTypeValue: analysisType?.value,
+            financialTabExists: !!financialTab 
+        });
+        
+        if (analysisType && financialTab) {
+            // Remove any existing event listeners by cloning
+            const newAnalysisType = analysisType.cloneNode(true);
+            analysisType.parentNode.replaceChild(newAnalysisType, analysisType);
+            
+            // Get the analysis ID from URL if it exists
+            const urlParams = new URLSearchParams(window.location.search);
+            const analysisId = urlParams.get('analysis_id');
+            console.log('AnalysisId in type handler:', analysisId);
+            
+            // Store initial value
+            this.initialAnalysisType = analysisId ? null : newAnalysisType.value;
+            console.log('Initial analysis type:', this.initialAnalysisType);
+            
+            // Load initial template if not editing existing analysis
+            if (!analysisId) {
+                console.log('Not editing - loading initial template for type:', this.initialAnalysisType);
+                console.log('loadTemplateForType exists:', typeof this.loadTemplateForType === 'function');
+                this.loadTemplateForType(this.initialAnalysisType, financialTab);
+            }
+                
+            // Set up event listener for changes
+            newAnalysisType.addEventListener('change', async (e) => {
+                console.log('Analysis type changed to:', e.target.value);
+                // Prevent multiple concurrent changes
+                if (this.typeChangeInProgress) {
+                    console.log('Type change already in progress');
+                    return;
+                }
+    
+                const newType = e.target.value;
+                console.log('Processing change to type:', newType);
+                console.log('Initial type:', this.initialAnalysisType);
+                
+                // Skip if initial type hasn't been set yet or if type hasn't actually changed
+                if (!this.initialAnalysisType || newType === this.initialAnalysisType) {
+                    console.log('Skipping - no initial type or no change. Initial:', 
+                        this.initialAnalysisType, 'New:', newType);
+                    return;
+                }
+                
+                // If we're in create mode, just update the fields
+                if (!this.currentAnalysisId) {
+                    console.log('Create mode - will update template for type:', newType);
+                    console.log('Financial tab exists:', !!financialTab);
+                    console.log('loadTemplateForType exists:', typeof this.loadTemplateForType === 'function');
+                    
+                    // Call loadTemplateForType and check its result
+                    try {
+                        this.loadTemplateForType(newType, financialTab);
+                        console.log('Template loaded successfully');
+                    } catch (error) {
+                        console.error('Error loading template:', error);
+                    }
+                    
+                    this.initialAnalysisType = newType;
+                    return;
+                }
+                
+                try {
+                    this.typeChangeInProgress = true;
+                    const confirmed = await this.confirmTypeChange(newType);
+                    
+                    if (!confirmed) {
+                        e.target.value = this.initialAnalysisType;
+                        return;
+                    }
+                    
+                    await this.handleTypeChange(newType);
+                    
+                } catch (error) {
+                    console.error('Error:', error);
+                    toastr.error(error.message);
+                    e.target.value = this.initialAnalysisType;
+                } finally {
+                    this.typeChangeInProgress = false;
+                }
+            });
+        } else {
+            console.error('Missing required elements:', { 
+                analysisType: !!analysisType, 
+                financialTab: !!financialTab 
+            });
+        }
+    },
+
+    // Add a separate function for notes counter initialization
+    initNotesCounter() {
+        const notesTextarea = document.getElementById('notes');
+        const notesCounter = document.getElementById('notes-counter');
+        if (notesTextarea && notesCounter) {
+            // Update counter with initial value if exists
+            notesCounter.textContent = notesTextarea.value.length;
+            
+            // Add event listener for changes
+            notesTextarea.addEventListener('input', function() {
+                notesCounter.textContent = this.value.length;
+            });
+        }
+    },
+
+    // Updated initLoanHandlers for flat schema
+    initLoanHandlers() {
+        const addLoanBtn = document.getElementById('add-loan-btn');
+        const loansContainer = document.getElementById('loans-container');
+        
+        if (!addLoanBtn || !loansContainer || addLoanBtn.hasAttribute('data-initialized')) {
+            return;
+        }
+
+        // Mark as initialized
+        addLoanBtn.setAttribute('data-initialized', 'true');
+        
+        addLoanBtn.addEventListener('click', () => {
+            const loanCount = loansContainer.querySelectorAll('.loan-section').length + 1;
+            
+            if (loanCount <= 3) {  // Maximum 3 loans allowed
+                loansContainer.insertAdjacentHTML('beforeend', getLoanFieldsHTML(loanCount));
+                
+                if (loanCount >= 3) {
+                    addLoanBtn.style.display = 'none';
+                }
+            }
+        });
+
+        // Event delegation for remove loan buttons
+        loansContainer.addEventListener('click', (e) => {
+            if (e.target.classList.contains('remove-loan-btn')) {
+                const loanSection = e.target.closest('.loan-section');
+                if (loanSection) {
+                    loanSection.remove();
+                    
+                    // Renumber remaining loans
+                    const remainingLoans = loansContainer.querySelectorAll('.loan-section');
+                    remainingLoans.forEach((loan, index) => {
+                        const newIndex = index + 1;
+                        const heading = loan.querySelector('h5');
+                        if (heading) {
+                            heading.textContent = `Loan ${newIndex}`;
+                        }
+                        
+                        // Update field IDs and names to match flat schema
+                        const inputs = loan.querySelectorAll('input');
+                        inputs.forEach(input => {
+                            const fieldType = input.id.split('_').pop(); // amount, interest_rate, etc.
+                            input.id = `loan${newIndex}_loan_${fieldType}`;
+                            input.name = `loan${newIndex}_loan_${fieldType}`;
+                        });
+                    });
+
+                    if (remainingLoans.length < 3) {
+                        addLoanBtn.style.display = 'block';
+                    }
+                }
+            }
         });
     },
     
@@ -1983,191 +2688,6 @@ window.analysisModule = {
         return isNaN(num) ? 0 : num;
     },
 
-    // Add mobile interaction methods
-    initializeMobileInteractions() {
-        this.initAccordionScrolling();
-        this.initTouchFeedback();
-        this.initResponsiveTables();
-        this.initMobileTooltips();
-    },
-
-    initAccordionScrolling() {
-        const accordions = document.querySelectorAll('.accordion');
-        accordions.forEach(accordion => {
-            accordion.addEventListener('shown.bs.collapse', (e) => {
-                const targetElement = e.target;
-                const offset = targetElement.getBoundingClientRect().top + window.pageYOffset - 80;
-                window.scrollTo({
-                    top: offset,
-                    behavior: 'smooth'
-                });
-            });
-        });
-    },
-
-    initTouchFeedback() {
-        const interactiveElements = document.querySelectorAll(
-            '.list-group-item, .accordion-button, .btn'
-        );
-        
-        interactiveElements.forEach(element => {
-            element.addEventListener('touchstart', function() {
-                this.style.backgroundColor = 'rgba(0,0,0,0.05)';
-            });
-            
-            element.addEventListener('touchend', function() {
-                this.style.backgroundColor = '';
-            });
-        });
-    },
-
-    initResponsiveTables() {
-        const tables = document.querySelectorAll('.table:not(.responsive-handled)');
-        tables.forEach(table => {
-            if (!table.parentElement.classList.contains('table-responsive')) {
-                const wrapper = document.createElement('div');
-                wrapper.className = 'table-responsive';
-                table.parentNode.insertBefore(wrapper, table);
-                wrapper.appendChild(table);
-                table.classList.add('responsive-handled');
-            }
-        });
-    },
-
-    // New method for mobile-specific event handlers
-    initMobileSpecificHandlers() {
-        // Handle form submission on mobile
-        this.initMobileFormSubmission();
-        
-        // Handle mobile scroll behavior
-        this.initMobileScrolling();
-        
-        // Initialize mobile-friendly tooltips
-        this.initMobileTooltips();
-        
-        // Handle mobile keyboard adjustments
-        this.initMobileKeyboardHandling();
-    },
-
-    // Optimize form submission for mobile
-    initMobileFormSubmission() {
-        const form = document.getElementById('analysisForm');
-        if (form) {
-            // Prevent double submission on mobile
-            let isSubmitting = false;
-            
-            form.addEventListener('submit', (e) => {
-                if (isSubmitting) {
-                    e.preventDefault();
-                    return;
-                }
-                
-                isSubmitting = true;
-                const submitBtn = form.querySelector('button[type="submit"]');
-                if (submitBtn) {
-                    submitBtn.disabled = true;
-                }
-                
-                // Reset submission state after delay
-                setTimeout(() => {
-                    isSubmitting = false;
-                    if (submitBtn) {
-                        submitBtn.disabled = false;
-                    }
-                }, 2000);
-            });
-        }
-    },
-
-    // Handle mobile scrolling behavior
-    initMobileScrolling() {
-        // Smooth scrolling for mobile
-        const contentArea = document.querySelector('.content-area');
-        if (contentArea) {
-            contentArea.style.overscrollBehavior = 'contain';
-            contentArea.classList.add('touch-scroll');
-        }
-
-        // Handle fixed position elements when virtual keyboard is visible
-        const inputs = document.querySelectorAll('input, textarea');
-        inputs.forEach(input => {
-            input.addEventListener('focus', () => {
-                if (window.innerWidth < 768) {
-                    document.body.classList.add('keyboard-visible');
-                }
-            });
-            
-            input.addEventListener('blur', () => {
-                document.body.classList.remove('keyboard-visible');
-            });
-        });
-    },
-
-    initMobileTooltips() {
-        const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-        tooltips.forEach(tooltip => {
-            const instance = bootstrap.Tooltip.getInstance(tooltip);
-            if (instance) {
-                instance.dispose();
-            }
-            new bootstrap.Tooltip(tooltip, {
-                trigger: window.innerWidth < 768 ? 'click' : 'hover',
-                placement: window.innerWidth < 768 ? 'bottom' : 'auto'
-            });
-        });
-    },
-
-    // Handle mobile keyboard behavior
-    initMobileKeyboardHandling() {
-        // Detect virtual keyboard
-        let originalHeight = window.innerHeight;
-        
-        window.addEventListener('resize', () => {
-            if (window.innerWidth < 768) {
-                const heightDiff = originalHeight - window.innerHeight;
-                if (heightDiff > 150) {
-                    // Keyboard is likely visible
-                    document.body.classList.add('keyboard-visible');
-                } else {
-                    document.body.classList.remove('keyboard-visible');
-                }
-            }
-        });
-
-        // Improve input behavior on mobile
-        const numericInputs = document.querySelectorAll('input[type="number"]');
-        numericInputs.forEach(input => {
-            input.addEventListener('focus', function() {
-                if (window.innerWidth < 768) {
-                    this.type = 'tel';  // Better numeric keyboard on mobile
-                }
-            });
-            
-            input.addEventListener('blur', function() {
-                this.type = 'number';
-            });
-        });
-    },
-
-    // Enhanced form responsiveness
-    initFormResponsiveness() {
-        // Handle form layout on mobile
-        this.adjustFormLayout();
-        
-        // Handle form validation display
-        this.initMobileValidation();
-        
-        // Initialize mobile-friendly dropdowns
-        this.initMobileDropdowns();
-    },
-
-    // Add viewport change handler
-    initViewportHandler() {
-        window.addEventListener('resize', _.debounce(() => {
-            this.initializeMobileInteractions();
-        }, 250));
-    },
-
     // Adjust form layout for mobile
     adjustFormLayout() {
         if (window.innerWidth < 768) {
@@ -2183,36 +2703,6 @@ window.analysisModule = {
                 group.classList.add('d-flex', 'flex-column');
             });
         }
-    },
-
-    // Mobile-friendly form validation
-    initMobileValidation() {
-        const form = document.getElementById('analysisForm');
-        if (form) {
-            // Show validation messages immediately on mobile
-            form.addEventListener('input', (e) => {
-                if (window.innerWidth < 768) {
-                    const input = e.target;
-                    if (input.checkValidity()) {
-                        input.classList.remove('is-invalid');
-                        input.classList.add('is-valid');
-                    } else {
-                        input.classList.remove('is-valid');
-                        input.classList.add('is-invalid');
-                    }
-                }
-            });
-        }
-    },
-
-    // Initialize mobile-friendly dropdowns
-    initMobileDropdowns() {
-        const dropdowns = document.querySelectorAll('.dropdown-toggle');
-        dropdowns.forEach(dropdown => {
-            new bootstrap.Dropdown(dropdown, {
-                display: 'static'  // Prevent dropdown from being cut off on mobile
-            });
-        });
     },
 
     clearBalloonPaymentFields() {
@@ -2351,189 +2841,85 @@ window.analysisModule = {
         }, 2000);
     },
 
-    initButtonHandlers() {
-        const reEditButton = document.getElementById('reEditButton');
-        if (reEditButton) {
-            reEditButton.addEventListener('click', () => this.switchToFinancialTab());
-        }
-    },
-
-    // Updated initRefinanceCalculations for flat 
-    initRefinanceCalculations() {
-        const arvInput = document.getElementById('after_repair_value');
-        const ltvInput = document.getElementById('refinance_ltv_percentage');
-        const loanAmountInput = document.getElementById('refinance_loan_amount');
-        const downPaymentInput = document.getElementById('refinance_loan_down_payment');
-        const closingCostsInput = document.getElementById('refinance_loan_closing_costs');
-
-        const updateRefinanceCalcs = () => {
-            const arv = toRawNumber(arvInput.value);
-            const ltv = toRawNumber(ltvInput.value);
-
-            // Calculate loan amount
-            const loanAmount = (arv * ltv) / 100;
-            loanAmountInput.value = loanAmount.toFixed(2);
-
-            // Calculate down payment
-            const downPayment = (arv * (100 - ltv)) / 100;
-            downPaymentInput.value = downPayment.toFixed(2);
-
-            // Calculate closing costs (5%)
-            const closingCosts = loanAmount * 0.05;
-            closingCostsInput.value = closingCosts.toFixed(2);
-        };
-
-        if (arvInput && ltvInput) {
-            arvInput.addEventListener('input', updateRefinanceCalcs);
-            ltvInput.addEventListener('input', updateRefinanceCalcs);
-        }
-    },
-
     getAnalysisIdFromUrl() {
         const urlParams = new URLSearchParams(window.location.search);
         return urlParams.get('analysis_id');
     },
 
-    // Configure toastr options
-    initToastr() {
-        toastr.options = {
-            closeButton: true,
-            progressBar: true,
-            positionClass: 'toast-top-right',
-            preventDuplicates: true,
-            timeOut: 3000,
-            extendedTimeOut: 1000,
-            showEasing: 'swing',
-            hideEasing: 'linear',
-            showMethod: 'fadeIn',
-            hideMethod: 'fadeOut'
-        };
-    },
-
-    initTabHandling() {
-        // Use this.getAnalysisIdFromUrl() instead
-        const analysisId = this.getAnalysisIdFromUrl();
-        if (!analysisId) return;
-    
-        const reportTab = document.getElementById('reports-tab');
-        const financialTab = document.getElementById('financial-tab');
-    
-        if (reportTab) {
-            reportTab.addEventListener('click', () => {
-                this.currentAnalysisId = analysisId;
-                console.log('Report tab clicked, analysis ID:', this.currentAnalysisId);
-            });
-        }
-    
-        if (financialTab) {
-            financialTab.addEventListener('click', () => {
-                this.currentAnalysisId = analysisId;
-                console.log('Financial tab clicked, analysis ID:', this.currentAnalysisId);
-            });
-        }
-    },
-
-    // Update initAddressAutocomplete in the analysisModule
-    initAddressAutocomplete() {
-        console.log('Initializing address autocomplete');
-        const addressInput = document.getElementById('address');
-        
-        if (!addressInput) {
-            console.error('Address input not found');
+    loadAnalysisData(analysisId) {
+        if (!analysisId) {
+            console.error('No analysis ID provided to loadAnalysisData');
             return;
         }
-
-        // Create results list element
-        const resultsList = document.createElement('ul');
-        resultsList.className = 'autocomplete-results list-group position-absolute w-100 shadow-sm';
-        resultsList.style.zIndex = '1000';
+    
+        console.log('Loading analysis data for ID:', analysisId);
         
-        // Insert the results list after the input
-        addressInput.parentNode.appendChild(resultsList);
-        
-        let timeoutId;
-        
-        // Add input event listener
-        addressInput.addEventListener('input', function() {
-            clearTimeout(timeoutId);
-            timeoutId = setTimeout(() => {
-                const query = this.value;
-                if (query.length > 2) {
-                    console.log('Making API call for:', query);
-                    fetch(`/api/autocomplete?query=${encodeURIComponent(query)}`)
-                        .then(response => {
-                            if (!response.ok) {
-                                throw new Error(`HTTP error! status: ${response.status}`);
+        fetch(`/analyses/get_analysis/${analysisId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data?.success) {
+                    const form = document.getElementById('analysisForm');
+                    const financialTab = document.getElementById('financial');
+                    
+                    if (form) {
+                        form.setAttribute('data-analysis-id', analysisId);
+                    }
+                    
+                    // Set analysis type and store as initial type
+                    const analysisType = document.getElementById('analysis_type');
+                    if (analysisType && financialTab) {
+                        analysisType.value = data.analysis.analysis_type;
+                        this.initialAnalysisType = data.analysis.analysis_type;
+                        
+                        // Load appropriate template
+                        console.log('Loading template for type:', this.initialAnalysisType);
+                        if (this.initialAnalysisType === 'Multi-Family') {
+                            console.log('Setting Multi-Family template');
+                            financialTab.innerHTML = getMultiFamilyHTML();
+                            setTimeout(() => {
+                                this.initMultiFamilyHandlers();
+                                this.populateFormFields(data.analysis);
+                            }, 100);
+                        } else {
+                            if (this.initialAnalysisType === 'Lease Option') {
+                                financialTab.innerHTML = getLeaseOptionHTML();
+                            } else if (this.initialAnalysisType.includes('BRRRR')) {
+                                financialTab.innerHTML = getBRRRRHTML();
+                            } else {
+                                financialTab.innerHTML = getLongTermRentalHTML();
                             }
-                            return response.json();
-                        })
-                        .then(data => {
-                            console.log('API response:', data);
-                            resultsList.innerHTML = '';
                             
-                            if (data.status === 'success' && data.data && Array.isArray(data.data)) {
-                                data.data.forEach(result => {
-                                    const li = document.createElement('li');
-                                    li.className = 'list-group-item list-group-item-action';
-                                    li.textContent = result.formatted;
-                                    li.style.cursor = 'pointer';
-                                    
-                                    li.addEventListener('click', function() {
-                                        addressInput.value = this.textContent;
-                                        resultsList.innerHTML = '';
-                                    });
-                                    
-                                    resultsList.appendChild(li);
-                                });
-                                
-                                if (data.data.length === 0) {
-                                    const li = document.createElement('li');
-                                    li.className = 'list-group-item disabled';
-                                    li.textContent = 'No matches found';
-                                    resultsList.appendChild(li);
-                                }
+                            // Add PadSplit expenses if needed
+                            if (this.initialAnalysisType.includes('PadSplit')) {
+                                financialTab.insertAdjacentHTML('beforeend', padSplitExpensesHTML);
                             }
-                        })
-                        .catch(error => {
-                            console.error('Error:', error);
-                            resultsList.innerHTML = `
-                                <li class="list-group-item text-danger">
-                                    Error fetching results: ${error.message}
-                                </li>
-                            `;
-                        });
+                            
+                            // Initialize handlers
+                            if (!this.initialAnalysisType.includes('BRRRR')) {
+                                this.initBalloonPaymentHandlers();
+                            }
+                            this.initLoanHandlers();
+                            if (this.initialAnalysisType.includes('BRRRR')) {
+                                this.initRefinanceCalculations();
+                            }
+                            
+                            // Wait for DOM to be ready before populating fields
+                            setTimeout(() => {
+                                this.populateFormFields(data.analysis);
+                            }, 100);
+                        }
+                    } else {
+                        console.error('Analysis type field or financial tab not found');
+                    }
                 } else {
-                    resultsList.innerHTML = '';
+                    console.error('Failed to fetch analysis data');
+                    toastr.error('Error loading analysis data');
                 }
-            }, 300);
-        });
-
-        // Close suggestions when clicking outside
-        document.addEventListener('click', function(e) {
-            if (e.target !== addressInput && e.target !== resultsList) {
-                resultsList.innerHTML = '';
-            }
-        });
-
-        // Prevent form submission when selecting from dropdown
-        resultsList.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-        });
-
-        // Add some basic styling for the autocomplete
-        const style = document.createElement('style');
-        style.textContent = `
-            .autocomplete-results {
-                max-height: 200px;
-                overflow-y: auto;
-                background: white;
-            }
-            .autocomplete-results .list-group-item:hover {
-                background-color: #f8f9fa;
-            }
-        `;
-        document.head.appendChild(style);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                toastr.error('Error loading analysis data');
+            });
     },
 
     handleTypeChange(newType) {
@@ -2613,250 +2999,6 @@ window.analysisModule = {
             toastr.error(error.message);
             throw error;
         }
-    },
-
-    initAnalysisTypeHandler() {
-        console.log('Starting initAnalysisTypeHandler');
-        const analysisType = document.getElementById('analysis_type');
-        const financialTab = document.getElementById('financial');
-        console.log('Found elements:', { 
-            analysisTypeExists: !!analysisType, 
-            analysisTypeValue: analysisType?.value,
-            financialTabExists: !!financialTab 
-        });
-        
-        if (analysisType && financialTab) {
-            // Remove any existing event listeners by cloning
-            const newAnalysisType = analysisType.cloneNode(true);
-            analysisType.parentNode.replaceChild(newAnalysisType, analysisType);
-            
-            // Get the analysis ID from URL if it exists
-            const urlParams = new URLSearchParams(window.location.search);
-            const analysisId = urlParams.get('analysis_id');
-            console.log('AnalysisId in type handler:', analysisId);
-            
-            // Store initial value
-            this.initialAnalysisType = analysisId ? null : newAnalysisType.value;
-            console.log('Initial analysis type:', this.initialAnalysisType);
-            
-            // Load initial template if not editing existing analysis
-            if (!analysisId) {
-                console.log('Not editing - loading initial template for type:', this.initialAnalysisType);
-                console.log('loadTemplateForType exists:', typeof this.loadTemplateForType === 'function');
-                this.loadTemplateForType(this.initialAnalysisType, financialTab);
-            }
-                
-            // Set up event listener for changes
-            newAnalysisType.addEventListener('change', async (e) => {
-                console.log('Analysis type changed to:', e.target.value);
-                // Prevent multiple concurrent changes
-                if (this.typeChangeInProgress) {
-                    console.log('Type change already in progress');
-                    return;
-                }
-    
-                const newType = e.target.value;
-                console.log('Processing change to type:', newType);
-                console.log('Initial type:', this.initialAnalysisType);
-                
-                // Skip if initial type hasn't been set yet or if type hasn't actually changed
-                if (!this.initialAnalysisType || newType === this.initialAnalysisType) {
-                    console.log('Skipping - no initial type or no change. Initial:', 
-                        this.initialAnalysisType, 'New:', newType);
-                    return;
-                }
-                
-                // If we're in create mode, just update the fields
-                if (!this.currentAnalysisId) {
-                    console.log('Create mode - will update template for type:', newType);
-                    console.log('Financial tab exists:', !!financialTab);
-                    console.log('loadTemplateForType exists:', typeof this.loadTemplateForType === 'function');
-                    
-                    // Call loadTemplateForType and check its result
-                    try {
-                        this.loadTemplateForType(newType, financialTab);
-                        console.log('Template loaded successfully');
-                    } catch (error) {
-                        console.error('Error loading template:', error);
-                    }
-                    
-                    this.initialAnalysisType = newType;
-                    return;
-                }
-                
-                try {
-                    this.typeChangeInProgress = true;
-                    const confirmed = await this.confirmTypeChange(newType);
-                    
-                    if (!confirmed) {
-                        e.target.value = this.initialAnalysisType;
-                        return;
-                    }
-                    
-                    await this.handleTypeChange(newType);
-                    
-                } catch (error) {
-                    console.error('Error:', error);
-                    toastr.error(error.message);
-                    e.target.value = this.initialAnalysisType;
-                } finally {
-                    this.typeChangeInProgress = false;
-                }
-            });
-        } else {
-            console.error('Missing required elements:', { 
-                analysisType: !!analysisType, 
-                financialTab: !!financialTab 
-            });
-        }
-    },
-
-    // Add a separate function for notes counter initialization
-    initNotesCounter() {
-        const notesTextarea = document.getElementById('notes');
-        const notesCounter = document.getElementById('notes-counter');
-        if (notesTextarea && notesCounter) {
-            // Update counter with initial value if exists
-            notesCounter.textContent = notesTextarea.value.length;
-            
-            // Add event listener for changes
-            notesTextarea.addEventListener('input', function() {
-                notesCounter.textContent = this.value.length;
-            });
-        }
-    },
-
-    loadAnalysisData(analysisId) {
-        if (!analysisId) {
-            console.error('No analysis ID provided to loadAnalysisData');
-            return;
-        }
-    
-        console.log('Loading analysis data for ID:', analysisId);
-        
-        fetch(`/analyses/get_analysis/${analysisId}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data?.success) {
-                    const form = document.getElementById('analysisForm');
-                    const financialTab = document.getElementById('financial');
-                    
-                    if (form) {
-                        form.setAttribute('data-analysis-id', analysisId);
-                    }
-                    
-                    // Set analysis type and store as initial type
-                    const analysisType = document.getElementById('analysis_type');
-                    if (analysisType && financialTab) {
-                        analysisType.value = data.analysis.analysis_type;
-                        this.initialAnalysisType = data.analysis.analysis_type;
-                        
-                        // Load appropriate template
-                        console.log('Loading template for type:', this.initialAnalysisType);
-                        if (this.initialAnalysisType === 'Multi-Family') {
-                            console.log('Setting Multi-Family template');
-                            financialTab.innerHTML = getMultiFamilyHTML();
-                            setTimeout(() => {
-                                this.initMultiFamilyHandlers();
-                                this.populateFormFields(data.analysis);
-                            }, 100);
-                        } else {
-                            if (this.initialAnalysisType === 'Lease Option') {
-                                financialTab.innerHTML = getLeaseOptionHTML();
-                            } else if (this.initialAnalysisType.includes('BRRRR')) {
-                                financialTab.innerHTML = getBRRRRHTML();
-                            } else {
-                                financialTab.innerHTML = getLongTermRentalHTML();
-                            }
-                            
-                            // Add PadSplit expenses if needed
-                            if (this.initialAnalysisType.includes('PadSplit')) {
-                                financialTab.insertAdjacentHTML('beforeend', padSplitExpensesHTML);
-                            }
-                            
-                            // Initialize handlers
-                            if (!this.initialAnalysisType.includes('BRRRR')) {
-                                this.initBalloonPaymentHandlers();
-                            }
-                            this.initLoanHandlers();
-                            if (this.initialAnalysisType.includes('BRRRR')) {
-                                this.initRefinanceCalculations();
-                            }
-                            
-                            // Wait for DOM to be ready before populating fields
-                            setTimeout(() => {
-                                this.populateFormFields(data.analysis);
-                            }, 100);
-                        }
-                    } else {
-                        console.error('Analysis type field or financial tab not found');
-                    }
-                } else {
-                    console.error('Failed to fetch analysis data');
-                    toastr.error('Error loading analysis data');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                toastr.error('Error loading analysis data');
-            });
-    },
-    
-    // Updated initLoanHandlers for flat schema
-    initLoanHandlers() {
-        const addLoanBtn = document.getElementById('add-loan-btn');
-        const loansContainer = document.getElementById('loans-container');
-        
-        if (!addLoanBtn || !loansContainer || addLoanBtn.hasAttribute('data-initialized')) {
-            return;
-        }
-
-        // Mark as initialized
-        addLoanBtn.setAttribute('data-initialized', 'true');
-        
-        addLoanBtn.addEventListener('click', () => {
-            const loanCount = loansContainer.querySelectorAll('.loan-section').length + 1;
-            
-            if (loanCount <= 3) {  // Maximum 3 loans allowed
-                loansContainer.insertAdjacentHTML('beforeend', getLoanFieldsHTML(loanCount));
-                
-                if (loanCount >= 3) {
-                    addLoanBtn.style.display = 'none';
-                }
-            }
-        });
-
-        // Event delegation for remove loan buttons
-        loansContainer.addEventListener('click', (e) => {
-            if (e.target.classList.contains('remove-loan-btn')) {
-                const loanSection = e.target.closest('.loan-section');
-                if (loanSection) {
-                    loanSection.remove();
-                    
-                    // Renumber remaining loans
-                    const remainingLoans = loansContainer.querySelectorAll('.loan-section');
-                    remainingLoans.forEach((loan, index) => {
-                        const newIndex = index + 1;
-                        const heading = loan.querySelector('h5');
-                        if (heading) {
-                            heading.textContent = `Loan ${newIndex}`;
-                        }
-                        
-                        // Update field IDs and names to match flat schema
-                        const inputs = loan.querySelectorAll('input');
-                        inputs.forEach(input => {
-                            const fieldType = input.id.split('_').pop(); // amount, interest_rate, etc.
-                            input.id = `loan${newIndex}_loan_${fieldType}`;
-                            input.name = `loan${newIndex}_loan_${fieldType}`;
-                        });
-                    });
-
-                    if (remainingLoans.length < 3) {
-                        addLoanBtn.style.display = 'block';
-                    }
-                }
-            }
-        });
     },
 
     // Updated handleSubmit function for flat data structure
@@ -2976,6 +3118,13 @@ window.analysisModule = {
                 this.populateReportsTab(data.analysis);
                 this.switchToReportsTab();
                 this.showReportActions();
+                
+                // Initialize comps handler for new analysis
+                setTimeout(() => {
+                    console.log('Initializing comps handler for new analysis:', this.currentAnalysisId);
+                    compsHandler.init(this.currentAnalysisId);
+                }, 100);
+                
                 toastr.success('Analysis created successfully');
             } else {
                 throw new Error(data.message || 'Unknown error occurred');
@@ -3138,30 +3287,31 @@ window.analysisModule = {
             console.log("Server response calculated_metrics:", data.analysis.calculated_metrics);
             
             if (data.success) {
-                const analysisData = data.analysis.analysis || data.analysis;
-                console.log('Analysis data for reports:', analysisData);
+                console.log('Analysis updated, initializing UI components...');
+                this.currentAnalysisId = data.analysis.id;
                 
-                if (!analysisData.analysis_type) {
-                    console.error('Missing analysis type in data:', analysisData);
-                    throw new Error('Invalid analysis data structure');
-                }
-    
-                // Update IDs and URLs if needed
-                if (analysisData.id !== analysisId) {
-                    this.currentAnalysisId = analysisData.id;
-                    form.setAttribute('data-analysis-id', analysisData.id);
-                    const newUrl = new URL(window.location.href);
-                    newUrl.searchParams.set('analysis_id', analysisData.id);
-                    window.history.pushState({}, '', newUrl);
-                    toastr.success(`New ${analysisData.analysis_type} analysis created`);
-                } else {
-                    toastr.success('Analysis updated successfully');
+                // Make sure we have the required data
+                if (!data.analysis.calculated_metrics) {
+                    console.warn('No calculated metrics in response:', data.analysis);
                 }
                 
-                this.populateReportsTab(analysisData);
+                // Populate reports and switch tabs
+                this.populateReportsTab(data.analysis);
                 this.switchToReportsTab();
                 this.showReportActions();
                 
+                // Initialize comps handler with a delay
+                setTimeout(() => {
+                    console.log('Initializing comps handler with ID:', this.currentAnalysisId);
+                    if (typeof compsHandler.init === 'function') {
+                        compsHandler.init(this.currentAnalysisId);
+                        console.log('Comps handler initialized');
+                    } else {
+                        console.error('Comps handler init method not found:', compsHandler);
+                    }
+                }, 100);
+                
+                toastr.success('Analysis updated successfully');
             } else {
                 throw new Error(data.message || 'Unknown error occurred');
             }
@@ -3172,10 +3322,10 @@ window.analysisModule = {
         })
         .finally(() => {
             this.isSubmitting = false;
+            const submitBtn = event.target.querySelector('button[type="submit"]');
             if (submitBtn) {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i class="bi bi-save me-2"></i>Update Analysis';
-                submitBtn.style.display = 'inline-block';
             }
         });
     },
@@ -3268,71 +3418,404 @@ window.analysisModule = {
             return '$0.00';
         }
     },
+
+    // Updated populateFormFields function - uses raw values
+    populateFormFields(analysis) {
+        // Store reference to 'this' for use in nested functions
+        const self = this;
+        
+        self.debugPropertyType('Starting form population', { analysis });
+        
+        try {
+            // Define setFieldValue with proper 'this' context first
+            const setFieldValue = (fieldId, value) => {
+                const field = document.getElementById(fieldId);
+                if (field) {
+                    self.debugPropertyType(`Setting field ${fieldId}`, { value });
+                    
+                    // Skip property type as it's handled separately
+                    if (fieldId === 'property_type') {
+                        return true;
+                    }
+                    
+                    if (field.type === 'checkbox') {
+                        field.checked = Boolean(value);
+                    } else {
+                        field.value = (value !== null && value !== undefined) ? value : '';
+                    }
+                    
+                    const event = new Event('change', { bubbles: true });
+                    field.dispatchEvent(event);
+                    return true;
+                }
+                return false;
+            };
     
+            // Set analysis type first
+            setFieldValue('analysis_type', analysis.analysis_type);
+            
+            // Initialize property type handler with a delay
+            setTimeout(() => {
+                self.initPropertyTypeHandler(analysis);
+            }, 100);
+    
+            // Basic fields
+            setFieldValue('analysis_name', analysis.analysis_name);
+            setFieldValue('address', analysis.address);
+            
+            // Property details
+            setFieldValue('square_footage', analysis.square_footage);
+            setFieldValue('lot_size', analysis.lot_size);
+            setFieldValue('year_built', analysis.year_built);
+            setFieldValue('bedrooms', analysis.bedrooms);
+            setFieldValue('bathrooms', analysis.bathrooms);
+            
+            // Purchase details
+            setFieldValue('purchase_price', analysis.purchase_price);
+            setFieldValue('after_repair_value', analysis.after_repair_value);
+            setFieldValue('renovation_costs', analysis.renovation_costs);
+            setFieldValue('renovation_duration', analysis.renovation_duration);
+                        
+            // Purchase closing details
+            setFieldValue('cash_to_seller', analysis.cash_to_seller);
+            setFieldValue('closing_costs', analysis.closing_costs);
+            setFieldValue('assignment_fee', analysis.assignment_fee);
+            setFieldValue('marketing_costs', analysis.marketing_costs);
+    
+            // Handle Multi-Family specific fields
+            if (analysis.analysis_type === 'Multi-Family') {
+                try {
+                    // Set basic Multi-Family fields
+                    setFieldValue('total_units', analysis.total_units);
+                    setFieldValue('occupied_units', analysis.occupied_units);
+                    setFieldValue('floors', analysis.floors);
+                    setFieldValue('other_income', analysis.other_income);
+                    setFieldValue('total_potential_income', analysis.total_potential_income);
+                    
+                    // Set Multi-Family specific expenses
+                    setFieldValue('common_area_maintenance', analysis.common_area_maintenance);
+                    setFieldValue('elevator_maintenance', analysis.elevator_maintenance);
+                    setFieldValue('staff_payroll', analysis.staff_payroll);
+                    setFieldValue('trash_removal', analysis.trash_removal);
+                    setFieldValue('common_utilities', analysis.common_utilities);
+                    
+                    // Handle unit types
+                    const unitTypesContainer = document.getElementById('unit-types-container');
+                    if (unitTypesContainer) {
+                        // Clear existing unit types
+                        unitTypesContainer.innerHTML = '';
+                        
+                        // Parse unit types from stored JSON string
+                        const unitTypes = JSON.parse(analysis.unit_types || '[]');
+                        
+                        // Add each unit type
+                        unitTypes.forEach((unitType, index) => {
+                            unitTypesContainer.insertAdjacentHTML('beforeend', getUnitTypeHTML(index));
+                            
+                            // Set values for this unit type
+                            const section = unitTypesContainer.children[index];
+                            if (section) {
+                                section.querySelector('select').value = unitType.type;
+                                section.querySelector('.unit-count').value = unitType.count;
+                                section.querySelector('.unit-occupied').value = unitType.occupied;
+                                section.querySelector('input[name$="[square_footage]"]').value = unitType.square_footage;
+                                section.querySelector('.unit-rent').value = unitType.rent;
+                            }
+                        });
+                        
+                        // Initialize calculations
+                        self.initUnitTypeCalculations();
+                    }
+                    
+                } catch (error) {
+                    console.error('Error populating Multi-Family fields:', error);
+                    toastr.error('Error loading Multi-Family data');
+                }
+            }
+    
+            // Handle Lease Option fields
+            if (analysis.analysis_type === 'Lease Option') {
+                // Clear any irrelevant fields that might be present
+                ['after_repair_value', 'renovation_costs', 'renovation_duration'].forEach(field => {
+                    const element = document.getElementById(field);
+                    if (element) element.value = '';
+                });
+                
+                // Set Lease Option specific fields
+                setFieldValue('option_consideration_fee', analysis.option_consideration_fee);
+                setFieldValue('option_term_months', analysis.option_term_months);
+                setFieldValue('strike_price', analysis.strike_price);
+                setFieldValue('monthly_rent_credit_percentage', analysis.monthly_rent_credit_percentage);
+                setFieldValue('rent_credit_cap', analysis.rent_credit_cap);
+            }
+    
+            // Handle balloon payment configuration
+            const hasBalloon = analysis.has_balloon_payment || (
+                analysis.balloon_refinance_loan_amount > 0 && 
+                analysis.balloon_due_date && 
+                analysis.balloon_refinance_ltv_percentage > 0
+            );
+    
+            // Set balloon toggle state
+            const balloonToggle = document.getElementById('has_balloon_payment');
+            const balloonDetails = document.getElementById('balloon-payment-details');
+            
+            if (balloonToggle && balloonDetails) {
+                balloonToggle.checked = hasBalloon;
+                if (hasBalloon) {
+                    balloonDetails.style.display = 'block';
+                    const balloonInputs = balloonDetails.querySelectorAll('input:not([type="checkbox"])');
+                    balloonInputs.forEach(input => {
+                        input.required = true;
+                    });
+                } else {
+                    balloonDetails.style.display = 'none';
+                    self.clearBalloonPaymentFields();
+                }
+            }
+    
+            // Set balloon payment fields if enabled
+            if (hasBalloon) {
+                setFieldValue('balloon_due_date', analysis.balloon_due_date);
+                setFieldValue('balloon_refinance_ltv_percentage', analysis.balloon_refinance_ltv_percentage);
+                setFieldValue('balloon_refinance_loan_amount', analysis.balloon_refinance_loan_amount);
+                setFieldValue('balloon_refinance_loan_interest_rate', analysis.balloon_refinance_loan_interest_rate);
+                setFieldValue('balloon_refinance_loan_term', analysis.balloon_refinance_loan_term);
+                setFieldValue('balloon_refinance_loan_down_payment', analysis.balloon_refinance_loan_down_payment);
+                setFieldValue('balloon_refinance_loan_closing_costs', analysis.balloon_refinance_loan_closing_costs);
+            }
+    
+            // Handle existing loans
+            const loansContainer = document.getElementById('loans-container');
+            if (loansContainer) {
+                // Clear existing loans
+                loansContainer.innerHTML = '';
+                
+                // Add each existing loan
+                for (let i = 1; i <= 3; i++) {
+                    const prefix = `loan${i}`;
+                    if (analysis[`${prefix}_loan_amount`] > 0) {
+                        // Insert loan HTML
+                        loansContainer.insertAdjacentHTML('beforeend', getLoanFieldsHTML(i));
+                        
+                        // Populate loan fields
+                        setFieldValue(`${prefix}_loan_name`, analysis[`${prefix}_loan_name`]);
+                        setFieldValue(`${prefix}_loan_amount`, analysis[`${prefix}_loan_amount`]);
+                        setFieldValue(`${prefix}_loan_interest_rate`, analysis[`${prefix}_loan_interest_rate`]);
+                        setFieldValue(`${prefix}_loan_term`, analysis[`${prefix}_loan_term`]);
+                        setFieldValue(`${prefix}_loan_down_payment`, analysis[`${prefix}_loan_down_payment`]);
+                        setFieldValue(`${prefix}_loan_closing_costs`, analysis[`${prefix}_loan_closing_costs`]);
+                        
+                        // Handle interest-only checkbox specifically
+                        const interestOnlyCheckbox = document.getElementById(`${prefix}_interest_only`);
+                        if (interestOnlyCheckbox) {
+                            // Convert the value to boolean and set it
+                            interestOnlyCheckbox.checked = Boolean(analysis[`${prefix}_interest_only`]);
+                            // Dispatch change event to trigger any listeners
+                            interestOnlyCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+                            console.log(`Setting ${prefix}_interest_only to:`, Boolean(analysis[`${prefix}_interest_only`]));
+                        }
+                    }
+                }
+            }
+    
+            setFieldValue('monthly_rent', analysis.monthly_rent);
+            
+            // Set operating expenses - now handles zero values
+            setFieldValue('property_taxes', analysis.property_taxes);
+            setFieldValue('insurance', analysis.insurance);
+            setFieldValue('hoa_coa_coop', analysis.hoa_coa_coop);
+            setFieldValue('management_fee_percentage', analysis.management_fee_percentage);
+            setFieldValue('capex_percentage', analysis.capex_percentage);
+            setFieldValue('vacancy_percentage', analysis.vacancy_percentage);
+            setFieldValue('repairs_percentage', analysis.repairs_percentage);
+    
+            // Set Notes
+            setFieldValue('notes', analysis.notes || '');
+            
+            // Set BRRRR-specific fields if applicable
+            if (analysis.analysis_type.includes('BRRRR')) {
+                // Initial loan details
+                setFieldValue('initial_loan_amount', analysis.initial_loan_amount);
+                setFieldValue('initial_loan_down_payment', analysis.initial_loan_down_payment);
+                setFieldValue('initial_loan_interest_rate', analysis.initial_loan_interest_rate);
+                setFieldValue('initial_loan_term', analysis.initial_loan_term);
+                setFieldValue('initial_loan_closing_costs', analysis.initial_loan_closing_costs);
+                
+                // Set interest-only checkbox - explicit boolean conversion
+                const initialInterestOnly = document.getElementById('initial_interest_only');
+                if (initialInterestOnly) {
+                    initialInterestOnly.checked = Boolean(analysis.initial_interest_only);
+                    initialInterestOnly.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                
+                // Refinance details
+                setFieldValue('refinance_loan_amount', analysis.refinance_loan_amount);
+                setFieldValue('refinance_loan_down_payment', analysis.refinance_loan_down_payment);
+                setFieldValue('refinance_loan_interest_rate', analysis.refinance_loan_interest_rate);
+                setFieldValue('refinance_loan_term', analysis.refinance_loan_term);
+                setFieldValue('refinance_loan_closing_costs', analysis.refinance_loan_closing_costs);
+            }
+            
+            // Set PadSplit-specific fields if applicable
+            if (analysis.analysis_type.includes('PadSplit')) {
+                setFieldValue('padsplit_platform_percentage', analysis.padsplit_platform_percentage);
+                setFieldValue('utilities', analysis.utilities);
+                setFieldValue('internet', analysis.internet);
+                setFieldValue('cleaning', analysis.cleaning);
+                setFieldValue('pest_control', analysis.pest_control);
+                setFieldValue('landscaping', analysis.landscaping);
+            }
+    
+            // Handle PadSplit-specific fields visibility
+            if (analysis.analysis_type?.includes('PadSplit')) {
+                setFieldValue('furnishing_costs', analysis.furnishing_costs || 0);
+                document.querySelectorAll('.padsplit-field').forEach(field => {
+                    field.style.display = 'block';
+                    field.querySelectorAll('input').forEach(input => {
+                        input.required = true;
+                    });
+                });
+            } else {
+                document.querySelectorAll('.padsplit-field').forEach(field => {
+                    field.style.display = 'none';
+                    field.querySelectorAll('input').forEach(input => {
+                        input.required = false;
+                        input.value = '';
+                    });
+                });
+            }
+    
+            // Initialize balloon payment handlers after setting all values
+            self.initBalloonPaymentHandlers(true);  // Pass true to skip toggle init
+            
+        } catch (error) {
+            console.error('Error populating form fields:', error);
+            toastr.error('Error populating form fields');
+        }
+    },
+
     // Updated populateReportsTab function - applies formatting for display
     populateReportsTab(data) {
         console.log('Starting populateReportsTab with data:', data);
         
-        const reportsContent = document.querySelector('#reports');
-        if (!reportsContent) {
-            console.error('Reports content element not found');
-            return;
-        }
-        
-        // Ensure we have the correct data structure
+        // Check for comps data
         const analysisData = data.analysis || data;
-        this.currentAnalysisId = analysisData.id || null;
+        console.log('Checking for comps data:', analysisData.comps_data);
     
-        try {
-            let reportContent = '';
-            const analysisType = analysisData.analysis_type || '';
-            
-            switch(analysisType) {
-                case 'Multi-Family':
-                    reportContent = this.getMultiFamilyReportContent(analysisData);
-                    break;
-                case 'BRRRR':
-                    reportContent = this.getBRRRRReportContent(analysisData);
-                    break;
-                case 'Lease Option':
-                    reportContent = this.getLeaseOptionReportContent(analysisData);
-                    break;
-                default:
-                    reportContent = this.getLTRReportContent(analysisData);
-            }
+        // Check for existing comps
+        const hasExistingComps = analysisData.comps_data && 
+                                analysisData.comps_data.comparables && 
+                                analysisData.comps_data.comparables.length > 0;
+                                
+        console.log('Has existing comps:', hasExistingComps);
+        if (hasExistingComps) {
+            console.log('Existing comps:', analysisData.comps_data.comparables);
+        }
     
-            const finalContent = `
-                <div class="row align-items-center mb-4">
-                    <div class="col">
-                        <h4 class="mb-0">${analysisType || 'Analysis'}: ${analysisData.analysis_name || 'Untitled'}</h4>
-                    </div>
-                    <div class="col-auto">
-                        <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-secondary" onclick="analysisModule.downloadPdf('${analysisData.id}')">
-                                <i class="bi bi-file-earmark-pdf me-1"></i>Download PDF
-                            </button>
-                            <button type="button" class="btn btn-primary" id="reEditButton">
-                                <i class="bi bi-pencil me-1"></i>Re-Edit Analysis
-                            </button>
-                        </div>
+        // Get your report content
+        let reportContent = '';
+        const analysisType = analysisData.analysis_type || '';
+        
+        switch(analysisType) {
+            case 'Multi-Family':
+                reportContent = this.getMultiFamilyReportContent(analysisData);
+                break;
+            case 'BRRRR':
+                reportContent = this.getBRRRRReportContent(analysisData);
+                break;
+            case 'Lease Option':
+                reportContent = this.getLeaseOptionReportContent(analysisData);
+                break;
+            default:
+                reportContent = this.getLTRReportContent(analysisData);
+        }
+    
+        const finalContent = `
+            <div class="row align-items-center mb-4">
+                <div class="col">
+                    <h4 class="mb-0">${analysisType || 'Analysis'}: ${analysisData.analysis_name || 'Untitled'}</h4>
+                </div>
+                <div class="col-auto">
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-secondary" onclick="analysisModule.downloadPdf('${analysisData.id}')">
+                            <i class="bi bi-file-earmark-pdf me-1"></i>Download PDF
+                        </button>
+                        <button type="button" class="btn btn-primary" id="reEditButton">
+                            <i class="bi bi-pencil me-1"></i>Re-Edit Analysis
+                        </button>
                     </div>
                 </div>
-                ${reportContent}`;
+            </div>
+            ${reportContent}
+            ${getCompsHTML(hasExistingComps)}`;
     
+        // Update the DOM
+        const reportsContent = document.querySelector('#reports');
+        if (reportsContent) {
             reportsContent.innerHTML = finalContent;
-    
-            const reEditButton = document.getElementById('reEditButton');
+            
+            // Attach event handler after content is added
+            const reEditButton = reportsContent.querySelector('#reEditButton');
             if (reEditButton) {
-                reEditButton.addEventListener('click', () => {
-                    this.switchToFinancialTab();
-                });
+                reEditButton.addEventListener('click', () => this.switchToFinancialTab());
             }
-        } catch (error) {
-            console.error('Error in populateReportsTab:', error);
-            reportsContent.innerHTML = `
-                <div class="alert alert-danger">
-                    Error generating report content: ${error.message}
-                </div>`;
+        }
+    
+        // If there are existing comps, display them
+        if (hasExistingComps) {
+            console.log('Displaying existing comps...');
+            this.displayExistingComps(analysisData.comps_data);
+        }
+    },
+
+    // Add this helper method to display existing comps
+    displayExistingComps(compsData) {
+        console.log('Displaying existing comps:', compsData);
+        
+        const estimatedValueSection = document.getElementById('estimatedValueSection');
+        const compsTableSection = document.getElementById('compsTableSection');
+        const runCountElement = document.getElementById('compsRunCount');
+        const initialMessage = document.getElementById('initialCompsMessage');
+        const runCompsBtn = document.getElementById('runCompsBtn');
+        
+        console.log('Found elements:', {
+            estimatedValueSection: !!estimatedValueSection,
+            compsTableSection: !!compsTableSection,
+            runCountElement: !!runCountElement,
+            initialMessage: !!initialMessage,
+            runCompsBtn: !!runCompsBtn
+        });
+        
+        if (estimatedValueSection && compsData.estimated_value) {
+            console.log('Showing estimated value:', compsData.estimated_value);
+            estimatedValueSection.style.display = 'block';
+            document.getElementById('estimatedValue').textContent = this.formatCurrency(compsData.estimated_value);
+            document.getElementById('valueLow').textContent = this.formatCurrency(compsData.value_range_low);
+            document.getElementById('valueHigh').textContent = this.formatCurrency(compsData.value_range_high);
+        }
+        
+        if (compsTableSection && compsData.comparables?.length > 0) {
+            console.log('Showing comps table with', compsData.comparables.length, 'entries');
+            compsTableSection.style.display = 'block';
+            const tableBody = document.getElementById('compsTableBody');
+            if (tableBody) {
+                tableBody.innerHTML = this.generateCompsTableRows(compsData.comparables);
+            }
+        }
+        
+        if (runCountElement && compsData.run_count) {
+            console.log('Showing run count:', compsData.run_count);
+            runCountElement.style.display = 'inline-block';
+            document.getElementById('runCountValue').textContent = compsData.run_count;
+        }
+        
+        if (initialMessage) {
+            initialMessage.style.display = 'none';
+        }
+        
+        if (runCompsBtn) {
+            runCompsBtn.innerHTML = '<i class="bi bi-arrow-repeat me-2"></i>Re-Run Comps';
         }
     },
     
@@ -4482,35 +4965,35 @@ window.analysisModule = {
         const submitBtn = document.getElementById('submitAnalysisBtn');
         const reEditButton = document.getElementById('reEditButton');
         
+        console.log('Switching to financial tab, currentAnalysisId:', this.currentAnalysisId);
+        
         if (financialTab) {
+            // Trigger click on financial tab
             financialTab.click();
         }
     
-        console.log('Switching to financial tab, currentAnalysisId:', this.currentAnalysisId);
-        console.log('Submit button exists:', !!submitBtn);
-    
-        // Always create or show submit button when editing
+        // Create or show submit button
         if (!submitBtn) {
             console.log('Creating new submit button');
             const form = document.getElementById('analysisForm');
-            const actionButtons = form.querySelector('.d-flex.gap-2');
-            if (actionButtons) {
-                const newSubmitBtn = document.createElement('button');
-                newSubmitBtn.id = 'submitAnalysisBtn';
-                newSubmitBtn.type = 'submit';
-                newSubmitBtn.className = 'btn btn-success';
-                newSubmitBtn.innerHTML = '<i class="bi bi-save me-2"></i>Update Analysis';
-                actionButtons.insertBefore(newSubmitBtn, actionButtons.firstChild);
-                
-                // Set up form for editing
-                if (this.currentAnalysisId) {
-                    form.setAttribute('data-analysis-id', this.currentAnalysisId);
-                    form.onsubmit = (event) => this.handleEditSubmit(event, this.currentAnalysisId);
+            if (form) {
+                const actionButtons = form.querySelector('.d-flex.gap-2');
+                if (actionButtons) {
+                    const newSubmitBtn = document.createElement('button');
+                    newSubmitBtn.id = 'submitAnalysisBtn';
+                    newSubmitBtn.type = 'submit';
+                    newSubmitBtn.className = 'btn btn-primary';
+                    newSubmitBtn.innerHTML = '<i class="bi bi-save me-2"></i>Update Analysis';
+                    actionButtons.insertBefore(newSubmitBtn, actionButtons.firstChild);
+                    
+                    // Set up form for editing
+                    if (this.currentAnalysisId) {
+                        form.setAttribute('data-analysis-id', this.currentAnalysisId);
+                        form.onsubmit = (event) => this.handleEditSubmit(event, this.currentAnalysisId);
+                    }
                 }
-                console.log('New submit button created');
             }
         } else {
-            console.log('Showing existing submit button');
             submitBtn.style.display = 'inline-block';
             submitBtn.innerHTML = '<i class="bi bi-save me-2"></i>Update Analysis';
         }
@@ -4912,280 +5395,6 @@ window.analysisModule = {
         
         totalUnitsInput.value = totalUnits;
         occupiedUnitsInput.value = occupiedUnits;
-    },
-
-    // Updated populateFormFields function - uses raw values
-    populateFormFields(analysis) {
-        console.log('Populating form fields with:', analysis);
-        
-        const setFieldValue = (fieldId, value) => {
-            const field = document.getElementById(fieldId);
-            if (field) {
-                // Handle checkbox fields differently
-                if (field.type === 'checkbox') {
-                    field.checked = Boolean(value);
-                } else {
-                    // Handle zero values explicitly
-                    field.value = (value !== null && value !== undefined) ? value : '';
-                }
-                const event = new Event('change', { bubbles: true });
-                field.dispatchEvent(event);
-                return true;
-            }
-            return false;
-        };
-    
-        try {
-            // Basic fields
-            setFieldValue('analysis_name', analysis.analysis_name);
-            setFieldValue('analysis_type', analysis.analysis_type);
-            setFieldValue('address', analysis.address);
-            
-            // Property details
-            setFieldValue('square_footage', analysis.square_footage);
-            setFieldValue('lot_size', analysis.lot_size);
-            setFieldValue('year_built', analysis.year_built);
-            setFieldValue('bedrooms', analysis.bedrooms);
-            setFieldValue('bathrooms', analysis.bathrooms);
-            
-            // Purchase details
-            setFieldValue('purchase_price', analysis.purchase_price);
-            setFieldValue('after_repair_value', analysis.after_repair_value);
-            setFieldValue('renovation_costs', analysis.renovation_costs);
-            setFieldValue('renovation_duration', analysis.renovation_duration);
-                        
-            // Purchase closing details
-            setFieldValue('cash_to_seller', analysis.cash_to_seller);
-            setFieldValue('closing_costs', analysis.closing_costs);
-            setFieldValue('assignment_fee', analysis.assignment_fee);
-            setFieldValue('marketing_costs', analysis.marketing_costs);
-    
-            // Handle Multi-Family specific fields
-            if (analysis.analysis_type === 'Multi-Family') {
-                try {
-                    // Set basic Multi-Family fields
-                    setFieldValue('total_units', analysis.total_units);
-                    setFieldValue('occupied_units', analysis.occupied_units);
-                    setFieldValue('floors', analysis.floors);
-                    setFieldValue('other_income', analysis.other_income);
-                    setFieldValue('total_potential_income', analysis.total_potential_income);
-                    
-                    // Set Multi-Family specific expenses
-                    setFieldValue('common_area_maintenance', analysis.common_area_maintenance);
-                    setFieldValue('elevator_maintenance', analysis.elevator_maintenance);
-                    setFieldValue('staff_payroll', analysis.staff_payroll);
-                    setFieldValue('trash_removal', analysis.trash_removal);
-                    setFieldValue('common_utilities', analysis.common_utilities);
-                    
-                    // Add property type handling
-                    const propertyType = document.getElementById('property_type');
-                    if (propertyType) {
-                        if (analysis.analysis_type === 'Multi-Family') {
-                            propertyType.innerHTML = '<option value="Multi-Family">Multi-Family</option>';
-                            propertyType.value = 'Multi-Family';
-                            propertyType.disabled = true;
-                        } else {
-                            propertyType.disabled = false;
-                            if (analysis.property_type) {
-                                propertyType.value = analysis.property_type;
-                            }
-                        }
-                    }
-                    
-                    // Handle unit types
-                    const unitTypesContainer = document.getElementById('unit-types-container');
-                    if (unitTypesContainer) {
-                        // Clear existing unit types
-                        unitTypesContainer.innerHTML = '';
-                        
-                        // Parse unit types from stored JSON string
-                        const unitTypes = JSON.parse(analysis.unit_types || '[]');
-                        
-                        // Add each unit type
-                        unitTypes.forEach((unitType, index) => {
-                            unitTypesContainer.insertAdjacentHTML('beforeend', getUnitTypeHTML(index));
-                            
-                            // Set values for this unit type
-                            const section = unitTypesContainer.children[index];
-                            if (section) {
-                                section.querySelector('select').value = unitType.type;
-                                section.querySelector('.unit-count').value = unitType.count;
-                                section.querySelector('.unit-occupied').value = unitType.occupied;
-                                section.querySelector('input[name$="[square_footage]"]').value = unitType.square_footage;
-                                section.querySelector('.unit-rent').value = unitType.rent;
-                            }
-                        });
-                        
-                        // Initialize calculations
-                        this.initUnitTypeCalculations();
-                    }
-                    
-                } catch (error) {
-                    console.error('Error populating Multi-Family fields:', error);
-                    toastr.error('Error loading Multi-Family data');
-                }
-            }
-    
-            // Handle Lease Option fields
-            if (analysis.analysis_type === 'Lease Option') {
-                // Clear any irrelevant fields that might be present
-                ['after_repair_value', 'renovation_costs', 'renovation_duration'].forEach(field => {
-                    const element = document.getElementById(field);
-                    if (element) element.value = '';
-                });
-                
-                // Set Lease Option specific fields
-                setFieldValue('option_consideration_fee', analysis.option_consideration_fee);
-                setFieldValue('option_term_months', analysis.option_term_months);
-                setFieldValue('strike_price', analysis.strike_price);
-                setFieldValue('monthly_rent_credit_percentage', analysis.monthly_rent_credit_percentage);
-                setFieldValue('rent_credit_cap', analysis.rent_credit_cap);
-            }
-    
-            // Handle balloon payment configuration
-            const hasBalloon = analysis.has_balloon_payment || (
-                analysis.balloon_refinance_loan_amount > 0 && 
-                analysis.balloon_due_date && 
-                analysis.balloon_refinance_ltv_percentage > 0
-            );
-    
-            // Set balloon toggle state
-            const balloonToggle = document.getElementById('has_balloon_payment');
-            const balloonDetails = document.getElementById('balloon-payment-details');
-            
-            if (balloonToggle && balloonDetails) {
-                balloonToggle.checked = hasBalloon;
-                if (hasBalloon) {
-                    balloonDetails.style.display = 'block';
-                    const balloonInputs = balloonDetails.querySelectorAll('input:not([type="checkbox"])');
-                    balloonInputs.forEach(input => {
-                        input.required = true;
-                    });
-                } else {
-                    balloonDetails.style.display = 'none';
-                    this.clearBalloonPaymentFields();
-                }
-            }
-    
-            // Set balloon payment fields if enabled
-            if (hasBalloon) {
-                setFieldValue('balloon_due_date', analysis.balloon_due_date);
-                setFieldValue('balloon_refinance_ltv_percentage', analysis.balloon_refinance_ltv_percentage);
-                setFieldValue('balloon_refinance_loan_amount', analysis.balloon_refinance_loan_amount);
-                setFieldValue('balloon_refinance_loan_interest_rate', analysis.balloon_refinance_loan_interest_rate);
-                setFieldValue('balloon_refinance_loan_term', analysis.balloon_refinance_loan_term);
-                setFieldValue('balloon_refinance_loan_down_payment', analysis.balloon_refinance_loan_down_payment);
-                setFieldValue('balloon_refinance_loan_closing_costs', analysis.balloon_refinance_loan_closing_costs);
-            }
-    
-            // Handle existing loans
-            const loansContainer = document.getElementById('loans-container');
-            if (loansContainer) {
-                // Clear existing loans
-                loansContainer.innerHTML = '';
-                
-                // Add each existing loan
-                for (let i = 1; i <= 3; i++) {
-                    const prefix = `loan${i}`;
-                    if (analysis[`${prefix}_loan_amount`] > 0) {
-                        // Insert loan HTML
-                        loansContainer.insertAdjacentHTML('beforeend', getLoanFieldsHTML(i));
-                        
-                        // Populate loan fields
-                        setFieldValue(`${prefix}_loan_name`, analysis[`${prefix}_loan_name`]);
-                        setFieldValue(`${prefix}_loan_amount`, analysis[`${prefix}_loan_amount`]);
-                        setFieldValue(`${prefix}_loan_interest_rate`, analysis[`${prefix}_loan_interest_rate`]);
-                        setFieldValue(`${prefix}_loan_term`, analysis[`${prefix}_loan_term`]);
-                        setFieldValue(`${prefix}_loan_down_payment`, analysis[`${prefix}_loan_down_payment`]);
-                        setFieldValue(`${prefix}_loan_closing_costs`, analysis[`${prefix}_loan_closing_costs`]);
-                        
-                        // Handle interest-only checkbox specifically
-                        const interestOnlyCheckbox = document.getElementById(`${prefix}_interest_only`);
-                        if (interestOnlyCheckbox) {
-                            // Convert the value to boolean and set it
-                            interestOnlyCheckbox.checked = Boolean(analysis[`${prefix}_interest_only`]);
-                            // Dispatch change event to trigger any listeners
-                            interestOnlyCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
-                            console.log(`Setting ${prefix}_interest_only to:`, Boolean(analysis[`${prefix}_interest_only`]));
-                        }
-                    }
-                }
-            }
-    
-            setFieldValue('monthly_rent', analysis.monthly_rent);
-            
-            // Set operating expenses - now handles zero values
-            setFieldValue('property_taxes', analysis.property_taxes);
-            setFieldValue('insurance', analysis.insurance);
-            setFieldValue('hoa_coa_coop', analysis.hoa_coa_coop);
-            setFieldValue('management_fee_percentage', analysis.management_fee_percentage);
-            setFieldValue('capex_percentage', analysis.capex_percentage);
-            setFieldValue('vacancy_percentage', analysis.vacancy_percentage);
-            setFieldValue('repairs_percentage', analysis.repairs_percentage);
-    
-            // Set Notes
-            setFieldValue('notes', analysis.notes || '');
-            
-            // Set BRRRR-specific fields if applicable
-            if (analysis.analysis_type.includes('BRRRR')) {
-                // Initial loan details
-                setFieldValue('initial_loan_amount', analysis.initial_loan_amount);
-                setFieldValue('initial_loan_down_payment', analysis.initial_loan_down_payment);
-                setFieldValue('initial_loan_interest_rate', analysis.initial_loan_interest_rate);
-                setFieldValue('initial_loan_term', analysis.initial_loan_term);
-                setFieldValue('initial_loan_closing_costs', analysis.initial_loan_closing_costs);
-                
-                // Set interest-only checkbox - explicit boolean conversion
-                const initialInterestOnly = document.getElementById('initial_interest_only');
-                if (initialInterestOnly) {
-                    initialInterestOnly.checked = Boolean(analysis.initial_interest_only);
-                    initialInterestOnly.dispatchEvent(new Event('change', { bubbles: true }));
-                }
-                
-                // Refinance details
-                setFieldValue('refinance_loan_amount', analysis.refinance_loan_amount);
-                setFieldValue('refinance_loan_down_payment', analysis.refinance_loan_down_payment);
-                setFieldValue('refinance_loan_interest_rate', analysis.refinance_loan_interest_rate);
-                setFieldValue('refinance_loan_term', analysis.refinance_loan_term);
-                setFieldValue('refinance_loan_closing_costs', analysis.refinance_loan_closing_costs);
-            }
-            
-            // Set PadSplit-specific fields if applicable
-            if (analysis.analysis_type.includes('PadSplit')) {
-                setFieldValue('padsplit_platform_percentage', analysis.padsplit_platform_percentage);
-                setFieldValue('utilities', analysis.utilities);
-                setFieldValue('internet', analysis.internet);
-                setFieldValue('cleaning', analysis.cleaning);
-                setFieldValue('pest_control', analysis.pest_control);
-                setFieldValue('landscaping', analysis.landscaping);
-            }
-
-            // Handle PadSplit-specific fields
-            if (analysis.analysis_type?.includes('PadSplit')) {
-                setFieldValue('furnishing_costs', analysis.furnishing_costs || 0);
-                document.querySelectorAll('.padsplit-field').forEach(field => {
-                    field.style.display = 'block';
-                    field.querySelectorAll('input').forEach(input => {
-                        input.required = true;
-                    });
-                });
-            } else {
-                document.querySelectorAll('.padsplit-field').forEach(field => {
-                    field.style.display = 'none';
-                    field.querySelectorAll('input').forEach(input => {
-                        input.required = false;
-                        input.value = '';
-                    });
-                });
-            }
-    
-            // Initialize balloon payment handlers after setting all values
-            this.initBalloonPaymentHandlers(true);  // Pass true to skip toggle init
-            
-        } catch (error) {
-            console.error('Error populating form fields:', error);
-            toastr.error('Error populating form fields');
-        }
     },
 
     createNewAnalysis() {

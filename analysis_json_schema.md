@@ -75,6 +75,72 @@
 - loan3_loan_down_payment: integer
 - loan3_loan_closing_costs: integer
 
+Analysis Schema Updates for Comps Integration
+
+# Additional Fields for Comps Integration
+
+## New Top-Level Fields:
+- comps_data: object (null if comps haven't been run)
+  - last_run: ISO 8601 datetime string
+  - run_count: integer (number of times comps have been run in current session)
+  - estimated_value: integer
+  - value_range_low: integer
+  - value_range_high: integer
+  - comparables: array of objects
+    - id: string
+    - formattedAddress: string
+    - city: string
+    - state: string
+    - zipCode: string
+    - propertyType: string
+    - bedrooms: integer
+    - bathrooms: float
+    - squareFootage: integer
+    - yearBuilt: integer
+    - price: integer
+    - listingType: string
+    - listedDate: ISO 8601 datetime string
+    - removedDate: ISO 8601 datetime string (null if still active)
+    - daysOnMarket: integer
+    - distance: float
+    - correlation: float
+
+    ## Example:
+```json
+{
+  // ... existing analysis fields ...
+  "comps_data": {
+    "last_run": "2024-09-28T13:21:51.018Z",
+    "run_count": 1,
+    "estimated_value": 221000,
+    "value_range_low": 208000,
+    "value_range_high": 233000,
+    "comparables": [
+      {
+        "id": "unique-comp-id",
+        "formattedAddress": "123 Main St",
+        "city": "San Antonio",
+        "state": "TX",
+        "zipCode": "78244",
+        "propertyType": "Single Family",
+        "bedrooms": 4,
+        "bathrooms": 2,
+        "squareFootage": 1747,
+        "yearBuilt": 1986,
+        "price": 229900,
+        "listingType": "Standard",
+        "listedDate": "2024-04-03T00:00:00.000Z",
+        "removedDate": "2024-05-26T00:00:00.000Z",
+        "daysOnMarket": 53,
+        "distance": 0.2994,
+        "correlation": 0.9822
+      }
+      // ... additional comps ...
+    ]
+  }
+}
+```
+
 ## Analysis Workflow:
 1. User selects Create Analysis
 2. User selects Analysis Type

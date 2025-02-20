@@ -7,11 +7,12 @@ import time  # Add this for retry delays
 from typing import Dict, List, Optional, Union, Any, Tuple
 import traceback
 from services.report_generator import generate_report
-from flask import current_app
+from flask import current_app, session
 from io import BytesIO
 from utils.json_handler import read_json, write_json
-from utils.money import Money, Percentage
 from services.analysis_calculations import create_analysis
+from utils.comps_handler import fetch_property_comps, update_analysis_comps, RentcastAPIError
+
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,73 @@ class AnalysisService:
         'year_built': {'type': 'integer', 'optional': True},
         'bedrooms': {'type': 'integer', 'optional': True},
         'bathrooms': {'type': 'float', 'optional': True},
+
+        # Add comps data fields
+        'comps_data': {
+            'type': 'object',
+            'optional': True,  # Not all analyses will have comps run
+            'properties': {
+                'last_run': {
+                    'type': 'string',
+                    'format': 'datetime',
+                    'optional': True,
+                    'description': 'ISO 8601 datetime when comps were last run'
+                },
+                'run_count': {
+                    'type': 'integer',
+                    'optional': True,
+                    'description': 'Number of times comps have been run in current session'
+                },
+                'estimated_value': {
+                    'type': 'integer',
+                    'optional': True,
+                    'description': 'Estimated value based on comps'
+                },
+                'value_range_low': {
+                    'type': 'integer',
+                    'optional': True,
+                    'description': 'Lower bound of estimated value range'
+                },
+                'value_range_high': {
+                    'type': 'integer',
+                    'optional': True,
+                    'description': 'Upper bound of estimated value range'
+                },
+                'comparables': {
+                    'type': 'array',
+                    'optional': True,
+                    'items': {
+                        'type': 'object',
+                        'properties': {
+                            'id': {'type': 'string'},
+                            'formattedAddress': {'type': 'string'},
+                            'city': {'type': 'string'},
+                            'state': {'type': 'string'},
+                            'zipCode': {'type': 'string'},
+                            'propertyType': {'type': 'string'},
+                            'bedrooms': {'type': 'integer'},
+                            'bathrooms': {'type': 'float'},
+                            'squareFootage': {'type': 'integer'},
+                            'yearBuilt': {'type': 'integer'},
+                            'price': {'type': 'integer'},
+                            'listingType': {'type': 'string'},
+                            'listedDate': {
+                                'type': 'string',
+                                'format': 'datetime'
+                            },
+                            'removedDate': {
+                                'type': 'string',
+                                'format': 'datetime',
+                                'optional': True
+                            },
+                            'daysOnMarket': {'type': 'integer'},
+                            'distance': {'type': 'float'},
+                            'correlation': {'type': 'float'}
+                        }
+                    }
+                }
+            }
+        },
 
         # Ballon Options
         'has_balloon_payment': {'type': 'boolean'},
@@ -193,6 +261,68 @@ class AnalysisService:
             'cache_duration': 300    # Cache duration in seconds
         }
 
+    def run_property_comps(self, analysis_id: str, user_id: str) -> Optional[Dict]:
+        """
+        Run property comps for an analysis and update the analysis data
+        
+        Args:
+            analysis_id: ID of the analysis
+            user_id: ID of the user running comps
+            
+        Returns:
+            Updated analysis dictionary or None if analysis not found
+            
+        Raises:
+            RentcastAPIError: If API request fails
+        """
+        try:
+            # Get the analysis
+            analysis = self.get_analysis(analysis_id, user_id)
+            if not analysis:
+                return None
+            
+            # Log configuration access
+            logger.debug("Current app config:")
+            logger.debug(f"RENTCAST_API_BASE_URL: {getattr(current_app.config, 'RENTCAST_API_BASE_URL', 'Not Found')}")
+            logger.debug(f"RENTCAST_API_KEY present: {'Yes' if getattr(current_app.config, 'RENTCAST_API_KEY', None) else 'No'}")
+                
+            # Check run count in session
+            session_key = f'comps_run_count_{analysis_id}'
+            run_count = session.get(session_key, 0)
+            
+            if run_count >= current_app.config['MAX_COMP_RUNS_PER_SESSION']:
+                raise RentcastAPIError(
+                    f"Maximum comp runs ({current_app.config['MAX_COMP_RUNS_PER_SESSION']}) "
+                    "reached for this session"
+                )
+            
+            # Fetch comps from RentCast
+            comps_data = fetch_property_comps(
+                current_app.config,
+                analysis['address'],
+                analysis['property_type'],
+                float(analysis['bedrooms']),
+                float(analysis['bathrooms']),
+                float(analysis['square_footage'])
+            )
+            
+            # Increment run count
+            run_count += 1
+            session[session_key] = run_count
+            
+            # Update analysis with comps data
+            updated_analysis = update_analysis_comps(analysis, comps_data, run_count)
+            
+            # Save updated analysis
+            self._save_analysis(updated_analysis, user_id)
+            
+            return updated_analysis
+            
+        except Exception as e:
+            logger.error(f"Error running property comps: {str(e)}")
+            logger.error(traceback.format_exc())
+            raise
+    
     def normalize_data(self, data: Dict, is_mobile: bool = False) -> Dict:
         try:
             logger.debug("=== Starting Data Normalization ===")

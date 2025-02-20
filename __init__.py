@@ -87,12 +87,28 @@ def create_app(config_class=None):
                 static_folder='static', 
                 static_url_path='/static')
     
+    # Get config and create config object
     if config_class is None:
         config_class = get_config()
     
-    app.config.from_object(config_class)
+    # Create an instance of the config class
+    config_object = config_class
+
+    # Load config into Flask
+    app.config.from_object(config_object)
+
+    # Manually copy RentCast configuration to app.config
+    app.config['RENTCAST_API_BASE_URL'] = config_object.RENTCAST_API_BASE_URL
+    app.config['RENTCAST_API_KEY'] = config_object.RENTCAST_API_KEY
+    app.config['RENTCAST_COMP_DEFAULTS'] = config_object.RENTCAST_COMP_DEFAULTS
     
-    # Configure logging first
+    # Add debug logging
+    print("Flask App Configuration:")
+    print(f"RENTCAST_API_BASE_URL: {app.config.get('RENTCAST_API_BASE_URL', 'Not Found')}")
+    print(f"RENTCAST_API_KEY present: {'Yes' if app.config.get('RENTCAST_API_KEY') else 'No'}")
+    print(f"RENTCAST_COMP_DEFAULTS present: {'Yes' if app.config.get('RENTCAST_COMP_DEFAULTS') else 'No'}")
+    
+    # Rest of your initialization code...
     configure_logging(app)
     
     # Log the environment and paths

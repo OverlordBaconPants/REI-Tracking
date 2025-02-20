@@ -5,11 +5,46 @@ from utils.flash import flash_message
 import logging
 import json
 import traceback
-import os
+from utils.comps_handler import RentcastAPIError
 
 analyses_bp = Blueprint('analyses', __name__)
 logger = logging.getLogger(__name__)
 analysis_service = AnalysisService()
+
+@analyses_bp.route('/run_comps/<analysis_id>', methods=['POST'])
+@login_required
+def run_comps(analysis_id: str):
+    """Run property comps for an analysis"""
+    try:
+        # Fetch comps and update analysis
+        results = analysis_service.run_property_comps(analysis_id, current_user.id)
+        
+        if not results:
+            return jsonify({
+                "success": False,
+                "message": "Analysis not found"
+            }), 404
+            
+        return jsonify({
+            "success": True,
+            "message": "Comps updated successfully",
+            "analysis": results
+        })
+            
+    except RentcastAPIError as e:
+        logger.error(f"RentCast API error: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 503  # Service Unavailable
+        
+    except Exception as e:
+        logger.error(f"Error running comps: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({
+            "success": False,
+            "message": f"Error running comps: {str(e)}"
+        }), 500
 
 @analyses_bp.route('/create_analysis', methods=['GET', 'POST']) 
 @login_required
