@@ -128,13 +128,21 @@ class ProductionConfig(Config):
     TESTING = False
     
     def __init__(self):
-        # For Render.com, use the correct mounted volume path
+        # Set production paths first
         self.BASE_DIR = '/opt/render/project/src'
         self.DATA_DIR = '/opt/render/project/src/data'
-        self.ANALYSES_DIR = '/opt/render/project/src/data/analyses'
-        self.UPLOAD_FOLDER = '/opt/render/project/src/data/uploads'  # Single uploads directory
+        self.ANALYSES_DIR = os.path.join(self.DATA_DIR, 'analyses')
+        self.UPLOAD_FOLDER = os.path.join(self.DATA_DIR, 'uploads')
         
-        # JSON file paths
+        # Call parent init to set up API keys and other configs
+        super().__init__()
+        
+        # Ensure directories exist in production
+        os.makedirs(self.DATA_DIR, exist_ok=True)
+        os.makedirs(self.ANALYSES_DIR, exist_ok=True)
+        os.makedirs(self.UPLOAD_FOLDER, exist_ok=True)
+        
+        # Create/update JSON file paths
         self.USERS_FILE = os.path.join(self.DATA_DIR, 'users.json')
         self.PROPERTIES_FILE = os.path.join(self.DATA_DIR, 'properties.json')
         self.TRANSACTIONS_FILE = os.path.join(self.DATA_DIR, 'transactions.json')
