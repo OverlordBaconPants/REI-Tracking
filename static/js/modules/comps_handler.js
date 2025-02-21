@@ -5,58 +5,93 @@ const compsHandler = {
     
     // Initialize the comps functionality
     init(analysisId) {
-        this.analysisId = analysisId;
+        console.log('Comps Handler: Starting initialization with ID:', analysisId);
+        
+        // Enhanced validation
+        if (!analysisId || typeof analysisId !== 'string') {
+            console.error('Comps Handler: Invalid analysis ID type:', typeof analysisId);
+            return false;
+        }
+
+        const trimmedId = analysisId.trim();
+        if (trimmedId === '') {
+            console.error('Comps Handler: Empty analysis ID');
+            return false;
+        }
+
+        this.analysisId = trimmedId;
+        console.log('Comps Handler: Analysis ID set to:', this.analysisId);
+        
         this.attachEventHandlers();
         this.loadExistingComps();
+        
+        return true;
     },
     
     // Attach event handlers
     attachEventHandlers() {
-        console.log('Attaching comps event handlers...');
+        console.log('Comps Handler: Starting to attach event handlers');
         const runCompsBtn = document.getElementById('runCompsBtn');
-        console.log('Run comps button found:', !!runCompsBtn);
+        console.log('Comps Handler: Run comps button found:', !!runCompsBtn);
         
         if (runCompsBtn) {
             // Remove any existing click handlers
             const newBtn = runCompsBtn.cloneNode(true);
             runCompsBtn.parentNode.replaceChild(newBtn, runCompsBtn);
             
-            newBtn.addEventListener('click', () => {
-                console.log('Run comps button clicked');
+            // Add click handler with debugging
+            newBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (!this.analysisId) {
+                    console.error('Comps Handler: No analysis ID available');
+                    toastr.error('Analysis ID not found');
+                    return;
+                }
+                console.log('Comps Handler: Run comps button clicked');
+                console.log('Comps Handler: Current analysis ID:', this.analysisId);
                 this.handleRunComps();
             });
-            console.log('Click handler attached to run comps button');
+            
+            console.log('Comps Handler: Click handler attached successfully');
         } else {
-            console.error('Run comps button not found in DOM');
+            console.error('Comps Handler: Run comps button not found in DOM');
         }
     },
     
     // Load existing comps data if available
     loadExistingComps() {
+        console.log('Comps Handler: Loading existing comps');
         const analysis = document.getElementById('analysis-data')?.textContent;
         if (analysis) {
             try {
                 const data = JSON.parse(analysis);
                 if (data.comps_data) {
                     this.updateCompsDisplay(data.comps_data);
+                    console.log('Comps Handler: Loaded existing comps data');
                 }
             } catch (error) {
-                console.error('Error parsing analysis data:', error);
+                console.error('Comps Handler: Error parsing analysis data:', error);
             }
         }
     },
     
     // Handle running comps
     async handleRunComps() {
+        console.log('Comps Handler: handleRunComps called');
+        console.log('Comps Handler: Analysis ID at execution:', this.analysisId);
+        
         if (!this.analysisId) {
+            console.error('Comps Handler: Analysis ID not found');
             toastr.error('Analysis ID not found');
             return;
         }
         
         // Show loading state
         this.setLoadingState(true);
+        console.log('Comps Handler: Set loading state');
         
         try {
+            console.log('Comps Handler: Making API request to /analyses/run_comps/' + this.analysisId);
             const response = await fetch(`/analyses/run_comps/${this.analysisId}`, {
                 method: 'POST',
                 headers: {
@@ -64,7 +99,9 @@ const compsHandler = {
                 }
             });
             
+            console.log('Comps Handler: Received response:', response.status);
             const data = await response.json();
+            console.log('Comps Handler: Parsed response data:', data);
             
             if (!response.ok) {
                 throw new Error(data.message || 'Error fetching comps');
@@ -74,15 +111,17 @@ const compsHandler = {
                 // Update display with new comps data
                 this.updateCompsDisplay(data.analysis.comps_data);
                 toastr.success('Comps updated successfully');
+                console.log('Comps Handler: Display updated successfully');
             } else {
                 throw new Error(data.message);
             }
             
         } catch (error) {
-            console.error('Error:', error);
+            console.error('Comps Handler: Error in handleRunComps:', error);
             this.showError(error.message);
         } finally {
             this.setLoadingState(false);
+            console.log('Comps Handler: Reset loading state');
         }
     },
     

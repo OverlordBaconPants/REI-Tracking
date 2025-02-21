@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, send_file, current_app
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, send_file, current_app, session
 from flask_login import login_required, current_user
 from services.analysis_service import AnalysisService
 from utils.flash import flash_message
@@ -13,37 +13,60 @@ analysis_service = AnalysisService()
 
 @analyses_bp.route('/run_comps/<analysis_id>', methods=['POST'])
 @login_required
-def run_comps(analysis_id: str):
-    """Run property comps for an analysis"""
+def run_property_comps(analysis_id):
     try:
-        # Fetch comps and update analysis
-        results = analysis_service.run_property_comps(analysis_id, current_user.id)
+        # Get user ID from current user
+        user_id = current_user.get_id()
         
-        if not results:
+        # Get max runs from config with default fallback
+        max_runs = current_app.config.get('MAX_COMP_RUNS_PER_SESSION', 3)
+        
+        # Check session run count
+        session_key = f'comps_run_count_{analysis_id}'
+        run_count = session.get(session_key, 0)
+        
+        # Log current state
+        current_app.logger.debug(f"Current run count for {analysis_id}: {run_count}")
+        current_app.logger.debug(f"Max runs allowed: {max_runs}")
+        
+        if run_count >= max_runs:
             return jsonify({
-                "success": False,
-                "message": "Analysis not found"
+                'success': False,
+                'message': f'Maximum comp runs ({max_runs}) reached for this session'
+            }), 429  # Too Many Requests
+        
+        # Run comps using analysis service
+        analysis_service = AnalysisService()
+        updated_analysis = analysis_service.run_property_comps(analysis_id, user_id)
+        
+        if not updated_analysis:
+            return jsonify({
+                'success': False,
+                'message': 'Analysis not found'
             }), 404
             
-        return jsonify({
-            "success": True,
-            "message": "Comps updated successfully",
-            "analysis": results
-        })
+        # Increment run count
+        session[session_key] = run_count + 1
+        current_app.logger.debug(f"Updated run count to: {run_count + 1}")
             
-    except RentcastAPIError as e:
-        logger.error(f"RentCast API error: {str(e)}")
         return jsonify({
-            "success": False,
-            "message": str(e)
-        }), 503  # Service Unavailable
+            'success': True,
+            'analysis': updated_analysis,
+            'message': 'Comps updated successfully'
+        })
         
-    except Exception as e:
-        logger.error(f"Error running comps: {str(e)}")
-        logger.error(traceback.format_exc())
+    except RentcastAPIError as e:
+        current_app.logger.error(f'RentcastAPIError: {str(e)}')
         return jsonify({
-            "success": False,
-            "message": f"Error running comps: {str(e)}"
+            'success': False,
+            'message': f'Error running comps: {str(e)}'
+        }), 500
+    except Exception as e:
+        current_app.logger.error(f'Error in run_property_comps: {str(e)}')
+        current_app.logger.exception('Full traceback:')
+        return jsonify({
+            'success': False,
+            'message': f'Error running comps: {str(e)}'
         }), 500
 
 @analyses_bp.route('/create_analysis', methods=['GET', 'POST']) 
@@ -77,11 +100,16 @@ def create_analysis():
                 else:
                     logger.error("No unit_types found in Multi-Family analysis data")
 
+            # Get the analysis results
             results = analysis_service.create_analysis(analysis_data, current_user.id)
+            
+            # Extract the analysis data from results
+            analysis_data = results.get('analysis') if isinstance(results, dict) else results
+            
             return jsonify({
                 "success": True,
                 "message": "Analysis created successfully",
-                "analysis": results
+                "analysis": analysis_data  # Return just the analysis data
             })
         except Exception as e:
             logger.error(f"Error creating analysis: {str(e)}")

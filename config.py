@@ -97,13 +97,8 @@ class Config:
         self.RENTCAST_COMP_DEFAULTS = {
             'maxRadius': 1.0,  # 1 mile radius
             'daysOld': 180,    # Last 6 months
-            'compCount': 5     # Number of comps to return
+            'compCount': 10     # Number of comps to return
         }
-
-        print("Loaded RentCast Configuration:")
-        print(f"API Base URL: {self.RENTCAST_API_BASE_URL}")
-        print(f"API Key Present: {'Yes' if self.RENTCAST_API_KEY else 'No'}")
-        print(f"Comp Defaults: {self.RENTCAST_COMP_DEFAULTS}")
 
         # Session limits for comps
         self.MAX_COMP_RUNS_PER_SESSION = 3

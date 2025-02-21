@@ -91,24 +91,32 @@ def create_app(config_class=None):
     if config_class is None:
         config_class = get_config()
     
-    # Create an instance of the config class
-    config_object = config_class
-
     # Load config into Flask
-    app.config.from_object(config_object)
+    app.config.from_object(config_class)
 
-    # Manually copy RentCast configuration to app.config
-    app.config['RENTCAST_API_BASE_URL'] = config_object.RENTCAST_API_BASE_URL
-    app.config['RENTCAST_API_KEY'] = config_object.RENTCAST_API_KEY
-    app.config['RENTCAST_COMP_DEFAULTS'] = config_object.RENTCAST_COMP_DEFAULTS
+    # Ensure critical config values are present
+    critical_configs = [
+        'RENTCAST_API_BASE_URL',
+        'RENTCAST_API_KEY',
+        'RENTCAST_COMP_DEFAULTS',
+        'MAX_COMP_RUNS_PER_SESSION'
+    ]
     
+    for config_key in critical_configs:
+        if not hasattr(config_class, config_key):
+            app.logger.error(f"Missing critical configuration: {config_key}")
+            raise ValueError(f"Missing required configuration: {config_key}")
+        app.config[config_key] = getattr(config_class, config_key)
+
     # Add debug logging
-    print("Flask App Configuration:")
-    print(f"RENTCAST_API_BASE_URL: {app.config.get('RENTCAST_API_BASE_URL', 'Not Found')}")
-    print(f"RENTCAST_API_KEY present: {'Yes' if app.config.get('RENTCAST_API_KEY') else 'No'}")
-    print(f"RENTCAST_COMP_DEFAULTS present: {'Yes' if app.config.get('RENTCAST_COMP_DEFAULTS') else 'No'}")
+    app.logger.info("Flask App Configuration:")
+    for key in critical_configs:
+        if key == 'RENTCAST_API_KEY':
+            app.logger.info(f"{key} present: {'Yes' if app.config.get(key) else 'No'}")
+        else:
+            app.logger.info(f"{key}: {app.config.get(key, 'Not Found')}")
     
-    # Rest of your initialization code...
+    # Configure logging
     configure_logging(app)
     
     # Log the environment and paths

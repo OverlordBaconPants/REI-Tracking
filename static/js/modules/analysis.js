@@ -1667,6 +1667,9 @@ window.analysisModule = {
             // Inject styles first
             this.injectStyles();
             
+            // Make compsHandler available globally
+            window.compsHandler = compsHandler;
+            
             // Initialize mobile interactions
             this.initializeMobileInteractions();
             
@@ -1691,16 +1694,13 @@ window.analysisModule = {
                 if (analysisId) {
                     console.log('Loading existing analysis:', analysisId);
                     this.currentAnalysisId = analysisId;
+                    // Initialize comps handler with the analysis ID
                     compsHandler.init(analysisId);
                     analysisForm.setAttribute('data-analysis-id', analysisId);
                     analysisForm.addEventListener('submit', (event) => {
                         this.handleEditSubmit(event, analysisId);
                     });
                     await this.loadAnalysisData(analysisId);
-                    
-                    // Initialize comps handler for existing analysis
-                    console.log('Initializing comps handler for existing analysis');
-                    compsHandler.init(analysisId);
                 } else {
                     console.log('Creating new analysis');
                     const analysisDataElement = document.getElementById('analysis-data');
@@ -1712,21 +1712,18 @@ window.analysisModule = {
                             // Initialize comps handler if analysis data exists
                             if (analysisData.id) {
                                 console.log('Initializing comps handler for analysis:', analysisData.id);
-                                compsHandler.init(analysisData.id);
+                                window.compsHandler.init(analysisData.id);
                             }
                         } catch (error) {
                             console.error('Error parsing analysis data:', error);
                         }
-                    } else {
-                        console.log('Initializing balloon payment handlers');
-                        this.initBalloonPaymentHandlers();
                     }
                     
                     analysisForm.addEventListener('submit', (event) => {
                         this.handleSubmit(event);
                     });
                 }
-    
+                
                 console.log('Initializing analysis type handler');
                 this.initAnalysisTypeHandler();
                 console.log('Initializing address autocomplete');
@@ -1742,7 +1739,7 @@ window.analysisModule = {
                         const analysisData = JSON.parse(analysisDataElement.textContent);
                         if (analysisData.id) {
                             console.log('Initializing comps handler for view-only analysis:', analysisData.id);
-                            compsHandler.init(analysisData.id);
+                            window.compsHandler.init(analysisData.id);
                         }
                     } catch (error) {
                         console.error('Error parsing analysis data for comps:', error);
@@ -3114,18 +3111,29 @@ window.analysisModule = {
         })
         .then(data => {
             if (data.success) {
+                console.log('Analysis updated, initializing UI components...');
+                
+                // Store the analysis ID first
                 this.currentAnalysisId = data.analysis.id;
+                console.log('Analysis ID set to:', this.currentAnalysisId);
+                
+                // Make sure we have the required data
+                if (!data.analysis.calculated_metrics) {
+                    console.warn('No calculated metrics in response:', data.analysis);
+                }
+                
+                // Populate reports and switch tabs
                 this.populateReportsTab(data.analysis);
                 this.switchToReportsTab();
                 this.showReportActions();
                 
-                // Initialize comps handler for new analysis
-                setTimeout(() => {
-                    console.log('Initializing comps handler for new analysis:', this.currentAnalysisId);
-                    compsHandler.init(this.currentAnalysisId);
-                }, 100);
+                // Initialize comps handler only after we have the ID
+                if (this.currentAnalysisId && typeof compsHandler.init === 'function') {
+                    const initResult = compsHandler.init(this.currentAnalysisId);
+                    console.log('Comps handler initialization result:', initResult);
+                }
                 
-                toastr.success('Analysis created successfully');
+                toastr.success('Analysis updated successfully');
             } else {
                 throw new Error(data.message || 'Unknown error occurred');
             }
@@ -3144,7 +3152,7 @@ window.analysisModule = {
     },
 
     // Updated handleEditSubmit function for flat schema
-    handleEditSubmit: function(event, analysisId) {
+    handleEditSubmit: async function(event, analysisId) {
         event.preventDefault();
         
         if (this.isSubmitting) {
@@ -3152,182 +3160,205 @@ window.analysisModule = {
             return;
         }
         
-        this.isSubmitting = true;
-        
+        // Store form reference at the top level
         const form = event.target;
-        const submitBtn = form.querySelector('button[type="submit"]');
-        if (submitBtn) {
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Updating...';
-        }
-    
-        if (!this.validateForm(form)) {
-            this.isSubmitting = false;
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = 'Update Analysis';
-            }
-            return;
-        }
-    
-        // Get current and original analysis types
-        const formData = new FormData(form);
-        const currentAnalysisType = formData.get('analysis_type');
-        const originalAnalysisType = this.initialAnalysisType;
-    
-        // Create the analysis data object with ID
-        const analysisData = {
-            id: analysisId
-        };
-
-        // Add property type handling
-        const propertyType = formData.get('property_type');
-        analysisData.property_type = propertyType || null;  // Allow null for backward compatibility
-    
-        // Handle Multi-Family unit types
-        if (currentAnalysisType === 'Multi-Family') {
-            const unitTypes = [];
-            let totalPotentialRent = 0;
+        let submitBtn = null;
+        
+        try {
+            this.isSubmitting = true;
             
-            document.querySelectorAll('.unit-type-section').forEach(section => {
-                const count = parseInt(section.querySelector('.unit-count').value) || 0;
-                const rent = parseFloat(section.querySelector('.unit-rent').value) || 0;
-                totalPotentialRent += count * rent;
-                
-                unitTypes.push({
-                    type: section.querySelector('select').value || '',
-                    count: count,
-                    occupied: parseInt(section.querySelector('.unit-occupied').value) || 0,
-                    square_footage: parseInt(section.querySelector('input[name$="[square_footage]"]').value) || 0,
-                    rent: rent
-                });
-            });
-            
-            analysisData.unit_types = JSON.stringify(unitTypes);
-            analysisData.monthly_rent = totalPotentialRent; // Add total potential rent
-        }
-    
-        // First, set the balloon payment flag correctly - convert checkbox value to boolean
-        const hasBalloon = form.querySelector('#has_balloon_payment')?.checked || false;
-        analysisData.has_balloon_payment = hasBalloon;  // This will be a true boolean, not 'on'
-    
-        // Process each field according to its type
-        formData.forEach((value, key) => {
-            if (key === 'has_balloon_payment') {
-                // Skip as we've already handled this
+            // Verify we have an analysis ID
+            if (!analysisId) {
+                console.error('No analysis ID provided for update');
+                toastr.error('Missing analysis ID');
                 return;
-            } else if (key.endsWith('_interest_only')) {
-                // Handle checkbox fields - convert to boolean
-                const checkbox = form.querySelector(`#${key}`);
-                analysisData[key] = checkbox ? checkbox.checked : false;
-            } else if (key === 'balloon_due_date' && value) {
-                // Handle date field - only if balloon payments are enabled
-                analysisData[key] = hasBalloon ? new Date(value).toISOString().split('T')[0] : null;
-            } else if (key.endsWith('_percentage') || this.isNumericField(key)) {
-                // Handle all numeric fields (including percentages)
-                // Convert empty strings to 0
-                analysisData[key] = value === '' ? 0 : this.toRawNumber(value);
-            } else if (key === 'bathrooms') {
-                // Handle bathrooms specifically as it can be decimal
-                analysisData[key] = this.toRawNumber(value);
-            } else {
-                // Handle all other fields
-                analysisData[key] = value || null;  // Convert empty strings to null
             }
-        });
     
-        // Handle PadSplit furnishing costs
-        if (currentAnalysisType.includes('PadSplit')) {
-            const furnishingCosts = formData.get('furnishing_costs');
-            analysisData.furnishing_costs = furnishingCosts ? this.toRawNumber(furnishingCosts) : 0;
-        } else {
-            analysisData.furnishing_costs = 0;
-        }
-    
-        // If balloon payment is false, ensure all balloon-related fields are 0 or null
-        if (!hasBalloon) {
-            const balloonFields = [
-                'balloon_refinance_loan_amount',
-                'balloon_refinance_loan_closing_costs',
-                'balloon_refinance_loan_down_payment',
-                'balloon_refinance_loan_interest_rate',
-                'balloon_refinance_loan_term',
-                'balloon_refinance_ltv_percentage'
-            ];
-            balloonFields.forEach(field => {
-                analysisData[field] = 0;
-            });
-            analysisData.balloon_due_date = null;
-        }
-    
-        // Set create_new flag if analysis type has changed
-        if (currentAnalysisType !== originalAnalysisType) {
-            analysisData.create_new = true;
-        }
-    
-        // Log the prepared data
-        console.log('Prepared analysis data:', analysisData);
-    
-        // Make the API call
-        fetch('/analyses/update_analysis', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(analysisData)
-        })
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(err => { throw err; });
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log('Server response:', data);
-            console.log("Server response calculated_metrics:", data.analysis.calculated_metrics);
+            // Store the analysis ID immediately
+            this.currentAnalysisId = analysisId;
+            console.log('Set currentAnalysisId to:', this.currentAnalysisId);
             
-            if (data.success) {
-                console.log('Analysis updated, initializing UI components...');
-                this.currentAnalysisId = data.analysis.id;
+            submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Updating...';
+            }
+    
+            if (!this.validateForm(form)) {
+                throw new Error('Form validation failed');
+            }
+    
+            // Get form data
+            const formData = new FormData(form);
+            const currentAnalysisType = formData.get('analysis_type');
+            const originalAnalysisType = this.initialAnalysisType;
+    
+            // Create the request data object with ID
+            const requestData = {
+                id: analysisId
+            };
+    
+            // Add property type handling
+            const propertyType = formData.get('property_type');
+            requestData.property_type = propertyType || null;
+    
+            // Handle Multi-Family unit types
+            if (currentAnalysisType === 'Multi-Family') {
+                const unitTypes = [];
+                let totalPotentialRent = 0;
                 
-                // Make sure we have the required data
-                if (!data.analysis.calculated_metrics) {
-                    console.warn('No calculated metrics in response:', data.analysis);
+                document.querySelectorAll('.unit-type-section').forEach(section => {
+                    const count = parseInt(section.querySelector('.unit-count').value) || 0;
+                    const rent = parseFloat(section.querySelector('.unit-rent').value) || 0;
+                    totalPotentialRent += count * rent;
+                    
+                    unitTypes.push({
+                        type: section.querySelector('select').value || '',
+                        count: count,
+                        occupied: parseInt(section.querySelector('.unit-occupied').value) || 0,
+                        square_footage: parseInt(section.querySelector('input[name$="[square_footage]"]').value) || 0,
+                        rent: rent
+                    });
+                });
+                
+                requestData.unit_types = JSON.stringify(unitTypes);
+                requestData.monthly_rent = totalPotentialRent;
+            }
+    
+            // Set balloon payment flag
+            const hasBalloon = form.querySelector('#has_balloon_payment')?.checked || false;
+            requestData.has_balloon_payment = hasBalloon;
+    
+            // Process each form field
+            formData.forEach((value, key) => {
+                if (key === 'has_balloon_payment') {
+                    return; // Skip as we've already handled this
                 }
                 
-                // Populate reports and switch tabs
-                this.populateReportsTab(data.analysis);
-                this.switchToReportsTab();
-                this.showReportActions();
-                
-                // Initialize comps handler with a delay
-                setTimeout(() => {
-                    console.log('Initializing comps handler with ID:', this.currentAnalysisId);
-                    if (typeof compsHandler.init === 'function') {
-                        compsHandler.init(this.currentAnalysisId);
-                        console.log('Comps handler initialized');
-                    } else {
-                        console.error('Comps handler init method not found:', compsHandler);
+                // Handle balloon payment fields
+                if (key.startsWith('balloon_')) {
+                    if (!hasBalloon) {
+                        // If balloon payments are disabled, set all balloon fields to null or 0
+                        if (key === 'balloon_due_date') {
+                            requestData[key] = null;
+                        } else {
+                            requestData[key] = 0;
+                        }
+                        return;
                     }
-                }, 100);
+                }
                 
-                toastr.success('Analysis updated successfully');
+                // Normal field processing
+                if (key.endsWith('_interest_only')) {
+                    const checkbox = form.querySelector(`#${key}`);
+                    requestData[key] = checkbox ? checkbox.checked : false;
+                } else if (key === 'balloon_due_date' && value && hasBalloon) {
+                    requestData[key] = new Date(value).toISOString().split('T')[0];
+                } else if (key.endsWith('_percentage') || this.isNumericField(key)) {
+                    requestData[key] = value === '' ? 0 : this.toRawNumber(value);
+                } else if (key === 'bathrooms') {
+                    requestData[key] = this.toRawNumber(value);
+                } else {
+                    requestData[key] = value || null;
+                }
+            });
+    
+            // Handle PadSplit furnishing costs
+            if (currentAnalysisType.includes('PadSplit')) {
+                const furnishingCosts = formData.get('furnishing_costs');
+                requestData.furnishing_costs = furnishingCosts ? this.toRawNumber(furnishingCosts) : 0;
             } else {
-                throw new Error(data.message || 'Unknown error occurred');
+                requestData.furnishing_costs = 0;
             }
-        })
-        .catch(error => {
-            console.error('Error:', error);
+    
+            // Set create_new flag if analysis type has changed
+            if (currentAnalysisType !== originalAnalysisType) {
+                requestData.create_new = true;
+            }
+    
+            console.log('Sending request data:', requestData);
+    
+            // Make API call
+            const response = await fetch('/analyses/update_analysis', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestData)
+            });
+    
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Error updating analysis');
+            }
+    
+            const responseData = await response.json();
+            
+            if (!responseData.success) {
+                throw new Error(responseData.message || 'Unknown error occurred');
+            }
+    
+            console.log('Update successful:', responseData);
+            
+            // Extract the updated analysis data
+            const updatedAnalysis = responseData.analysis || responseData;
+            
+            // Keep using the original analysis ID if not in response
+            this.currentAnalysisId = updatedAnalysis.id || analysisId;
+            console.log('Using analysis ID:', this.currentAnalysisId);
+    
+            // Update display and switch tabs
+            await this.populateReportsTab(updatedAnalysis);
+            this.switchToReportsTab();
+            this.showReportActions();
+    
+            // Initialize comps handler - wait for DOM
+            await new Promise(resolve => setTimeout(resolve, 250));
+    
+            if (this.currentAnalysisId) {
+                console.log('Initializing comps handler for analysis:', this.currentAnalysisId);
+                const compsSection = document.getElementById('compsCard');
+                
+                if (!compsSection) {
+                    console.error('Comps section not found in DOM');
+                    throw new Error('Comps section not found');
+                }
+    
+                if (!window.compsHandler?.init) {
+                    console.error('Comps handler not available');
+                    throw new Error('Comps handler not available');
+                }
+    
+                const success = window.compsHandler.init(this.currentAnalysisId);
+                if (!success) {
+                    console.error('Failed to initialize comps handler');
+                    throw new Error('Comps handler initialization failed');
+                }
+    
+                console.log('Comps handler initialized successfully');
+            } else {
+                throw new Error('No analysis ID available for comps handler');
+            }
+    
+            toastr.success('Analysis updated successfully');
+    
+        } catch (error) {
+            console.error('Error in handleEditSubmit:', error);
+            
+            // Log additional context if available
+            if (error.response) {
+                console.error('Response error:', await error.response.text());
+            }
+            
             toastr.error(error.message || 'Error updating analysis');
-        })
-        .finally(() => {
+        } finally {
             this.isSubmitting = false;
-            const submitBtn = event.target.querySelector('button[type="submit"]');
+            // Use the stored submitBtn reference
             if (submitBtn) {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i class="bi bi-save me-2"></i>Update Analysis';
             }
-        });
+        }
     },
 
     // Updated isNumericField function for flat schema
@@ -3699,13 +3730,26 @@ window.analysisModule = {
     populateReportsTab(data) {
         console.log('Starting populateReportsTab with data:', data);
         
-        // Check for comps data
+        // Ensure we have analysis data
         const analysisData = data.analysis || data;
+        if (!analysisData) {
+            console.error('No analysis data provided to populateReportsTab');
+            return;
+        }
+    
+        // Initialize empty comps data if not present
+        if (!analysisData.comps_data) {
+            analysisData.comps_data = {
+                comparables: [],
+                run_count: 0
+            };
+        }
+        
         console.log('Checking for comps data:', analysisData.comps_data);
     
         // Check for existing comps
         const hasExistingComps = analysisData.comps_data && 
-                                analysisData.comps_data.comparables && 
+                                Array.isArray(analysisData.comps_data.comparables) && 
                                 analysisData.comps_data.comparables.length > 0;
                                 
         console.log('Has existing comps:', hasExistingComps);
@@ -3717,6 +3761,7 @@ window.analysisModule = {
         let reportContent = '';
         const analysisType = analysisData.analysis_type || '';
         
+        // Generate appropriate report content based on type
         switch(analysisType) {
             case 'Multi-Family':
                 reportContent = this.getMultiFamilyReportContent(analysisData);
@@ -3731,6 +3776,9 @@ window.analysisModule = {
                 reportContent = this.getLTRReportContent(analysisData);
         }
     
+        // Add comps section
+        const compsHtml = getCompsHTML(hasExistingComps);
+        
         const finalContent = `
             <div class="row align-items-center mb-4">
                 <div class="col">
@@ -3748,7 +3796,7 @@ window.analysisModule = {
                 </div>
             </div>
             ${reportContent}
-            ${getCompsHTML(hasExistingComps)}`;
+            ${compsHtml}`;
     
         // Update the DOM
         const reportsContent = document.querySelector('#reports');

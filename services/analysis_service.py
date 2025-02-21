@@ -279,26 +279,30 @@ class AnalysisService:
             # Get the analysis
             analysis = self.get_analysis(analysis_id, user_id)
             if not analysis:
+                logger.error(f"Analysis not found for ID: {analysis_id}")
                 return None
-            
-            # Log configuration access
-            logger.debug("Current app config:")
-            logger.debug(f"RENTCAST_API_BASE_URL: {getattr(current_app.config, 'RENTCAST_API_BASE_URL', 'Not Found')}")
-            logger.debug(f"RENTCAST_API_KEY present: {'Yes' if getattr(current_app.config, 'RENTCAST_API_KEY', None) else 'No'}")
                 
             # Check run count in session
             session_key = f'comps_run_count_{analysis_id}'
             run_count = session.get(session_key, 0)
             
-            if run_count >= current_app.config['MAX_COMP_RUNS_PER_SESSION']:
+            # Log the current run count
+            logger.debug(f"Current comps run count for {analysis_id}: {run_count}")
+            
+            # Get max runs from config using dictionary access
+            max_runs = current_app.config['MAX_COMP_RUNS_PER_SESSION']
+            if max_runs is None:
+                max_runs = 3  # Default fallback
+                logger.warning("MAX_COMP_RUNS_PER_SESSION not found in config, using default: 3")
+            
+            if run_count >= max_runs:
                 raise RentcastAPIError(
-                    f"Maximum comp runs ({current_app.config['MAX_COMP_RUNS_PER_SESSION']}) "
-                    "reached for this session"
+                    f"Maximum comp runs ({max_runs}) reached for this session"
                 )
             
             # Fetch comps from RentCast
             comps_data = fetch_property_comps(
-                current_app.config,
+                current_app.config,  # Pass the entire config object
                 analysis['address'],
                 analysis['property_type'],
                 float(analysis['bedrooms']),
@@ -309,12 +313,14 @@ class AnalysisService:
             # Increment run count
             run_count += 1
             session[session_key] = run_count
+            logger.debug(f"Updated comps run count to: {run_count}")
             
             # Update analysis with comps data
             updated_analysis = update_analysis_comps(analysis, comps_data, run_count)
             
             # Save updated analysis
             self._save_analysis(updated_analysis, user_id)
+            logger.debug(f"Successfully saved updated analysis with comps data")
             
             return updated_analysis
             
