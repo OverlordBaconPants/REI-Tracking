@@ -66,7 +66,7 @@ const compsHandler = {
             try {
                 const data = JSON.parse(analysis);
                 if (data.comps_data) {
-                    this.updateCompsDisplay(data.comps_data);
+                    this.displayExistingComps(data.comps_data);
                     console.log('Comps Handler: Loaded existing comps data');
                 }
             } catch (error) {
@@ -181,6 +181,55 @@ const compsHandler = {
                 <td>${comp.distance.toFixed(2)} mi</td>
             </tr>
         `).join('');
+    },
+
+    displayExistingComps(compsData) {
+        console.log('Displaying existing comps:', compsData);
+        
+        const estimatedValueSection = document.getElementById('estimatedValueSection');
+        const compsTableSection = document.getElementById('compsTableSection');
+        const runCountElement = document.getElementById('compsRunCount');
+        const initialMessage = document.getElementById('initialCompsMessage');
+        const runCompsBtn = document.getElementById('runCompsBtn');
+        
+        console.log('Found elements:', {
+            estimatedValueSection: !!estimatedValueSection,
+            compsTableSection: !!compsTableSection,
+            runCountElement: !!runCountElement,
+            initialMessage: !!initialMessage,
+            runCompsBtn: !!runCompsBtn
+        });
+        
+        if (estimatedValueSection && compsData.estimated_value) {
+            console.log('Showing estimated value:', compsData.estimated_value);
+            estimatedValueSection.style.display = 'block';
+            document.getElementById('estimatedValue').textContent = this.formatCurrency(compsData.estimated_value);
+            document.getElementById('valueLow').textContent = this.formatCurrency(compsData.value_range_low);
+            document.getElementById('valueHigh').textContent = this.formatCurrency(compsData.value_range_high);
+        }
+        
+        if (compsTableSection && compsData.comparables?.length > 0) {
+            console.log('Showing comps table with', compsData.comparables.length, 'entries');
+            compsTableSection.style.display = 'block';
+            const tableBody = document.getElementById('compsTableBody');
+            if (tableBody) {
+                tableBody.innerHTML = this.generateCompsTableRows(compsData.comparables);
+            }
+        }
+        
+        if (runCountElement && compsData.run_count) {
+            console.log('Showing run count:', compsData.run_count);
+            runCountElement.style.display = 'inline-block';
+            document.getElementById('runCountValue').textContent = compsData.run_count;
+        }
+        
+        if (initialMessage) {
+            initialMessage.style.display = 'none';
+        }
+        
+        if (runCompsBtn) {
+            runCompsBtn.innerHTML = '<i class="bi bi-arrow-repeat me-2"></i>Re-Run Comps';
+        }
     },
     
     // Set loading state

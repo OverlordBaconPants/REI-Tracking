@@ -376,6 +376,9 @@ class ReportGenerator:
             # Add KPI table on new page
             story.extend(self._create_kpi_table(data))
             
+            # Add comps section if available (add this line)
+            story.extend(self._create_comps_section(data))
+
             # Build PDF
             doc.build(story)
             buffer.seek(0)
@@ -1077,6 +1080,95 @@ class ReportGenerator:
             logger.error(f"Error creating metrics table: {e}")
             return Table([["Error creating table"]], colWidths=[4*inch])
     
+    def _create_comps_section(self, data: Dict) -> list:
+        """Create property comparables section if comps exist."""
+        elements = []
+        
+        # Check if we have comps data
+        comps_data = data.get('comps_data', {})
+        if not comps_data or not comps_data.get('comparables'):
+            return elements
+            
+        elements.append(Paragraph("Property Comparables Analysis", self.styles['SectionHeader']))
+        elements.append(Spacer(1, 0.2*inch))
+        
+        # Add estimated value summary
+        value_data = [
+            ["Property Value Analysis", ""],
+            ["Estimated Value:", f"${self._safe_number(comps_data.get('estimated_value'), 2):,.2f}"],
+            ["Value Range:", f"${self._safe_number(comps_data.get('value_range_low'), 2):,.2f} - "
+                            f"${self._safe_number(comps_data.get('value_range_high'), 2):,.2f}"],
+            ["Analysis Date:", datetime.fromisoformat(comps_data.get('last_run')).strftime('%Y-%m-%d')
+                if comps_data.get('last_run') else 'N/A']
+        ]
+        elements.append(self._create_metrics_table(value_data))
+        elements.append(Spacer(1, 0.3*inch))
+        
+        # Create comps table
+        comps_table_data = [
+            ["Address", "Price", "Bed/Bath", "Sq.Ft.", "Year", "Date", "Distance"],  # Header
+        ]
+        
+        # Add each comparable property
+        for comp in comps_data.get('comparables', []):
+            # Format date (prefer removal date, fallback to listed date)
+            date_str = comp.get('removedDate') or comp.get('listedDate')
+            date = datetime.fromisoformat(date_str.replace('Z', '+00:00')).strftime('%Y-%m-%d') if date_str else 'N/A'
+            
+            comps_table_data.append([
+                comp.get('formattedAddress', 'N/A'),
+                f"${self._safe_number(comp.get('price'), 2):,.2f}",
+                f"{comp.get('bedrooms', 0)}/{comp.get('bathrooms', 0)}",
+                f"{comp.get('squareFootage', 0):,}",
+                str(comp.get('yearBuilt', 'N/A')),
+                date,
+                f"{comp.get('distance', 0):.2f} mi"
+            ])
+        
+        # Create table with appropriate styling
+        style = TableStyle([
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('BACKGROUND', (0, 0), (-1, 0), self.BRAND_NAVY),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('PADDING', (0, 0), (-1, -1), 4),
+            # Center align specific columns
+            ('ALIGN', (1, 1), (1, -1), 'RIGHT'),  # Price
+            ('ALIGN', (2, 1), (2, -1), 'CENTER'),  # Bed/Bath
+            ('ALIGN', (3, 1), (3, -1), 'RIGHT'),  # Sq.Ft.
+            ('ALIGN', (4, 1), (4, -1), 'CENTER'),  # Year
+            ('ALIGN', (5, 1), (5, -1), 'CENTER'),  # Date
+            ('ALIGN', (6, 1), (6, -1), 'RIGHT'),  # Distance
+        ])
+        
+        # Calculate dynamic column widths
+        table = Table(
+            comps_table_data,
+            colWidths=[2.5*inch, 1*inch, 0.75*inch, 0.75*inch, 0.6*inch, 1*inch, 0.75*inch],
+            style=style
+        )
+        
+        elements.append(table)
+        elements.append(Spacer(1, 0.2*inch))
+        
+        # Add explanation note
+        explanation_style = ParagraphStyle(
+            'Explanation',
+            parent=self.styles['Normal'],
+            fontSize=8,
+            textColor=colors.grey,
+            leading=10
+        )
+        elements.append(Paragraph(
+            "Comparable properties are selected based on similarity in location, size, and features. "
+            "The estimated value is calculated using RentCast's proprietary algorithm.",
+            explanation_style
+        ))
+        
+        return elements
+
 def generate_report(data: Dict, report_type: str = 'analysis') -> BytesIO:
     """Generate a PDF report from analysis data."""
     try:

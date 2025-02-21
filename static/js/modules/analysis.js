@@ -3160,21 +3160,19 @@ window.analysisModule = {
             return;
         }
         
-        // Store form reference at the top level
         const form = event.target;
         let submitBtn = null;
+        let existingComps = null;  // Store comps data at this scope
         
         try {
             this.isSubmitting = true;
             
-            // Verify we have an analysis ID
             if (!analysisId) {
                 console.error('No analysis ID provided for update');
                 toastr.error('Missing analysis ID');
                 return;
             }
     
-            // Store the analysis ID immediately
             this.currentAnalysisId = analysisId;
             console.log('Set currentAnalysisId to:', this.currentAnalysisId);
             
@@ -3193,9 +3191,20 @@ window.analysisModule = {
             const currentAnalysisType = formData.get('analysis_type');
             const originalAnalysisType = this.initialAnalysisType;
     
-            // Create the request data object with ID
+            // Get current analysis data
+            console.log('Fetching current analysis to preserve comps data');
+            const currentResponse = await fetch(`/analyses/get_analysis/${analysisId}`);
+            if (!currentResponse.ok) {
+                throw new Error('Failed to fetch current analysis data');
+            }
+            const currentData = await currentResponse.json();
+            existingComps = currentData.analysis?.comps_data;
+            console.log('Retrieved existing comps:', existingComps);
+    
+            // Create base request data
             const requestData = {
-                id: analysisId
+                id: analysisId,
+                comps_data: existingComps  // Include existing comps
             };
     
             // Add property type handling
@@ -3286,74 +3295,70 @@ window.analysisModule = {
                 },
                 body: JSON.stringify(requestData)
             });
-    
+
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.message || 'Error updating analysis');
             }
-    
+
             const responseData = await response.json();
             
             if (!responseData.success) {
                 throw new Error(responseData.message || 'Unknown error occurred');
             }
-    
+
             console.log('Update successful:', responseData);
             
-            // Extract the updated analysis data
-            const updatedAnalysis = responseData.analysis || responseData;
+            // Get the analysis data and ensure comps are preserved
+            let updatedAnalysis = responseData.analysis || responseData;
+            if (!updatedAnalysis.comps_data && existingComps) {
+                console.log('Restoring comps data from original analysis');
+                updatedAnalysis = {
+                    ...updatedAnalysis,
+                    comps_data: existingComps
+                };
+            }
             
             // Keep using the original analysis ID if not in response
             this.currentAnalysisId = updatedAnalysis.id || analysisId;
             console.log('Using analysis ID:', this.currentAnalysisId);
-    
-            // Update display and switch tabs
+
+            // After updating display
             await this.populateReportsTab(updatedAnalysis);
             this.switchToReportsTab();
             this.showReportActions();
-    
-            // Initialize comps handler - wait for DOM
+
+            // Initialize comps handler
             await new Promise(resolve => setTimeout(resolve, 250));
-    
+
             if (this.currentAnalysisId) {
                 console.log('Initializing comps handler for analysis:', this.currentAnalysisId);
-                const compsSection = document.getElementById('compsCard');
-                
-                if (!compsSection) {
-                    console.error('Comps section not found in DOM');
-                    throw new Error('Comps section not found');
-                }
-    
                 if (!window.compsHandler?.init) {
                     console.error('Comps handler not available');
                     throw new Error('Comps handler not available');
                 }
-    
+
                 const success = window.compsHandler.init(this.currentAnalysisId);
                 if (!success) {
                     console.error('Failed to initialize comps handler');
                     throw new Error('Comps handler initialization failed');
                 }
-    
+
                 console.log('Comps handler initialized successfully');
             } else {
                 throw new Error('No analysis ID available for comps handler');
             }
-    
+
             toastr.success('Analysis updated successfully');
-    
+
         } catch (error) {
             console.error('Error in handleEditSubmit:', error);
-            
-            // Log additional context if available
             if (error.response) {
                 console.error('Response error:', await error.response.text());
             }
-            
             toastr.error(error.message || 'Error updating analysis');
         } finally {
             this.isSubmitting = false;
-            // Use the stored submitBtn reference
             if (submitBtn) {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i class="bi bi-save me-2"></i>Update Analysis';
@@ -3434,7 +3439,7 @@ window.analysisModule = {
         return moneyFields.includes(fieldName) || 
                percentageFields.includes(fieldName) || 
                loanFields.includes(fieldName);
-    },    
+    },   
 
     calculateMAO(analysis) {
         try {
@@ -3803,17 +3808,16 @@ window.analysisModule = {
         if (reportsContent) {
             reportsContent.innerHTML = finalContent;
             
+            // If we have comps data and compsHandler is available, reinitialize it
+            if (hasExistingComps && window.compsHandler) {
+                window.compsHandler.displayExistingComps(analysisData.comps_data);
+            }
+            
             // Attach event handler after content is added
             const reEditButton = reportsContent.querySelector('#reEditButton');
             if (reEditButton) {
                 reEditButton.addEventListener('click', () => this.switchToFinancialTab());
             }
-        }
-    
-        // If there are existing comps, display them
-        if (hasExistingComps) {
-            console.log('Displaying existing comps...');
-            this.displayExistingComps(analysisData.comps_data);
         }
     },
 

@@ -696,20 +696,26 @@ class AnalysisService:
             if not analysis_id:
                 raise ValueError("Analysis ID required for updates")
             
-            # Verify analysis exists
+            # Verify analysis exists and get current data
             current_analysis = self.get_analysis(analysis_id, user_id)
             if not current_analysis:
                 raise ValueError("Analysis not found")
+            
+            # Preserve comps data from current analysis if not in update data
+            if not analysis_data.get('comps_data') and current_analysis.get('comps_data'):
+                logger.debug("Preserving existing comps data")
+                analysis_data['comps_data'] = current_analysis['comps_data']
                 
             # Normalize and validate new data
             normalized_data = self.normalize_data(analysis_data)
             
-            # Preserve metadata
+            # Preserve metadata and ensure comps data is kept
             normalized_data.update({
                 'id': analysis_id,
                 'user_id': user_id,
                 'created_at': current_analysis['created_at'],
-                'updated_at': datetime.now().strftime("%Y-%m-%d")
+                'updated_at': datetime.now().strftime("%Y-%m-%d"),
+                'comps_data': analysis_data.get('comps_data', current_analysis.get('comps_data'))
             })
             
             # Validate updated data
@@ -719,7 +725,12 @@ class AnalysisService:
             analysis = create_analysis(normalized_data)
             metrics = analysis.get_report_data()['metrics']
             
-            # Save to storage
+            # Add debugging for storage
+            logger.debug(f"Saving analysis with comps data present: {'comps_data' in normalized_data}")
+            if 'comps_data' in normalized_data:
+                logger.debug(f"Comps data contains {len(normalized_data['comps_data'].get('comparables', []))} comparables")
+            
+            # Save to storage with explicit comps preservation
             self._save_analysis(normalized_data, user_id)
             
             return {
