@@ -855,21 +855,45 @@ class ReportGenerator:
 
             # Handle Balloon Payment loans
             elif self._check_balloon_payment(data):
-                # Pre-Balloon Loan Details
-                loan_data = [
-                    ["Initial Loan (Pre-Balloon)", ""],
-                    ["Amount:", f"${self._safe_number(data.get('loan1_loan_amount'), 2):,.2f}"],
-                    ["Interest Rate:", f"{self._safe_number(data.get('loan1_loan_interest_rate'))}%"],
-                    ["Term:", f"{data.get('loan1_loan_term', 0)} months"],
-                    ["Monthly Payment:", metrics.get('pre_balloon_monthly_payment', '$0.00')],
-                    ["Interest Only:", "Yes" if data.get('loan1_interest_only') else "No"],
-                    ["Down Payment:", f"${self._safe_number(data.get('loan1_loan_down_payment'), 2):,.2f}"],
-                    ["Closing Costs:", f"${self._safe_number(data.get('loan1_loan_closing_costs'), 2):,.2f}"],
-                    ["Balloon Due Date:", datetime.fromisoformat(data.get('balloon_due_date', '')).strftime('%Y-%m-%d') 
-                        if data.get('balloon_due_date') else 'N/A']
-                ]
-                elements.append(self._create_metrics_table(loan_data))
-                elements.append(Spacer(1, 0.2*inch))
+                # Display all loans in pre-balloon section
+                has_loans = False
+                total_payment = 0
+                
+                # Process all loans in pre-balloon section
+                for i in range(1, 4):
+                    prefix = f'loan{i}'
+                    amount = self._safe_number(data.get(f'{prefix}_loan_amount'))
+                    if amount > 0:
+                        has_loans = True
+                        loan_name = data.get(f'{prefix}_loan_name', '') or f"Loan {i}"
+                        loan_payment_str = metrics.get(f'{prefix}_loan_payment', '$0.00')
+                        # Extract numeric value from payment for total calculation
+                        payment_value = self._safe_number(loan_payment_str.replace('$', '').replace(',', ''))
+                        total_payment += payment_value
+                        
+                        loan_data = [
+                            [f"{loan_name} (Pre-Balloon)", ""],
+                            ["Amount:", f"${amount:,.2f}"],
+                            ["Interest Rate:", f"{self._safe_number(data.get(f'{prefix}_loan_interest_rate'))}%"],
+                            ["Term:", f"{data.get(f'{prefix}_loan_term', 0)} months"],
+                            ["Monthly Payment:", loan_payment_str],
+                            ["Interest Only:", "Yes" if data.get(f'{prefix}_interest_only') else "No"],
+                            ["Down Payment:", f"${self._safe_number(data.get(f'{prefix}_loan_down_payment'), 2):,.2f}"],
+                            ["Closing Costs:", f"${self._safe_number(data.get(f'{prefix}_loan_closing_costs'), 2):,.2f}"]
+                        ]
+                        elements.append(self._create_metrics_table(loan_data))
+                        elements.append(Spacer(1, 0.2*inch))
+                
+                # Add total payment and balloon due date after all loans
+                if has_loans:
+                    balloon_summary = [
+                        ["Balloon Payment Summary", ""],
+                        ["Total Monthly Payment:", f"${total_payment:,.2f}"],
+                        ["Balloon Due Date:", datetime.fromisoformat(data.get('balloon_due_date', '')).strftime('%Y-%m-%d') 
+                            if data.get('balloon_due_date') else 'N/A']
+                    ]
+                    elements.append(self._create_metrics_table(balloon_summary))
+                    elements.append(Spacer(1, 0.2*inch))
 
                 # Balloon Refinance Details
                 refinance_data = [

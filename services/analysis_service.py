@@ -701,10 +701,20 @@ class AnalysisService:
             if not current_analysis:
                 raise ValueError("Analysis not found")
             
+            # Add detailed logging for balloon payment fields
+            logger.debug(f"Has balloon payment: {analysis_data.get('has_balloon_payment')}")
+            if analysis_data.get('has_balloon_payment'):
+                logger.debug("Balloon fields:")
+                for field in ['balloon_due_date', 'balloon_refinance_ltv_percentage', 
+                            'balloon_refinance_loan_amount', 'balloon_refinance_loan_interest_rate',
+                            'balloon_refinance_loan_term', 'balloon_refinance_loan_down_payment',
+                            'balloon_refinance_loan_closing_costs']:
+                    logger.debug(f"  {field}: {analysis_data.get(field)}")
+            
             # Preserve comps data from current analysis if not in update data
             if not analysis_data.get('comps_data') and current_analysis.get('comps_data'):
                 logger.debug("Preserving existing comps data")
-                analysis_data['comps_data'] = current_analysis['comps_data']
+                analysis_data['comps_data'] = current_analysis.get('comps_data')
                 
             # Normalize and validate new data
             normalized_data = self.normalize_data(analysis_data)
@@ -713,7 +723,7 @@ class AnalysisService:
             normalized_data.update({
                 'id': analysis_id,
                 'user_id': user_id,
-                'created_at': current_analysis['created_at'],
+                'created_at': current_analysis.get('created_at', datetime.now().strftime("%Y-%m-%d")),
                 'updated_at': datetime.now().strftime("%Y-%m-%d"),
                 'comps_data': analysis_data.get('comps_data', current_analysis.get('comps_data'))
             })
@@ -723,12 +733,15 @@ class AnalysisService:
             
             # Create Analysis object and get calculations
             analysis = create_analysis(normalized_data)
-            metrics = analysis.get_report_data()['metrics']
+            metrics = analysis.get_report_data().get('metrics', {})
             
             # Add debugging for storage
             logger.debug(f"Saving analysis with comps data present: {'comps_data' in normalized_data}")
-            if 'comps_data' in normalized_data:
-                logger.debug(f"Comps data contains {len(normalized_data['comps_data'].get('comparables', []))} comparables")
+            if normalized_data.get('comps_data') is not None:
+                comparables = normalized_data['comps_data'].get('comparables', [])
+                logger.debug(f"Comps data contains {len(comparables)} comparables")
+            else:
+                logger.debug("No comps data present")
             
             # Save to storage with explicit comps preservation
             self._save_analysis(normalized_data, user_id)

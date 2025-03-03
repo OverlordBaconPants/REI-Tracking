@@ -344,38 +344,74 @@ class Analysis(ABC):
     def _calculate_balloon_payment(self) -> Money:
         """Calculate loan payments for balloon payment scenario."""
         try:
-            now = datetime.now()
-            balloon_date = datetime.fromisoformat(self.data['balloon_due_date'])
-            
-            if now > balloon_date:
-                # Past balloon date, use refinanced terms
-                payment = self._calculate_single_loan_payment(
-                    amount=self._get_money('balloon_refinance_loan_amount'),
-                    interest_rate=self._get_percentage('balloon_refinance_loan_interest_rate'),
-                    term=self.data.get('balloon_refinance_loan_term', 0),
-                    is_interest_only=False  # Refinanced balloon typically amortizes
-                )
-                self.data.setdefault('calculated_metrics', {})['balloon_refinance_payment'] = str(payment)
-                return payment
-            else:
-                # Before balloon date, use original loan payments
-                total_payments = Money(0)
-                loan_prefixes = ['loan1', 'loan2', 'loan3']
+            # First check if balloon payment is enabled
+            if not self.data.get('has_balloon_payment'):
+                logger.debug("Balloon payment not enabled, returning 0")
+                return Money(0)
                 
-                for prefix in loan_prefixes:
-                    amount = self._get_money(f'{prefix}_loan_amount')
-                    if amount.dollars > 0:
-                        payment = self._calculate_single_loan_payment(
-                            amount=amount,
-                            interest_rate=self._get_percentage(f'{prefix}_loan_interest_rate'),
-                            term=self.data.get(f'{prefix}_loan_term', 0),
-                            is_interest_only=self.data.get(f'{prefix}_interest_only', False)
-                        )
-                        self.data.setdefault('calculated_metrics', {})[f'{prefix}_loan_payment'] = str(payment)
-                        total_payments += payment
-                        logger.debug(f"Pre-balloon {prefix} payment: ${payment.dollars:.2f}")
-                        
-                return total_payments
+            # Safe access to balloon_due_date 
+            balloon_due_date = self.data.get('balloon_due_date')
+            if not balloon_due_date:
+                logger.error("Missing balloon_due_date for balloon payment calculation")
+                return Money(0)
+                
+            # Handle date conversion safely
+            try:
+                now = datetime.now()
+                logger.debug(f"Processing balloon date: {balloon_due_date} (type: {type(balloon_due_date)})")
+                
+                # Handle various date formats
+                if isinstance(balloon_due_date, str):
+                    if 'T' in balloon_due_date:
+                        balloon_date = datetime.fromisoformat(balloon_due_date.replace('Z', '+00:00'))
+                    else:
+                        # Handle YYYY-MM-DD format
+                        balloon_date = datetime.strptime(balloon_due_date, "%Y-%m-%d")
+                elif isinstance(balloon_due_date, datetime):
+                    balloon_date = balloon_due_date
+                else:
+                    logger.error(f"Unexpected balloon_due_date format: {type(balloon_due_date)}")
+                    return Money(0)
+                    
+                logger.debug(f"Parsed balloon date: {balloon_date}")
+                
+                # Compare dates to determine if we're before or after balloon date
+                if now > balloon_date:
+                    # Past balloon date, use refinanced terms
+                    payment = self._calculate_single_loan_payment(
+                        amount=self._get_money('balloon_refinance_loan_amount'),
+                        interest_rate=self._get_percentage('balloon_refinance_loan_interest_rate'),
+                        term=self.data.get('balloon_refinance_loan_term', 0),
+                        is_interest_only=False  # Refinanced balloon typically amortizes
+                    )
+                    self.data.setdefault('calculated_metrics', {})['balloon_refinance_payment'] = str(payment)
+                    logger.debug(f"Using post-balloon refinance payment: {payment}")
+                    return payment
+                else:
+                    # Before balloon date, use original loan payments
+                    total_payments = Money(0)
+                    loan_prefixes = ['loan1', 'loan2', 'loan3']
+                    
+                    for prefix in loan_prefixes:
+                        amount = self._get_money(f'{prefix}_loan_amount')
+                        if amount.dollars > 0:
+                            payment = self._calculate_single_loan_payment(
+                                amount=amount,
+                                interest_rate=self._get_percentage(f'{prefix}_loan_interest_rate'),
+                                term=self.data.get(f'{prefix}_loan_term', 0),
+                                is_interest_only=self.data.get(f'{prefix}_interest_only', False)
+                            )
+                            self.data.setdefault('calculated_metrics', {}).setdefault(f'{prefix}_loan_payment', str(payment))
+                            total_payments += payment
+                            logger.debug(f"Pre-balloon {prefix} payment: ${payment.dollars:.2f}")
+                            
+                    logger.debug(f"Using pre-balloon payments total: {total_payments}")
+                    return total_payments
+                    
+            except Exception as date_error:
+                logger.error(f"Error processing balloon date: {str(date_error)}, value: {balloon_due_date}")
+                logger.error(traceback.format_exc())
+                return Money(0)
                 
         except Exception as e:
             logger.error(f"Error calculating balloon payment: {str(e)}")

@@ -4511,32 +4511,21 @@ window.analysisModule = {
     // Shared loan details component
     getLoanDetailsContent(analysis) {
         // Add debugging
-        console.log('Full analysis object:', {
-            loan1: {
-                amount: analysis.loan1_loan_amount,
-                interest: analysis.loan1_loan_interest_rate,
-                term: analysis.loan1_loan_term
-            },
-            loan2: {
-                amount: analysis.loan2_loan_amount,
-                interest: analysis.loan2_loan_interest_rate,
-                term: analysis.loan2_loan_term
+        console.log('Generating loan details with analysis:', {
+            hasBalloon: this.hasBalloonData(analysis),
+            loans: {
+                loan1: {
+                    amount: analysis.loan1_loan_amount,
+                    interest: analysis.loan1_loan_interest_rate,
+                    term: analysis.loan1_loan_term
+                },
+                loan2: {
+                    amount: analysis.loan2_loan_amount,
+                    interest: analysis.loan2_loan_interest_rate,
+                    term: analysis.loan2_loan_term
+                }
             },
             calculated_metrics: analysis.calculated_metrics
-        });
-
-        console.log('Loan payment metrics:', {
-            loan1_payment: analysis.calculated_metrics?.loan1_loan_payment,
-            loan2_payment: analysis.calculated_metrics?.loan2_loan_payment,
-            loan3_payment: analysis.calculated_metrics?.loan3_loan_payment,
-            hasBalloon: this.hasBalloonData(analysis),
-            balloon_data: {
-                amount: analysis.balloon_refinance_loan_amount,
-                rate: analysis.balloon_refinance_loan_interest_rate,
-                term: analysis.balloon_refinance_loan_term,
-                due_date: analysis.balloon_due_date
-            },
-            all_metrics: analysis.calculated_metrics
         });
     
         if (this.hasBalloonData(analysis)) {
@@ -4546,6 +4535,65 @@ window.analysisModule = {
             const postMonthlyPayment = analysis.calculated_metrics?.post_balloon_monthly_payment || 
                                       analysis.calculated_metrics?.refinance_loan_payment;
             
+            // Get all loan prefixes with existing loans
+            const existingLoans = [];
+            ['loan1', 'loan2', 'loan3'].forEach(prefix => {
+                const loanAmount = this.toRawNumber(analysis[`${prefix}_loan_amount`]);
+                if (loanAmount > 0) {
+                    existingLoans.push(prefix);
+                }
+            });
+            
+            // Generate HTML for all existing pre-balloon loans
+            let preBallooonLoansHTML = '';
+            existingLoans.forEach(prefix => {
+                const loanPayment = analysis.calculated_metrics?.[`${prefix}_loan_payment`];
+                preBallooonLoansHTML += `
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Loan Name</span>
+                            <strong>${analysis[`${prefix}_loan_name`] || `Loan ${prefix.slice(-1)}`}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Amount</span>
+                            <strong>${this.formatDisplayValue(analysis[`${prefix}_loan_amount`])}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Interest Rate</span>
+                            <div>
+                                <strong>${this.formatDisplayValue(analysis[`${prefix}_loan_interest_rate`], 'percentage')}</strong>
+                                <span class="badge ${analysis[`${prefix}_interest_only`] ? 'bg-success' : 'bg-info'} ms-2">
+                                    ${analysis[`${prefix}_interest_only`] ? 'Interest Only' : 'Amortized'}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Term</span>
+                            <strong>${analysis[`${prefix}_loan_term`] || '0'} months</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span class="d-flex align-items-center">
+                                Monthly Payment
+                                <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" 
+                                   title="${analysis[`${prefix}_interest_only`] ? 
+                                       'Interest-only payment on loan' : 
+                                       'Fully amortized payment including principal and interest'}"></i>
+                            </span>
+                            <strong>${loanPayment || this.formatDisplayValue(0)}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Down Payment</span>
+                            <strong>${this.formatDisplayValue(analysis[`${prefix}_loan_down_payment`])}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Closing Costs</span>
+                            <strong>${this.formatDisplayValue(analysis[`${prefix}_loan_closing_costs`])}</strong>
+                        </div>
+                    </div>
+                    ${prefix !== existingLoans[existingLoans.length - 1] ? '<hr class="my-3">' : ''}
+                `;
+            });
+            
             return `
                 <div class="accordion" id="balloonLoanAccordion">
                     <!-- Pre-Balloon Section -->
@@ -4553,45 +4601,20 @@ window.analysisModule = {
                         <h6 class="accordion-header">
                             <button class="accordion-button" type="button" data-bs-toggle="collapse" 
                                     data-bs-target="#preBalloonCollapse">
-                                Original Loan (Pre-Balloon)
+                                Original Loans (Pre-Balloon)
                             </button>
                         </h6>
                         <div id="preBalloonCollapse" class="accordion-collapse collapse show" 
                              data-bs-parent="#balloonLoanAccordion">
                             <div class="accordion-body p-0">
-                                <div class="list-group list-group-flush">
-                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                        <span>Amount</span>
-                                        <strong>${this.formatDisplayValue(analysis.loan1_loan_amount)}</strong>
-                                    </div>
-                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                        <span>Interest Rate</span>
-                                        <strong>${this.formatDisplayValue(analysis.loan1_loan_interest_rate, 'percentage')}</strong>
-                                    </div>
-                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                        <span>Term</span>
-                                        <strong>${analysis.loan1_loan_term} months</strong>
-                                    </div>
-                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                        <span class="d-flex align-items-center">
-                                            Monthly Payment
-                                            <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" 
-                                               title="Monthly payment before balloon refinance"></i>
-                                        </span>
-                                        <strong>${preMonthlyPayment || this.formatDisplayValue(0)}</strong>
-                                    </div>
-                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                        <span>Down Payment</span>
-                                        <strong>${this.formatDisplayValue(analysis.loan1_loan_down_payment)}</strong>
-                                    </div>
-                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                        <span>Closing Costs</span>
-                                        <strong>${this.formatDisplayValue(analysis.loan1_loan_closing_costs)}</strong>
-                                    </div>
-                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                        <span>Balloon Due Date</span>
-                                        <strong>${new Date(analysis.balloon_due_date).toLocaleDateString()}</strong>
-                                    </div>
+                                ${preBallooonLoansHTML}
+                                <div class="list-group-item d-flex justify-content-between align-items-center py-3 bg-light">
+                                    <span class="fw-bold">Combined Monthly Payment</span>
+                                    <strong>${preMonthlyPayment || this.formatDisplayValue(0)}</strong>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                    <span>Balloon Due Date</span>
+                                    <strong>${new Date(analysis.balloon_due_date).toLocaleDateString()}</strong>
                                 </div>
                             </div>
                         </div>
@@ -4647,7 +4670,7 @@ window.analysisModule = {
                     </div>
                 </div>`;
             } else {
-                // Regular loans
+                // Regular loans - keep your existing code here
                 const loanPrefixes = ['loan1', 'loan2', 'loan3'];
                 let hasLoans = false;
                 
