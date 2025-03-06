@@ -808,6 +808,42 @@ const getLongTermRentalHTML = () => `
                         <span class="input-group-text">months</span>
                     </div>
                 </div>
+                <!-- Add Cash to Seller field -->
+                <div class="col-12 col-md-6">
+                    <label for="cash_to_seller" class="form-label">Cash to Seller</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control form-control-lg" id="cash_to_seller" 
+                               name="cash_to_seller" placeholder="Cash paid directly to seller">
+                    </div>
+                </div>
+                <!-- Add Assignment Fee field -->
+                <div class="col-12 col-md-6">
+                    <label for="assignment_fee" class="form-label">Assignment Fee</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control form-control-lg" id="assignment_fee" 
+                               name="assignment_fee" placeholder="Assignment fee if any">
+                    </div>
+                </div>
+                <!-- Add Closing Costs field -->
+                <div class="col-12 col-md-6">
+                    <label for="closing_costs" class="form-label">Closing Costs</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control form-control-lg" id="closing_costs" 
+                               name="closing_costs" placeholder="Base closing costs">
+                    </div>
+                </div>
+                <!-- Add Marketing Costs field -->
+                <div class="col-12 col-md-6">
+                    <label for="marketing_costs" class="form-label">Marketing Costs</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control form-control-lg" id="marketing_costs" 
+                               name="marketing_costs" placeholder="Marketing costs if any">
+                    </div>
+                </div>
                 <!-- Add Furnishing Costs field for PadSplit -->
                 <div class="col-12 col-md-6 padsplit-field" style="display: none;">
                     <label for="furnishing_costs" class="form-label">Furnishing Costs</label>
@@ -3948,6 +3984,55 @@ window.analysisModule = {
             console.log('Generated KPI card:', kpiCard ? 'Success' : 'Empty');
     
             return `
+                <!-- Purchase Details Card -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Purchase Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group list-group-flush">
+                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                <span>Purchase Price</span>
+                                <strong>${this.formatDisplayValue(analysis.purchase_price)}</strong>
+                            </div>
+                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                <span>After Repair Value</span>
+                                <strong>${this.formatDisplayValue(analysis.after_repair_value)}</strong>
+                            </div>
+                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                <span>Renovation Costs</span>
+                                <strong>${this.formatDisplayValue(analysis.renovation_costs)}</strong>
+                            </div>
+                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                <span>Renovation Duration</span>
+                                <strong>${analysis.renovation_duration} months</strong>
+                            </div>
+                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                <span>Cash to Seller</span>
+                                <strong>${this.formatDisplayValue(analysis.cash_to_seller)}</strong>
+                            </div>
+                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                <span>Closing Costs</span>
+                                <strong>${this.formatDisplayValue(analysis.closing_costs)}</strong>
+                            </div>
+                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                <span>Assignment Fee</span>
+                                <strong>${this.formatDisplayValue(analysis.assignment_fee)}</strong>
+                            </div>
+                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                <span>Marketing Costs</span>
+                                <strong>${this.formatDisplayValue(analysis.marketing_costs)}</strong>
+                            </div>
+                            ${analysis.analysis_type.includes('PadSplit') ? `
+                                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                    <span>Furnishing Costs</span>
+                                    <strong>${this.formatDisplayValue(analysis.furnishing_costs)}</strong>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            
                 <!-- Property Overview Card -->
                 <div class="card mb-4">
                     <div class="card-header">
@@ -4149,7 +4234,56 @@ window.analysisModule = {
         const kpiCard = this.generateKPICard(analysis);
         console.log('Generated KPI card:', kpiCard ? 'Success' : 'Empty');
         
-        return `
+        return `       
+            <!-- Purchase Details Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Purchase Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Purchase Price</span>
+                            <strong>${this.formatDisplayValue(analysis.purchase_price)}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>After Repair Value</span>
+                            <strong>${this.formatDisplayValue(analysis.after_repair_value)}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Renovation Costs</span>
+                            <strong>${this.formatDisplayValue(analysis.renovation_costs)}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Renovation Duration</span>
+                            <strong>${analysis.renovation_duration} months</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Cash to Seller</span>
+                            <strong>${this.formatDisplayValue(analysis.cash_to_seller)}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Closing Costs</span>
+                            <strong>${this.formatDisplayValue(analysis.closing_costs)}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Assignment Fee</span>
+                            <strong>${this.formatDisplayValue(analysis.assignment_fee)}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Marketing Costs</span>
+                            <strong>${this.formatDisplayValue(analysis.marketing_costs)}</strong>
+                        </div>
+                        ${analysis.analysis_type.includes('PadSplit') ? `
+                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                <span>Furnishing Costs</span>
+                                <strong>${this.formatDisplayValue(analysis.furnishing_costs)}</strong>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        
             <!-- Option Details Card -->
             <div class="card mb-4">
                 <div class="card-header">
@@ -4328,6 +4462,55 @@ window.analysisModule = {
         });
     
         return `
+            <!-- Purchase Details Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Purchase Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Purchase Price</span>
+                            <strong>${this.formatDisplayValue(analysis.purchase_price)}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>After Repair Value</span>
+                            <strong>${this.formatDisplayValue(analysis.after_repair_value)}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Renovation Costs</span>
+                            <strong>${this.formatDisplayValue(analysis.renovation_costs)}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Renovation Duration</span>
+                            <strong>${analysis.renovation_duration} months</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Cash to Seller</span>
+                            <strong>${this.formatDisplayValue(analysis.cash_to_seller)}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Closing Costs</span>
+                            <strong>${this.formatDisplayValue(analysis.closing_costs)}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Assignment Fee</span>
+                            <strong>${this.formatDisplayValue(analysis.assignment_fee)}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Marketing Costs</span>
+                            <strong>${this.formatDisplayValue(analysis.marketing_costs)}</strong>
+                        </div>
+                        ${analysis.analysis_type.includes('PadSplit') ? `
+                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                <span>Furnishing Costs</span>
+                                <strong>${this.formatDisplayValue(analysis.furnishing_costs)}</strong>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        
             <!-- Income & Returns Card -->
             <div class="card mb-4">
                 <div class="card-header">
@@ -4350,7 +4533,7 @@ window.analysisModule = {
                             <span class="d-flex align-items-center">
                                 Monthly Cash Flow
                                 <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" data-bs-html="true" 
-                                   title="Monthly income after all operating expenses and ${this.hasBalloonData(analysis) ? 'initial ' : ''}loan payments">
+                                title="Monthly income after all operating expenses and ${this.hasBalloonData(analysis) ? 'initial ' : ''}loan payments">
                                 </i>
                             </span>
                             <strong>${this.hasBalloonData(analysis) ? 
@@ -4361,7 +4544,7 @@ window.analysisModule = {
                             <span class="d-flex align-items-center">
                                 Annual Cash Flow
                                 <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" data-bs-html="true" 
-                                   title="Monthly cash flow × 12 months">
+                                title="Monthly cash flow × 12 months">
                                 </i>
                             </span>
                             <strong>${this.hasBalloonData(analysis) ? 
@@ -4372,36 +4555,20 @@ window.analysisModule = {
                             <span class="d-flex align-items-center">
                                 Cash-on-Cash Return
                                 <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" data-bs-html="true" 
-                                   title="${this.hasBalloonData(analysis) ? 
-                                       'Based on initial investment before balloon refinance' : 
-                                       '(Annual Cash Flow ÷ Total Cash Invested) × 100'}">
+                                title="${this.hasBalloonData(analysis) ? 
+                                    'Based on initial investment before balloon refinance' : 
+                                    '(Annual Cash Flow ÷ Total Cash Invested) × 100'}">
                                 </i>
                             </span>
                             <strong>${analysis.calculated_metrics?.cash_on_cash_return}</strong>
                         </div>
-                        ${analysis.analysis_type.includes('PadSplit') ? `
-                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                <span class="d-flex align-items-center">
-                                    Platform Fee
-                                    <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" data-bs-html="true" 
-                                       title="PadSplit platform fee based on monthly rent">
-                                    </i>
-                                </span>
-                                <div class="text-end">
-                                    <div class="small text-muted">
-                                        ${this.formatDisplayValue(analysis.padsplit_platform_percentage, 'percentage')}
-                                    </div>
-                                    <strong>${this.formatDisplayValue(analysis.monthly_rent * (analysis.padsplit_platform_percentage / 100))}</strong>
-                                </div>
-                            </div>
-                        ` : ''}
                     </div>
                 </div>
             </div>
 
             <!-- KPIs Card -->
             ${kpiCard}
-       
+    
             <!-- Operating Expenses Card -->
             <div class="card mb-4">
                 <div class="card-header">
@@ -4486,6 +4653,20 @@ window.analysisModule = {
                                         <span>Landscaping</span>
                                         <strong>${this.formatDisplayValue(analysis.landscaping)}</strong>
                                     </div>
+                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                        <span class="d-flex align-items-center">
+                                            Platform Fee
+                                            <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" data-bs-html="true" 
+                                            title="PadSplit platform fee based on monthly rent">
+                                            </i>
+                                        </span>
+                                        <div class="text-end">
+                                            <div class="small text-muted">
+                                                ${this.formatDisplayValue(analysis.padsplit_platform_percentage, 'percentage')}
+                                            </div>
+                                            <strong>${this.formatDisplayValue(analysis.monthly_rent * (analysis.padsplit_platform_percentage / 100))}</strong>
+                                        </div>
+                                    </div>
                                 ` : ''}
                             </div>
                         </div>
@@ -4504,7 +4685,7 @@ window.analysisModule = {
                     </div>
                 </div>
             </div>
-    
+
             ${this.createNotesSection(analysis.notes)}`;
     },
     
@@ -4768,6 +4949,55 @@ window.analysisModule = {
         console.log('Generated KPI card:', kpiCard ? 'Success' : 'Empty');
     
         return `
+            <!-- Purchase Details Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Purchase Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Purchase Price</span>
+                            <strong>${this.formatDisplayValue(analysis.purchase_price)}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>After Repair Value</span>
+                            <strong>${this.formatDisplayValue(analysis.after_repair_value)}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Renovation Costs</span>
+                            <strong>${this.formatDisplayValue(analysis.renovation_costs)}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Renovation Duration</span>
+                            <strong>${analysis.renovation_duration} months</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Cash to Seller</span>
+                            <strong>${this.formatDisplayValue(analysis.cash_to_seller)}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Closing Costs</span>
+                            <strong>${this.formatDisplayValue(analysis.closing_costs)}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Assignment Fee</span>
+                            <strong>${this.formatDisplayValue(analysis.assignment_fee)}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Marketing Costs</span>
+                            <strong>${this.formatDisplayValue(analysis.marketing_costs)}</strong>
+                        </div>
+                        ${analysis.analysis_type.includes('PadSplit') ? `
+                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                <span>Furnishing Costs</span>
+                                <strong>${this.formatDisplayValue(analysis.furnishing_costs)}</strong>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        
             <!-- Income & Returns Card -->
             <div class="card mb-4">
                 <div class="card-header">

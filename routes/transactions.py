@@ -702,7 +702,7 @@ def delete_transaction(transaction_id):
                 
         if transaction.get('reimbursement', {}).get('documentation'):
             reimb_file_path = os.path.join(
-                current_app.config['REIMBURSEMENTS_DIR'], 
+                current_app.config['UPLOAD_FOLDER'], 
                 transaction['reimbursement']['documentation']
             )
             if os.path.exists(reimb_file_path):
