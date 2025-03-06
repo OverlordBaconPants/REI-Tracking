@@ -35,3 +35,4 @@ webdriver_manager>=4.0.1
 werkzeug==3.0.1
 zipp==3.17.0
 gunicorn==21.2.0
+seaborn==0.12.2

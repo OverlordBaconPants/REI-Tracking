@@ -39,3 +39,6 @@ config.py
 tree.txt
 app.log
 import_statement.txt
+__pycache__/
+.pytest_cache/
+test-results/

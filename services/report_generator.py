@@ -1,1203 +1,2350 @@
-from datetime import datetime
-from typing import Dict, Any, List
+from datetime import datetime, timedelta
 import os
-import traceback
-import json
 import logging
+import traceback
 from io import BytesIO
+import json
+import math
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
-from reportlab.lib.colors import HexColor
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
-from reportlab.platypus import Frame, PageTemplate, FrameBreak, PageBreak
+from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image,
+                               Frame, PageTemplate, NextPageTemplate, FrameBreak, PageBreak, Flowable)
+from reportlab.graphics.shapes import Drawing, Circle, String, Rect
+import matplotlib
+matplotlib.use('Agg')  # Use non-interactive backend
+import matplotlib.pyplot as plt
+import matplotlib.patheffects as patheffects
+from matplotlib.ticker import FuncFormatter
 
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# KPI Configurations for different analysis types
-KPI_CONFIGS = {
-    'Multi-Family': {
-        'noi': {
-            'label': 'Net Operating Income (per unit)',
-            'min': 0,
-            'max': 2000,
-            'threshold': 800,
-            'direction': 'min',  # 'min' means "at least" - higher is better
-            'format': 'money',
-            'info': 'Monthly NOI should be at least $800 per unit. Higher is better.'
-        },
-        'operatingExpenseRatio': {
-            'label': 'Operating Expense Ratio',
-            'min': 0,
-            'max': 100,
-            'threshold': 40,
-            'direction': 'max',  # 'max' means "at most" - lower is better
-            'format': 'percentage',
-            'info': 'Operating expenses should be at most 40% of income. Lower is better.'
-        },
-        'capRate': {
-            'label': 'Cap Rate',
-            'min': 3,
-            'max': 12,
-            'goodMin': 5,
-            'goodMax': 10,
-            'format': 'percentage',
-            'info': '5-10% indicates good value for multi-family.'
-        },
-        'dscr': {
-            'label': 'Debt Service Coverage Ratio',
-            'min': 0,
-            'max': 3,
-            'threshold': 1.25,
-            'direction': 'min',
-            'format': 'ratio',
-            'info': 'DSCR should be at least 1.25. Higher is better.'
-        },
-        'cashOnCash': {
-            'label': 'Cash-on-Cash Return',
-            'min': 0,
-            'max': 30,
-            'threshold': 10,
-            'direction': 'min',
-            'format': 'percentage',
-            'info': 'Cash-on-Cash return should be at least 10%. Higher is better.'
-        }
+# Brand configuration
+BRAND_CONFIG = {
+    'colors': {
+        'primary': '#0047AB',       # Navy blue primary color
+        'secondary': '#0056b3',     # Slightly lighter blue for accents
+        'tertiary': '#4285F4',      # Light blue for highlights
+        'text_dark': '#333333',     # Dark text
+        'text_light': '#666666',    # Light text
+        'background': '#FFFFFF',    # White background
+        'success': '#51A351',       # Green for positive indicators
+        'warning': '#F89406',       # Orange for warnings
+        'danger': '#BD362F',        # Red for negative indicators
+        'neutral': '#F5F7FA',       # Lighter gray for backgrounds
+        'border': '#E0E5EB',        # Border color
+        'table_row_alt': '#F0F3F7', # Alternating table row background color
+        'table_header': '#E8ECEF',  # Table header background color
+        'border_light': '#E0E5EB'   # Light border color for tables
     },
-    'LTR': {
-        'noi': {
-            'label': 'Net Operating Income (monthly)',
-            'min': 0,
-            'max': 2000,
-            'threshold': 800,
-            'direction': 'min',
-            'format': 'money',
-            'info': 'Monthly NOI should be at least $800. Higher is better.'
-        },
-        'operatingExpenseRatio': {
-            'label': 'Operating Expense Ratio',
-            'min': 0,
-            'max': 100,
-            'threshold': 40,
-            'direction': 'max',
-            'format': 'percentage',
-            'info': 'Operating expenses should be at most 40% of income. Lower is better.'
-        },
-        'capRate': {
-            'label': 'Cap Rate',
-            'min': 4,
-            'max': 14,
-            'goodMin': 6,
-            'goodMax': 12,
-            'format': 'percentage',
-            'info': '6-12% indicates good value for long-term rentals.'
-        },
-        'dscr': {
-            'label': 'Debt Service Coverage Ratio',
-            'min': 0,
-            'max': 3,
-            'threshold': 1.25,
-            'direction': 'min',
-            'format': 'ratio',
-            'info': 'DSCR should be at least 1.25. Higher is better.'
-        },
-        'cashOnCash': {
-            'label': 'Cash-on-Cash Return',
-            'min': 0,
-            'max': 30,
-            'threshold': 10,
-            'direction': 'min',
-            'format': 'percentage',
-            'info': 'Cash-on-Cash return should be at least 10%. Higher is better.'
-        }
+    'fonts': {
+        'primary': 'Helvetica-Bold',  # Built-in ReportLab font for headings
+        'secondary': 'Helvetica',     # Built-in ReportLab font for body text
     },
-    'BRRRR': {
-        'noi': {
-            'label': 'Net Operating Income (monthly)',
-            'min': 0,
-            'max': 2000,
-            'threshold': 800,
-            'direction': 'min',
-            'format': 'money',
-            'info': 'Monthly NOI should be at least $800. Higher is better.'
-        },
-        'operatingExpenseRatio': {
-            'label': 'Operating Expense Ratio',
-            'min': 0,
-            'max': 100,
-            'threshold': 40,
-            'direction': 'max',
-            'format': 'percentage',
-            'info': 'Operating expenses should be at most 40% of income. Lower is better.'
-        },
-        'capRate': {
-            'label': 'Cap Rate',
-            'min': 5,
-            'max': 15,
-            'goodMin': 7,
-            'goodMax': 12,
-            'format': 'percentage',
-            'info': '7-12% indicates good value for BRRRR strategy.'
-        },
-        'dscr': {
-            'label': 'Debt Service Coverage Ratio',
-            'min': 0,
-            'max': 3,
-            'threshold': 1.25,
-            'direction': 'min',
-            'format': 'ratio',
-            'info': 'DSCR should be at least 1.25. Higher is better.'
-        },
-        'cashOnCash': {
-            'label': 'Cash-on-Cash Return',
-            'min': 0,
-            'max': 30,
-            'threshold': 10,
-            'direction': 'min',
-            'format': 'percentage',
-            'info': 'Cash-on-Cash return should be at least 10%. Higher is better.'
-        }
-    },
-    'Lease Option': {
-        'noi': {
-            'label': 'Net Operating Income (monthly)',
-            'min': 0,
-            'max': 2000,
-            'threshold': 800,
-            'direction': 'min',
-            'format': 'money',
-            'info': 'Monthly NOI should be at least $800. Higher is better.'
-        },
-        'operatingExpenseRatio': {
-            'label': 'Operating Expense Ratio',
-            'min': 0,
-            'max': 100,
-            'threshold': 40,
-            'direction': 'max',
-            'format': 'percentage',
-            'info': 'Operating expenses should be at most 40% of income. Lower is better.'
-        },
-        'cashOnCash': {
-            'label': 'Cash-on-Cash Return',
-            'min': 0,
-            'max': 30,
-            'threshold': 10,
-            'direction': 'min',
-            'format': 'percentage',
-            'info': 'Cash-on-Cash return should be at least 10%. Higher is better.'
-        }
-    }
+    'logo_path': os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'images', 'logo-blue.png')
 }
 
-class ReportGenerator:
-    """Generates PDF reports with refined layout."""
+class KPICardFlowable(Flowable):
+    """A flowable that draws a KPI card with value, target, and favorable/unfavorable indicator."""
     
-    # Define brand colors
-    BRAND_NAVY = HexColor('#1a3d5c')
+    def __init__(self, title, value, target, is_favorable, width=2*inch, height=0.9*inch):
+        Flowable.__init__(self)
+        self.title = title
+        self.value = value
+        self.target = target
+        self.is_favorable = is_favorable
+        self.width = width
+        self.height = height
+        
+    def draw(self):
+        """Draw the KPI card with styling."""
+        colors = BRAND_CONFIG['colors']
+        
+        # Draw card background with rounded corners
+        self.canv.setFillColor(colors['neutral'])
+        self.canv.setStrokeColor(colors['border_light'])
+        self.canv.roundRect(0, 0, self.width, self.height, 5, fill=1, stroke=1)
+        
+        # Draw title
+        self.canv.setFont(BRAND_CONFIG['fonts']['primary'], 9)
+        self.canv.setFillColor(colors['primary'])
+        self.canv.drawCentredString(self.width/2, self.height-14, self.title)
+        
+        # Draw value
+        self.canv.setFont(BRAND_CONFIG['fonts']['primary'], 16)
+        self.canv.setFillColor(colors['text_dark'])
+        self.canv.drawCentredString(self.width/2, self.height/2, self.value)
+        
+        # Draw target
+        self.canv.setFont(BRAND_CONFIG['fonts']['secondary'], 7)
+        self.canv.setFillColor(colors['text_light'])
+        self.canv.drawCentredString(self.width/2, 24, f"Target: {self.target}")
+        
+        # Draw status line
+        status_color = colors['success'] if self.is_favorable else colors['danger']
+        self.canv.setStrokeColor(status_color)
+        self.canv.setLineWidth(1.5)
+        self.canv.line(5, 18, self.width-5, 18)
+        
+        # Draw status text
+        status_text = "FAVORABLE" if self.is_favorable else "UNFAVORABLE"
+        self.canv.setFont(BRAND_CONFIG['fonts']['secondary'], 7)
+        self.canv.setFillColor(status_color)
+        self.canv.drawCentredString(self.width/2, 8, status_text)
     
-    def __init__(self):
-        self.styles = getSampleStyleSheet()
+    def wrap(self, availWidth, availHeight):
+        """Return the size this flowable will take up."""
+        return (self.width, self.height)
+
+class ChartGenerator:
+    """Generate charts for the report."""
+    
+    def create_amortization_chart(self, data):
+        """Create an enhanced amortization chart showing balance, principal and interest."""
+        buffer = BytesIO()
+        colors = BRAND_CONFIG['colors']
+        
+        try:
+            # Extract the schedule data
+            schedule = data.get('total_schedule', [])
+            if not schedule:
+                raise ValueError("No amortization schedule data available")
+                
+            # Extract data for plotting
+            months = [entry.get('month', i+1) for i, entry in enumerate(schedule)]
+            balances = [entry.get('ending_balance', 0) for entry in schedule]
+            
+            # Calculate cumulative principal and interest
+            cumulative_principal = []
+            cumulative_interest = []
+            principal_sum = 0
+            interest_sum = 0
+            
+            for entry in schedule:
+                principal_sum += entry.get('principal_payment', 0)
+                interest_sum += entry.get('interest_payment', 0)
+                cumulative_principal.append(principal_sum)
+                cumulative_interest.append(interest_sum)
+            
+            # Determine if we have balloon data
+            has_balloon = data.get('balloon_data') is not None
+            balloon_month = None
+            if has_balloon and data.get('balloon_data'):
+                balloon_month = data['balloon_data'].get('months_to_balloon')
+            
+            # Create figure with improved size for legend
+            fig, ax = plt.subplots(figsize=(5, 3.5), dpi=100)
+            
+            # Set background color
+            fig.patch.set_facecolor('#FFFFFF')
+            ax.set_facecolor('#F9FBFF')
+            
+            # Plot loan balance line
+            ax.plot(months, balances, 
+                color=colors['primary'], 
+                linewidth=2,
+                label='Loan Balance',
+                solid_capstyle='round')
+            
+            # Plot cumulative principal line
+            ax.plot(months, cumulative_principal, 
+                color=colors['success'], 
+                linewidth=2,
+                label='Principal Paid',
+                solid_capstyle='round')
+            
+            # Plot cumulative interest line
+            ax.plot(months, cumulative_interest, 
+                color=colors['danger'], 
+                linewidth=2,
+                label='Interest Paid',
+                solid_capstyle='round')
+            
+            # Add balloon marker if applicable
+            if has_balloon and balloon_month:
+                ax.axvline(x=balloon_month, 
+                        linestyle='--', 
+                        color=colors['warning'], 
+                        linewidth=1.5,
+                        alpha=0.7,
+                        label='Balloon Due')
+            
+            # Formatting
+            ax.set_xlabel('Month', fontsize=9, fontweight='bold')
+            ax.set_ylabel('Amount ($)', fontsize=9, fontweight='bold')
+            ax.set_title('Loan Amortization Schedule', fontsize=10, fontweight='bold', pad=10)
+            
+            # Format y-axis as currency
+            def currency_formatter(x, pos):
+                if x >= 1000:
+                    return f'${x/1000:.0f}K'
+                return f'${x:.0f}'
+            
+            ax.yaxis.set_major_formatter(FuncFormatter(currency_formatter))
+            
+            # Set y-axis to start at 0
+            ax.set_ylim(bottom=0)
+            
+            # Add grid
+            ax.grid(True, linestyle=':', linewidth=0.5, alpha=0.3)
+            
+            # Add legend with better positioning
+            ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), 
+                    frameon=True, framealpha=0.9, fontsize=8, ncol=4)
+            
+            plt.tight_layout()
+            plt.subplots_adjust(bottom=0.25)  # Add extra space for the legend
+            
+            plt.savefig(buffer, format='png', dpi=100, bbox_inches='tight')
+            plt.close(fig)
+            
+            buffer.seek(0)
+            return buffer
+            
+        except Exception as e:
+            logger.error(f"Error generating amortization chart: {str(e)}")
+            
+            # Create a simple error message chart
+            fig, ax = plt.subplots(figsize=(4, 3))
+            ax.text(0.5, 0.5, "Error generating chart", 
+                horizontalalignment='center', 
+                verticalalignment='center',
+                transform=ax.transAxes, 
+                fontsize=10,
+                color=colors['danger'])
+            ax.axis('off')
+            plt.savefig(buffer, format='png', dpi=100)
+            plt.close(fig)
+            
+            buffer.seek(0)
+            return buffer
+
+# Main function to generate report that matches the original signature
+def generate_report(data, report_type='analysis'):
+    """Generate a PDF report from analysis data."""
+    try:
+        # Create report generator
+        generator = PropertyReportGenerator(data)
+        
+        # Generate report
+        return generator.generate()
+    
+    except Exception as e:
+        logger.error(f"Error generating report: {str(e)}")
+        logger.error(f"Stack trace: {traceback.format_exc()}")
+        raise RuntimeError(f"Failed to generate report: {str(e)}")
+
+class PropertyReportGenerator:
+    """Generate property analysis reports."""
+    
+    def __init__(self, data):
+        """Initialize with property data."""
+        self.data = data
+        self.buffer = BytesIO()
+        
+        # Create document with proper margins
+        self.doc = SimpleDocTemplate(
+            self.buffer,
+            pagesize=letter,
+            rightMargin=0.5*inch,
+            leftMargin=0.5*inch,
+            topMargin=0.5*inch,
+            bottomMargin=0.5*inch
+        )
+        
+        # Create styles
+        self.styles = self._create_styles()
+        
+        # Initialize chart generator
+        self.chart_gen = ChartGenerator()
+    
+    def _create_styles(self):
+        """Create paragraph and table styles."""
+        styles = getSampleStyleSheet()
+        colors = BRAND_CONFIG['colors']
+        
         # Add custom styles
-        self.styles.add(ParagraphStyle(
-            name='HeaderText',
-            parent=self.styles['Heading1'],
+        styles.add(ParagraphStyle(
+            name='BrandNormal',
+            parent=styles['Normal'],
+            fontName=BRAND_CONFIG['fonts']['secondary'],
+            fontSize=8,
+            textColor=colors['text_dark'],
+            spaceAfter=4,
+            wordWrap='CJK'
+        ))
+
+        styles.add(ParagraphStyle(
+            name='BrandHeading1',
+            parent=styles['Heading1'],
+            fontName=BRAND_CONFIG['fonts']['primary'],
             fontSize=16,
-            textColor=self.BRAND_NAVY,
-            spaceAfter=12
+            textColor=colors['primary'],
+            spaceAfter=12,
+            alignment=0,  # Left aligned
+            wordWrap='CJK'
         ))
-        self.styles.add(ParagraphStyle(
-            name='SectionHeader',
-            parent=self.styles['Heading2'],
-            fontSize=12,
-            textColor=self.BRAND_NAVY,
+        
+        styles.add(ParagraphStyle(
+            name='BrandHeading3',
+            parent=styles['Heading3'],
+            fontName=BRAND_CONFIG['fonts']['primary'],
+            fontSize=10,
+            textColor=colors['primary'],
             spaceBefore=6,
-            spaceAfter=3
+            spaceAfter=4,
+            alignment=0,  # Left aligned
+            wordWrap='CJK'
         ))
         
-    def _create_page_template(self, doc):
-        """Create page template with header and two columns."""
-        # Header frame at top of page
-        header_frame = Frame(
-            doc.leftMargin,
-            doc.height - 0.75*inch,
-            doc.width,
-            1*inch,
-            id='header',
-            showBoundary=0
-        )
-
-        # Left column for property and loan details
-        left_column = Frame(
-            doc.leftMargin,
-            doc.bottomMargin,
-            (doc.width/2) - 6,
-            doc.height - 1.5*inch,
-            id='left',
-            showBoundary=0
-        )
-
-        # Right column for financial overview and operating expenses
-        right_column = Frame(
-            doc.leftMargin + (doc.width/2) + 6,
-            doc.bottomMargin,
-            (doc.width/2) - 6,
-            doc.height - 1.5*inch,
-            id='right',
-            showBoundary=0
-        )
-
-        return PageTemplate(
-            id='TwoColumn',
-            frames=[header_frame, left_column, right_column],
-            onPage=self._add_page_number
+        styles.add(ParagraphStyle(
+            name='BrandSmall',
+            parent=styles['Normal'],
+            fontName=BRAND_CONFIG['fonts']['secondary'],
+            fontSize=7,
+            textColor=colors['text_light'],
+            spaceAfter=4,
+            wordWrap='CJK'
+        ))
+        
+        styles.add(ParagraphStyle(
+            name='TableHeader',
+            parent=styles['Normal'],
+            fontName=BRAND_CONFIG['fonts']['primary'],
+            fontSize=9,
+            textColor=colors['background'],
+            alignment=1,  # Center aligned
+            wordWrap='CJK'
+        ))
+        
+        styles.add(ParagraphStyle(
+            name='EnhancedTitle',
+            parent=styles['Heading1'],
+            fontName=BRAND_CONFIG['fonts']['primary'],
+            fontSize=16,
+            leading=20,
+            textColor=colors['primary'],
+            alignment=0,  # Left aligned
+            spaceBefore=0,
+            spaceAfter=2
+        ))
+        
+        styles.add(ParagraphStyle(
+            name='EnhancedSubtitle',
+            parent=styles['Normal'],
+            fontName=BRAND_CONFIG['fonts']['secondary'],
+            fontSize=9,
+            leading=11,
+            textColor=colors['text_light'],
+            alignment=0,  # Left aligned
+            spaceBefore=0,
+            spaceAfter=0
+        ))
+        
+        return styles
+    
+    def _get_short_address(self, full_address):
+        """Extract street address and city from full address."""
+        if full_address and ',' in full_address:
+            parts = full_address.split(',')
+            if len(parts) >= 2:
+                # Keep only the street address and city
+                return f"{parts[0]}, {parts[1].strip()}"
+        return full_address
+    
+    def create_header(self):
+        """Create the header with address and logo."""
+        elements = []
+        
+        # Get address and format title
+        full_address = self.data.get('address', 'Property Analysis')
+        title = self._get_short_address(full_address)
+            
+        # Create a subtitle
+        analysis_type = self.data.get('analysis_type', '')
+        current_date = datetime.now().strftime('%B %d, %Y')
+        subtitle = f"{analysis_type} | {current_date}"
+        
+        # Create elements for header with proper spacing
+        elements.append(Paragraph(title, self.styles['EnhancedTitle']))
+        elements.append(Paragraph(subtitle, self.styles['EnhancedSubtitle']))
+        
+        return elements
+    
+    def create_property_details(self):
+        """Create property details table."""
+        elements = []
+        colors = BRAND_CONFIG['colors']
+        
+        # Add section header
+        elements.append(Paragraph("Property Details", self.styles['BrandHeading3']))
+        elements.append(Spacer(1, 0.05*inch))
+        
+        # Define styles for table cells
+        label_style = ParagraphStyle(
+            name='TableLabel',
+            parent=self.styles['BrandNormal'],
+            fontSize=8,
+            textColor=colors['text_dark'],
+            alignment=0  # Left aligned
         )
         
-    def _add_page_number(self, canvas, doc):
-        """Add page number to each page."""
+        value_style = ParagraphStyle(
+            name='TableValue',
+            parent=self.styles['BrandNormal'],
+            fontSize=8,
+            textColor=colors['text_dark'],
+            alignment=2  # Right aligned
+        )
+        
+        # Property fields
+        property_fields = [
+            ('property_type', 'Property Type'),
+            ('square_footage', 'Square Footage'),
+            ('lot_size', 'Lot Size'),
+            ('year_built', 'Year Built'),
+            ('bedrooms', 'Bedrooms'),
+            ('bathrooms', 'Bathrooms')
+        ]
+        
+        # Build table data
+        table_data = []
+        for key, label in property_fields:
+            if key in self.data and self.data[key]:
+                value = self.data[key]
+                
+                # Format values for better display
+                if key in ['square_footage', 'lot_size']:
+                    if isinstance(value, (int, float)):
+                        value = f"{int(value):,} sq ft"
+                elif key == 'bedrooms':
+                    if isinstance(value, (int, float)):
+                        value = f"{int(value)} BR"
+                elif key == 'bathrooms':
+                    if isinstance(value, (int, float)):
+                        value = f"{float(value):.1f} BA"
+                
+                table_data.append([
+                    Paragraph(label + ":", label_style),
+                    Paragraph(str(value), value_style)
+                ])
+        
+        # Create and style the table
+        if table_data:
+            # Calculate optimal column widths
+            col1_width = min(1.5*inch, self.doc.width * 0.45 * 0.6)
+            col2_width = (self.doc.width * 0.45) - col1_width
+            
+            # Create alternating row colors
+            row_styles = []
+            for i in range(len(table_data)):
+                if i % 2 == 1:  # Alternate rows
+                    row_styles.append(('BACKGROUND', (0, i), (-1, i), colors['table_row_alt']))
+            
+            property_table = Table(
+                table_data,
+                colWidths=[col1_width, col2_width],
+                style=TableStyle([
+                    # Label styling - left column
+                    ('BACKGROUND', (0, 0), (0, -1), colors['table_header']),
+                    ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+                    
+                    # Value styling - right column
+                    ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+                    
+                    # Grid and borders
+                    ('LINEBELOW', (0, 0), (-1, -1), 0.25, colors['border_light']),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    
+                    # Padding for breathing room
+                    ('TOPPADDING', (0, 0), (-1, -1), 4),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                    ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                    ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+                ] + row_styles)
+            )
+            
+            # Apply table border
+            property_table.setStyle(TableStyle([
+                ('BOX', (0, 0), (-1, -1), 0.5, colors['border_light']),
+            ]))
+            
+            elements.append(property_table)
+        else:
+            # No data available
+            elements.append(Paragraph("No property details available", self.styles['BrandNormal']))
+        
+        return elements
+    
+    def create_kpi_dashboard(self):
+        """Create KPI dashboard with card metrics."""
+        elements = []
+        colors = BRAND_CONFIG['colors']
+        
+        # Add section header
+        elements.append(Paragraph("Key Performance Indicators", self.styles['BrandHeading3']))
+        elements.append(Spacer(1, 0.05*inch))
+        
+        # Calculate KPI metrics from data
+        kpi_data = self._calculate_kpi_metrics()
+        
+        # Define KPI cards layout
+        card_width = (self.doc.width - 0.5*inch) / 3  # Divide available width into 3 columns with some spacing
+        
+        # First row of KPIs (3 cards)
+        row1_cards = [
+            ('Cash-on-Cash', 
+             kpi_data.get('cash_on_cash', '0%'), 
+             kpi_data.get('cash_on_cash_target', '≥ 10.0%'),
+             kpi_data.get('cash_on_cash_favorable', False)),
+            
+            ('Cap Rate', 
+             kpi_data.get('cap_rate', '0%'), 
+             kpi_data.get('cap_rate_target', '6.0% - 12.0%'),
+             kpi_data.get('cap_rate_favorable', False)),
+             
+            ('NOI', 
+             kpi_data.get('noi', '$0'), 
+             kpi_data.get('noi_target', '≥ $800'),
+             kpi_data.get('noi_favorable', False))
+        ]
+        
+        # Create first row of KPI cards
+        row1_data = []
+        for title, value, target, is_favorable in row1_cards:
+            kpi_card = KPICardFlowable(title, value, target, is_favorable, width=card_width-0.1*inch)
+            row1_data.append(kpi_card)
+            
+        row1_table = Table([row1_data], colWidths=[card_width-0.1*inch]*3, 
+                         style=TableStyle([
+                             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                             ('LEFTPADDING', (0, 0), (-1, -1), 5),
+                             ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+                         ]))
+        
+        elements.append(row1_table)
+        elements.append(Spacer(1, 0.1*inch))
+        
+        # Second row of KPIs (2 cards)
+        row2_cards = [
+            ('DSCR', 
+             kpi_data.get('dscr', '0'), 
+             kpi_data.get('dscr_target', '≥ 1.25'),
+             kpi_data.get('dscr_favorable', False)),
+            
+            ('Expense Ratio', 
+             kpi_data.get('expense_ratio', '0%'), 
+             kpi_data.get('expense_ratio_target', '≤ 40.0%'),
+             kpi_data.get('expense_ratio_favorable', False))
+        ]
+        
+        # Create second row of KPI cards
+        row2_data = []
+        for title, value, target, is_favorable in row2_cards:
+            kpi_card = KPICardFlowable(title, value, target, is_favorable, width=card_width-0.1*inch)
+            row2_data.append(kpi_card)
+        
+        # Add empty cell to maintain 3-column layout
+        row2_data.append("")
+            
+        row2_table = Table([row2_data], colWidths=[card_width-0.1*inch]*3, 
+                         style=TableStyle([
+                             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                             ('LEFTPADDING', (0, 0), (-1, -1), 5),
+                             ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+                         ]))
+        
+        elements.append(row2_table)
+        
+        # Add explanation note
+        elements.append(Spacer(1, 0.05*inch))
+        note_text = (
+            "KPIs evaluate investment aspects with target thresholds. 'Favorable' means the metric meets or exceeds its target."
+        )
+        elements.append(Paragraph(note_text, self.styles['BrandSmall']))
+        
+        return elements
+    
+    def create_amortization_section(self):
+        """Create loan amortization section with chart."""
+        elements = []
+        
+        # Add section header
+        elements.append(Paragraph("Loan Amortization", self.styles['BrandHeading3']))
+        elements.append(Spacer(1, 0.05*inch))
+        
+        # Generate amortization data
+        amortization_data = self._calculate_amortization_data()
+        
+        # Generate chart if we have data
+        if amortization_data.get('total_schedule'):
+            # Create chart
+            chart_buffer = self.chart_gen.create_amortization_chart(amortization_data)
+            elements.append(Image(chart_buffer, width=4*inch, height=3*inch))
+            
+            # Add brief explanation
+            if self._has_balloon_payment():
+                explanation = "The vertical line indicates balloon due date."
+            else:
+                explanation = "Shows loan balance over time."
+            elements.append(Paragraph(explanation, self.styles['BrandSmall']))
+        else:
+            # No data available
+            elements.append(Paragraph("No loan amortization data available", self.styles['BrandNormal']))
+        
+        return elements
+    
+    def _add_page_decorations(self, canvas, doc):
+        """Add page number, footer line, and logo (first page only)."""
         canvas.saveState()
-        canvas.setFont('Helvetica', 8)
+        
+        # Draw the footer with page number
+        canvas.setFont(BRAND_CONFIG['fonts']['primary'], 8)
+        canvas.setFillColor(BRAND_CONFIG['colors']['text_light'])
         canvas.drawRightString(
             doc.pagesize[0] - 0.5*inch,
             0.25*inch,
             f"Page {doc.page}"
         )
-        canvas.restoreState()
         
-    def _safe_number(self, value: Any, decimals: int = 1) -> float:
-        """Safely convert a value to a number, returning 0 if conversion fails."""
-        try:
-            # Return 0 for None or empty values
-            if value is None or value == '':
-                return 0.0
-                
-            # Handle string values
-            if isinstance(value, str):
-                # Remove currency symbols and commas
-                clean_value = value.replace('$', '').replace(',', '').replace('%', '').strip()
-                if not clean_value:  # If empty after cleaning
-                    return 0.0
-                return round(float(clean_value), decimals)
-                
-            # Handle numeric values
-            return round(float(value), decimals)
-            
-        except (TypeError, ValueError) as e:
-            logger.warning(f"Failed to convert value to number: {value}, type: {type(value)}, error: {str(e)}")
-            return 0.0
-
-    def _check_balloon_payment(self, data: Dict) -> bool:
-        """Safely check if balloon payment is enabled and valid."""
-        logger.debug(f"Checking balloon payment with data: {data}")
+        # Add a thin footer line
+        canvas.setStrokeColor(BRAND_CONFIG['colors']['primary'])
+        canvas.setLineWidth(0.5)
+        canvas.line(
+            doc.leftMargin, 
+            0.45*inch, 
+            doc.pagesize[0] - doc.rightMargin, 
+            0.45*inch
+        )
         
-        try:
-            # First, check if balloon payment is explicitly disabled
-            has_balloon = data.get('has_balloon_payment', False)
-            if not has_balloon:
-                logger.debug("Balloon payment explicitly disabled")
-                return False
-                
-            # Check all required balloon fields have valid non-zero values
-            loan_amount = self._safe_number(data.get('balloon_refinance_loan_amount', 0))
-            logger.debug(f"Balloon loan amount: {loan_amount}")
+        # Draw actual logo only on first page
+        if doc.page == 1:
+            logo_path = BRAND_CONFIG['logo_path']
+            logo_height = 1*inch  # Increased from 0.5 to 1 inch
             
-            ltv_percentage = self._safe_number(data.get('balloon_refinance_ltv_percentage', 0))
-            logger.debug(f"Balloon LTV percentage: {ltv_percentage}")
-            
-            due_date = data.get('balloon_due_date')
-            logger.debug(f"Balloon due date: {due_date}")
-            
-            # Verify all required values are present and valid
-            if not all([
-                loan_amount > 0,
-                ltv_percentage > 0,
-                due_date and isinstance(due_date, str)
-            ]):
-                logger.debug("Missing or invalid balloon payment values")
-                return False
-                
-            # Verify date format
             try:
-                datetime.fromisoformat(due_date.replace('Z', '+00:00'))
-            except (ValueError, AttributeError) as e:
-                logger.debug(f"Invalid balloon due date format: {e}")
-                return False
-                
-            logger.debug("All balloon payment checks passed")
-            return True
-            
-        except Exception as e:
-            logger.error(f"Error checking balloon payment: {e}")
-            return False
+                if os.path.exists(logo_path):
+                    # Use actual logo from file with transparent background
+                    canvas.drawImage(
+                        logo_path,
+                        doc.pagesize[0] - doc.rightMargin - 2.0*inch,  # Moved left to accommodate larger logo
+                        doc.pagesize[1] - doc.topMargin - logo_height,
+                        width=2.0*inch,  # Increased from 1.5 to 2.0 inch
+                        height=logo_height,
+                        preserveAspectRatio=True,
+                        mask='auto'  # This makes white background transparent
+                    )
+                else:
+                    # Placeholder if logo not found
+                    logger.warning(f"Logo file not found at {logo_path}, using placeholder.")
+                    # Code for placeholder logo...
+            except Exception as e:
+                logger.error(f"Error adding logo: {str(e)}")
+        
+        canvas.restoreState()
     
-    def generate_report(self, data: Dict, report_type: str = 'analysis') -> BytesIO:
-        """Generate a PDF report with KPI analysis table."""
+    def generate(self):
+        """Generate the complete report with all sections."""
         try:
-            buffer = BytesIO()
-            doc = SimpleDocTemplate(
-                buffer,
-                pagesize=letter,
-                rightMargin=0.5*inch,
-                leftMargin=0.5*inch,
-                topMargin=0.5*inch,
-                bottomMargin=0.5*inch
-            )
-            
-            # Add page templates
-            doc.addPageTemplates([self._create_page_template(doc)])
-            
-            # Initialize story (content) for the PDF
             story = []
             
-            # Add header
-            story.extend(self._create_header(data, doc))
+            # Section 1: Header and property details
+            story.extend(self.create_header())
+            story.append(Spacer(1, 0.2*inch))
+            story.extend(self.create_property_details())
+            story.append(Spacer(1, 0.3*inch))
             
-            if data.get('analysis_type') == 'Lease Option':
-                # Left column content
-                story.extend(self._create_property_section(data))
-                story.extend(self._create_lease_option_details(data))
-                story.extend(self._create_loan_section(data))
-                story.extend(self._create_notes_section(data))
+            # Section 2: KPI Dashboard and Amortization Chart
+            story.extend(self.create_kpi_dashboard())
+            story.append(Spacer(1, 0.3*inch))
+            story.extend(self.create_amortization_section())
+            story.append(Spacer(1, 0.3*inch))
+            
+            # Section 3: Long-Term Performance Projections
+            story.extend(self.create_projections_section())
+            story.append(Spacer(1, 0.3*inch))
+            
+            # Sections 4-6: Purchase Details and Financial Overviews
+            if self._has_balloon_payment():
+                # Single column for Purchase Details
+                story.extend(self.create_purchase_details_section())
+                story.append(Spacer(1, 0.3*inch))
                 
-                # Force switch to right column
-                story.append(FrameBreak())
-                
-                # Right column content
-                story.extend(self._create_financial_section(data))
-                story.extend(self._create_expenses_section(data))
+                # Two-column Balloon Comparison
+                story.extend(self.create_balloon_sections())
             else:
-                # Standard report layout for other analysis types
-                story.extend(self._create_property_section(data))
-                story.extend(self._create_loan_section(data))
-                story.extend(self._create_notes_section(data))
-                story.append(FrameBreak())
-                story.extend(self._create_financial_section(data))
-                story.extend(self._create_expenses_section(data))
+                # Two-column layout - Purchase Details and Financial Overview
+                purchase_details = self.create_purchase_details_section()
+                financial_overview = self.create_financial_overview_section()
+                
+                col_width = self.doc.width / 2 - 0.1*inch
+                two_col_data = [[purchase_details, financial_overview]]
+                
+                two_col_table = Table(
+                    two_col_data,
+                    colWidths=[col_width, col_width],
+                    style=TableStyle([
+                        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+                        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+                        ('TOPPADDING', (0, 0), (-1, -1), 0),
+                        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+                    ])
+                )
+                
+                story.append(two_col_table)
             
-            # Add KPI table on new page
-            story.extend(self._create_kpi_table(data))
+            # Add page break before next section
+            story.append(PageBreak())
             
-            # Add comps section if available (add this line)
-            story.extend(self._create_comps_section(data))
-
-            # Build PDF
-            doc.build(story)
-            buffer.seek(0)
-            return buffer
+            # Section 7: Loan Details and Operating Expenses
+            story.extend(self.create_loans_and_expenses_section())
+            
+            # Build the document
+            self.doc.build(story, onFirstPage=self._add_page_decorations, onLaterPages=self._add_page_decorations)
+            self.buffer.seek(0)
+            return self.buffer
             
         except Exception as e:
             logger.error(f"Error generating report: {str(e)}")
+            logger.error(f"Stack trace: {traceback.format_exc()}")
             raise RuntimeError(f"Failed to generate report: {str(e)}")
-
-    def _create_header(self, data: Dict, doc: SimpleDocTemplate) -> list:
-        """Create report header with analysis type and date."""
-        elements = []
-        
-        # Create header text with analysis type and date
-        header_text = data.get('analysis_name', '')
-        subheader_text = (
-            f"{data.get('analysis_type', 'Analysis')} | "
-            f"Generated: {datetime.now().strftime('%Y-%m-%d')}"
-        )
-        
-        logo_path = os.path.join('static', 'images', 'logo-blue.png')
-        if os.path.exists(logo_path):
-            img = Image(logo_path, width=0.75*inch, height=0.75*inch)
-            
-            # Create header table
-            header_elements = [
-                [
-                    Paragraph(header_text, self.styles['HeaderText']),
-                    img
-                ],
-                [
-                    Paragraph(subheader_text, self.styles['HeaderText']),
-                    ''  # Empty cell under logo
-                ]
-            ]
-            
-            header_table = Table(
-                header_elements,
-                colWidths=[doc.width - 1*inch, 0.75*inch],
-                style=TableStyle([
-                    ('ALIGN', (0, 0), (0, -1), 'LEFT'),
-                    ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
-                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                    ('SPAN', (1, 0), (1, 1))  # Make logo span both rows
-                ])
-            )
-            elements.append(header_table)
-            elements.append(Spacer(1, 0.1*inch))  # Minimal gap after header
-            
-        return elements
-
-    def _create_property_section(self, data: Dict) -> list:
-        """Create property details section with property type."""
-        elements = []
-        
-        elements.append(Paragraph("Property Details", self.styles['SectionHeader']))
-        
-        if data.get('analysis_type') == 'Lease Option':
-            property_data = [
-                ["Property Type:", str(data.get('property_type', 'Not Specified'))],  # Add property type
-                ["Purchase Price:", f"${self._safe_number(data.get('purchase_price'), 2):,.2f}"],
-                ["Square Footage:", f"{data.get('square_footage', 0):,}"],
-                ["Lot Size:", f"{data.get('lot_size', 0):,}"],
-                ["Year Built:", str(data.get('year_built', 'N/A'))],
-                ["Bedrooms:", str(data.get('bedrooms', 0))],
-                ["Bathrooms:", f"{data.get('bathrooms') or 0:.1f}"]
-            ]
-        else:
-            # Standard property details with conditional furnishing costs for PadSplit
-            property_data = [
-                ["Property Type:", str(data.get('property_type', 'Not Specified'))],  # Add property type
-                ["Purchase Price:", f"${self._safe_number(data.get('purchase_price'), 2):,.2f}"],
-                ["After Repair Value:", f"${self._safe_number(data.get('after_repair_value'), 2):,.2f}"],
-                ["Renovation Costs:", f"${self._safe_number(data.get('renovation_costs'), 2):,.2f}"]
-            ]
-
-            # Add furnishing costs for PadSplit
-            if 'PadSplit' in data.get('analysis_type', ''):
-                property_data.append(
-                    ["Furnishing Costs:", f"${self._safe_number(data.get('furnishing_costs'), 2):,.2f}"]
-                )
-
-            # Add remaining standard fields
-            property_data.extend([
-                ["Bedrooms:", str(data.get('bedrooms', 0))],
-                ["Bathrooms:", f"{data.get('bathrooms') or 0:.1f}"]
-            ])
-        
-        table = Table(
-            property_data,
-            colWidths=[1.2*inch, 2.3*inch],
-            style=TableStyle([
-                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-                ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
-                ('TEXTCOLOR', (0, 0), (-1, -1), self.BRAND_NAVY),
-                ('FONTSIZE', (0, 0), (-1, -1), 8),
-                ('PADDING', (0, 0), (-1, -1), 4),
-                ('ALIGN', (1, 0), (1, -1), 'RIGHT')
-            ])
-        )
-        
-        elements.append(table)
-        elements.append(Spacer(1, 6))
-        
-        return elements
-
-    def _create_financial_section(self, data: Dict) -> list:
-        """Create financial overview section with support for all analysis types."""
-        try:
-            elements = []
-            metrics = data.get('calculated_metrics', {})
-            analysis_type = data.get('analysis_type')
-
-            # Handle Lease Option analysis
-            if analysis_type == 'Lease Option':
-                elements.append(Paragraph("Financial Overview", self.styles['SectionHeader']))
-                
-                # Calculate monthly rent credit
-                monthly_rent = self._safe_number(data.get('monthly_rent', 0))
-                credit_percentage = self._safe_number(data.get('monthly_rent_credit_percentage', 0))
-                monthly_credit = (monthly_rent * credit_percentage) / 100
-                
-                financial_data = [
-                    ["Financial Overview", ""],
-                    ["Monthly Rent:", f"${self._safe_number(data.get('monthly_rent'), 2):,.2f}"],
-                    ["Monthly Cash Flow:", metrics.get('monthly_cash_flow', '$0.00')],
-                    ["Annual Cash Flow:", metrics.get('annual_cash_flow', '$0.00')],
-                    ["Monthly Rent Credit:", f"${monthly_credit:,.2f}"],
-                    ["Rent Credit Percentage:", f"{credit_percentage:.1f}%"],
-                    ["Option Fee ROI (Annual):", metrics.get('option_roi', '0%')],
-                    ["Cash on Cash Return:", metrics.get('cash_on_cash_return', '0%')],
-                    ["Months to Break Even:", metrics.get('breakeven_months', 'N/A')]
-                ]
-                
-                elements.append(self._create_metrics_table(financial_data))
-                
-            # Handle analyses with balloon payments
-            elif self._check_balloon_payment(data):
-                # Pre-Balloon Overview
-                elements.append(Paragraph("Pre-Balloon Financial Overview", self.styles['SectionHeader']))
-                pre_balloon_data = [
-                    ["Pre-Balloon Financial Overview", ""],
-                    ["Monthly Rent:", f"${self._safe_number(data.get('monthly_rent'), 2):,.2f}"],
-                    ["Monthly Cash Flow:", metrics.get('pre_balloon_monthly_cash_flow', '$0.00')],
-                    ["Annual Cash Flow:", metrics.get('pre_balloon_annual_cash_flow', '$0.00')],
-                    ["Cash on Cash Return:", metrics.get('cash_on_cash_return', '0%')],
-                    ["Balloon Due Date:", data.get('balloon_due_date', 'N/A') if data.get('balloon_due_date') else 'N/A']
-                ]
-                elements.append(self._create_metrics_table(pre_balloon_data))
-                elements.append(Spacer(1, 0.2*inch))
-
-                # Post-Balloon Overview
-                elements.append(Paragraph("Post-Balloon Financial Overview", self.styles['SectionHeader']))
-                post_balloon_data = [
-                    ["Post-Balloon Financial Overview", ""],
-                    ["Monthly Rent:", metrics.get('post_balloon_monthly_rent', '$0.00')],
-                    ["Monthly Cash Flow:", metrics.get('post_balloon_monthly_cash_flow', '$0.00')],
-                    ["Annual Cash Flow:", metrics.get('post_balloon_annual_cash_flow', '$0.00')],
-                    ["Cash-on-Cash Return:", metrics.get('post_balloon_cash_on_cash_return', '0%')],
-                    ["Refinance Amount:", f"${self._safe_number(data.get('balloon_refinance_loan_amount'), 2):,.2f}"],
-                    ["Refinance LTV:", f"{self._safe_number(data.get('balloon_refinance_ltv_percentage'))}%"],
-                    ["Monthly Payment Change:", metrics.get('monthly_payment_difference', '$0.00')]
-                ]
-                elements.append(self._create_metrics_table(post_balloon_data))
-                
-            # Handle BRRRR analysis
-            elif 'BRRRR' in analysis_type:
-                elements.append(Paragraph("Financial Overview", self.styles['SectionHeader']))
-                financial_data = [
-                    ["Financial Overview", ""],
-                    ["Monthly Rent:", f"${self._safe_number(data.get('monthly_rent'), 2):,.2f}"],
-                    ["Monthly Cash Flow:", metrics.get('monthly_cash_flow', '$0.00')],
-                    ["Annual Cash Flow:", metrics.get('annual_cash_flow', '$0.00')],
-                    ["Cash on Cash Return:", metrics.get('cash_on_cash_return', '0%')],
-                    ["ROI:", metrics.get('roi', '0%')],
-                    ["Equity Captured:", metrics.get('equity_captured', '$0.00')],
-                    ["Cash Recouped:", metrics.get('cash_recouped', '$0.00')]
-                ]
-                elements.append(self._create_metrics_table(financial_data))
-                
-            # Handle standard LTR analysis
-            else:
-                elements.append(Paragraph("Financial Overview", self.styles['SectionHeader']))
-                financial_data = [
-                    ["Financial Overview", ""],
-                    ["Monthly Rent:", f"${self._safe_number(data.get('monthly_rent'), 2):,.2f}"],
-                    ["Monthly Cash Flow:", metrics.get('monthly_cash_flow', '$0.00')],
-                    ["Annual Cash Flow:", metrics.get('annual_cash_flow', '$0.00')],
-                    ["Cash on Cash Return:", metrics.get('cash_on_cash_return', '0%')],
-                    ["ROI:", metrics.get('roi', '0%')]
-                ]
-                elements.append(self._create_metrics_table(financial_data))
-
-            # Add total investment details for all types except balloon payment
-            if not self._check_balloon_payment(data):
-                total_investment = self._safe_number(metrics.get('total_cash_invested', 0))
-                if total_investment > 0:
-                    investment_data = [
-                        ["Investment Overview", ""],
-                        ["Total Cash Invested:", f"${total_investment:,.2f}"]
-                    ]
-                    elements.append(Spacer(1, 0.2*inch))
-                    elements.append(self._create_metrics_table(investment_data))
-
-            return elements
-            
-        except Exception as e:
-            logger.error(f"Error creating financial section: {str(e)}")
-            logger.error(traceback.format_exc())
-            return [Paragraph(f"Error creating financial section: {str(e)}", self.styles['Normal'])]
-
-    def _calculate_kpi_metrics(self, data: Dict) -> Dict:
-        """Calculate KPI metrics for the analysis."""
-        metrics = {}
-        
-        try:
-            # Get gross income
-            if data.get('analysis_type') == 'Multi-Family':
-                unit_types = json.loads(data.get('unit_types', '[]'))
-                gross_income = sum(ut.get('count', 0) * ut.get('rent', 0) for ut in unit_types)
-                total_units = sum(ut.get('count', 0) for ut in unit_types)
-            else:
-                gross_income = self._safe_number(data.get('monthly_rent', 0))
-                total_units = 1
-            
-            annual_gross_income = gross_income * 12
-            
-            # Calculate expenses
-            expenses = sum([
-                self._safe_number(data.get('property_taxes', 0)),
-                self._safe_number(data.get('insurance', 0)),
-                self._safe_number(data.get('hoa_coa_coop', 0)),
-                self._safe_number(data.get('common_area_maintenance', 0)),
-                self._safe_number(data.get('elevator_maintenance', 0)),
-                self._safe_number(data.get('staff_payroll', 0)),
-                self._safe_number(data.get('trash_removal', 0)),
-                self._safe_number(data.get('common_utilities', 0))
-            ]) * 12
-            
-            # Add percentage-based expenses
-            percentage_expenses = sum([
-                gross_income * self._safe_number(data.get('management_fee_percentage', 0)) / 100,
-                gross_income * self._safe_number(data.get('capex_percentage', 0)) / 100,
-                gross_income * self._safe_number(data.get('vacancy_percentage', 0)) / 100,
-                gross_income * self._safe_number(data.get('repairs_percentage', 0)) / 100
-            ]) * 12
-            
-            total_expenses = expenses + percentage_expenses
-            
-            # Calculate NOI
-            noi = annual_gross_income - total_expenses
-            if data.get('analysis_type') == 'Multi-Family':
-                metrics['noi'] = noi / total_units / 12  # Monthly NOI per unit
-            else:
-                metrics['noi'] = noi / 12  # Monthly NOI
-            
-            # Operating Expense Ratio
-            if annual_gross_income > 0:
-                metrics['operatingExpenseRatio'] = (total_expenses / annual_gross_income) * 100
-            
-            # Cap Rate
-            purchase_price = self._safe_number(data.get('purchase_price', 0))
-            if purchase_price > 0:
-                metrics['capRate'] = (noi / purchase_price) * 100
-            
-            # DSCR
-            annual_debt_service = 0
-            for prefix in ['loan1', 'loan2', 'loan3']:
-                payment_str = data.get('calculated_metrics', {}).get(f'{prefix}_loan_payment', '')
-                if payment_str:
-                    try:
-                        # Remove currency formatting
-                        payment = float(payment_str.replace('$', '').replace(',', ''))
-                        annual_debt_service += payment * 12
-                    except (ValueError, AttributeError):
-                        pass
-            
-            if annual_debt_service > 0:
-                metrics['dscr'] = noi / annual_debt_service
-            
-            # Cash on Cash Return
-            total_cash_invested = data.get('calculated_metrics', {}).get('total_cash_invested', '0')
-            if isinstance(total_cash_invested, str):
-                total_cash_invested = float(total_cash_invested.replace('$', '').replace(',', ''))
-                
-            if total_cash_invested > 0:
-                annual_cash_flow = data.get('calculated_metrics', {}).get('annual_cash_flow', '0')
-                if isinstance(annual_cash_flow, str):
-                    annual_cash_flow = float(annual_cash_flow.replace('$', '').replace(',', ''))
-                    
-                metrics['cashOnCash'] = (annual_cash_flow / total_cash_invested) * 100
-            
-            # For Lease Option properties, we don't calculate certain metrics
-            if data.get('analysis_type') == 'Lease Option':
-                metrics.pop('capRate', None)
-                metrics.pop('dscr', None)
-                
-                # Calculate option ROI
-                option_fee = self._safe_number(data.get('option_consideration_fee', 0))
-                if option_fee > 0:
-                    annual_cash_flow = self._safe_number(data.get('calculated_metrics', {}).get('annual_cash_flow', '0'))
-                    metrics['optionRoi'] = (annual_cash_flow / option_fee) * 100
-            
-        except Exception as e:
-            logger.error(f"Error calculating KPI metrics: {str(e)}")
-            logger.error(traceback.format_exc())
-        
-        return metrics
-
-    def _create_kpi_table(self, data: Dict) -> list:
-        """Create KPI analysis table with thresholds and assessments."""
-        elements = []
-        
-        # Add page break and header
-        elements.append(PageBreak())
-        elements.append(Paragraph("Key Performance Indicators", self.styles['SectionHeader']))
-        elements.append(Spacer(1, 0.2*inch))
-        
-        try:
-            # Get analysis type and handle PadSplit variants
-            analysis_type = data.get('analysis_type', '')
-            if analysis_type.startswith('PadSplit'):
-                analysis_type = 'LTR'
-                
-            # Get KPI config for this analysis type
-            kpi_config = KPI_CONFIGS.get(analysis_type, {})
-            if not kpi_config:
-                return elements
-                
-            # Calculate KPI values
-            metrics = self._calculate_kpi_metrics(data)
-            
-            # Create table data
-            table_data = [
-                ["KPI", "Target", "Current", "Assessment"]  # Header row
-            ]
-            
-            # Add style for header
-            style = [
-                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-                ('BACKGROUND', (0, 0), (-1, 0), self.BRAND_NAVY),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-                ('FONTSIZE', (0, 0), (-1, -1), 8),
-                ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('PADDING', (0, 0), (-1, -1), 4),
-                ('ALIGN', (1, 1), (-1, -1), 'CENTER'),  # Center-align all data columns
-            ]
-            
-            # Add each KPI row
-            row_index = 1
-            for key, config in kpi_config.items():
-                if key in metrics:
-                    value = metrics[key]
-                    
-                    # Format value based on type
-                    if config['format'] == 'money':
-                        formatted_value = f"${value:,.2f}"
-                    elif config['format'] == 'percentage':
-                        formatted_value = f"{value:.1f}%"
-                    else:  # ratio
-                        formatted_value = f"{value:.2f}"
-                    
-                    # Format threshold text and determine if favorable
-                    if config.get('direction') == 'min':
-                        # "At least" threshold
-                        threshold = f"≥ ${config['threshold']:,.2f}" if config['format'] == 'money' else \
-                                f"≥ {config['threshold']:.1f}%" if config['format'] == 'percentage' else \
-                                f"≥ {config['threshold']:.2f}"
-                        is_favorable = value >= config['threshold']
-                    elif config.get('direction') == 'max':
-                        # "At most" threshold
-                        threshold = f"≤ ${config['threshold']:,.2f}" if config['format'] == 'money' else \
-                                f"≤ {config['threshold']:.1f}%" if config['format'] == 'percentage' else \
-                                f"≤ {config['threshold']:.2f}"
-                        is_favorable = value <= config['threshold']
-                    else:
-                        # Range threshold (like Cap Rate)
-                        threshold = f"{config['goodMin']:.1f}% - {config['goodMax']:.1f}%"
-                        is_favorable = config['goodMin'] <= value <= config['goodMax']
-                    
-                    assessment = "Favorable" if is_favorable else "Unfavorable"
-                    assessment_color = colors.green if is_favorable else colors.red
-                    
-                    # Add row to table
-                    table_data.append([
-                        config['label'],
-                        threshold,
-                        formatted_value,
-                        assessment
-                    ])
-                    
-                    # Add row styling
-                    style.extend([
-                        ('BACKGROUND', (0, row_index), (0, row_index), colors.lightgrey),
-                        ('TEXTCOLOR', (-1, row_index), (-1, row_index), assessment_color)
-                    ])
-                    row_index += 1
-            
-            # Create table with appropriate column widths
-            table = Table(
-                table_data,
-                colWidths=[2.5*inch, 1.5*inch, 1.5*inch, 1*inch],
-                style=TableStyle(style)
-            )
-            
-            elements.append(table)
-            elements.append(Spacer(1, 0.2*inch))
-            
-            # Add explanation paragraph
-            explanation_style = ParagraphStyle(
-                'Explanation',
-                parent=self.styles['Normal'],
-                fontSize=8,
-                textColor=colors.grey,
-                leading=10
-            )
-            elements.append(Paragraph(
-                "Key Performance Indicators (KPIs) evaluate different aspects of the investment. "
-                "Each metric has a target threshold that indicates good performance. "
-                "'Favorable' means the metric meets or exceeds its performance target.",
-                explanation_style
-            ))
-            
-            return elements
-            
-        except Exception as e:
-            logger.error(f"Error creating KPI table: {str(e)}")
-            logger.error(traceback.format_exc())
-            elements.append(Paragraph("Error generating KPI analysis", self.styles['Normal']))
-            return elements
-
-    def _create_loan_section(self, data: Dict) -> list:
-        """
-        Create loan details section handling all analysis types:
-        - BRRRR (including PadSplit BRRRR)
-        - Balloon Payment Loans
-        - Regular Loans (LTR, PadSplit LTR)
-        - Lease Option
-        """
-        try:
-            elements = []
-            elements.append(Paragraph("Loan Details", self.styles['SectionHeader']))
-            metrics = data.get('calculated_metrics', {})
-            analysis_type = data.get('analysis_type', '')
-
-            # Handle BRRRR analysis type (including PadSplit BRRRR)
-            if 'BRRRR' in analysis_type:
-                # Initial Hard Money Loan Details
-                initial_loan_data = [
-                    ["Initial Hard Money Loan", ""],
-                    ["Amount:", f"${self._safe_number(data.get('initial_loan_amount'), 2):,.2f}"],
-                    ["Interest Rate:", f"{self._safe_number(data.get('initial_loan_interest_rate'))}%"],
-                    ["Term:", f"{data.get('initial_loan_term', 0)} months"],
-                    ["Monthly Payment:", metrics.get('initial_loan_payment', '$0.00')],
-                    ["Interest Only:", "Yes" if data.get('initial_interest_only') else "No"],
-                    ["Down Payment:", f"${self._safe_number(data.get('initial_loan_down_payment'), 2):,.2f}"],
-                    ["Closing Costs:", f"${self._safe_number(data.get('initial_loan_closing_costs'), 2):,.2f}"]
-                ]
-                elements.append(self._create_metrics_table(initial_loan_data))
-                elements.append(Spacer(1, 0.2*inch))
-
-                # Refinance Loan Details
-                refinance_data = [
-                    ["Refinance Loan", ""],
-                    ["Amount:", f"${self._safe_number(data.get('refinance_loan_amount'), 2):,.2f}"],
-                    ["Interest Rate:", f"{self._safe_number(data.get('refinance_loan_interest_rate'))}%"],
-                    ["Term:", f"{data.get('refinance_loan_term', 0)} months"],
-                    ["Monthly Payment:", metrics.get('refinance_loan_payment', '$0.00')],
-                    ["Down Payment:", f"${self._safe_number(data.get('refinance_loan_down_payment'), 2):,.2f}"],
-                    ["Closing Costs:", f"${self._safe_number(data.get('refinance_loan_closing_costs'), 2):,.2f}"]
-                ]
-                elements.append(self._create_metrics_table(refinance_data))
-
-            # Handle Balloon Payment loans
-            elif self._check_balloon_payment(data):
-                # Display all loans in pre-balloon section
-                has_loans = False
-                total_payment = 0
-                
-                # Process all loans in pre-balloon section
-                for i in range(1, 4):
-                    prefix = f'loan{i}'
-                    amount = self._safe_number(data.get(f'{prefix}_loan_amount'))
-                    if amount > 0:
-                        has_loans = True
-                        loan_name = data.get(f'{prefix}_loan_name', '') or f"Loan {i}"
-                        loan_payment_str = metrics.get(f'{prefix}_loan_payment', '$0.00')
-                        # Extract numeric value from payment for total calculation
-                        payment_value = self._safe_number(loan_payment_str.replace('$', '').replace(',', ''))
-                        total_payment += payment_value
-                        
-                        loan_data = [
-                            [f"{loan_name} (Pre-Balloon)", ""],
-                            ["Amount:", f"${amount:,.2f}"],
-                            ["Interest Rate:", f"{self._safe_number(data.get(f'{prefix}_loan_interest_rate'))}%"],
-                            ["Term:", f"{data.get(f'{prefix}_loan_term', 0)} months"],
-                            ["Monthly Payment:", loan_payment_str],
-                            ["Interest Only:", "Yes" if data.get(f'{prefix}_interest_only') else "No"],
-                            ["Down Payment:", f"${self._safe_number(data.get(f'{prefix}_loan_down_payment'), 2):,.2f}"],
-                            ["Closing Costs:", f"${self._safe_number(data.get(f'{prefix}_loan_closing_costs'), 2):,.2f}"]
-                        ]
-                        elements.append(self._create_metrics_table(loan_data))
-                        elements.append(Spacer(1, 0.2*inch))
-                
-                # Add total payment and balloon due date after all loans
-                if has_loans:
-                    balloon_summary = [
-                        ["Balloon Payment Summary", ""],
-                        ["Total Monthly Payment:", f"${total_payment:,.2f}"],
-                        ["Balloon Due Date:", datetime.fromisoformat(data.get('balloon_due_date', '')).strftime('%Y-%m-%d') 
-                            if data.get('balloon_due_date') else 'N/A']
-                    ]
-                    elements.append(self._create_metrics_table(balloon_summary))
-                    elements.append(Spacer(1, 0.2*inch))
-
-                # Balloon Refinance Details
-                refinance_data = [
-                    ["Balloon Refinance Details", ""],
-                    ["Refinance Amount:", f"${self._safe_number(data.get('balloon_refinance_loan_amount'), 2):,.2f}"],
-                    ["Interest Rate:", f"{self._safe_number(data.get('balloon_refinance_loan_interest_rate'))}%"],
-                    ["Term:", f"{data.get('balloon_refinance_loan_term', 0)} months"],
-                    ["Monthly Payment:", metrics.get('post_balloon_monthly_payment', '$0.00')],
-                    ["LTV Percentage:", f"{self._safe_number(data.get('balloon_refinance_ltv_percentage'))}%"],
-                    ["Down Payment:", f"${self._safe_number(data.get('balloon_refinance_loan_down_payment'), 2):,.2f}"],
-                    ["Closing Costs:", f"${self._safe_number(data.get('balloon_refinance_loan_closing_costs'), 2):,.2f}"]
-                ]
-                elements.append(self._create_metrics_table(refinance_data))
-
-            # Handle Lease Option
-            elif analysis_type == 'Lease Option':
-                has_loans = False
-                
-                # Check for additional financing (up to 3 loans)
-                for i in range(1, 4):
-                    prefix = f'loan{i}'
-                    amount = self._safe_number(data.get(f'{prefix}_loan_amount'))
-                    if amount > 0:
-                        has_loans = True
-                        loan_data = [
-                            [data.get(f'{prefix}_loan_name', '') or f"Additional Financing {i}", ""],
-                            ["Amount:", f"${amount:,.2f}"],
-                            ["Interest Rate:", f"{self._safe_number(data.get(f'{prefix}_loan_interest_rate'))}%"],
-                            ["Term:", f"{data.get(f'{prefix}_loan_term', 0)} months"],
-                            ["Monthly Payment:", metrics.get(f'{prefix}_loan_payment', '$0.00')],
-                            ["Interest Only:", "Yes" if data.get(f'{prefix}_interest_only') else "No"],
-                            ["Down Payment:", f"${self._safe_number(data.get(f'{prefix}_loan_down_payment'), 2):,.2f}"],
-                            ["Closing Costs:", f"${self._safe_number(data.get(f'{prefix}_loan_closing_costs'), 2):,.2f}"]
-                        ]
-                        elements.append(self._create_metrics_table(loan_data))
-                        elements.append(Spacer(1, 0.2*inch))
-                
-                if not has_loans:
-                    elements.append(Paragraph("No additional financing", self.styles['Normal']))
-
-            # Handle regular loans (LTR, PadSplit LTR)
-            else:
-                has_loans = False
-                
-                # Process up to 3 loans
-                for i in range(1, 4):
-                    prefix = f'loan{i}'
-                    amount = self._safe_number(data.get(f'{prefix}_loan_amount'))
-                    if amount > 0:
-                        has_loans = True
-                        loan_data = [
-                            [data.get(f'{prefix}_loan_name', '') or f"Loan {i}", ""],
-                            ["Amount:", f"${amount:,.2f}"],
-                            ["Interest Rate:", f"{self._safe_number(data.get(f'{prefix}_loan_interest_rate'))}%"],
-                            ["Term:", f"{data.get(f'{prefix}_loan_term', 0)} months"],
-                            ["Monthly Payment:", metrics.get(f'{prefix}_loan_payment', '$0.00')],
-                            ["Interest Only:", "Yes" if data.get(f'{prefix}_interest_only') else "No"],
-                            ["Down Payment:", f"${self._safe_number(data.get(f'{prefix}_loan_down_payment'), 2):,.2f}"],
-                            ["Closing Costs:", f"${self._safe_number(data.get(f'{prefix}_loan_closing_costs'), 2):,.2f}"]
-                        ]
-                        elements.append(self._create_metrics_table(loan_data))
-                        # Add spacing between loans, but not after the last one
-                        if i < 3 and self._safe_number(data.get(f'loan{i+1}_loan_amount')) > 0:
-                            elements.append(Spacer(1, 0.2*inch))
-                
-                if not has_loans:
-                    elements.append(Paragraph("No loans", self.styles['Normal']))
-
-            return elements
-
-        except Exception as e:
-            logger.error(f"Error creating loan section: {str(e)}")
-            logger.error(traceback.format_exc())
-            return [Paragraph(f"Error creating loan section: {str(e)}", self.styles['Normal'])]
-
-    def _create_lease_option_details(self, data: Dict) -> list:
-        """Create lease option specific details section."""
-        elements = []
-        elements.append(Paragraph("Option Details", self.styles['SectionHeader']))
-        
-        # Format option details
-        option_data = [
-            ["Option Details", ""],
-            ["Option Fee:", f"${self._safe_number(data.get('option_consideration_fee'), 2):,.2f}"],
-            ["Option Term:", f"{data.get('option_term_months', 0)} months"],
-            ["Strike Price:", f"${self._safe_number(data.get('strike_price'), 2):,.2f}"],
-            ["Monthly Rent Credit:", f"{self._safe_number(data.get('monthly_rent_credit_percentage'))}%"],
-            ["Rent Credit Cap:", f"${self._safe_number(data.get('rent_credit_cap'), 2):,.2f}"]
-        ]
-        
-        # Calculate total potential credits
-        monthly_rent = self._safe_number(data.get('monthly_rent', 0))
-        monthly_credit_pct = self._safe_number(data.get('monthly_rent_credit_percentage', 0)) / 100
-        term_months = int(data.get('option_term_months', 0))
-        total_potential = monthly_rent * monthly_credit_pct * term_months
-        credit_cap = self._safe_number(data.get('rent_credit_cap', 0))
-        total_credits = min(total_potential, credit_cap)
-        
-        option_data.append(["Total Potential Credits:", f"${total_credits:,.2f}"])
-        
-        elements.append(self._create_metrics_table(option_data))
-        elements.append(Spacer(1, 0.2*inch))
-        
-        return elements
-
-    def _create_notes_section(self, data: Dict) -> list:
-        """Create notes section for the report."""
-        elements = []
-        
-        if notes := data.get('notes'):
-            elements.append(Spacer(1, 0.2*inch))  # Add some space before Notes section
-            elements.append(Paragraph("Notes", self.styles['SectionHeader']))
-            
-            # Create a style for notes text with better formatting
-            notes_style = ParagraphStyle(
-                'NotesStyle',
-                parent=self.styles['Normal'],
-                fontSize=9,
-                textColor=self.BRAND_NAVY,
-                spaceAfter=12,
-                leftIndent=12,
-                rightIndent=12,
-                firstLineIndent=0,
-                leading=14  # Line height
-            )
-            
-            # Add notes text, replacing newlines with <br/> tags
-            formatted_notes = notes.replace('\n', '<br/>')
-            elements.append(Paragraph(formatted_notes, notes_style))
-            elements.append(Spacer(1, 0.1*inch))
-        
-        return elements
-
-    def _create_expenses_section(self, data: Dict) -> list:
-        """Create operating expenses section with safe value handling."""
-        try:
-            elements = []
-            has_balloon = self._check_balloon_payment(data)
-            
-            if not has_balloon:
-                elements.append(Paragraph("Operating Expenses", self.styles['SectionHeader']))
-                monthly_rent = self._safe_number(data.get('monthly_rent'))
-                
-                # Basic expenses
-                expense_data = [
-                    ["Property Taxes:", f"${self._safe_number(data.get('property_taxes'), 2):,.2f}"],
-                    ["Insurance:", f"${self._safe_number(data.get('insurance'), 2):,.2f}"],
-                    ["HOA/COA/COOP:", f"${self._safe_number(data.get('hoa_coa_coop'), 2):,.2f}"]
-                ]
-                
-                # Percentage-based expenses
-                for field, label in {
-                    'management_fee_percentage': 'Management',
-                    'capex_percentage': 'CapEx',
-                    'vacancy_percentage': 'Vacancy',
-                    'repairs_percentage': 'Repairs'
-                }.items():
-                    percentage = self._safe_number(data.get(field))
-                    amount = (monthly_rent * percentage) / 100
-                    expense_data.append([
-                        f"{label}:", 
-                        f"({percentage:.1f}%) ${amount:,.2f}"
-                    ])
-                
-                elements.append(self._create_metrics_table(expense_data))
-                elements.append(Spacer(1, 6))
-            
-            return elements
-            
-        except Exception as e:
-            logger.error(f"Error in _create_expenses_section: {str(e)}")
-            return [Paragraph("Error generating expenses section", self.styles['Normal'])]
-
-    def _create_metrics_table(self, data: List[List[str]], include_header: bool = True) -> Table:
-        """Helper method to create consistently styled metrics tables."""
-        try:
-            # Make sure we have valid data
-            if not data or not isinstance(data, list):
-                logger.error("Invalid data for metrics table")
-                return Table([["No data available"]], colWidths=[4*inch])
-                
-            # Create table style
-            style = [
-                ('GRID', (0, 1), (-1, -1), 0.5, colors.grey),
-                ('BACKGROUND', (0, 1), (0, -1), colors.lightgrey),
-                ('TEXTCOLOR', (0, 1), (-1, -1), self.BRAND_NAVY),
-                ('FONTSIZE', (0, 0), (-1, -1), 8),
-                ('PADDING', (0, 0), (-1, -1), 4),
-                ('ALIGN', (1, 1), (1, -1), 'RIGHT')
-            ]
-            
-            # Add header styling if included
-            if include_header and len(data) > 0:
-                style.extend([
-                    ('SPAN', (0, 0), (1, 0)),
-                    ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
-                    ('BACKGROUND', (0, 0), (-1, 0), self.BRAND_NAVY),
-                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.white)
-                ])
-                
-            return Table(
-                data,
-                colWidths=[1.2*inch, 2.3*inch],
-                style=TableStyle(style)
-            )
-            
-        except Exception as e:
-            logger.error(f"Error creating metrics table: {e}")
-            return Table([["Error creating table"]], colWidths=[4*inch])
     
-    def _create_comps_section(self, data: Dict) -> list:
-        """Create property comparables section if comps exist."""
-        elements = []
+    def _calculate_kpi_metrics(self):
+        """Calculate KPI metrics from data."""
+        kpi_data = {}
         
-        # Check if we have comps data
-        comps_data = data.get('comps_data', {})
-        if not comps_data or not comps_data.get('comparables'):
-            return elements
-            
-        elements.append(Paragraph("Property Comparables Analysis", self.styles['SectionHeader']))
-        elements.append(Spacer(1, 0.2*inch))
+        # Get calculated metrics if available
+        calculated_metrics = self.data.get('calculated_metrics', {})
         
-        # Add estimated value summary
-        value_data = [
-            ["Property Value Analysis", ""],
-            ["Estimated Value:", f"${self._safe_number(comps_data.get('estimated_value'), 2):,.2f}"],
-            ["Value Range:", f"${self._safe_number(comps_data.get('value_range_low'), 2):,.2f} - "
-                            f"${self._safe_number(comps_data.get('value_range_high'), 2):,.2f}"],
-            ["Analysis Date:", datetime.fromisoformat(comps_data.get('last_run')).strftime('%Y-%m-%d')
-                if comps_data.get('last_run') else 'N/A']
-        ]
-        elements.append(self._create_metrics_table(value_data))
-        elements.append(Spacer(1, 0.3*inch))
+        # Cash on Cash Return
+        cash_on_cash = self._parse_percentage(calculated_metrics.get('cash_on_cash_return', '0%'))
+        kpi_data['cash_on_cash'] = f"{cash_on_cash:.1f}%"
+        kpi_data['cash_on_cash_target'] = '≥ 10.0%'
+        kpi_data['cash_on_cash_favorable'] = cash_on_cash >= 10.0
         
-        # Create comps table
-        comps_table_data = [
-            ["Address", "Price", "Bed/Bath", "Sq.Ft.", "Year", "Date", "Distance"],  # Header
-        ]
+        # Net Operating Income (NOI)
+        noi_monthly = self._calculate_noi()
+        kpi_data['noi'] = f"${noi_monthly:.2f}"
+        kpi_data['noi_target'] = '≥ $800.00'
+        kpi_data['noi_favorable'] = noi_monthly >= 800
         
-        # Add each comparable property
-        for comp in comps_data.get('comparables', []):
-            # Format date (prefer removal date, fallback to listed date)
-            date_str = comp.get('removedDate') or comp.get('listedDate')
-            date = datetime.fromisoformat(date_str.replace('Z', '+00:00')).strftime('%Y-%m-%d') if date_str else 'N/A'
-            
-            comps_table_data.append([
-                comp.get('formattedAddress', 'N/A'),
-                f"${self._safe_number(comp.get('price'), 2):,.2f}",
-                f"{comp.get('bedrooms', 0)}/{comp.get('bathrooms', 0)}",
-                f"{comp.get('squareFootage', 0):,}",
-                str(comp.get('yearBuilt', 'N/A')),
-                date,
-                f"{comp.get('distance', 0):.2f} mi"
-            ])
+        # Cap Rate
+        purchase_price = self._parse_currency(self.data.get('purchase_price', 0))
+        if purchase_price > 0:
+            cap_rate = (noi_monthly * 12 / purchase_price) * 100
+            kpi_data['cap_rate'] = f"{cap_rate:.1f}%"
+            kpi_data['cap_rate_target'] = '6.0% - 12.0%'
+            kpi_data['cap_rate_favorable'] = 6.0 <= cap_rate <= 12.0
         
-        # Create table with appropriate styling
-        style = TableStyle([
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-            ('BACKGROUND', (0, 0), (-1, 0), self.BRAND_NAVY),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('FONTSIZE', (0, 0), (-1, -1), 8),
-            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('PADDING', (0, 0), (-1, -1), 4),
-            # Center align specific columns
-            ('ALIGN', (1, 1), (1, -1), 'RIGHT'),  # Price
-            ('ALIGN', (2, 1), (2, -1), 'CENTER'),  # Bed/Bath
-            ('ALIGN', (3, 1), (3, -1), 'RIGHT'),  # Sq.Ft.
-            ('ALIGN', (4, 1), (4, -1), 'CENTER'),  # Year
-            ('ALIGN', (5, 1), (5, -1), 'CENTER'),  # Date
-            ('ALIGN', (6, 1), (6, -1), 'RIGHT'),  # Distance
+        # Debt Service Coverage Ratio (DSCR)
+        monthly_loan_payment = 0
+        for prefix in ['loan1', 'loan2', 'loan3']:
+            payment_str = calculated_metrics.get(f'{prefix}_loan_payment', '0')
+            monthly_loan_payment += self._parse_currency(payment_str)
+        
+        if monthly_loan_payment > 0:
+            dscr = noi_monthly / monthly_loan_payment
+            kpi_data['dscr'] = f"{dscr:.2f}"
+            kpi_data['dscr_target'] = '≥ 1.25'
+            kpi_data['dscr_favorable'] = dscr >= 1.25
+        
+        # Operating Expense Ratio
+        monthly_rent = self._parse_currency(self.data.get('monthly_rent', 0))
+        if monthly_rent > 0:
+            total_expenses = self._calculate_total_expenses(monthly_rent)
+            expense_ratio = (total_expenses / monthly_rent) * 100
+            kpi_data['expense_ratio'] = f"{expense_ratio:.1f}%"
+            kpi_data['expense_ratio_target'] = '≤ 40.0%'
+            kpi_data['expense_ratio_favorable'] = expense_ratio <= 40.0
+        
+        return kpi_data
+    
+    def _calculate_noi(self):
+        """Calculate Net Operating Income."""
+        # Get monthly rent
+        monthly_rent = self._parse_currency(self.data.get('monthly_rent', 0))
+        
+        # Calculate expenses (excluding debt service)
+        total_expenses = self._calculate_total_expenses(monthly_rent)
+        
+        # NOI = Rent - Expenses (excluding debt service)
+        noi = monthly_rent - total_expenses
+        
+        return noi
+    
+    def _calculate_total_expenses(self, monthly_rent):
+        """Calculate total monthly operating expenses."""
+        # Fixed expenses
+        fixed_expenses = sum([
+            self._parse_currency(self.data.get('property_taxes', 0)),
+            self._parse_currency(self.data.get('insurance', 0)),
+            self._parse_currency(self.data.get('hoa_coa_coop', 0))
         ])
         
-        # Calculate dynamic column widths
-        table = Table(
-            comps_table_data,
-            colWidths=[2.5*inch, 1*inch, 0.75*inch, 0.75*inch, 0.6*inch, 1*inch, 0.75*inch],
-            style=style
-        )
+        # Percentage-based expenses
+        pct_expenses = sum([
+            monthly_rent * self._parse_percentage(self.data.get('management_fee_percentage', 0)) / 100,
+            monthly_rent * self._parse_percentage(self.data.get('capex_percentage', 0)) / 100,
+            monthly_rent * self._parse_percentage(self.data.get('vacancy_percentage', 0)) / 100,
+            monthly_rent * self._parse_percentage(self.data.get('repairs_percentage', 0)) / 100
+        ])
         
-        elements.append(table)
-        elements.append(Spacer(1, 0.2*inch))
+        # Add PadSplit-specific expenses if applicable
+        padsplit_expenses = 0
+        if 'PadSplit' in self.data.get('analysis_type', ''):
+            padsplit_expenses = sum([
+                self._parse_currency(self.data.get('utilities', 0)),
+                self._parse_currency(self.data.get('internet', 0)),
+                self._parse_currency(self.data.get('cleaning', 0)),
+                self._parse_currency(self.data.get('pest_control', 0)),
+                self._parse_currency(self.data.get('landscaping', 0)),
+                monthly_rent * self._parse_percentage(self.data.get('padsplit_platform_percentage', 0)) / 100
+            ])
         
-        # Add explanation note
-        explanation_style = ParagraphStyle(
-            'Explanation',
-            parent=self.styles['Normal'],
-            fontSize=8,
-            textColor=colors.grey,
-            leading=10
-        )
-        elements.append(Paragraph(
-            "Comparable properties are selected based on similarity in location, size, and features. "
-            "The estimated value is calculated using RentCast's proprietary algorithm.",
-            explanation_style
-        ))
+        return fixed_expenses + pct_expenses + padsplit_expenses
+    
+    def _calculate_amortization_data(self):
+        """Calculate amortization schedule data."""
+        # Check if this has a balloon payment
+        has_balloon = self._has_balloon_payment()
+        
+        if has_balloon:
+            return self._calculate_balloon_amortization()
+        else:
+            return self._calculate_standard_amortization()
+    
+    def _has_balloon_payment(self):
+        """Check if this analysis has balloon payment."""
+        has_balloon = self.data.get('has_balloon_payment', False)
+        if not has_balloon:
+            return False
+            
+        # Additional validation for balloon payment values
+        balloon_amount = self._parse_currency(self.data.get('balloon_refinance_loan_amount', 0))
+        return bool(has_balloon and balloon_amount > 0 and self.data.get('balloon_due_date'))
+    
+    def _calculate_standard_amortization(self):
+        """Calculate standard amortization schedule for loans."""
+        schedules = []
+        
+        for i in range(1, 4):
+            prefix = f'loan{i}'
+            amount = self._parse_currency(self.data.get(f'{prefix}_loan_amount', 0))
+            if amount > 0:
+                interest_rate = self._parse_percentage(self.data.get(f'{prefix}_loan_interest_rate', 0)) / 100 / 12
+                term_months = int(self.data.get(f'{prefix}_loan_term', 0) or 0)
+                is_interest_only = self.data.get(f'{prefix}_interest_only', False)
+                
+                if term_months > 0:
+                    schedule = self._calculate_loan_schedule(
+                        principal=amount,
+                        interest_rate=interest_rate,
+                        term_months=term_months,
+                        is_interest_only=is_interest_only,
+                        label=f"Loan {i}"
+                    )
+                    
+                    schedules.append(schedule)
+        
+        # Combine schedules if multiple loans
+        if len(schedules) > 1:
+            max_length = max(len(schedule['schedule']) for schedule in schedules)
+            
+            total_schedule = []
+            for month in range(max_length):
+                month_data = {
+                    'month': month + 1,
+                    'date': datetime.now() + timedelta(days=30 * month),
+                    'principal_payment': 0,
+                    'interest_payment': 0,
+                    'total_payment': 0,
+                    'ending_balance': 0,
+                    'period': 'standard'
+                }
+                
+                for schedule in schedules:
+                    if month < len(schedule['schedule']):
+                        month_entry = schedule['schedule'][month]
+                        month_data['principal_payment'] += month_entry['principal_payment']
+                        month_data['interest_payment'] += month_entry['interest_payment']
+                        month_data['total_payment'] += month_entry['total_payment']
+                        month_data['ending_balance'] += month_entry['ending_balance']
+                
+                total_schedule.append(month_data)
+        elif len(schedules) == 1:
+            # Use the single schedule directly
+            total_schedule = schedules[0]['schedule']
+            for entry in total_schedule:
+                entry['period'] = 'standard'
+        else:
+            total_schedule = []
+        
+        return {
+            'loans': schedules,
+            'balloon_data': None,
+            'total_schedule': total_schedule
+        }
+    
+    def _calculate_balloon_amortization(self):
+        """Calculate amortization schedule for balloon payment scenario."""
+        # Calculate pre-balloon amortization
+        balloon_date = None
+        balloon_date_str = self.data.get('balloon_due_date', '')
+        
+        try:
+            if 'T' in balloon_date_str:
+                balloon_date = datetime.fromisoformat(balloon_date_str.replace('Z', '+00:00'))
+            else:
+                balloon_date = datetime.strptime(balloon_date_str, '%Y-%m-%d')
+                
+            today = datetime.now()
+            months_to_balloon = max(1, (balloon_date.year - today.year) * 12 + (balloon_date.month - today.month))
+        except (ValueError, TypeError):
+            # Default to 60 months if date parsing fails
+            months_to_balloon = 60
+            balloon_date = today + timedelta(days=30 * 60)
+        
+        # Setup balloon data
+        balloon_data = {
+            'balloon_date': balloon_date,
+            'months_to_balloon': months_to_balloon
+        }
+        
+        # Process pre-balloon loans
+        pre_balloon_schedules = []
+        total_pre_balloon_balance = 0
+        
+        for i in range(1, 4):
+            prefix = f'loan{i}'
+            amount = self._parse_currency(self.data.get(f'{prefix}_loan_amount', 0))
+            if amount > 0:
+                interest_rate = self._parse_percentage(self.data.get(f'{prefix}_loan_interest_rate', 0)) / 100 / 12
+                term_months = int(self.data.get(f'{prefix}_loan_term', 0) or 0)
+                is_interest_only = self.data.get(f'{prefix}_interest_only', False)
+                
+                if term_months > 0:
+                    # Calculate schedule
+                    schedule = self._calculate_loan_schedule(
+                        principal=amount,
+                        interest_rate=interest_rate,
+                        term_months=term_months,
+                        months_to_calculate=months_to_balloon,
+                        is_interest_only=is_interest_only,
+                        label=f"Loan {i}"
+                    )
+                    
+                    pre_balloon_schedules.append(schedule)
+                    if schedule['schedule'] and len(schedule['schedule']) > 0:
+                        total_pre_balloon_balance += schedule['schedule'][-1]['ending_balance']
+        
+        # Calculate post-balloon refinance
+        refinance_amount = self._parse_currency(self.data.get('balloon_refinance_loan_amount', 0))
+        refinance_rate = self._parse_percentage(self.data.get('balloon_refinance_loan_interest_rate', 0)) / 100 / 12
+        refinance_term = int(self.data.get('balloon_refinance_loan_term', 0) or 0)
+        
+        post_balloon_schedule = None
+        if refinance_amount > 0 and refinance_term > 0:
+            post_balloon_schedule = self._calculate_loan_schedule(
+                principal=refinance_amount,
+                interest_rate=refinance_rate,
+                term_months=refinance_term,
+                start_date=balloon_date,
+                label="Refinance Loan"
+            )
+        
+        # Combine schedules
+        total_schedule = []
+        
+        # Add pre-balloon months
+        if pre_balloon_schedules:
+            for month in range(months_to_balloon):
+                month_data = {
+                    'month': month + 1,
+                    'date': datetime.now() + timedelta(days=30 * month),
+                    'principal_payment': 0,
+                    'interest_payment': 0,
+                    'total_payment': 0,
+                    'ending_balance': 0,
+                    'period': 'pre-balloon'
+                }
+                
+                for schedule in pre_balloon_schedules:
+                    if month < len(schedule['schedule']):
+                        month_entry = schedule['schedule'][month]
+                        month_data['principal_payment'] += month_entry['principal_payment']
+                        month_data['interest_payment'] += month_entry['interest_payment']
+                        month_data['total_payment'] += month_entry['total_payment']
+                        month_data['ending_balance'] += month_entry['ending_balance']
+                
+                total_schedule.append(month_data)
+        
+        # Add post-balloon months
+        if post_balloon_schedule:
+            for i, month_entry in enumerate(post_balloon_schedule['schedule']):
+                modified_entry = month_entry.copy()
+                modified_entry['month'] = months_to_balloon + i + 1
+                modified_entry['period'] = 'post-balloon'
+                total_schedule.append(modified_entry)
+        
+        return {
+            'loans': pre_balloon_schedules + ([post_balloon_schedule] if post_balloon_schedule else []),
+            'balloon_data': balloon_data,
+            'total_schedule': total_schedule
+        }
+    
+    def _calculate_loan_schedule(self, principal, interest_rate, term_months, 
+                              months_to_calculate=None, is_interest_only=False,
+                              start_date=None, label="Loan"):
+        """Calculate amortization schedule for a single loan."""
+        if months_to_calculate is None:
+            months_to_calculate = term_months
+            
+        if start_date is None:
+            start_date = datetime.now()
+        
+        # Calculate monthly payment
+        if is_interest_only:
+            monthly_payment = principal * interest_rate
+        elif interest_rate > 0:
+            monthly_payment = principal * (interest_rate * (1 + interest_rate) ** term_months) / ((1 + interest_rate) ** term_months - 1)
+        else:
+            # Simple principal-only payment for 0% loans
+            monthly_payment = principal / term_months
+            
+        schedule = []
+        remaining_balance = principal
+        
+        for month in range(1, min(months_to_calculate + 1, term_months + 1)):
+            if is_interest_only:
+                interest = remaining_balance * interest_rate
+                principal_payment = 0  # No principal payment for interest-only
+                
+                # If it's the last month, pay off the entire principal
+                if month == term_months:
+                    principal_payment = remaining_balance
+            else:
+                interest = remaining_balance * interest_rate
+                principal_payment = monthly_payment - interest
+            
+            # Handle edge cases for very small remaining amounts
+            if remaining_balance < principal_payment:
+                principal_payment = remaining_balance
+                
+            remaining_balance -= principal_payment
+            
+            # Calculate payment date
+            payment_date = start_date + timedelta(days=30 * (month - 1))
+            
+            month_data = {
+                'month': month,
+                'date': payment_date,
+                'principal_payment': principal_payment,
+                'interest_payment': interest,
+                'total_payment': principal_payment + interest,
+                'ending_balance': remaining_balance
+            }
+            
+            schedule.append(month_data)
+            
+            # Stop if balance is paid off
+            if remaining_balance <= 0:
+                break
+        
+        return {
+            'label': label,
+            'principal': principal,
+            'interest_rate': interest_rate * 12 * 100,  # Convert back to annual percentage
+            'term_months': term_months,
+            'monthly_payment': monthly_payment,
+            'is_interest_only': is_interest_only,
+            'schedule': schedule
+        }
+    
+    def _parse_currency(self, value):
+        """Parse currency value to float."""
+        if value is None:
+            return 0.0
+            
+        try:
+            if isinstance(value, str):
+                # Remove currency symbols and commas - fixed string syntax
+                value = value.replace('$', '').replace(',', '')
+            return float(value)
+        except (ValueError, TypeError):
+            return 0.0
+        
+    def _parse_percentage(self, value):
+        """Parse percentage value to float."""
+        if value is None:
+            return 0.0
+            
+        try:
+            if isinstance(value, str):
+                value = value.replace('%', '')
+            return float(value)
+        except (ValueError, TypeError):
+            return 0.0
+        
+    def create_projections_section(self):
+        
+        """Create long-term performance projections section."""
+        elements = []
+        colors = BRAND_CONFIG['colors']
+        
+        # Add section header
+        elements.append(Paragraph("Long-Term Performance Projections", self.styles['BrandHeading3']))
+        elements.append(Spacer(1, 0.05*inch))
+        
+        # Calculate projections data
+        projections_data = self._calculate_projections_data()
+        
+        # Create table with projection data
+        if projections_data.get('metrics') and projections_data.get('timeframes'):
+            table_data = self._create_projections_table_data(projections_data)
+            
+            # Calculate column widths
+            table_width = self.doc.width * 0.95
+            first_col_width = table_width * 0.25
+            other_col_width = (table_width - first_col_width) / len(projections_data['timeframes'])
+            col_widths = [first_col_width] + [other_col_width] * len(projections_data['timeframes'])
+            
+            # Create alternating row colors
+            row_styles = []
+            for i in range(1, len(table_data)):  # Skip header row
+                if i % 2 == 1:  # Alternate rows
+                    row_styles.append(('BACKGROUND', (0, i), (-1, i), colors['table_row_alt']))
+            
+            # Create table with styling
+            projections_table = Table(
+                table_data,
+                colWidths=col_widths,
+                style=TableStyle([
+                    # Header styling
+                    ('BACKGROUND', (0, 0), (-1, 0), colors['primary']),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors['background']),
+                    ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+                    
+                    # First column styling
+                    ('BACKGROUND', (0, 1), (0, -1), colors['table_header']),
+                    ('ALIGN', (0, 1), (0, -1), 'LEFT'),
+                    
+                    # Values styling
+                    ('ALIGN', (1, 1), (-1, -1), 'RIGHT'),
+                    
+                    # Grid and borders
+                    ('LINEBELOW', (0, 0), (-1, -1), 0.25, colors['border_light']),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    
+                    # Padding
+                    ('TOPPADDING', (0, 0), (-1, -1), 3),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+                    ('LEFTPADDING', (0, 0), (-1, -1), 5),
+                    ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+                ] + row_styles)
+            )
+            
+            elements.append(projections_table)
+            
+            # Add explanation note
+            elements.append(Spacer(1, 0.06*inch))
+            note_text = (
+                "These projections assume 2.5% annual rent and expense growth, "
+                "3% property appreciation rate, and include both principal reduction "
+                "and property appreciation in the equity calculations."
+            )
+            elements.append(Paragraph(note_text, self.styles['BrandSmall']))
+        else:
+            # No data available
+            elements.append(Paragraph("No projections data available", self.styles['BrandNormal']))
         
         return elements
 
-def generate_report(data: Dict, report_type: str = 'analysis') -> BytesIO:
-    """Generate a PDF report from analysis data."""
-    try:
-        generator = ReportGenerator()
-        return generator.generate_report(data, report_type)
-    except Exception as e:
-        logger.error(f"Error generating report: {str(e)}")
-        raise RuntimeError(f"Failed to generate report: {str(e)}")
+    def _create_projections_table_data(self, projections_data):
+        """Create table data for projections."""
+        timeframes = projections_data['timeframes']
+        metrics = projections_data['metrics']
+        
+        # Create header row
+        header_style = ParagraphStyle(
+            name='ProjectionHeader',
+            parent=self.styles['TableHeader'],
+            fontSize=8,
+            textColor=BRAND_CONFIG['colors']['background'],
+            alignment=1  # Center aligned
+        )
+        
+        metric_style = ParagraphStyle(
+            name='MetricLabel',
+            parent=self.styles['BrandNormal'],
+            fontSize=8,
+            textColor=BRAND_CONFIG['colors']['text_dark'],
+            alignment=0  # Left aligned
+        )
+        
+        value_style = ParagraphStyle(
+            name='MetricValue',
+            parent=self.styles['BrandNormal'],
+            fontSize=8,
+            textColor=BRAND_CONFIG['colors']['text_dark'],
+            alignment=2  # Right aligned
+        )
+        
+        # Create header row
+        table_data = [
+            [Paragraph("Metric", header_style)] + 
+            [Paragraph(f"Year {year}", header_style) for year in timeframes]
+        ]
+        
+        # Define metrics to display
+        metric_display = [
+            ('monthly_cash_flow', 'Monthly Cash Flow', 'currency'),
+            ('noi', 'Net Operating Income', 'currency'),
+            ('cash_on_cash', 'Cash-on-Cash Return', 'percentage'),
+            ('cap_rate', 'Cap Rate', 'percentage'),
+            ('equity_earned', 'Equity Earned', 'currency')
+        ]
+        
+        # Add rows for each metric
+        for metric_key, metric_name, format_type in metric_display:
+            if metric_key in metrics:
+                row = [Paragraph(metric_name, metric_style)]
+                
+                # Add value for each timeframe
+                for i, year in enumerate(timeframes):
+                    value = metrics[metric_key][i]
+                    
+                    # Format based on type
+                    if format_type == 'currency':
+                        formatted_value = f"${value:,.2f}"
+                    else:  # percentage
+                        formatted_value = f"{value:.1f}%"
+                    
+                    row.append(Paragraph(formatted_value, value_style))
+                    
+                table_data.append(row)
+        
+        return table_data
+
+    def _calculate_projections_data(self):
+        """Calculate projection data for future years."""
+        timeframes = [1, 3, 5, 10]  # Years to project
+        
+        # Initialize metrics dictionary
+        metrics = {
+            'monthly_cash_flow': [],
+            'noi': [],
+            'cash_on_cash': [],
+            'cap_rate': [],
+            'equity_earned': []
+        }
+        
+        # Starting values
+        purchase_price = self._parse_currency(self.data.get('purchase_price', 0))
+        monthly_rent = self._parse_currency(self.data.get('monthly_rent', 0))
+        monthly_expenses = self._calculate_total_expenses(monthly_rent)
+        
+        # Get loan information for principal reduction calculation
+        amortization_data = self._calculate_amortization_data()
+        
+        # Annual growth rates
+        rent_growth_rate = 0.025  # 2.5% annual rent growth
+        expense_growth_rate = 0.025  # 2.5% annual expense growth
+        appreciation_rate = 0.03  # 3% annual property appreciation
+        
+        # Calculate metrics for each timeframe
+        for year in timeframes:
+            # Apply growth rates
+            projected_monthly_rent = monthly_rent * (1 + rent_growth_rate) ** year
+            projected_monthly_expenses = monthly_expenses * (1 + expense_growth_rate) ** year
+            
+            # Calculate NOI
+            projected_noi = projected_monthly_rent - projected_monthly_expenses
+            metrics['noi'].append(projected_noi)
+            
+            # Calculate property value with appreciation
+            projected_property_value = purchase_price * (1 + appreciation_rate) ** year
+            
+            # Calculate loan balances and equity
+            loan_balance = self._get_loan_balance_at_year(amortization_data, year)
+            equity = projected_property_value - loan_balance
+            metrics['equity_earned'].append(equity)
+            
+            # Calculate monthly cash flow
+            monthly_loan_payment = self._get_loan_payment_at_year(amortization_data, year)
+            projected_monthly_cash_flow = projected_noi - monthly_loan_payment
+            metrics['monthly_cash_flow'].append(projected_monthly_cash_flow)
+            
+            # Calculate cap rate
+            if projected_property_value > 0:
+                projected_cap_rate = (projected_noi * 12 / projected_property_value) * 100
+            else:
+                projected_cap_rate = 0
+            metrics['cap_rate'].append(projected_cap_rate)
+            
+            # Calculate cash-on-cash return
+            total_investment = self._calculate_total_investment()
+            if total_investment > 0:
+                projected_cash_on_cash = (projected_monthly_cash_flow * 12 / total_investment) * 100
+            else:
+                projected_cash_on_cash = 0
+            metrics['cash_on_cash'].append(projected_cash_on_cash)
+        
+        return {
+            'timeframes': timeframes,
+            'metrics': metrics
+        }
+
+    def _get_loan_balance_at_year(self, amortization_data, years):
+        """Get the remaining loan balance at a specific year."""
+        schedule = amortization_data.get('total_schedule', [])
+        if not schedule:
+            return 0
+            
+        target_month = years * 12
+        
+        # Find the closest month in the schedule
+        for i in range(len(schedule) - 1, -1, -1):
+            if schedule[i]['month'] <= target_month:
+                return schedule[i]['ending_balance']
+        
+        return 0
+
+    def _get_loan_payment_at_year(self, amortization_data, years):
+        """Get the monthly loan payment at a specific year."""
+        schedule = amortization_data.get('total_schedule', [])
+        if not schedule:
+            return 0
+            
+        target_month = years * 12
+        
+        # Find the closest month in the schedule
+        for i in range(len(schedule) - 1, -1, -1):
+            if schedule[i]['month'] <= target_month:
+                return schedule[i]['total_payment']
+        
+        return 0
+
+    def _calculate_total_investment(self):
+        """Calculate total cash invested in the property."""
+        # Sum up down payments from all loans
+        down_payment_total = 0
+        for i in range(1, 4):
+            prefix = f'loan{i}'
+            down_payment_total += self._parse_currency(self.data.get(f'{prefix}_loan_down_payment', 0))
+        
+        # Add closing costs
+        closing_costs = self._parse_currency(self.data.get('closing_costs', 0))
+        
+        # Add renovation costs
+        renovation_costs = self._parse_currency(self.data.get('renovation_costs', 0))
+        
+        # Add other costs like furnishings (for PadSplit)
+        furnishing_costs = self._parse_currency(self.data.get('furnishing_costs', 0))
+        
+        return down_payment_total + closing_costs + renovation_costs + furnishing_costs
+    
+    def create_purchase_details_section(self):
+        """Create purchase details section with pricing and costs."""
+        elements = []
+        colors = BRAND_CONFIG['colors']
+        
+        # Add section header
+        elements.append(Paragraph("Purchase Details", self.styles['BrandHeading3']))
+        elements.append(Spacer(1, 0.05*inch))
+        
+        # Define styles for table cells
+        label_style = ParagraphStyle(
+            name='PurchaseLabel',
+            parent=self.styles['BrandNormal'],
+            fontSize=8,
+            textColor=colors['text_dark'],
+            alignment=0  # Left aligned
+        )
+        
+        value_style = ParagraphStyle(
+            name='PurchaseValue',
+            parent=self.styles['BrandNormal'],
+            fontSize=8,
+            textColor=colors['text_dark'],
+            alignment=2  # Right aligned
+        )
+        
+        # Define purchase fields based on analysis type
+        purchase_fields = [
+            ('purchase_price', 'Purchase Price'),
+            ('after_repair_value', 'After Repair Value'),
+            ('renovation_costs', 'Renovation Costs'),
+            ('renovation_duration', 'Renovation Duration'),
+            ('cash_to_seller', 'Cash to Seller'),
+            ('closing_costs', 'Closing Costs'),
+            ('assignment_fee', 'Assignment Fee'),
+            ('marketing_costs', 'Marketing Costs')
+        ]
+        
+        # Add PadSplit-specific field
+        if 'PadSplit' in self.data.get('analysis_type', ''):
+            purchase_fields.append(('furnishing_costs', 'Furnishing Costs'))
+        
+        # Build table data
+        table_data = []
+        for key, label in purchase_fields:
+            if key in self.data and self.data[key]:
+                value = self.data[key]
+                
+                # Format currency values
+                if key in ['purchase_price', 'after_repair_value', 'renovation_costs', 
+                        'cash_to_seller', 'closing_costs', 'assignment_fee', 
+                        'marketing_costs', 'furnishing_costs']:
+                    if isinstance(value, (int, float)):
+                        value = f"${value:,.2f}"
+                # Format renovation duration
+                elif key == 'renovation_duration':
+                    if isinstance(value, (int, float)) and value > 0:
+                        value = f"{int(value)} month{'s' if int(value) != 1 else ''}"
+                
+                table_data.append([
+                    Paragraph(label + ":", label_style),
+                    Paragraph(str(value), value_style)
+                ])
+        
+        # Create and style the table
+        if table_data:
+            # Calculate column widths
+            col1_width = min(1.6*inch, self.doc.width * 0.45 * 0.6)
+            col2_width = (self.doc.width * 0.45) - col1_width
+            
+            # Create alternating row colors
+            row_styles = []
+            for i in range(len(table_data)):
+                if i % 2 == 1:  # Alternate rows
+                    row_styles.append(('BACKGROUND', (0, i), (-1, i), colors['table_row_alt']))
+            
+            purchase_table = Table(
+                table_data,
+                colWidths=[col1_width, col2_width],
+                style=TableStyle([
+                    # Label styling - left column
+                    ('BACKGROUND', (0, 0), (0, -1), colors['table_header']),
+                    ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+                    
+                    # Value styling - right column
+                    ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+                    
+                    # Grid and borders
+                    ('LINEBELOW', (0, 0), (-1, -1), 0.25, colors['border_light']),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    
+                    # Padding
+                    ('TOPPADDING', (0, 0), (-1, -1), 4),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                    ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                    ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+                ] + row_styles)
+            )
+            
+            # Apply table border
+            purchase_table.setStyle(TableStyle([
+                ('BOX', (0, 0), (-1, -1), 0.5, colors['border_light']),
+            ]))
+            
+            elements.append(purchase_table)
+        else:
+            # No data available
+            elements.append(Paragraph("No purchase details available", self.styles['BrandNormal']))
+        
+        return elements
+    
+    def create_financial_overview_section(self):
+        """Create financial overview section."""
+        elements = []
+        colors = BRAND_CONFIG['colors']
+        
+        # Add section header
+        elements.append(Paragraph("Financial Overview", self.styles['BrandHeading3']))
+        elements.append(Spacer(1, 0.05*inch))
+        
+        # Define styles for table cells
+        label_style = ParagraphStyle(
+            name='FinancialLabel',
+            parent=self.styles['BrandNormal'],
+            fontSize=8,
+            textColor=colors['text_dark'],
+            alignment=0  # Left aligned
+        )
+        
+        value_style = ParagraphStyle(
+            name='FinancialValue',
+            parent=self.styles['BrandNormal'],
+            fontSize=8,
+            textColor=colors['text_dark'],
+            alignment=2  # Right aligned
+        )
+        
+        # Define financial fields
+        financial_fields = [
+            ('monthly_rent', 'Monthly Rent'),
+            ('monthly_cash_flow', 'Monthly Cash Flow'),
+            ('annual_cash_flow', 'Annual Cash Flow'),
+            ('cash_on_cash_return', 'Cash on Cash Return'),
+            ('roi', 'ROI'),
+            ('total_cash_invested', 'Total Cash Invested')
+        ]
+        
+        # Build table data
+        table_data = []
+        
+        # Get calculated metrics
+        calculated_metrics = self.data.get('calculated_metrics', {})
+        
+        for key, label in financial_fields:
+            value = None
+            
+            # Get value from calculated metrics if available
+            if key in calculated_metrics:
+                value = calculated_metrics[key]
+            # Calculate some values if not already available
+            elif key == 'monthly_cash_flow':
+                noi = self._calculate_noi()
+                monthly_loan_payment = self._calculate_total_loan_payment()
+                value = f"${noi - monthly_loan_payment:.2f}"
+            elif key == 'annual_cash_flow':
+                if 'monthly_cash_flow' in calculated_metrics:
+                    monthly = self._parse_currency(calculated_metrics['monthly_cash_flow'])
+                    value = f"${monthly * 12:.2f}"
+            elif key == 'total_cash_invested':
+                total = self._calculate_total_investment()
+                value = f"${total:.2f}"
+            # Use direct values for some fields
+            elif key == 'monthly_rent':
+                value = f"${self._parse_currency(self.data.get('monthly_rent', 0)):.2f}"
+            
+            if value:
+                table_data.append([
+                    Paragraph(label + ":", label_style),
+                    Paragraph(str(value), value_style)
+                ])
+        
+        # Create and style the table
+        if table_data:
+            # Calculate column widths
+            col1_width = min(1.6*inch, self.doc.width * 0.45 * 0.6)
+            col2_width = (self.doc.width * 0.45) - col1_width
+            
+            # Create alternating row colors
+            row_styles = []
+            for i in range(len(table_data)):
+                if i % 2 == 1:  # Alternate rows
+                    row_styles.append(('BACKGROUND', (0, i), (-1, i), colors['table_row_alt']))
+            
+            financial_table = Table(
+                table_data,
+                colWidths=[col1_width, col2_width],
+                style=TableStyle([
+                    # Label styling - left column
+                    ('BACKGROUND', (0, 0), (0, -1), colors['table_header']),
+                    ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+                    
+                    # Value styling - right column
+                    ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+                    
+                    # Grid and borders
+                    ('LINEBELOW', (0, 0), (-1, -1), 0.25, colors['border_light']),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    
+                    # Padding
+                    ('TOPPADDING', (0, 0), (-1, -1), 4),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                    ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                    ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+                ] + row_styles)
+            )
+            
+            # Apply table border
+            financial_table.setStyle(TableStyle([
+                ('BOX', (0, 0), (-1, -1), 0.5, colors['border_light']),
+            ]))
+            
+            elements.append(financial_table)
+        else:
+            # No data available
+            elements.append(Paragraph("No financial overview available", self.styles['BrandNormal']))
+        
+        return elements
+    
+    def _calculate_total_loan_payment(self):
+        """Calculate total monthly loan payment across all loans."""
+        # Get calculated metrics
+        calculated_metrics = self.data.get('calculated_metrics', {})
+        
+        # For BRRRR, use refinance loan payment or initial loan payment
+        if 'BRRRR' in self.data.get('analysis_type', ''):
+            if 'refinance_loan_payment' in calculated_metrics:
+                return self._parse_currency(calculated_metrics['refinance_loan_payment'])
+            elif 'initial_loan_payment' in calculated_metrics:
+                return self._parse_currency(calculated_metrics['initial_loan_payment'])
+        
+        # For standard loans, sum all loan payments
+        total_payment = 0
+        for i in range(1, 4):
+            payment_key = f'loan{i}_loan_payment'
+            if payment_key in calculated_metrics:
+                total_payment += self._parse_currency(calculated_metrics[payment_key])
+        
+        return total_payment
+    
+    def create_balloon_sections(self):
+        """Create pre/post balloon payment financial overviews."""
+        elements = []
+        colors = BRAND_CONFIG['colors']
+        
+        # Create two sections for balloon payment comparison
+        pre_balloon = self.create_balloon_financial_section('pre_balloon', "Pre-Balloon Financial Overview")
+        post_balloon = self.create_balloon_financial_section('post_balloon', "Post-Balloon Financial Overview")
+        
+        # Create a two-column layout with pre-balloon and post-balloon sections
+        col_width = self.doc.width / 2 - 0.1*inch
+        two_col_data = [[pre_balloon, post_balloon]]
+        
+        two_col_table = Table(
+            two_col_data,
+            colWidths=[col_width, col_width],
+            style=TableStyle([
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('LEFTPADDING', (0, 0), (-1, -1), 0),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+                ('TOPPADDING', (0, 0), (-1, -1), 0),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+            ])
+        )
+        
+        elements.append(two_col_table)
+        return elements
+
+    def create_balloon_financial_section(self, section_type, title):
+        """Create financial overview for balloon payment scenarios."""
+        elements = []
+        colors = BRAND_CONFIG['colors']
+        
+        # Add section header
+        elements.append(Paragraph(title, self.styles['BrandHeading3']))
+        elements.append(Spacer(1, 0.05*inch))
+        
+        # Define styles for table cells
+        label_style = ParagraphStyle(
+            name=f'{section_type}Label',
+            parent=self.styles['BrandNormal'],
+            fontSize=8,
+            textColor=colors['text_dark'],
+            alignment=0  # Left aligned
+        )
+        
+        value_style = ParagraphStyle(
+            name=f'{section_type}Value',
+            parent=self.styles['BrandNormal'],
+            fontSize=8,
+            textColor=colors['text_dark'],
+            alignment=2  # Right aligned
+        )
+        
+        # Define financial fields based on section type
+        if section_type == 'pre_balloon':
+            financial_fields = [
+                ('monthly_rent', 'Monthly Rent'),
+                ('monthly_cash_flow', 'Monthly Cash Flow'),
+                ('annual_cash_flow', 'Annual Cash Flow'),
+                ('cash_on_cash_return', 'Cash on Cash Return'),
+                ('balloon_due_date', 'Balloon Due Date')
+            ]
+        else:  # post_balloon
+            financial_fields = [
+                ('monthly_rent', 'Monthly Rent'),
+                ('monthly_cash_flow', 'Monthly Cash Flow'),
+                ('annual_cash_flow', 'Annual Cash Flow'),
+                ('cash_on_cash_return', 'Cash-on-Cash Return'),
+                ('refinance_amount', 'Refinance Amount'),
+                ('refinance_ltv', 'Refinance LTV'),
+                ('monthly_payment_change', 'Monthly Payment Change')
+            ]
+        
+        # Build table data
+        table_data = []
+        calculated_metrics = self.data.get('calculated_metrics', {})
+        
+        # Get prefix-based metrics
+        for key, label in financial_fields:
+            value = None
+            metric_key = f"{section_type}_{key}" if key not in ['balloon_due_date', 'refinance_amount', 'refinance_ltv'] else key
+                
+            # Get value from calculated metrics if available
+            if metric_key in calculated_metrics:
+                value = calculated_metrics[metric_key]
+            # Special case handling
+            elif key == 'balloon_due_date':
+                value = self.data.get('balloon_due_date', '')
+                if 'T' in value:
+                    # Format ISO date
+                    try:
+                        date_obj = datetime.fromisoformat(value.replace('Z', '+00:00'))
+                        value = date_obj.strftime('%B %d, %Y')
+                    except (ValueError, TypeError):
+                        pass
+            elif key == 'refinance_amount':
+                value = f"${self._parse_currency(self.data.get('balloon_refinance_loan_amount', 0)):,.2f}"
+            elif key == 'refinance_ltv':
+                value = f"{self._parse_percentage(self.data.get('balloon_refinance_ltv_percentage', 0)):.1f}%"
+            elif key == 'monthly_rent':
+                # For post-balloon, apply rent growth
+                if section_type == 'post_balloon':
+                    balloon_date = self.data.get('balloon_due_date', '')
+                    today = datetime.now()
+                    years_to_balloon = 0
+                    
+                    try:
+                        if 'T' in balloon_date:
+                            balloon_date = datetime.fromisoformat(balloon_date.replace('Z', '+00:00'))
+                        else:
+                            balloon_date = datetime.strptime(balloon_date, '%Y-%m-%d')
+                        
+                        years_to_balloon = max(0, (balloon_date.year - today.year) + 
+                                            (balloon_date.month - today.month) / 12)
+                    except (ValueError, TypeError):
+                        years_to_balloon = 8  # Default if parsing fails
+                    
+                    # Apply 2.5% annual rent growth
+                    monthly_rent = self._parse_currency(self.data.get('monthly_rent', 0))
+                    grown_rent = monthly_rent * (1.025 ** years_to_balloon)
+                    value = f"${grown_rent:.2f}"
+                else:
+                    value = f"${self._parse_currency(self.data.get('monthly_rent', 0)):.2f}"
+            
+            if value:
+                table_data.append([
+                    Paragraph(label + ":", label_style),
+                    Paragraph(str(value), value_style)
+                ])
+        
+        # Create and style the table
+        if table_data:
+            # Calculate column widths
+            col1_width = min(1.6*inch, (self.doc.width/2 - 0.2*inch) * 0.6)
+            col2_width = (self.doc.width/2 - 0.2*inch) - col1_width
+            
+            # Create alternating row colors
+            row_styles = []
+            for i in range(len(table_data)):
+                if i % 2 == 1:  # Alternate rows
+                    row_styles.append(('BACKGROUND', (0, i), (-1, i), colors['table_row_alt']))
+            
+            financial_table = Table(
+                table_data,
+                colWidths=[col1_width, col2_width],
+                style=TableStyle([
+                    # Label styling - left column
+                    ('BACKGROUND', (0, 0), (0, -1), colors['table_header']),
+                    ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+                    
+                    # Value styling - right column
+                    ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+                    
+                    # Grid and borders
+                    ('LINEBELOW', (0, 0), (-1, -1), 0.25, colors['border_light']),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    
+                    # Padding
+                    ('TOPPADDING', (0, 0), (-1, -1), 4),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                    ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                    ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+                ] + row_styles)
+            )
+            
+            # Apply table border
+            financial_table.setStyle(TableStyle([
+                ('BOX', (0, 0), (-1, -1), 0.5, colors['border_light']),
+            ]))
+            
+            elements.append(financial_table)
+        else:
+            # No data available
+            elements.append(Paragraph(f"No {section_type} financial data available", self.styles['BrandNormal']))
+        
+        return elements
+    
+    def create_loans_and_expenses_section(self):
+        """Create two-column section with loan details and operating expenses."""
+        elements = []
+        
+        # Create loan details and operating expenses
+        loan_details = self.create_loan_details_section()
+        operating_expenses = self.create_operating_expenses_section()
+        
+        # Create two-column layout
+        col_width = self.doc.width / 2 - 0.1*inch
+        two_col_data = [[loan_details, operating_expenses]]
+        
+        two_col_table = Table(
+            two_col_data,
+            colWidths=[col_width, col_width],
+            style=TableStyle([
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('LEFTPADDING', (0, 0), (-1, -1), 0),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+                ('TOPPADDING', (0, 0), (-1, -1), 0),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+            ])
+        )
+        
+        elements.append(two_col_table)
+        return elements
+
+    def create_loan_details_section(self):
+        """Create loan details section."""
+        elements = []
+        colors = BRAND_CONFIG['colors']
+        
+        # Add section header
+        elements.append(Paragraph("Loan Details", self.styles['BrandHeading3']))
+        elements.append(Spacer(1, 0.05*inch))
+        
+        # Create loan tables based on analysis type
+        if 'BRRRR' in self.data.get('analysis_type', ''):
+            # BRRRR: Show initial and refinance loans
+            elements.append(self._create_loan_table("Initial Hard Money Loan", 
+                                                prefix='initial',
+                                                special_styling='hard_money'))
+            elements.append(Spacer(1, 0.2*inch))
+            elements.append(self._create_loan_table("Refinance Loan", 
+                                                prefix='refinance',
+                                                special_styling='refinance'))
+        elif self._has_balloon_payment():
+            # Balloon payment: Show loans with balloon and refinance details
+            # Pre-balloon loans
+            for i in range(1, 4):
+                prefix = f'loan{i}'
+                if self._has_loan(prefix):
+                    loan_name = self.data.get(f'{prefix}_loan_name', '') or f"Loan {i}"
+                    elements.append(self._create_loan_table(f"{loan_name} (Pre-Balloon)", 
+                                                        prefix=prefix,
+                                                        special_styling='balloon_pre'))
+                    elements.append(Spacer(1, 0.1*inch))
+            
+            # Add balloon summary
+            elements.append(self._create_balloon_summary())
+            elements.append(Spacer(1, 0.1*inch))
+            
+            # Add refinance details
+            elements.append(self._create_balloon_refinance_table())
+        else:
+            # Standard loans: Show each loan
+            for i in range(1, 4):
+                prefix = f'loan{i}'
+                if self._has_loan(prefix):
+                    loan_name = self.data.get(f'{prefix}_loan_name', '') or f"Loan {i}"
+                    elements.append(self._create_loan_table(loan_name, prefix=prefix))
+                    if i < 3 and self._has_loan(f'loan{i+1}'):
+                        elements.append(Spacer(1, 0.1*inch))
+        
+        return elements
+
+    def create_operating_expenses_section(self):
+        """Create operating expenses section."""
+        elements = []
+        colors = BRAND_CONFIG['colors']
+        
+        # Add section header
+        elements.append(Paragraph("Operating Expenses", self.styles['BrandHeading3']))
+        elements.append(Spacer(1, 0.05*inch))
+        
+        # Define styles for table cells
+        label_style = ParagraphStyle(
+            name='ExpenseLabel',
+            parent=self.styles['BrandNormal'],
+            fontSize=8,
+            textColor=colors['text_dark'],
+            alignment=0  # Left aligned
+        )
+        
+        value_style = ParagraphStyle(
+            name='ExpenseValue',
+            parent=self.styles['BrandNormal'],
+            fontSize=8,
+            textColor=colors['text_dark'],
+            alignment=2  # Right aligned
+        )
+        
+        category_style = ParagraphStyle(
+            name='ExpenseCategory',
+            parent=self.styles['BrandNormal'],
+            fontSize=7,
+            textColor=colors['text_light'],
+            fontName=BRAND_CONFIG['fonts']['primary'],
+            alignment=0  # Left aligned
+        )
+        
+        # Organize expenses by category
+        fixed_expenses = []
+        percentage_expenses = []
+        padsplit_expenses = []
+        
+        # Fixed expenses
+        for key, label in [
+            ('property_taxes', 'Property Taxes'),
+            ('insurance', 'Insurance'),
+            ('hoa_coa_coop', 'HOA/COA/COOP')
+        ]:
+            if key in self.data and self.data[key]:
+                value = f"${self._parse_currency(self.data[key]):.2f}"
+                fixed_expenses.append([
+                    Paragraph(label + ":", label_style),
+                    Paragraph(value, value_style)
+                ])
+        
+        # PadSplit specific expenses
+        if 'PadSplit' in self.data.get('analysis_type', ''):
+            for key, label in [
+                ('utilities', 'Utilities'),
+                ('internet', 'Internet'),
+                ('cleaning', 'Cleaning'),
+                ('pest_control', 'Pest Control'),
+                ('landscaping', 'Landscaping')
+            ]:
+                if key in self.data and self.data[key]:
+                    value = f"${self._parse_currency(self.data[key]):.2f}"
+                    padsplit_expenses.append([
+                        Paragraph(label + ":", label_style),
+                        Paragraph(value, value_style)
+                    ])
+            
+            # Add platform fee
+            platform_pct = self._parse_percentage(self.data.get('padsplit_platform_percentage', 0))
+            if platform_pct > 0:
+                monthly_rent = self._parse_currency(self.data.get('monthly_rent', 0))
+                platform_fee = monthly_rent * platform_pct / 100
+                padsplit_expenses.append([
+                    Paragraph("Platform Fee:", label_style),
+                    Paragraph(f"({platform_pct:.1f}%) ${platform_fee:.2f}", value_style)
+                ])
+        
+        # Percentage-based expenses
+        monthly_rent = self._parse_currency(self.data.get('monthly_rent', 0))
+        
+        for key, label, pct_key in [
+            ('management_fee', 'Management', 'management_fee_percentage'),
+            ('capex', 'CapEx', 'capex_percentage'),
+            ('vacancy', 'Vacancy', 'vacancy_percentage'),
+            ('repairs', 'Repairs', 'repairs_percentage')
+        ]:
+            pct = self._parse_percentage(self.data.get(pct_key, 0))
+            if pct > 0:
+                amount = monthly_rent * pct / 100
+                percentage_expenses.append([
+                    Paragraph(label + ":", label_style),
+                    Paragraph(f"({pct:.1f}%) ${amount:.2f}", value_style)
+                ])
+        
+        # Combine all expenses with category headers
+        table_data = []
+        
+        # Fixed expenses
+        if fixed_expenses:
+            table_data.extend(fixed_expenses)
+        
+        # PadSplit expenses
+        if padsplit_expenses:
+            if fixed_expenses:  # Add separator if needed
+                table_data.append([
+                    Paragraph("PadSplit Expenses:", category_style),
+                    Paragraph("", value_style)
+                ])
+            table_data.extend(padsplit_expenses)
+        
+        # Percentage expenses
+        if percentage_expenses:
+            if fixed_expenses or padsplit_expenses:  # Add separator if needed
+                table_data.append([
+                    Paragraph("Variable Expenses:", category_style),
+                    Paragraph("", value_style)
+                ])
+            table_data.extend(percentage_expenses)
+        
+        # Create and style the table
+        if table_data:
+            # Calculate column widths
+            col1_width = min(1.6*inch, (self.doc.width/2 - 0.2*inch) * 0.6)
+            col2_width = (self.doc.width/2 - 0.2*inch) - col1_width
+            
+            # Create alternating row colors and style category headers
+            row_styles = []
+            category_styles = []
+            
+            for i, row in enumerate(table_data):
+                if i % 2 == 1 and not (isinstance(row[0], Paragraph) and "Expenses:" in row[0].text):
+                    row_styles.append(('BACKGROUND', (0, i), (-1, i), colors['table_row_alt']))
+                
+                if isinstance(row[0], Paragraph) and "Expenses:" in row[0].text:
+                    category_styles.append(('LINEABOVE', (0, i), (-1, i), 0.5, colors['border_light']))
+                    category_styles.append(('BACKGROUND', (0, i), (0, i), colors['table_header']))
+            
+            expenses_table = Table(
+                table_data,
+                colWidths=[col1_width, col2_width],
+                style=TableStyle([
+                    # Label styling - left column
+                    ('BACKGROUND', (0, 0), (0, -1), colors['table_header']),
+                    ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+                    
+                    # Value styling - right column
+                    ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+                    
+                    # Grid and borders
+                    ('LINEBELOW', (0, 0), (-1, -1), 0.25, colors['border_light']),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    
+                    # Padding
+                    ('TOPPADDING', (0, 0), (-1, -1), 4),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                    ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                    ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+                ] + row_styles + category_styles)
+            )
+            
+            # Apply table border
+            expenses_table.setStyle(TableStyle([
+                ('BOX', (0, 0), (-1, -1), 0.5, colors['border_light']),
+            ]))
+            
+            elements.append(expenses_table)
+        else:
+            # No data available
+            elements.append(Paragraph("No operating expenses available", self.styles['BrandNormal']))
+        
+        return elements
+    
+    def _has_loan(self, prefix):
+        """Check if a loan with the given prefix exists and has a non-zero amount."""
+        amount = self._parse_currency(self.data.get(f'{prefix}_loan_amount', 0))
+        return amount > 0
+
+    def _create_loan_table(self, title, prefix, special_styling=None):
+        """Create a loan details table with appropriate styling."""
+        colors = BRAND_CONFIG['colors']
+        
+        # Determine header color based on loan type
+        header_color = colors['primary']
+        if special_styling == 'hard_money':
+            header_color = colors['warning']
+        elif special_styling == 'refinance':
+            header_color = colors['success']
+        elif special_styling == 'balloon_pre':
+            header_color = colors['tertiary']
+        
+        # Define styles
+        header_style = ParagraphStyle(
+            name='LoanHeader',
+            parent=self.styles['TableHeader'],
+            fontSize=9,
+            textColor=colors['background'],
+            alignment=1  # Center aligned
+        )
+        
+        label_style = ParagraphStyle(
+            name='LoanLabel',
+            parent=self.styles['BrandNormal'],
+            fontSize=8,
+            textColor=colors['text_dark'],
+            alignment=0  # Left aligned
+        )
+        
+        value_style = ParagraphStyle(
+            name='LoanValue',
+            parent=self.styles['BrandNormal'],
+            fontSize=8,
+            textColor=colors['text_dark'],
+            alignment=2  # Right aligned
+        )
+        
+        value_bold_style = ParagraphStyle(
+            name='LoanValueBold',
+            parent=value_style,
+            fontName=BRAND_CONFIG['fonts']['primary']
+        )
+        
+        # Create table data
+        table_data = [
+            [Paragraph(title, header_style)]
+        ]
+        
+        # Check if we have loan amount
+        amount = self._parse_currency(self.data.get(f'{prefix}_loan_amount', 0))
+        if amount <= 0:
+            return Paragraph(f"No data for {title}", self.styles['BrandNormal'])
+        
+        # Add loan details
+        table_data.extend([
+            [Paragraph("Amount:", label_style),
+            Paragraph(f"${amount:,.2f}", value_bold_style)],
+            
+            [Paragraph("Interest Rate:", label_style),
+            Paragraph(f"{self._parse_percentage(self.data.get(f'{prefix}_loan_interest_rate', 0)):.2f}%", value_style)],
+            
+            [Paragraph("Term:", label_style),
+            Paragraph(f"{int(self.data.get(f'{prefix}_loan_term', 0))} months", value_style)],
+            
+            [Paragraph("Monthly Payment:", label_style),
+            Paragraph(self.data.get('calculated_metrics', {}).get(f'{prefix}_loan_payment', '$0.00'), value_bold_style)]
+        ])
+        
+        # Add interest only flag
+        is_interest_only = self.data.get(f'{prefix}_interest_only', False)
+        interest_style = value_bold_style if is_interest_only else value_style
+        table_data.append([
+            Paragraph("Interest Only:", label_style),
+            Paragraph("Yes" if is_interest_only else "No", interest_style)
+        ])
+        
+        # Add down payment and closing costs
+        table_data.extend([
+            [Paragraph("Down Payment:", label_style),
+            Paragraph(f"${self._parse_currency(self.data.get(f'{prefix}_loan_down_payment', 0)):,.2f}", value_style)],
+            
+            [Paragraph("Closing Costs:", label_style),
+            Paragraph(f"${self._parse_currency(self.data.get(f'{prefix}_loan_closing_costs', 0)):,.2f}", value_style)]
+        ])
+        
+        # Calculate column widths
+        col1_width = min(1.6*inch, (self.doc.width/2 - 0.2*inch) * 0.6)
+        col2_width = (self.doc.width/2 - 0.2*inch) - col1_width
+        
+        # Create alternating row colors
+        row_styles = []
+        for i in range(1, len(table_data)):  # Skip header row
+            if i % 2 == 1:  # Alternate rows
+                row_styles.append(('BACKGROUND', (0, i), (-1, i), colors['table_row_alt']))
+        
+        # Create table with styling
+        loan_table = Table(
+            table_data,
+            colWidths=[col1_width, col2_width],
+            style=TableStyle([
+                # Header styling
+                ('SPAN', (0, 0), (1, 0)),  # Span header across columns
+                ('ALIGN', (0, 0), (0, 0), 'CENTER'),  # Center header
+                ('BACKGROUND', (0, 0), (1, 0), header_color),  # Custom header background
+                ('TEXTCOLOR', (0, 0), (1, 0), colors['background']),  # Header text color
+                
+                # Content styling
+                ('ALIGN', (0, 1), (0, -1), 'LEFT'),  # Left align labels
+                ('ALIGN', (1, 1), (1, -1), 'RIGHT'),  # Right align values
+                ('BACKGROUND', (0, 1), (0, -1), colors['table_header']),  # Label background
+                
+                # Grid and borders
+                ('LINEBELOW', (0, 0), (-1, -1), 0.25, colors['border_light']),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                
+                # Padding
+                ('TOPPADDING', (0, 0), (-1, -1), 4),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+            ] + row_styles)
+        )
+        
+        # Apply table border
+        loan_table.setStyle(TableStyle([
+            ('BOX', (0, 0), (-1, -1), 0.5, colors['border_light']),
+        ]))
+        
+        return loan_table
+
+    def _create_balloon_summary(self):
+        """Create a balloon payment summary table."""
+        colors = BRAND_CONFIG['colors']
+        
+        # Define styles
+        header_style = ParagraphStyle(
+            name='BalloonHeader',
+            parent=self.styles['TableHeader'],
+            fontSize=9,
+            textColor=colors['background'],
+            alignment=1  # Center aligned
+        )
+        
+        label_style = ParagraphStyle(
+            name='BalloonLabel',
+            parent=self.styles['BrandNormal'],
+            fontSize=8,
+            textColor=colors['text_dark'],
+            alignment=0  # Left aligned
+        )
+        
+        value_style = ParagraphStyle(
+            name='BalloonValue',
+            parent=self.styles['BrandNormal'],
+            fontSize=8,
+            textColor=colors['text_dark'],
+            alignment=2  # Right aligned
+        )
+        
+        # Calculate total monthly payment
+        total_payment = 0
+        for i in range(1, 4):
+            prefix = f'loan{i}'
+            if self._has_loan(prefix):
+                payment_str = self.data.get('calculated_metrics', {}).get(f'{prefix}_loan_payment', '0')
+                total_payment += self._parse_currency(payment_str)
+        
+        # Create data for balloon summary
+        table_data = [
+            [Paragraph("Balloon Payment Summary", header_style)],
+            [Paragraph("Total Monthly Payment:", label_style),
+            Paragraph(f"${total_payment:,.2f}", value_style)],
+            [Paragraph("Balloon Due Date:", label_style),
+            Paragraph(self.data.get('balloon_due_date', 'N/A'), value_style)]
+        ]
+        
+        # Calculate column widths
+        col1_width = min(1.6*inch, (self.doc.width/2 - 0.2*inch) * 0.6)
+        col2_width = (self.doc.width/2 - 0.2*inch) - col1_width
+        
+        # Create table with styling
+        balloon_table = Table(
+            table_data,
+            colWidths=[col1_width, col2_width],
+            style=TableStyle([
+                # Header styling
+                ('SPAN', (0, 0), (1, 0)),  # Span header across columns
+                ('ALIGN', (0, 0), (0, 0), 'CENTER'),  # Center header
+                ('BACKGROUND', (0, 0), (1, 0), colors['warning']),  # Warning color for balloon
+                ('TEXTCOLOR', (0, 0), (1, 0), colors['background']),  # Header text color
+                
+                # Content styling
+                ('ALIGN', (0, 1), (0, -1), 'LEFT'),  # Left align labels
+                ('ALIGN', (1, 1), (1, -1), 'RIGHT'),  # Right align values
+                ('BACKGROUND', (0, 1), (0, -1), colors['table_header']),  # Label background
+                
+                # Highlight due date
+                ('BACKGROUND', (0, 2), (0, 2), colors['table_header']),
+                
+                # Grid and borders
+                ('LINEBELOW', (0, 0), (-1, -1), 0.25, colors['border_light']),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                
+                # Padding
+                ('TOPPADDING', (0, 0), (-1, -1), 4),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+            ])
+        )
+        
+        # Apply table border
+        balloon_table.setStyle(TableStyle([
+            ('BOX', (0, 0), (-1, -1), 0.5, colors['border_light']),
+        ]))
+        
+        return balloon_table
+
+    def _create_balloon_refinance_table(self):
+        """Create a refinance details table for balloon payment."""
+        colors = BRAND_CONFIG['colors']
+        
+        # Define styles
+        header_style = ParagraphStyle(
+            name='RefinanceHeader',
+            parent=self.styles['TableHeader'],
+            fontSize=9,
+            textColor=colors['background'],
+            alignment=1  # Center aligned
+        )
+        
+        label_style = ParagraphStyle(
+            name='RefinanceLabel',
+            parent=self.styles['BrandNormal'],
+            fontSize=8,
+            textColor=colors['text_dark'],
+            alignment=0  # Left aligned
+        )
+        
+        value_style = ParagraphStyle(
+            name='RefinanceValue',
+            parent=self.styles['BrandNormal'],
+            fontSize=8,
+            textColor=colors['text_dark'],
+            alignment=2  # Right aligned
+        )
+        
+        value_bold_style = ParagraphStyle(
+            name='RefinanceValueBold',
+            parent=value_style,
+            fontName=BRAND_CONFIG['fonts']['primary']
+        )
+        
+        # Create data for refinance details
+        table_data = [
+            [Paragraph("Balloon Refinance Details", header_style)],
+            [Paragraph("Refinance Amount:", label_style),
+            Paragraph(f"${self._parse_currency(self.data.get('balloon_refinance_loan_amount', 0)):,.2f}", value_bold_style)],
+            [Paragraph("Interest Rate:", label_style),
+            Paragraph(f"{self._parse_percentage(self.data.get('balloon_refinance_loan_interest_rate', 0)):.2f}%", value_style)],
+            [Paragraph("Term:", label_style),
+            Paragraph(f"{int(self.data.get('balloon_refinance_loan_term', 0))} months", value_style)],
+            [Paragraph("Monthly Payment:", label_style),
+            Paragraph(self.data.get('calculated_metrics', {}).get('post_balloon_monthly_payment', '$0.00'), value_bold_style)],
+            [Paragraph("LTV Percentage:", label_style),
+            Paragraph(f"{self._parse_percentage(self.data.get('balloon_refinance_ltv_percentage', 0)):.1f}%", value_style)],
+            [Paragraph("Down Payment:", label_style),
+            Paragraph(f"${self._parse_currency(self.data.get('balloon_refinance_loan_down_payment', 0)):,.2f}", value_style)],
+            [Paragraph("Closing Costs:", label_style),
+            Paragraph(f"${self._parse_currency(self.data.get('balloon_refinance_loan_closing_costs', 0)):,.2f}", value_style)]
+        ]
+        
+        # Calculate column widths
+        col1_width = min(1.6*inch, (self.doc.width/2 - 0.2*inch) * 0.6)
+        col2_width = (self.doc.width/2 - 0.2*inch) - col1_width
+        
+        # Create alternating row colors
+        row_styles = []
+        for i in range(1, len(table_data)):  # Skip header row
+            if i % 2 == 1:  # Alternate rows
+                row_styles.append(('BACKGROUND', (0, i), (-1, i), colors['table_row_alt']))
+        
+        # Create table with styling
+        refinance_table = Table(
+            table_data,
+            colWidths=[col1_width, col2_width],
+            style=TableStyle([
+                # Header styling
+                ('SPAN', (0, 0), (1, 0)),  # Span header across columns
+                ('ALIGN', (0, 0), (0, 0), 'CENTER'),  # Center header
+                ('BACKGROUND', (0, 0), (1, 0), colors['success']),  # Success color for refinance
+                ('TEXTCOLOR', (0, 0), (1, 0), colors['background']),  # Header text color
+                
+                # Content styling
+                ('ALIGN', (0, 1), (0, -1), 'LEFT'),  # Left align labels
+                ('ALIGN', (1, 1), (1, -1), 'RIGHT'),  # Right align values
+                ('BACKGROUND', (0, 1), (0, -1), colors['table_header']),  # Label background
+                
+                # Grid and borders
+                ('LINEBELOW', (0, 0), (-1, -1), 0.25, colors['border_light']),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                
+                # Padding
+                ('TOPPADDING', (0, 0), (-1, -1), 4),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+            ] + row_styles)
+        )
+        
+        # Apply table border
+        refinance_table.setStyle(TableStyle([
+            ('BOX', (0, 0), (-1, -1), 0.5, colors['border_light']),
+        ]))
+        
+        return refinance_table
