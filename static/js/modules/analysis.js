@@ -4683,6 +4683,182 @@ window.analysisModule = {
             ${this.createNotesSection(analysis.notes)}`;
     },
     
+    getBRRRRLoanDetails(analysis) {
+        // Log BRRRR call
+        console.log('Generating BRRRR loan details for analysis type:', analysis.analysis_type);
+        
+        // Check if we have the required loan data
+        const hasInitialLoan = this.toRawNumber(analysis.initial_loan_amount) > 0;
+        const hasRefinanceLoan = this.toRawNumber(analysis.refinance_loan_amount) > 0;
+        
+        // Get loan payment metrics - use fallback values if not in calculated_metrics
+        let initialLoanPayment = '$0.00';
+        let refinanceLoanPayment = '$0.00';
+        
+        if (analysis.calculated_metrics) {
+            // Try to get values from calculated_metrics first
+            initialLoanPayment = analysis.calculated_metrics.initial_loan_payment || '$0.00';
+            refinanceLoanPayment = analysis.calculated_metrics.refinance_loan_payment || '$0.00';
+        }
+        
+        // If not available in calculated_metrics, calculate them directly
+        if (initialLoanPayment === '$0.00' && hasInitialLoan) {
+            // Basic calculation for initial loan payment
+            const loanAmount = this.toRawNumber(analysis.initial_loan_amount);
+            const interestRate = this.toRawNumber(analysis.initial_loan_interest_rate) / 100 / 12; // Monthly rate
+            const term = this.toRawNumber(analysis.initial_loan_term);
+            
+            if (analysis.initial_interest_only) {
+                // Interest-only payment
+                initialLoanPayment = this.formatDisplayValue(loanAmount * interestRate);
+            } else if (term > 0 && interestRate > 0) {
+                // Amortized payment formula: P * r * (1+r)^n / ((1+r)^n - 1)
+                const payment = loanAmount * interestRate * Math.pow(1 + interestRate, term) / 
+                              (Math.pow(1 + interestRate, term) - 1);
+                initialLoanPayment = this.formatDisplayValue(payment);
+            }
+        }
+        
+        if (refinanceLoanPayment === '$0.00' && hasRefinanceLoan) {
+            // Basic calculation for refinance loan payment
+            const loanAmount = this.toRawNumber(analysis.refinance_loan_amount);
+            const interestRate = this.toRawNumber(analysis.refinance_loan_interest_rate) / 100 / 12; // Monthly rate
+            const term = this.toRawNumber(analysis.refinance_loan_term);
+            
+            if (term > 0 && interestRate > 0) {
+                // Amortized payment formula: P * r * (1+r)^n / ((1+r)^n - 1)
+                const payment = loanAmount * interestRate * Math.pow(1 + interestRate, term) / 
+                              (Math.pow(1 + interestRate, term) - 1);
+                refinanceLoanPayment = this.formatDisplayValue(payment);
+            }
+        }
+        
+        // Determine if initial loan is interest-only
+        const isInitialLoanInterestOnly = analysis.initial_interest_only || false;
+        
+        // Check if we have any loan data
+        if (!hasInitialLoan && !hasRefinanceLoan) {
+            console.log('No BRRRR loan data found, showing empty message');
+            return `
+                <div class="text-center py-4">
+                    <p class="mb-0 text-muted">No loan details available</p>
+                </div>`;
+        }
+        
+        // Build the loan details HTML
+        return `
+            <div class="accordion" id="brrrrLoansAccordion">
+                ${hasInitialLoan ? `
+                <!-- Initial Loan Section -->
+                <div class="accordion-item">
+                    <h6 class="accordion-header">
+                        <button class="accordion-button" type="button" data-bs-toggle="collapse" 
+                                data-bs-target="#initialLoanCollapse">
+                            Initial Hard Money Loan
+                        </button>
+                    </h6>
+                    <div id="initialLoanCollapse" class="accordion-collapse collapse show" 
+                         data-bs-parent="#brrrrLoansAccordion">
+                        <div class="accordion-body p-0">
+                            <div class="list-group list-group-flush">
+                                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                    <span>Amount</span>
+                                    <strong>${this.formatDisplayValue(analysis.initial_loan_amount)}</strong>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                    <span>Interest Rate</span>
+                                    <div>
+                                        <strong>${this.formatDisplayValue(analysis.initial_loan_interest_rate, 'percentage')}</strong>
+                                        <span class="badge ${isInitialLoanInterestOnly ? 'bg-success' : 'bg-info'} ms-2">
+                                            ${isInitialLoanInterestOnly ? 'Interest Only' : 'Amortized'}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                    <span>Term</span>
+                                    <strong>${analysis.initial_loan_term || '0'} months</strong>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                    <span class="d-flex align-items-center">
+                                        Monthly Payment
+                                        <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" 
+                                           title="${isInitialLoanInterestOnly ? 
+                                               'Interest-only payment during renovation period' : 
+                                               'Fully amortized payment including principal and interest'}"></i>
+                                    </span>
+                                    <strong>${initialLoanPayment}</strong>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                    <span>Down Payment</span>
+                                    <strong>${this.formatDisplayValue(analysis.initial_loan_down_payment)}</strong>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                    <span>Closing Costs</span>
+                                    <strong>${this.formatDisplayValue(analysis.initial_loan_closing_costs)}</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+    
+                ${hasRefinanceLoan ? `
+                <!-- Refinance Loan Section -->
+                <div class="accordion-item">
+                    <h6 class="accordion-header">
+                        <button class="accordion-button ${!hasInitialLoan ? '' : 'collapsed'}" type="button" data-bs-toggle="collapse" 
+                                data-bs-target="#refinanceLoanCollapse">
+                            Long-term Refinance Loan
+                        </button>
+                    </h6>
+                    <div id="refinanceLoanCollapse" class="accordion-collapse collapse ${!hasInitialLoan ? 'show' : ''}" 
+                         data-bs-parent="#brrrrLoansAccordion">
+                        <div class="accordion-body p-0">
+                            <div class="list-group list-group-flush">
+                                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                    <span>Amount</span>
+                                    <strong>${this.formatDisplayValue(analysis.refinance_loan_amount)}</strong>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                    <span>Interest Rate</span>
+                                    <div>
+                                        <strong>${this.formatDisplayValue(analysis.refinance_loan_interest_rate, 'percentage')}</strong>
+                                        <span class="badge bg-info ms-2">Amortized</span>
+                                    </div>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                    <span>Term</span>
+                                    <strong>${analysis.refinance_loan_term || '360'} months</strong>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                    <span class="d-flex align-items-center">
+                                        Monthly Payment
+                                        <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" 
+                                           title="Long-term refinance payment after renovation"></i>
+                                    </span>
+                                    <strong>${refinanceLoanPayment}</strong>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                    <span>Down Payment</span>
+                                    <strong>${this.formatDisplayValue(analysis.refinance_loan_down_payment)}</strong>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                    <span>Closing Costs</span>
+                                    <strong>${this.formatDisplayValue(analysis.refinance_loan_closing_costs)}</strong>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                    <span>Cash Recouped</span>
+                                    <strong>${analysis.calculated_metrics?.cash_recouped || 
+                                              this.formatDisplayValue(analysis.refinance_loan_amount)}</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+            </div>`;
+    },
+
     // Shared loan details component
     getLoanDetailsContent(analysis) {
         // Add debugging
@@ -4703,7 +4879,27 @@ window.analysisModule = {
             calculated_metrics: analysis.calculated_metrics
         });
     
-        if (this.hasBalloonData(analysis)) {
+        // Check for BRRRR analysis type first and validate loan data exists
+        if (analysis.analysis_type?.includes('BRRRR') && 
+            (this.toRawNumber(analysis.initial_loan_amount) > 0 || 
+             this.toRawNumber(analysis.refinance_loan_amount) > 0)) {
+            // Log BRRRR loan data for debugging
+            console.log('BRRRR loan data detected:', {
+                initial_loan_amount: analysis.initial_loan_amount,
+                initial_loan_interest_rate: analysis.initial_loan_interest_rate,
+                initial_loan_term: analysis.initial_loan_term,
+                refinance_loan_amount: analysis.refinance_loan_amount,
+                refinance_loan_interest_rate: analysis.refinance_loan_interest_rate,
+                refinance_loan_term: analysis.refinance_loan_term,
+                calculated_metrics: {
+                    initial_loan_payment: analysis.calculated_metrics?.initial_loan_payment,
+                    refinance_loan_payment: analysis.calculated_metrics?.refinance_loan_payment
+                }
+            });
+            
+            // Handle BRRRR-specific loan details
+            return this.getBRRRRLoanDetails(analysis);
+        } else if (this.hasBalloonData(analysis)) {
             // Get metrics
             const preMonthlyPayment = analysis.calculated_metrics?.pre_balloon_monthly_payment || 
                                      analysis.calculated_metrics?.loan1_loan_payment;
@@ -4844,83 +5040,83 @@ window.analysisModule = {
                         </div>
                     </div>
                 </div>`;
-            } else {
-                // Regular loans - keep your existing code here
-                const loanPrefixes = ['loan1', 'loan2', 'loan3'];
-                let hasLoans = false;
-                
-                let html = '<div class="accordion" id="regularLoansAccordion">';
-                
-                for (const prefix of loanPrefixes) {
-                    // Check if loan exists by verifying amount is greater than 0
-                    const loanAmount = this.toRawNumber(analysis[`${prefix}_loan_amount`]);
-                    if (loanAmount > 0) {
-                        hasLoans = true;
-                        
-                        // Get loan payment from calculated metrics
-                        const loanPayment = analysis.calculated_metrics?.[`${prefix}_loan_payment`];
-                        console.log(`${prefix} payment:`, loanPayment);
-                        
-                        html += `
-                            <div class="accordion-item">
-                                <h6 class="accordion-header">
-                                    <button class="accordion-button ${prefix !== 'loan1' ? 'collapsed' : ''}" type="button" 
-                                            data-bs-toggle="collapse" data-bs-target="#${prefix}Collapse">
-                                        ${analysis[`${prefix}_loan_name`] || `Loan ${prefix.slice(-1)}`}
-                                    </button>
-                                </h6>
-                                <div id="${prefix}Collapse" class="accordion-collapse collapse ${prefix === 'loan1' ? 'show' : ''}" 
-                                     data-bs-parent="#regularLoansAccordion">
-                                    <div class="accordion-body p-0">
-                                        <div class="list-group list-group-flush">
-                                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                                <span>Amount</span>
-                                                <strong>${this.formatDisplayValue(loanAmount)}</strong>
-                                            </div>
-                                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                                <span>Interest Rate</span>
-                                                <div>
-                                                    <strong>${this.formatDisplayValue(analysis[`${prefix}_loan_interest_rate`], 'percentage')}</strong>
-                                                    <span class="badge ${analysis[`${prefix}_interest_only`] ? 'bg-success' : 'bg-info'} ms-2">
-                                                        ${analysis[`${prefix}_interest_only`] ? 'Interest Only' : 'Amortized'}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                                <span>Term</span>
-                                                <strong>${analysis[`${prefix}_loan_term`] || '0'} months</strong>
-                                            </div>
-                                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                                <span class="d-flex align-items-center">
-                                                    Monthly Payment
-                                                    <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" 
-                                                       title="${analysis[`${prefix}_interest_only`] ? 
-                                                           'Interest-only payment on loan' : 
-                                                           'Fully amortized payment including principal and interest'}"></i>
+        } else {
+            // Regular loans - keep your existing code here
+            const loanPrefixes = ['loan1', 'loan2', 'loan3'];
+            let hasLoans = false;
+            
+            let html = '<div class="accordion" id="regularLoansAccordion">';
+            
+            for (const prefix of loanPrefixes) {
+                // Check if loan exists by verifying amount is greater than 0
+                const loanAmount = this.toRawNumber(analysis[`${prefix}_loan_amount`]);
+                if (loanAmount > 0) {
+                    hasLoans = true;
+                    
+                    // Get loan payment from calculated metrics
+                    const loanPayment = analysis.calculated_metrics?.[`${prefix}_loan_payment`];
+                    console.log(`${prefix} payment:`, loanPayment);
+                    
+                    html += `
+                        <div class="accordion-item">
+                            <h6 class="accordion-header">
+                                <button class="accordion-button ${prefix !== 'loan1' ? 'collapsed' : ''}" type="button" 
+                                        data-bs-toggle="collapse" data-bs-target="#${prefix}Collapse">
+                                    ${analysis[`${prefix}_loan_name`] || `Loan ${prefix.slice(-1)}`}
+                                </button>
+                            </h6>
+                            <div id="${prefix}Collapse" class="accordion-collapse collapse ${prefix === 'loan1' ? 'show' : ''}" 
+                                 data-bs-parent="#regularLoansAccordion">
+                                <div class="accordion-body p-0">
+                                    <div class="list-group list-group-flush">
+                                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                            <span>Amount</span>
+                                            <strong>${this.formatDisplayValue(loanAmount)}</strong>
+                                        </div>
+                                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                            <span>Interest Rate</span>
+                                            <div>
+                                                <strong>${this.formatDisplayValue(analysis[`${prefix}_loan_interest_rate`], 'percentage')}</strong>
+                                                <span class="badge ${analysis[`${prefix}_interest_only`] ? 'bg-success' : 'bg-info'} ms-2">
+                                                    ${analysis[`${prefix}_interest_only`] ? 'Interest Only' : 'Amortized'}
                                                 </span>
-                                                <strong>${loanPayment || this.formatDisplayValue(0)}</strong>
                                             </div>
-                                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                                <span>Down Payment</span>
-                                                <strong>${this.formatDisplayValue(analysis[`${prefix}_loan_down_payment`])}</strong>
-                                            </div>
-                                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                                <span>Closing Costs</span>
-                                                <strong>${this.formatDisplayValue(analysis[`${prefix}_loan_closing_costs`])}</strong>
-                                            </div>
+                                        </div>
+                                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                            <span>Term</span>
+                                            <strong>${analysis[`${prefix}_loan_term`] || '0'} months</strong>
+                                        </div>
+                                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                            <span class="d-flex align-items-center">
+                                                Monthly Payment
+                                                <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" 
+                                                   title="${analysis[`${prefix}_interest_only`] ? 
+                                                       'Interest-only payment on loan' : 
+                                                       'Fully amortized payment including principal and interest'}"></i>
+                                            </span>
+                                            <strong>${loanPayment || this.formatDisplayValue(0)}</strong>
+                                        </div>
+                                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                            <span>Down Payment</span>
+                                            <strong>${this.formatDisplayValue(analysis[`${prefix}_loan_down_payment`])}</strong>
+                                        </div>
+                                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                            <span>Closing Costs</span>
+                                            <strong>${this.formatDisplayValue(analysis[`${prefix}_loan_closing_costs`])}</strong>
                                         </div>
                                     </div>
                                 </div>
-                            </div>`;
-                    }
+                            </div>
+                        </div>`;
                 }
-                html += '</div>';
-                
-                return hasLoans ? html : `
-                    <div class="text-center py-4">
-                        <p class="mb-0 text-muted">No loan details available</p>
-                    </div>`;
             }
+            html += '</div>';
+            
+            return hasLoans ? html : `
+                <div class="text-center py-4">
+                    <p class="mb-0 text-muted">No loan details available</p>
+                </div>`;
+        }
     },
 
     // Updated getBRRRRReportContent function to handle flat schema and formatting

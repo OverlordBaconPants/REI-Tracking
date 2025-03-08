@@ -705,6 +705,14 @@ class PropertyReportGenerator:
             # Section 7: Loan Details and Operating Expenses
             story.extend(self.create_loans_and_expenses_section())
             
+            # Check if we have comps data to add
+            if self.data.get('comps_data') and self.data['comps_data'].get('comparables'):
+                # Add page break before comps section
+                story.append(PageBreak())
+                
+                # Section 8: Property Comparables
+                story.extend(self.create_property_comps_section())
+            
             # Build the document
             self.doc.build(story, onFirstPage=self._add_page_decorations, onLaterPages=self._add_page_decorations)
             self.buffer.seek(0)
@@ -2406,3 +2414,187 @@ class PropertyReportGenerator:
         ]))
         
         return refinance_table
+
+    def create_property_comps_section(self):
+        """Create property comps section with comparable properties."""
+        elements = []
+        colors = BRAND_CONFIG['colors']
+        
+        # Add section header
+        elements.append(Paragraph("Property Comparables", self.styles['BrandHeading3']))
+        elements.append(Spacer(1, 0.05*inch))
+        
+        # Get comps data
+        comps_data = self.data.get('comps_data', {})
+        comparables = comps_data.get('comparables', [])
+        
+        if comparables and len(comparables) > 0:
+            # Create summary of comps estimates
+            estimated_value = comps_data.get('estimated_value', 0)
+            value_range_low = comps_data.get('value_range_low', 0)
+            value_range_high = comps_data.get('value_range_high', 0)
+            
+            summary_style = ParagraphStyle(
+                name='CompsSummary',
+                parent=self.styles['BrandNormal'],
+                fontSize=9,
+                textColor=colors['text_dark'],
+                alignment=0  # Left aligned
+            )
+            
+            value_style = ParagraphStyle(
+                name='CompsValue',
+                parent=self.styles['BrandNormal'],
+                fontSize=9,
+                textColor=colors['primary'],
+                fontName=BRAND_CONFIG['fonts']['primary'],
+                alignment=0  # Left aligned
+            )
+            
+            # Add estimated value and range
+            elements.append(Paragraph(f"Estimated Value: <b>${estimated_value:,}</b>", summary_style))
+            elements.append(Paragraph(f"Value Range: ${value_range_low:,} - ${value_range_high:,}", summary_style))
+            elements.append(Spacer(1, 0.1*inch))
+            
+            # Create comparables table
+            table_data = []
+            
+            # Create header row
+            header_style = ParagraphStyle(
+                name='CompsHeader',
+                parent=self.styles['TableHeader'],
+                fontSize=8,
+                textColor=colors['background'],
+                alignment=1  # Center aligned
+            )
+            
+            # Define columns
+            headers = [
+                'Address',
+                'Price',
+                'Bed/Bath',
+                'Sq Ft',
+                'Year',
+                'Distance',
+                'Date Sold'
+            ]
+            
+            # Add header row
+            table_data.append([Paragraph(h, header_style) for h in headers])
+            
+            # Cell styles
+            cell_style = ParagraphStyle(
+                name='CompsCell',
+                parent=self.styles['BrandNormal'],
+                fontSize=7,
+                textColor=colors['text_dark'],
+                alignment=0  # Left aligned
+            )
+            
+            price_style = ParagraphStyle(
+                name='CompsPrice',
+                parent=cell_style,
+                alignment=2  # Right aligned
+            )
+            
+            numeric_style = ParagraphStyle(
+                name='CompsNumeric',
+                parent=cell_style,
+                alignment=1  # Center aligned
+            )
+            
+            # Add data rows - limit to 10 comps max to fit on page
+            max_comps = min(len(comparables), 10)
+            for i in range(max_comps):
+                comp = comparables[i]
+                
+                # Format address - keep it short to fit in table
+                address = comp.get('formattedAddress', '')
+                short_address = self._get_short_address(address)
+                
+                # Format date
+                listed_date = comp.get('listedDate', '')
+                date_display = ''
+                if listed_date:
+                    try:
+                        if 'T' in listed_date:
+                            date_obj = datetime.fromisoformat(listed_date.replace('Z', '+00:00'))
+                            date_display = date_obj.strftime('%m/%d/%Y')
+                        else:
+                            date_obj = datetime.strptime(listed_date, '%Y-%m-%d')
+                            date_display = date_obj.strftime('%m/%d/%Y')
+                    except (ValueError, TypeError):
+                        date_display = listed_date
+                
+                # Add row
+                table_data.append([
+                    Paragraph(short_address, cell_style),
+                    Paragraph(f"${comp.get('price', 0):,}", price_style),
+                    Paragraph(f"{comp.get('bedrooms', 0)}/{comp.get('bathrooms', 0)}", numeric_style),
+                    Paragraph(f"{comp.get('squareFootage', 0):,}", numeric_style),
+                    Paragraph(f"{comp.get('yearBuilt', '')}", numeric_style),
+                    Paragraph(f"{comp.get('distance', 0):.1f} mi", numeric_style),
+                    Paragraph(date_display, numeric_style)
+                ])
+            
+            # Calculate column widths based on content
+            table_width = self.doc.width
+            col_widths = [
+                table_width * 0.30,  # Address
+                table_width * 0.15,  # Price
+                table_width * 0.10,  # Bed/Bath
+                table_width * 0.10,  # Sq Ft
+                table_width * 0.10,  # Year
+                table_width * 0.10,  # Distance
+                table_width * 0.15   # Date Sold
+            ]
+            
+            # Create alternating row colors
+            row_styles = []
+            for i in range(1, len(table_data)):  # Skip header row
+                if i % 2 == 1:  # Alternate rows
+                    row_styles.append(('BACKGROUND', (0, i), (-1, i), colors['table_row_alt']))
+            
+            # Create table with styling
+            comps_table = Table(
+                table_data,
+                colWidths=col_widths,
+                style=TableStyle([
+                    # Header styling
+                    ('BACKGROUND', (0, 0), (-1, 0), colors['primary']),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors['background']),
+                    ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+                    
+                    # Content styling
+                    ('ALIGN', (0, 1), (0, -1), 'LEFT'),     # Left align address
+                    ('ALIGN', (1, 1), (1, -1), 'RIGHT'),    # Right align price
+                    ('ALIGN', (2, 1), (-1, -1), 'CENTER'),  # Center everything else
+                    
+                    # Grid and borders
+                    ('GRID', (0, 0), (-1, -1), 0.25, colors['border_light']),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    
+                    # Padding for breathing room
+                    ('TOPPADDING', (0, 0), (-1, -1), 3),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+                    ('LEFTPADDING', (0, 0), (-1, -1), 4),
+                    ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+                ] + row_styles)
+            )
+            
+            elements.append(comps_table)
+            
+            # Add note about comps
+            elements.append(Spacer(1, 0.05*inch))
+            note_text = (
+                f"Based on {len(comparables)} comparable properties within the area. "
+                f"Last updated: {comps_data.get('last_run', 'N/A')}"
+            )
+            elements.append(Paragraph(note_text, self.styles['BrandSmall']))
+            
+        else:
+            # No comps available
+            elements.append(Paragraph("No comparable properties available. Run comps in the application to include them in this report.", 
+                                    self.styles['BrandNormal']))
+        
+        return elements
