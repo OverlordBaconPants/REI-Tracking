@@ -2,13 +2,14 @@ from datetime import datetime
 import logging
 import os
 import uuid
-import json  # Add this import
-import time  # Add this for retry delays
+import json
+import time
 from typing import Dict, List, Optional, Union, Any, Tuple
 import traceback
-from services.report_generator import generate_report
-from flask import current_app, session
 from io import BytesIO
+
+from flask import current_app, session
+from services.report_generator import generate_report
 from utils.json_handler import read_json, write_json
 from services.analysis_calculations import create_analysis
 from utils.comps_handler import fetch_property_comps, update_analysis_comps, RentcastAPIError
@@ -16,245 +17,18 @@ from utils.comps_handler import fetch_property_comps, update_analysis_comps, Ren
 
 logger = logging.getLogger(__name__)
 
+
 class AnalysisService:
     """Service for handling property investment analyses with flat data structure."""
 
-    ANALYSIS_SCHEMA = {
-        # Core fields
-        'id': {'type': 'string', 'format': 'uuid'},
-        'user_id': {'type': 'string'},
-        'created_at': {'type': 'string', 'format': 'datetime'},
-        'updated_at': {'type': 'string', 'format': 'datetime'},
-        'analysis_type': {'type': 'string'},
-        'analysis_name': {'type': 'string'},
+    # Schema moved to a separate file or class constant to reduce clutter
+    from .analysis_schema import ANALYSIS_SCHEMA
 
-        # Property details
-        'address': {'type': 'string'},
-        'property_type': {'type': 'string', 'optional': True, 
-            'allowed_values': [
-                'Single Family',
-                'Condo',
-                'Townhouse',
-                'Manufactured',
-                'Multi-Family'
-            ]
-        },
-        'square_footage': {'type': 'integer', 'optional': True},  # Add optional flag
-        'lot_size': {'type': 'integer', 'optional': True},
-        'year_built': {'type': 'integer', 'optional': True},
-        'bedrooms': {'type': 'integer', 'optional': True},
-        'bathrooms': {'type': 'float', 'optional': True},
-
-        # Add comps data fields
-        'comps_data': {
-            'type': 'object',
-            'optional': True,  # Not all analyses will have comps run
-            'properties': {
-                'last_run': {
-                    'type': 'string',
-                    'format': 'datetime',
-                    'optional': True,
-                    'description': 'ISO 8601 datetime when comps were last run'
-                },
-                'run_count': {
-                    'type': 'integer',
-                    'optional': True,
-                    'description': 'Number of times comps have been run in current session'
-                },
-                'estimated_value': {
-                    'type': 'integer',
-                    'optional': True,
-                    'description': 'Estimated value based on comps'
-                },
-                'value_range_low': {
-                    'type': 'integer',
-                    'optional': True,
-                    'description': 'Lower bound of estimated value range'
-                },
-                'value_range_high': {
-                    'type': 'integer',
-                    'optional': True,
-                    'description': 'Upper bound of estimated value range'
-                },
-                'comparables': {
-                    'type': 'array',
-                    'optional': True,
-                    'items': {
-                        'type': 'object',
-                        'properties': {
-                            'id': {'type': 'string'},
-                            'formattedAddress': {'type': 'string'},
-                            'city': {'type': 'string'},
-                            'state': {'type': 'string'},
-                            'zipCode': {'type': 'string'},
-                            'propertyType': {'type': 'string'},
-                            'bedrooms': {'type': 'integer'},
-                            'bathrooms': {'type': 'float'},
-                            'squareFootage': {'type': 'integer'},
-                            'yearBuilt': {'type': 'integer'},
-                            'price': {'type': 'integer'},
-                            'listingType': {'type': 'string'},
-                            'listedDate': {
-                                'type': 'string',
-                                'format': 'datetime'
-                            },
-                            'removedDate': {
-                                'type': 'string',
-                                'format': 'datetime',
-                                'optional': True
-                            },
-                            'daysOnMarket': {'type': 'integer'},
-                            'distance': {'type': 'float'},
-                            'correlation': {'type': 'float'}
-                        }
-                    }
-                }
-            }
-        },
-
-        # Ballon Options
-        'has_balloon_payment': {'type': 'boolean'},
-        'balloon_due_date': {'type': 'string', 'format': 'date'},  # ISO format date
-        'balloon_refinance_ltv_percentage': {'type': 'float'},
-        'balloon_refinance_loan_amount': {'type': 'integer'},
-        'balloon_refinance_loan_interest_rate': {'type': 'float'},
-        'balloon_refinance_loan_term': {'type': 'integer'},
-        'balloon_refinance_loan_down_payment': {'type': 'integer'},
-        'balloon_refinance_loan_closing_costs': {'type': 'integer'},
-
-        # Purchase details
-        'purchase_price': {'type': 'integer'},
-        'after_repair_value': {'type': 'integer'},
-        'renovation_costs': {'type': 'integer'},
-        'renovation_duration': {'type': 'integer'},
-        'cash_to_seller': {'type': 'integer'},
-        'closing_costs': {'type': 'integer'},
-        'assignment_fee': {'type': 'integer'},
-        'marketing_costs': {'type': 'integer'},
-        'furnishing_costs': {'type': 'integer','optional': True},
-
-        # Income
-        'monthly_rent': {'type': 'integer'},
-
-        # Operating expenses
-        'property_taxes': {'type': 'integer'},
-        'insurance': {'type': 'integer'},
-        'hoa_coa_coop': {'type': 'integer'},
-        'management_fee_percentage': {'type': 'float'},
-        'capex_percentage': {'type': 'float'},
-        'vacancy_percentage': {'type': 'float'},
-        'repairs_percentage': {'type': 'float'},
-
-        # Notes
-        'notes': {
-            'type': 'string',
-            'maxLength': 1000,  # Limit to 1,000 characters
-            'description': 'User notes about the analysis'
-        },
-
-        # PadSplit specific
-        'utilities': {'type': 'integer'},
-        'internet': {'type': 'integer'},
-        'cleaning': {'type': 'integer'},
-        'pest_control': {'type': 'integer'},
-        'landscaping': {'type': 'integer'},
-        'padsplit_platform_percentage': {'type': 'float'},
-
-        # Loan fields
-        'initial_loan_name': {'type': 'string'},
-        'initial_loan_amount': {'type': 'integer'},
-        'initial_loan_interest_rate': {'type': 'float'},
-        'initial_interest_only': {'type': 'boolean'},
-        'initial_loan_term': {'type': 'integer'},
-        'initial_loan_down_payment': {'type': 'integer'},
-        'initial_loan_closing_costs': {'type': 'integer'},
-
-        'refinance_loan_name': {'type': 'string'},
-        'refinance_loan_amount': {'type': 'integer'},
-        'refinance_loan_interest_rate': {'type': 'float'},
-        'refinance_loan_term': {'type': 'integer'},
-        'refinance_loan_down_payment': {'type': 'integer'},
-        'refinance_loan_closing_costs': {'type': 'integer'},
-
-        'loan1_interest_only': {'type': 'boolean'},
-        'loan2_interest_only': {'type': 'boolean'},
-        'loan3_interest_only': {'type': 'boolean'},
-
-        'loan1_loan_name': {'type': 'string'},
-        'loan1_loan_amount': {'type': 'integer'},
-        'loan1_loan_interest_rate': {'type': 'float'},
-        'loan1_loan_term': {'type': 'integer'},
-        'loan1_loan_down_payment': {'type': 'integer'},
-        'loan1_loan_closing_costs': {'type': 'integer'},
-
-        'loan2_loan_name': {'type': 'string'},
-        'loan2_loan_amount': {'type': 'integer'},
-        'loan2_loan_interest_rate': {'type': 'float'},
-        'loan2_loan_term': {'type': 'integer'},
-        'loan2_loan_down_payment': {'type': 'integer'},
-        'loan2_loan_closing_costs': {'type': 'integer'},
-
-        'loan3_loan_name': {'type': 'string'},
-        'loan3_loan_amount': {'type': 'integer'},
-        'loan3_loan_interest_rate': {'type': 'float'},
-        'loan3_loan_term': {'type': 'integer'},
-        'loan3_loan_down_payment': {'type': 'integer'},
-        'loan3_loan_closing_costs': {'type': 'integer'},
-
-        # New Lease Option fields
-        'option_consideration_fee': {
-            'type': 'integer',
-            'optional': False,
-            'description': 'Non-refundable upfront fee for lease option'
-        },
-        'option_term_months': {
-            'type': 'integer',
-            'optional': False,
-            'description': 'Duration of option period in months'
-        },
-        'strike_price': {
-            'type': 'integer',
-            'optional': False,
-            'description': 'Agreed upon future purchase price'
-        },
-        'monthly_rent_credit_percentage': {
-            'type': 'float',
-            'optional': False,
-            'description': 'Percentage of monthly rent applied as credit'
-        },
-        'rent_credit_cap': {
-            'type': 'integer',
-            'optional': False,
-            'description': 'Maximum total rent credit allowed'
-        },
-
-        # Multi-Family specific fields
-        'total_units': {'type': 'integer', 'optional': False},
-        'occupied_units': {'type': 'integer', 'optional': False},
-        'floors': {'type': 'integer', 'optional': False},
-        'other_income': {'type': 'integer', 'optional': True},
-        'total_potential_income': {'type': 'integer', 'optional': True},
-
-        # Multi-Family operating expenses
-        'common_area_maintenance': {'type': 'integer', 'optional': False},
-        'elevator_maintenance': {'type': 'integer', 'optional': True},
-        'staff_payroll': {'type': 'integer', 'optional': False},
-        'trash_removal': {'type': 'integer', 'optional': False},
-        'common_utilities': {'type': 'integer', 'optional': False},
-
-        # Unit Types array (will be handled as JSON string in storage)
-        'unit_types': {
-            'type': 'string',  # JSON string of unit type array
-            'optional': False,
-            'description': 'Array of unit types and their details'
-        },
-    }
-    
     def __init__(self):
-        self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(logging.DEBUG)
+        """Initialize the AnalysisService."""
+        self.logger = logger
         
-        # Add mobile-specific configuration
+        # Mobile-specific configuration
         self.mobile_config = {
             'max_image_size': 800,  # Max dimension for mobile images
             'pagination_size': 10,   # Items per page on mobile
@@ -286,14 +60,10 @@ class AnalysisService:
             session_key = f'comps_run_count_{analysis_id}'
             run_count = session.get(session_key, 0)
             
-            # Log the current run count
             logger.debug(f"Current comps run count for {analysis_id}: {run_count}")
             
-            # Get max runs from config using dictionary access
-            max_runs = current_app.config['MAX_COMP_RUNS_PER_SESSION']
-            if max_runs is None:
-                max_runs = 3  # Default fallback
-                logger.warning("MAX_COMP_RUNS_PER_SESSION not found in config, using default: 3")
+            # Get max runs from config
+            max_runs = current_app.config.get('MAX_COMP_RUNS_PER_SESSION', 3)
             
             if run_count >= max_runs:
                 raise RentcastAPIError(
@@ -302,7 +72,7 @@ class AnalysisService:
             
             # Fetch comps from RentCast
             comps_data = fetch_property_comps(
-                current_app.config,  # Pass the entire config object
+                current_app.config,
                 analysis['address'],
                 analysis['property_type'],
                 float(analysis['bedrooms']),
@@ -330,6 +100,16 @@ class AnalysisService:
             raise
     
     def normalize_data(self, data: Dict, is_mobile: bool = False) -> Dict:
+        """
+        Normalize input data according to schema types.
+        
+        Args:
+            data: Input data dictionary
+            is_mobile: Whether request is from mobile client
+            
+        Returns:
+            Normalized data dictionary
+        """
         try:
             logger.debug("=== Starting Data Normalization ===")
             normalized = {}
@@ -365,7 +145,7 @@ class AnalysisService:
                     continue
                     
                 # Skip empty mobile-optional fields on mobile
-                if is_mobile and not value and field in self.MOBILE_OPTIONAL_FIELDS:
+                if is_mobile and not value and field in getattr(self, 'MOBILE_OPTIONAL_FIELDS', []):
                     continue
                     
                 # Convert value based on type
@@ -376,20 +156,14 @@ class AnalysisService:
                     normalized[field] = self._convert_to_float(value)
                     
                 elif field_type == 'string':
-                    if value is not None:
-                        normalized[field] = str(value)
-                    else:
-                        normalized[field] = ''
+                    normalized[field] = str(value) if value is not None else ''
                         
                 elif field_type == 'boolean':
                     if field == 'has_balloon_payment':
                         normalized[field] = bool(value)
                     else:
                         # Handle other boolean fields
-                        if isinstance(value, str):
-                            normalized[field] = value.lower() in ('true', '1', 'yes', 'on')
-                        else:
-                            normalized[field] = bool(value)
+                        normalized[field] = self._convert_to_bool(value)
                 
                 # Handle special formats
                 if field_def.get('format') == 'uuid' and not value:
@@ -417,23 +191,27 @@ class AnalysisService:
             logger.error(traceback.format_exc())
             raise ValueError(f"Data normalization failed: {str(e)}")
 
+    def _convert_to_bool(self, value: Any) -> bool:
+        """Convert value to boolean, handling various formats."""
+        if isinstance(value, str):
+            return value.lower() in ('true', '1', 'yes', 'on')
+        return bool(value)
+
     def _optimize_metrics_for_mobile(self, metrics: Dict) -> Dict:
         """
         Optimize calculated metrics for mobile display.
         
         Args:
-            metrics (Dict): Original metrics dictionary
+            metrics: Original metrics dictionary
             
         Returns:
-            Dict: Optimized metrics for mobile
+            Optimized metrics for mobile
         """
-        optimized = {}
-        
         # Define precision for different metric types
         precision_map = {
             'percentage': 1,  # One decimal for percentages
             'currency': 0,    # No decimals for currency values
-            'ratio': 2       # Two decimals for ratios
+            'ratio': 2        # Two decimals for ratios
         }
         
         # Metric type mapping
@@ -447,27 +225,19 @@ class AnalysisService:
             # Add other metrics as needed
         }
         
-        for key, value in metrics.items():
-            if isinstance(value, (int, float)):
-                metric_type = metric_types.get(key, 'ratio')  # Default to ratio
-                precision = precision_map.get(metric_type, 2)  # Default to 2 decimals
-                
-                # Round according to metric type
-                if value is not None:
-                    optimized[key] = round(float(value), precision)
-            else:
-                # Keep non-numeric values as-is
-                optimized[key] = value
-                
-        return optimized
+        return {
+            key: round(float(value), precision_map.get(metric_types.get(key, 'ratio'), 2))
+            if isinstance(value, (int, float)) and value is not None else value
+            for key, value in metrics.items()
+        }
     
-    def _get_value(self, data, field):
+    def _get_value(self, data: Dict, field: str) -> Any:
         """
         Safely get a value from the data dict, handling various formats.
         
         Args:
-            data (dict): The data dictionary to get the value from
-            field (str): The field name to get
+            data: The data dictionary to get the value from
+            field: The field name to get
             
         Returns:
             The value or None if not found
@@ -495,7 +265,15 @@ class AnalysisService:
         return value
 
     def validate_analysis_data(self, data: Dict) -> None:
-        """Validate analysis data against schema."""
+        """
+        Validate analysis data against schema.
+        
+        Args:
+            data: Analysis data to validate
+            
+        Raises:
+            ValueError: If validation fails
+        """
         try:
             logger.debug("Starting analysis data validation")
             
@@ -505,36 +283,11 @@ class AnalysisService:
                 'analysis_name': str
             }
 
-            # Add monthly_rent requirement only for non-Multi-Family analyses
-            if data.get('analysis_type') != 'Multi-Family':
-                if 'monthly_rent' not in data or \
-                not isinstance(data['monthly_rent'], (int, float)) or \
-                data['monthly_rent'] <= 0:
-                    raise ValueError("Invalid monthly_rent: must be a positive number")
-            else:
-                # For Multi-Family, validate unit_types instead
-                if 'unit_types' not in data:
-                    raise ValueError("Missing unit_types for Multi-Family analysis")
-                try:
-                    unit_types = json.loads(data['unit_types'])
-                    if not isinstance(unit_types, list) or not unit_types:
-                        raise ValueError("unit_types must be a non-empty array")
-                        
-                    # Validate each unit type has required rent
-                    for unit in unit_types:
-                        if 'rent' not in unit or \
-                        not isinstance(unit['rent'], (int, float)) or \
-                        unit['rent'] <= 0:
-                            raise ValueError("Each unit type must have a positive rent value")
-                except json.JSONDecodeError:
-                    raise ValueError("Invalid unit_types format")
+            # Check for monthly rent requirement
+            self._validate_rent_data(data)
             
-            for field, expected_type in required_fields.items():
-                value = data.get(field)
-                if not value:
-                    raise ValueError(f"Missing required field: {field}")
-                if not isinstance(value, expected_type):
-                    raise ValueError(f"Invalid type for {field}: expected {expected_type.__name__}")
+            # Validate required fields
+            self._validate_required_fields(data, required_fields)
             
             # Validate field types for non-required fields
             for field, value in data.items():
@@ -545,46 +298,9 @@ class AnalysisService:
                         continue
                     self._validate_field_type(field, value)
                         
-            # Lease Option specific validation
+            # Validate analysis-type specific data
             if data.get('analysis_type') == 'Lease Option':
-                if float(self._get_value(data, 'strike_price') or 0) <= float(self._get_value(data, 'purchase_price') or 0):
-                    raise ValueError("Strike price must be greater than purchase price")
-
-                option_fields = {
-                    'option_consideration_fee': "Option fee",
-                    'option_term_months': "Option term",
-                    'strike_price': "Strike price",
-                    'monthly_rent_credit_percentage': "Monthly rent credit percentage",
-                    'rent_credit_cap': "Rent credit cap"
-                }
-
-                for field, display_name in option_fields.items():
-                    value = self._get_value(data, field)
-                    if value is None or float(value) <= 0:
-                        raise ValueError(f"{display_name} must be greater than 0")
-
-                rent_credit_pct = float(self._get_value(data, 'monthly_rent_credit_percentage') or 0)
-                if not 0 <= rent_credit_pct <= 100:
-                    raise ValueError("Monthly rent credit percentage must be between 0 and 100")
-
-                option_term = int(self._get_value(data, 'option_term_months') or 0)
-                if option_term > 120:
-                    raise ValueError("Option term cannot exceed 120 months")
-
-                # Add loan validation for Lease Options
-                loan_prefixes = ['loan1', 'loan2', 'loan3']
-                for prefix in loan_prefixes:
-                    loan_amount = self._get_value(data, f'{prefix}_loan_amount')
-                    if loan_amount and float(loan_amount) > 0:
-                        # Validate loan amount and terms
-                        interest_rate = float(self._get_value(data, f'{prefix}_loan_interest_rate') or 0)
-                        loan_term = int(self._get_value(data, f'{prefix}_loan_term') or 0)
-                        
-                        if interest_rate <= 0 or interest_rate > 30:
-                            raise ValueError(f"{prefix}: Interest rate must be between 0% and 30%")
-                        
-                        if loan_term <= 0 or loan_term > 360:
-                            raise ValueError(f"{prefix}: Loan term must be between 1 and 360 months")
+                self._validate_lease_option(data)
 
             logger.debug("Analysis data validation complete")
             
@@ -596,8 +312,96 @@ class AnalysisService:
             logger.error(traceback.format_exc())
             raise ValueError(f"Validation failed: {str(e)}")
 
+    def _validate_rent_data(self, data: Dict) -> None:
+        """Validate rent data based on analysis type."""
+        if data.get('analysis_type') != 'Multi-Family':
+            if 'monthly_rent' not in data or \
+            not isinstance(data['monthly_rent'], (int, float)) or \
+            data['monthly_rent'] <= 0:
+                raise ValueError("Invalid monthly_rent: must be a positive number")
+        else:
+            # For Multi-Family, validate unit_types instead
+            if 'unit_types' not in data:
+                raise ValueError("Missing unit_types for Multi-Family analysis")
+            try:
+                unit_types = json.loads(data['unit_types'])
+                if not isinstance(unit_types, list) or not unit_types:
+                    raise ValueError("unit_types must be a non-empty array")
+                    
+                # Validate each unit type has required rent
+                for unit in unit_types:
+                    if 'rent' not in unit or \
+                    not isinstance(unit['rent'], (int, float)) or \
+                    unit['rent'] <= 0:
+                        raise ValueError("Each unit type must have a positive rent value")
+            except json.JSONDecodeError:
+                raise ValueError("Invalid unit_types format")
+
+    def _validate_required_fields(self, data: Dict, required_fields: Dict) -> None:
+        """Validate required fields are present and of correct type."""
+        for field, expected_type in required_fields.items():
+            value = data.get(field)
+            if not value:
+                raise ValueError(f"Missing required field: {field}")
+            if not isinstance(value, expected_type):
+                raise ValueError(f"Invalid type for {field}: expected {expected_type.__name__}")
+
+    def _validate_lease_option(self, data: Dict) -> None:
+        """Validate lease option specific fields."""
+        if float(self._get_value(data, 'strike_price') or 0) <= float(self._get_value(data, 'purchase_price') or 0):
+            raise ValueError("Strike price must be greater than purchase price")
+
+        option_fields = {
+            'option_consideration_fee': "Option fee",
+            'option_term_months': "Option term",
+            'strike_price': "Strike price",
+            'monthly_rent_credit_percentage': "Monthly rent credit percentage",
+            'rent_credit_cap': "Rent credit cap"
+        }
+
+        for field, display_name in option_fields.items():
+            value = self._get_value(data, field)
+            if value is None or float(value) <= 0:
+                raise ValueError(f"{display_name} must be greater than 0")
+
+        rent_credit_pct = float(self._get_value(data, 'monthly_rent_credit_percentage') or 0)
+        if not 0 <= rent_credit_pct <= 100:
+            raise ValueError("Monthly rent credit percentage must be between 0 and 100")
+
+        option_term = int(self._get_value(data, 'option_term_months') or 0)
+        if option_term > 120:
+            raise ValueError("Option term cannot exceed 120 months")
+
+        # Validate loans for Lease Options
+        self._validate_loans(data)
+
+    def _validate_loans(self, data: Dict) -> None:
+        """Validate loan data."""
+        loan_prefixes = ['loan1', 'loan2', 'loan3']
+        for prefix in loan_prefixes:
+            loan_amount = self._get_value(data, f'{prefix}_loan_amount')
+            if loan_amount and float(loan_amount) > 0:
+                # Validate loan amount and terms
+                interest_rate = float(self._get_value(data, f'{prefix}_loan_interest_rate') or 0)
+                loan_term = int(self._get_value(data, f'{prefix}_loan_term') or 0)
+                
+                if interest_rate <= 0 or interest_rate > 30:
+                    raise ValueError(f"{prefix}: Interest rate must be between 0% and 30%")
+                
+                if loan_term <= 0 or loan_term > 360:
+                    raise ValueError(f"{prefix}: Loan term must be between 1 and 360 months")
+
     def _validate_field_type(self, field: str, value: Any) -> None:
-        """Validate a single field's type and format."""
+        """
+        Validate a single field's type and format.
+        
+        Args:
+            field: Field name
+            value: Field value
+            
+        Raises:
+            ValueError: If field value is invalid
+        """
         field_def = self.ANALYSIS_SCHEMA[field]
         field_type = field_def['type']
         
@@ -626,8 +430,19 @@ class AnalysisService:
         except (ValueError, TypeError) as e:
             raise ValueError(f"Invalid {field_type} value for field {field}: {str(e)}")
 
-    def _convert_to_int(self, value: Any) -> int:
-        """Convert value to integer, handling empty values for optional fields."""
+    def _convert_to_int(self, value: Any) -> Optional[int]:
+        """
+        Convert value to integer, handling empty values for optional fields.
+        
+        Args:
+            value: Value to convert
+            
+        Returns:
+            Converted integer value or None
+            
+        Raises:
+            ValueError: If conversion fails
+        """
         if value is None or value == '':
             return None  # Return None for empty optional fields
         try:
@@ -638,8 +453,19 @@ class AnalysisService:
         except (ValueError, TypeError):
             raise ValueError(f"Cannot convert {value} to integer")
 
-    def _convert_to_float(self, value: Any) -> float:
-        """Convert value to float, handling empty values for optional fields."""
+    def _convert_to_float(self, value: Any) -> Optional[float]:
+        """
+        Convert value to float, handling empty values for optional fields.
+        
+        Args:
+            value: Value to convert
+            
+        Returns:
+            Converted float value or None
+            
+        Raises:
+            ValueError: If conversion fails
+        """
         if value is None or value == '':
             return None  # Return None for empty optional fields
         try:
@@ -651,7 +477,16 @@ class AnalysisService:
             raise ValueError(f"Cannot convert {value} to float")
 
     def create_analysis(self, analysis_data: Dict, user_id: str) -> Dict:
-        """Create new analysis with validation and calculation."""
+        """
+        Create new analysis with validation and calculation.
+        
+        Args:
+            analysis_data: Input analysis data
+            user_id: User ID
+            
+        Returns:
+            Created analysis with calculated metrics
+        """
         try:
             logger.debug(f"Creating analysis for user {user_id}")
             
@@ -690,7 +525,19 @@ class AnalysisService:
             raise
 
     def update_analysis(self, analysis_data: Dict, user_id: str) -> Dict:
-        """Update existing analysis with validation and recalculation."""
+        """
+        Update existing analysis with validation and recalculation.
+        
+        Args:
+            analysis_data: Updated analysis data
+            user_id: User ID
+            
+        Returns:
+            Updated analysis with calculated metrics
+            
+        Raises:
+            ValueError: If analysis ID missing or not found
+        """
         try:
             analysis_id = analysis_data.get('id')
             if not analysis_id:
@@ -701,15 +548,8 @@ class AnalysisService:
             if not current_analysis:
                 raise ValueError("Analysis not found")
             
-            # Add detailed logging for balloon payment fields
-            logger.debug(f"Has balloon payment: {analysis_data.get('has_balloon_payment')}")
-            if analysis_data.get('has_balloon_payment'):
-                logger.debug("Balloon fields:")
-                for field in ['balloon_due_date', 'balloon_refinance_ltv_percentage', 
-                            'balloon_refinance_loan_amount', 'balloon_refinance_loan_interest_rate',
-                            'balloon_refinance_loan_term', 'balloon_refinance_loan_down_payment',
-                            'balloon_refinance_loan_closing_costs']:
-                    logger.debug(f"  {field}: {analysis_data.get(field)}")
+            # Log balloon payment fields
+            self._log_balloon_data(analysis_data)
             
             # Preserve comps data from current analysis if not in update data
             if not analysis_data.get('comps_data') and current_analysis.get('comps_data'):
@@ -719,7 +559,7 @@ class AnalysisService:
             # Normalize and validate new data
             normalized_data = self.normalize_data(analysis_data)
             
-            # Preserve metadata and ensure comps data is kept
+            # Preserve metadata
             normalized_data.update({
                 'id': analysis_id,
                 'user_id': user_id,
@@ -735,13 +575,8 @@ class AnalysisService:
             analysis = create_analysis(normalized_data)
             metrics = analysis.get_report_data().get('metrics', {})
             
-            # Add debugging for storage
-            logger.debug(f"Saving analysis with comps data present: {'comps_data' in normalized_data}")
-            if normalized_data.get('comps_data') is not None:
-                comparables = normalized_data['comps_data'].get('comparables', [])
-                logger.debug(f"Comps data contains {len(comparables)} comparables")
-            else:
-                logger.debug("No comps data present")
+            # Debug log for comps data
+            self._log_comps_data(normalized_data)
             
             # Save to storage with explicit comps preservation
             self._save_analysis(normalized_data, user_id)
@@ -759,8 +594,40 @@ class AnalysisService:
             logger.error(traceback.format_exc())
             raise
 
+    def _log_balloon_data(self, analysis_data: Dict) -> None:
+        """Log balloon payment fields for debugging."""
+        logger.debug(f"Has balloon payment: {analysis_data.get('has_balloon_payment')}")
+        if analysis_data.get('has_balloon_payment'):
+            logger.debug("Balloon fields:")
+            balloon_fields = [
+                'balloon_due_date', 'balloon_refinance_ltv_percentage', 
+                'balloon_refinance_loan_amount', 'balloon_refinance_loan_interest_rate',
+                'balloon_refinance_loan_term', 'balloon_refinance_loan_down_payment',
+                'balloon_refinance_loan_closing_costs'
+            ]
+            for field in balloon_fields:
+                logger.debug(f"  {field}: {analysis_data.get(field)}")
+
+    def _log_comps_data(self, data: Dict) -> None:
+        """Log comps data for debugging."""
+        logger.debug(f"Saving analysis with comps data present: {'comps_data' in data}")
+        if data.get('comps_data') is not None:
+            comparables = data['comps_data'].get('comparables', [])
+            logger.debug(f"Comps data contains {len(comparables)} comparables")
+        else:
+            logger.debug("No comps data present")
+
     def get_analysis(self, analysis_id: str, user_id: str) -> Optional[Dict]:
-        """Retrieve analysis with calculations."""
+        """
+        Retrieve analysis with calculations.
+        
+        Args:
+            analysis_id: Analysis ID
+            user_id: User ID
+            
+        Returns:
+            Analysis data with calculated metrics or None if not found
+        """
         try:
             filepath = self._get_analysis_filepath(analysis_id, user_id)
             if not os.path.exists(filepath):
@@ -769,7 +636,7 @@ class AnalysisService:
             # Load stored data
             stored_data = read_json(filepath)
             
-            # Handle field mapping
+            # Handle field mapping for backward compatibility
             if 'property_address' in stored_data and 'address' not in stored_data:
                 stored_data['address'] = stored_data['property_address']
             
@@ -788,77 +655,107 @@ class AnalysisService:
             raise
 
     def get_analyses_for_user(self, user_id: str, page: int = 1, per_page: int = 10) -> Tuple[List[Dict], int]:
-        """Get paginated list of analyses for a user."""
+        """
+        Get paginated list of analyses for a user.
+        
+        Args:
+            user_id: User ID
+            page: Page number (1-based)
+            per_page: Items per page
+            
+        Returns:
+            Tuple of (list of analyses, total pages)
+        """
         try:
-            logger.info(f"A. Starting get_analyses_for_user for user {user_id}")
+            logger.info(f"Starting get_analyses_for_user for user {user_id}")
             
             analyses_dir = current_app.config['ANALYSES_DIR']
             os.makedirs(analyses_dir, exist_ok=True)
             
-            logger.info(f"B. Looking in directory: {analyses_dir}")
+            logger.info(f"Looking in directory: {analyses_dir}")
             all_files = os.listdir(analyses_dir)
-            logger.info(f"C. All files: {all_files}")
             
             # Get all analyses for user
             analyses = []
             for filename in all_files:
-                logger.info(f"D. Checking file: {filename}")
                 if filename.endswith(f"_{user_id}.json"):
-                    logger.info(f"E. Found matching file: {filename}")
+                    logger.info(f"Found matching file: {filename}")
                     filepath = os.path.join(analyses_dir, filename)
                     analysis_data = read_json(filepath)
                     
-                    logger.info(f"F. Raw analysis data from {filename}: {analysis_data}")
-                    
                     if analysis_data:  # Only process if we got valid data
-                        # Handle field mapping
-                        if 'property_address' in analysis_data and 'address' not in analysis_data:
-                            analysis_data['address'] = analysis_data['property_address']
-                        
-                        # Update analysis data with required fields
-                        analysis_data.update({
-                            'user_id': user_id,
-                            'created_at': analysis_data.get('created_at') or datetime.now().strftime("%Y-%m-%d"),
-                            'updated_at': analysis_data.get('updated_at') or datetime.now().strftime("%Y-%m-%d"),
-                        })
-                        
-                        # Create Analysis object for calculations
-                        try:
-                            analysis = create_analysis(analysis_data)
-                            metrics = analysis.get_report_data()['metrics']
-                            analyses.append({
-                                **analysis_data,
-                                'calculated_metrics': metrics
-                            })
-                            logger.info(f"G. Successfully processed analysis: {analysis_data['analysis_name']}")
-                        except Exception as analysis_error:
-                            logger.error(f"Error processing analysis {filename}: {str(analysis_error)}")
-                            continue
+                        analysis_data = self._process_analysis_data(analysis_data, user_id, filename)
+                        if analysis_data:
+                            analyses.append(analysis_data)
             
-            logger.info(f"H. Total analyses found: {len(analyses)}")
+            logger.info(f"Total analyses found: {len(analyses)}")
             
             # Sort by updated_at timestamp
             analyses.sort(key=lambda x: x.get('updated_at', ''), reverse=True)
             
-            # Calculate pagination
-            total_analyses = len(analyses)
-            total_pages = max((total_analyses + per_page - 1) // per_page, 1)
-            
-            # Get requested page
-            start_idx = (page - 1) * per_page
-            end_idx = min(start_idx + per_page, total_analyses)
-            page_analyses = analyses[start_idx:end_idx]
-            
-            logger.info(f"I. Returning {len(page_analyses)} analyses for page {page} of {total_pages}")
-            return page_analyses, total_pages
+            # Paginate results
+            return self._paginate_analyses(analyses, page, per_page)
                 
         except Exception as e:
             logger.error(f"Error retrieving analyses: {str(e)}")
             logger.error(traceback.format_exc())
             return [], 1
 
+    def _process_analysis_data(self, analysis_data: Dict, user_id: str, filename: str) -> Optional[Dict]:
+        """Process a single analysis file."""
+        try:
+            # Handle field mapping
+            if 'property_address' in analysis_data and 'address' not in analysis_data:
+                analysis_data['address'] = analysis_data['property_address']
+            
+            # Update analysis data with required fields
+            analysis_data.update({
+                'user_id': user_id,
+                'created_at': analysis_data.get('created_at') or datetime.now().strftime("%Y-%m-%d"),
+                'updated_at': analysis_data.get('updated_at') or datetime.now().strftime("%Y-%m-%d"),
+            })
+            
+            # Create Analysis object for calculations
+            analysis = create_analysis(analysis_data)
+            metrics = analysis.get_report_data()['metrics']
+            processed_data = {
+                **analysis_data,
+                'calculated_metrics': metrics
+            }
+            logger.info(f"Successfully processed analysis: {analysis_data['analysis_name']}")
+            return processed_data
+        except Exception as analysis_error:
+            logger.error(f"Error processing analysis {filename}: {str(analysis_error)}")
+            return None
+
+    def _paginate_analyses(self, analyses: List[Dict], page: int, per_page: int) -> Tuple[List[Dict], int]:
+        """Paginate a list of analyses."""
+        # Calculate pagination
+        total_analyses = len(analyses)
+        total_pages = max((total_analyses + per_page - 1) // per_page, 1)
+        
+        # Get requested page
+        start_idx = (page - 1) * per_page
+        end_idx = min(start_idx + per_page, total_analyses)
+        page_analyses = analyses[start_idx:end_idx]
+        
+        logger.info(f"Returning {len(page_analyses)} analyses for page {page} of {total_pages}")
+        return page_analyses, total_pages
+
     def delete_analysis(self, analysis_id: str, user_id: str) -> bool:
-        """Delete an analysis."""
+        """
+        Delete an analysis.
+        
+        Args:
+            analysis_id: Analysis ID
+            user_id: User ID
+            
+        Returns:
+            True if successful
+            
+        Raises:
+            ValueError: If analysis not found
+        """
         try:
             logger.info(f"Attempting to delete analysis {analysis_id} for user {user_id}")
             
@@ -876,7 +773,19 @@ class AnalysisService:
             raise
 
     def generate_pdf_report(self, analysis_id: str, user_id: str) -> BytesIO:
-        """Generate a PDF report for an analysis."""
+        """
+        Generate a PDF report for an analysis.
+        
+        Args:
+            analysis_id: Analysis ID
+            user_id: User ID
+            
+        Returns:
+            BytesIO buffer containing PDF data
+            
+        Raises:
+            ValueError: If analysis not found
+        """
         try:
             analysis_data = self.get_analysis(analysis_id, user_id)
             if not analysis_data:
@@ -898,6 +807,15 @@ class AnalysisService:
     def _save_analysis(self, analysis_data: Dict, user_id: str, is_mobile: bool = False) -> None:
         """
         Save analysis data to storage with mobile optimization support.
+        
+        Args:
+            analysis_data: Analysis data to save
+            user_id: User ID
+            is_mobile: Whether request is from mobile client
+            
+        Raises:
+            ValueError: If validation fails
+            IOError: If file operations fail
         """
         try:
             logger.debug(f"Starting analysis save operation for user {user_id}")
@@ -924,37 +842,7 @@ class AnalysisService:
             self._validate_storage_data(storage_data)
             
             # Implement retries for file operations
-            max_retries = 3
-            retry_delay = 1  # seconds
-            
-            for attempt in range(max_retries):
-                try:
-                    # Create temporary file
-                    temp_filepath = f"{filepath}.temp"
-                    
-                    # Write to temporary file first using write_json utility
-                    write_json(temp_filepath, storage_data)
-                    
-                    # Atomic rename for safe file replacement
-                    os.replace(temp_filepath, filepath)
-                    
-                    logger.debug(f"Analysis saved successfully to {filepath}")
-                    break
-                    
-                except IOError as e:
-                    if attempt < max_retries - 1:
-                        logger.warning(f"Retry {attempt + 1}/{max_retries} after IOError: {str(e)}")
-                        time.sleep(retry_delay)
-                    else:
-                        raise IOError(f"Failed to save analysis after {max_retries} attempts: {str(e)}")
-                        
-                finally:
-                    # Cleanup temporary file if it exists
-                    if os.path.exists(temp_filepath):
-                        try:
-                            os.remove(temp_filepath)
-                        except OSError:
-                            pass
+            self._save_with_retries(filepath, storage_data)
             
         except ValueError as e:
             logger.error(f"Validation error during save: {str(e)}")
@@ -967,12 +855,55 @@ class AnalysisService:
             logger.error(traceback.format_exc())
             raise ValueError(f"Failed to save analysis: {str(e)}")
 
+    def _save_with_retries(self, filepath: str, data: Dict) -> None:
+        """
+        Save data to file with retry logic.
+        
+        Args:
+            filepath: Path to save file
+            data: Data to save
+            
+        Raises:
+            IOError: If save fails after all retries
+        """
+        max_retries = 3
+        retry_delay = 1  # seconds
+        
+        for attempt in range(max_retries):
+            try:
+                # Create temporary file
+                temp_filepath = f"{filepath}.temp"
+                
+                # Write to temporary file first using write_json utility
+                write_json(temp_filepath, data)
+                
+                # Atomic rename for safe file replacement
+                os.replace(temp_filepath, filepath)
+                
+                logger.debug(f"Analysis saved successfully to {filepath}")
+                break
+                
+            except IOError as e:
+                if attempt < max_retries - 1:
+                    logger.warning(f"Retry {attempt + 1}/{max_retries} after IOError: {str(e)}")
+                    time.sleep(retry_delay)
+                else:
+                    raise IOError(f"Failed to save analysis after {max_retries} attempts: {str(e)}")
+                    
+            finally:
+                # Cleanup temporary file if it exists
+                if os.path.exists(temp_filepath):
+                    try:
+                        os.remove(temp_filepath)
+                    except OSError:
+                        pass
+
     def _validate_storage_data(self, data: Dict) -> None:
         """
         Validate data before storage.
         
         Args:
-            data (Dict): Data to validate
+            data: Data to validate
             
         Raises:
             ValueError: If validation fails
@@ -1019,7 +950,15 @@ class AnalysisService:
                 raise ValueError("Invalid balloon_due_date format")
             
     def _compress_analysis_data(self, data: Dict) -> Dict:
-        """Compress analysis data for mobile storage"""
+        """
+        Compress analysis data for mobile storage.
+        
+        Args:
+            data: Original data
+            
+        Returns:
+            Compressed data for mobile
+        """
         compressed = data.copy()
         
         # Remove unnecessary precision from numeric values
@@ -1034,9 +973,21 @@ class AnalysisService:
         return compressed
 
     def _get_analysis_filepath(self, analysis_id: str, user_id: str) -> str:
-        """Get filepath for analysis storage."""
+        """
+        Get filepath for analysis storage.
+        
+        Args:
+            analysis_id: Analysis ID
+            user_id: User ID
+            
+        Returns:
+            Full filepath for storage
+            
+        Raises:
+            ValueError: If filepath cannot be determined
+        """
         try:
-            analyses_dir = current_app.config['ANALYSES_DIR']
+            analyses_dir = current_app.config.get('ANALYSES_DIR')
             if not analyses_dir:
                 raise ValueError("ANALYSES_DIR not configured")
                 
@@ -1052,17 +1003,3 @@ class AnalysisService:
         except Exception as e:
             logger.error(f"Error creating filepath: {str(e)}")
             raise ValueError(f"Could not determine filepath: {str(e)}")
-
-    def _convert_value(self, value: Any, type_func: type) -> Any:
-        """Convert value to specified type, handling various formats."""
-        if value in (None, '', 'null'):
-            return None
-            
-        try:
-            if isinstance(value, str):
-                # Remove any currency or percentage symbols and commas
-                clean_value = value.replace('$', '').replace('%', '').replace(',', '').strip()
-                return type_func(clean_value)
-            return type_func(value)
-        except (ValueError, TypeError):
-            return None

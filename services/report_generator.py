@@ -1376,20 +1376,34 @@ class PropertyReportGenerator:
         )
         
         # Define purchase fields based on analysis type
-        purchase_fields = [
-            ('purchase_price', 'Purchase Price'),
-            ('after_repair_value', 'After Repair Value'),
-            ('renovation_costs', 'Renovation Costs'),
-            ('renovation_duration', 'Renovation Duration'),
-            ('cash_to_seller', 'Cash to Seller'),
-            ('closing_costs', 'Closing Costs'),
-            ('assignment_fee', 'Assignment Fee'),
-            ('marketing_costs', 'Marketing Costs')
-        ]
+        purchase_fields = []
         
-        # Add PadSplit-specific field
-        if 'PadSplit' in self.data.get('analysis_type', ''):
-            purchase_fields.append(('furnishing_costs', 'Furnishing Costs'))
+        # For Lease Option, include specific fields
+        if self.data.get('analysis_type') == 'Lease Option':
+            purchase_fields = [
+                ('purchase_price', 'Purchase Price'),
+                ('strike_price', 'Strike Price'),
+                ('option_consideration_fee', 'Option Fee'),
+                ('option_term_months', 'Option Term'),
+                ('monthly_rent_credit_percentage', 'Monthly Rent Credit %'),
+                ('rent_credit_cap', 'Rent Credit Cap')
+            ]
+        else:
+            # For other analysis types, include standard fields
+            purchase_fields = [
+                ('purchase_price', 'Purchase Price'),
+                ('after_repair_value', 'After Repair Value'),
+                ('renovation_costs', 'Renovation Costs'),
+                ('renovation_duration', 'Renovation Duration'),
+                ('cash_to_seller', 'Cash to Seller'),
+                ('closing_costs', 'Closing Costs'),
+                ('assignment_fee', 'Assignment Fee'),
+                ('marketing_costs', 'Marketing Costs')
+            ]
+            
+            # Add PadSplit-specific field
+            if 'PadSplit' in self.data.get('analysis_type', ''):
+                purchase_fields.append(('furnishing_costs', 'Furnishing Costs'))
         
         # Build table data
         table_data = []
@@ -1397,16 +1411,25 @@ class PropertyReportGenerator:
             if key in self.data and self.data[key]:
                 value = self.data[key]
                 
-                # Format currency values
+                # Format values for better display
                 if key in ['purchase_price', 'after_repair_value', 'renovation_costs', 
                         'cash_to_seller', 'closing_costs', 'assignment_fee', 
-                        'marketing_costs', 'furnishing_costs']:
+                        'marketing_costs', 'furnishing_costs', 'strike_price',
+                        'option_consideration_fee', 'rent_credit_cap']:
                     if isinstance(value, (int, float)):
                         value = f"${value:,.2f}"
                 # Format renovation duration
                 elif key == 'renovation_duration':
                     if isinstance(value, (int, float)) and value > 0:
                         value = f"{int(value)} month{'s' if int(value) != 1 else ''}"
+                # Format option term
+                elif key == 'option_term_months':
+                    if isinstance(value, (int, float)) and value > 0:
+                        value = f"{int(value)} month{'s' if int(value) != 1 else ''}"
+                # Format rent credit percentage
+                elif key == 'monthly_rent_credit_percentage':
+                    if isinstance(value, (int, float)):
+                        value = f"{value}%"
                 
                 table_data.append([
                     Paragraph(label + ":", label_style),
@@ -1415,7 +1438,7 @@ class PropertyReportGenerator:
         
         # Create and style the table
         if table_data:
-            # Calculate column widths
+            # Calculate optimal column widths
             col1_width = min(1.6*inch, self.doc.width * 0.45 * 0.6)
             col2_width = (self.doc.width * 0.45) - col1_width
             
@@ -1440,7 +1463,7 @@ class PropertyReportGenerator:
                     ('LINEBELOW', (0, 0), (-1, -1), 0.25, colors['border_light']),
                     ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
                     
-                    # Padding
+                    # Padding for breathing room
                     ('TOPPADDING', (0, 0), (-1, -1), 4),
                     ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
                     ('LEFTPADDING', (0, 0), (-1, -1), 6),
@@ -1486,15 +1509,28 @@ class PropertyReportGenerator:
             alignment=2  # Right aligned
         )
         
-        # Define financial fields
-        financial_fields = [
-            ('monthly_rent', 'Monthly Rent'),
-            ('monthly_cash_flow', 'Monthly Cash Flow'),
-            ('annual_cash_flow', 'Annual Cash Flow'),
-            ('cash_on_cash_return', 'Cash on Cash Return'),
-            ('roi', 'ROI'),
-            ('total_cash_invested', 'Total Cash Invested')
-        ]
+        # Define financial fields based on analysis type
+        financial_fields = []
+        
+        if self.data.get('analysis_type') == 'Lease Option':
+            financial_fields = [
+                ('monthly_rent', 'Monthly Rent'),
+                ('monthly_cash_flow', 'Monthly Cash Flow'),
+                ('annual_cash_flow', 'Annual Cash Flow'),
+                ('total_rent_credits', 'Total Rent Credits'),
+                ('effective_purchase_price', 'Effective Purchase Price'),
+                ('cash_on_cash_return', 'Cash on Cash Return'),
+                ('breakeven_months', 'Breakeven Months')
+            ]
+        else:
+            financial_fields = [
+                ('monthly_rent', 'Monthly Rent'),
+                ('monthly_cash_flow', 'Monthly Cash Flow'),
+                ('annual_cash_flow', 'Annual Cash Flow'),
+                ('cash_on_cash_return', 'Cash on Cash Return'),
+                ('roi', 'ROI'),
+                ('total_cash_invested', 'Total Cash Invested')
+            ]
         
         # Build table data
         table_data = []
@@ -1523,6 +1559,28 @@ class PropertyReportGenerator:
             # Use direct values for some fields
             elif key == 'monthly_rent':
                 value = f"${self._parse_currency(self.data.get('monthly_rent', 0)):.2f}"
+            elif key == 'total_rent_credits' and not value:
+                # Calculate for Lease Option if not provided
+                monthly_rent = self._parse_currency(self.data.get('monthly_rent', 0))
+                credit_pct = self._parse_percentage(self.data.get('monthly_rent_credit_percentage', 0)) / 100
+                term = int(self.data.get('option_term_months', 0))
+                cap = self._parse_currency(self.data.get('rent_credit_cap', 0))
+                
+                total_credits = min(monthly_rent * credit_pct * term, cap)
+                value = f"${total_credits:.2f}"
+            elif key == 'effective_purchase_price' and not value:
+                # Calculate for Lease Option if not provided
+                strike_price = self._parse_currency(self.data.get('strike_price', 0))
+                
+                # Get total rent credits (from above calculation)
+                monthly_rent = self._parse_currency(self.data.get('monthly_rent', 0))
+                credit_pct = self._parse_percentage(self.data.get('monthly_rent_credit_percentage', 0)) / 100
+                term = int(self.data.get('option_term_months', 0))
+                cap = self._parse_currency(self.data.get('rent_credit_cap', 0))
+                
+                total_credits = min(monthly_rent * credit_pct * term, cap)
+                
+                value = f"${strike_price - total_credits:.2f}"
             
             if value:
                 table_data.append([

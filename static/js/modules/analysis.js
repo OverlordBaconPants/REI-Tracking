@@ -4238,7 +4238,7 @@ window.analysisModule = {
             <!-- Purchase Details Card -->
             <div class="card mb-4">
                 <div class="card-header">
-                    <h5 class="mb-0">Purchase Details</h5>
+                    <h5 class="mb-0">Lease Option Details</h5>
                 </div>
                 <div class="card-body">
                     <div class="list-group list-group-flush">
@@ -4247,53 +4247,8 @@ window.analysisModule = {
                             <strong>${this.formatDisplayValue(analysis.purchase_price)}</strong>
                         </div>
                         <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                            <span>After Repair Value</span>
-                            <strong>${this.formatDisplayValue(analysis.after_repair_value)}</strong>
-                        </div>
-                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                            <span>Renovation Costs</span>
-                            <strong>${this.formatDisplayValue(analysis.renovation_costs)}</strong>
-                        </div>
-                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                            <span>Renovation Duration</span>
-                            <strong>${analysis.renovation_duration} months</strong>
-                        </div>
-                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                            <span>Cash to Seller</span>
-                            <strong>${this.formatDisplayValue(analysis.cash_to_seller)}</strong>
-                        </div>
-                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                            <span>Closing Costs</span>
-                            <strong>${this.formatDisplayValue(analysis.closing_costs)}</strong>
-                        </div>
-                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                            <span>Assignment Fee</span>
-                            <strong>${this.formatDisplayValue(analysis.assignment_fee)}</strong>
-                        </div>
-                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                            <span>Marketing Costs</span>
-                            <strong>${this.formatDisplayValue(analysis.marketing_costs)}</strong>
-                        </div>
-                        ${analysis.analysis_type.includes('PadSplit') ? `
-                            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                <span>Furnishing Costs</span>
-                                <strong>${this.formatDisplayValue(analysis.furnishing_costs)}</strong>
-                            </div>
-                        ` : ''}
-                    </div>
-                </div>
-            </div>
-        
-            <!-- Option Details Card -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Option Details</h5>
-                </div>
-                <div class="card-body">
-                    <div class="list-group list-group-flush">
-                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                            <span>Property Type</span>
-                            <strong>${analysis.property_type || 'Not Specified'}</strong>
+                            <span>Strike Price</span>
+                            <strong>${this.formatDisplayValue(analysis.strike_price)}</strong>
                         </div>
                         <div class="list-group-item d-flex justify-content-between align-items-center py-3">
                             <span>Option Fee</span>
@@ -4304,32 +4259,55 @@ window.analysisModule = {
                             <strong>${analysis.option_term_months} months</strong>
                         </div>
                         <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                            <span>Strike Price</span>
-                            <strong>${this.formatDisplayValue(analysis.strike_price)}</strong>
+                            <span>Monthly Rent Credit %</span>
+                            <strong>${this.formatDisplayValue(analysis.monthly_rent_credit_percentage, 'percentage')}</strong>
                         </div>
                         <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                            <span>Monthly Rent Credit</span>
-                            <div class="text-end">
-                                <div class="small text-muted">
-                                    ${this.formatDisplayValue(analysis.monthly_rent_credit_percentage, 'percentage')}
-                                </div>
-                                <strong>${this.formatDisplayValue(analysis.monthly_rent * (analysis.monthly_rent_credit_percentage / 100))}/mo</strong>
-                            </div>
-                        </div>
-                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                            <span>Total Potential Credits</span>
-                            <strong>${this.formatDisplayValue(Math.min(
-                                analysis.monthly_rent * (analysis.monthly_rent_credit_percentage / 100) * analysis.option_term_months,
-                                analysis.rent_credit_cap
-                            ))}</strong>
+                            <span>Rent Credit Cap</span>
+                            <strong>${this.formatDisplayValue(analysis.rent_credit_cap)}</strong>
                         </div>
                     </div>
                 </div>
             </div>
             
+            <!-- Property Details Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Property Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Property Type</span>
+                            <strong>${analysis.property_type || 'Not Specified'}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Square Footage</span>
+                            <strong>${analysis.square_footage ? analysis.square_footage.toLocaleString() + ' sq ft' : 'Not Specified'}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Lot Size</span>
+                            <strong>${analysis.lot_size ? analysis.lot_size.toLocaleString() + ' sq ft' : 'Not Specified'}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Year Built</span>
+                            <strong>${analysis.year_built || 'Not Specified'}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Bedrooms</span>
+                            <strong>${analysis.bedrooms || 'Not Specified'}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Bathrooms</span>
+                            <strong>${analysis.bathrooms || 'Not Specified'}</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+                
             <!-- KPIs Card -->
             ${kpiCard}
-    
+
             <!-- Financial Overview Card -->
             <div class="card mb-4">
                 <div class="card-header">
@@ -4360,10 +4338,26 @@ window.analysisModule = {
                             <span>Cash-on-Cash Return</span>
                             <strong>${analysis.calculated_metrics?.cash_on_cash_return}</strong>
                         </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Total Rent Credits</span>
+                            <strong>${analysis.calculated_metrics?.total_rent_credits || this.formatDisplayValue(Math.min(
+                                analysis.monthly_rent * (analysis.monthly_rent_credit_percentage / 100) * analysis.option_term_months,
+                                analysis.rent_credit_cap
+                            ))}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Effective Purchase Price</span>
+                            <strong>${analysis.calculated_metrics?.effective_purchase_price || this.formatDisplayValue(
+                                analysis.strike_price - Math.min(
+                                    analysis.monthly_rent * (analysis.monthly_rent_credit_percentage / 100) * analysis.option_term_months,
+                                    analysis.rent_credit_cap
+                                )
+                            )}</strong>
+                        </div>
                     </div>
                 </div>
             </div>
-    
+
             <!-- Operating Expenses Card -->
             <div class="card mb-4">
                 <div class="card-header">
