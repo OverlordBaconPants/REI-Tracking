@@ -2,30 +2,39 @@ from typing import Dict, List, Optional
 from datetime import datetime, date
 import logging
 from decimal import Decimal
-import calendar
+from functools import lru_cache
 
 logger = logging.getLogger(__name__)
+
 
 class PropertyKPIService:
     """Enhanced service for calculating property KPIs from actual transaction data."""
     
     # Categories that should NOT be included in operating expenses
     NON_OPERATING_CATEGORIES = {
-        'Asset Acquisition',      # One-time acquisition costs
-        'Capital Expenditures',   # Major improvements
-        'Bank/Financial Fees',    # Financing costs
+        'Asset Acquisition',     # One-time acquisition costs
+        'Capital Expenditures',  # Major improvements
+        'Bank/Financial Fees',   # Financing costs
         'Legal/Professional Fees',# One-time costs
-        'Marketing/Advertising',  # One-time costs
+        'Marketing/Advertising', # One-time costs
         'Mortgage'               # Handled separately for DSCR
     }
     
     # Categories that should NOT be included in income calculations
     NON_OPERATING_INCOME = {
         'Security Deposit',  # Not true income
-        'Loan Repayment',   # Principal recovery
-        'Insurance Refund', # One-time refunds
-        'Escrow Refund'     # One-time refunds
+        'Loan Repayment',    # Principal recovery
+        'Insurance Refund',  # One-time refunds
+        'Escrow Refund'      # One-time refunds
     }
+    
+    # Constants for data quality checks
+    MAX_START_GAP_DAYS = 30  # Allow 30 days gap from purchase
+    MAX_END_GAP_DAYS = 45    # Allow 45 days gap to present
+    
+    def __init__(self, properties_data: List[Dict]):
+        """Initialize with properties data including acquisition and loan details."""
+        self.properties_data = {p['address']: p for p in properties_data}
     
     @staticmethod
     def safe_json(obj):
@@ -38,30 +47,29 @@ class PropertyKPIService:
             return [PropertyKPIService.safe_json(i) for i in obj]
         return obj
 
-    def __init__(self, properties_data: List[Dict]):
-        """Initialize with properties data including acquisition and loan details."""
-        self.properties_data = {
-            p['address']: p for p in properties_data
-        }
-    
     def get_kpi_dashboard_data(self, 
                              property_id: str,
                              transactions: List[Dict],
                              analysis_id: Optional[str] = None) -> Dict:
         """Get complete KPI dashboard data including YTD and Since Acquisition."""
         try:
+            # Filter transactions for the specific property once
+            property_transactions = [t for t in transactions if t['property_id'] == property_id]
+            
             # Get YTD KPIs
-            ytd_kpis = self.get_ytd_kpis(property_id, transactions)
+            ytd_kpis = self.get_ytd_kpis(property_id, property_transactions)
             
             # Get Since Acquisition KPIs
-            acquisition_kpis = self.get_since_acquisition_kpis(property_id, transactions)
+            acquisition_kpis = self.get_since_acquisition_kpis(property_id, property_transactions)
+            
+            has_complete_history = self._has_complete_history(property_id, property_transactions)
             
             return {
                 'year_to_date': ytd_kpis,
                 'since_acquisition': acquisition_kpis,
                 'analysis_comparison': None,
                 'metadata': {
-                    'has_complete_history': self._has_complete_history(property_id, transactions),
+                    'has_complete_history': has_complete_history,
                     'available_analyses': []
                 }
             }
@@ -94,7 +102,9 @@ class PropertyKPIService:
             end_date=date.today().strftime('%Y-%m-%d')
         )
     
-    def calculate_property_kpis(self, property_id: str, transactions: List[Dict], 
+    def calculate_property_kpis(self, 
+                              property_id: str, 
+                              transactions: List[Dict], 
                               start_date: Optional[str] = None, 
                               end_date: Optional[str] = None) -> Dict:
         """Calculate KPIs for a property based on actual transactions."""
@@ -107,72 +117,92 @@ class PropertyKPIService:
             
             # Filter transactions
             filtered_transactions = self._filter_transactions_by_date(
-                [t for t in transactions if t['property_id'] == property_id],
+                transactions,
                 start_date,
                 end_date
             )
             
             if not filtered_transactions:
-                logger.warning(f"No transactions found for property {property_id}")
+                logger.warning(f"No transactions found for property {property_id} in date range")
                 return self._get_empty_kpi_dict()
             
             # Calculate monthly averages
             monthly_metrics = self._calculate_monthly_metrics(filtered_transactions)
             
-            # Calculate property metrics
-            purchase_price = Decimal(str(property_details['purchase_price']))
-            total_investment = self._calculate_total_investment(property_details)
-            
-            # Calculate monthly NOI and cash flow
-            avg_monthly_noi = monthly_metrics['avg_monthly_noi']
-            avg_monthly_cash_flow = avg_monthly_noi - monthly_metrics['avg_monthly_mortgage']
-            
-            # Calculate DSCR
-            dscr = None
-            if monthly_metrics['avg_monthly_mortgage'] > 0:
-                dscr = avg_monthly_noi / monthly_metrics['avg_monthly_mortgage']
-            
-            # Calculate Cap Rate (using annualized NOI)
-            annual_noi = avg_monthly_noi * Decimal('12')
-            cap_rate = (annual_noi / purchase_price * Decimal('100')) if purchase_price else None
-            
-            # Calculate Cash on Cash Return
-            annual_cash_flow = avg_monthly_cash_flow * Decimal('12')
-            cash_on_cash = (annual_cash_flow / total_investment * Decimal('100')) if total_investment else None
-            
-            kpi_data = {
-                'net_operating_income': {
-                    'monthly': avg_monthly_noi,
-                    'annual': annual_noi
-                },
-                'total_income': {
-                    'monthly': monthly_metrics['avg_monthly_income'],
-                    'annual': monthly_metrics['avg_monthly_income'] * Decimal('12')
-                },
-                'total_expenses': {
-                    'monthly': monthly_metrics['avg_monthly_expenses'],
-                    'annual': monthly_metrics['avg_monthly_expenses'] * Decimal('12')
-                },
-                'cap_rate': cap_rate,
-                'cash_on_cash_return': cash_on_cash,
-                'debt_service_coverage_ratio': dscr,
-                'cash_invested': total_investment,
-                'metadata': {
-                    'has_complete_history': self._has_complete_history(property_id, filtered_transactions),
-                    'data_quality': {
-                        'confidence_level': 'high',
-                        'refinance_info': self._calculate_refinance_impact(
-                            property_id, filtered_transactions, start_date, end_date
-                        )
-                    }
-                }
-            }
+            # Calculate KPIs
+            kpi_data = self._compute_kpi_metrics(
+                property_details, 
+                monthly_metrics,
+                filtered_transactions,
+                start_date,
+                end_date
+            )
 
             return self.safe_json(kpi_data)
                 
         except Exception as e:
             logger.error(f"Error calculating KPIs for {property_id}: {str(e)}")
             return self._get_empty_kpi_dict()
+
+    def _compute_kpi_metrics(self, 
+                           property_details: Dict, 
+                           monthly_metrics: Dict[str, Decimal],
+                           transactions: List[Dict],
+                           start_date: Optional[str],
+                           end_date: Optional[str]) -> Dict:
+        """Compute all KPI metrics from monthly data and property details."""
+        # Extract required values
+        purchase_price = Decimal(str(property_details['purchase_price']))
+        total_investment = self._calculate_total_investment(property_details)
+        
+        # Calculate monthly NOI and cash flow
+        avg_monthly_noi = monthly_metrics['avg_monthly_noi']
+        avg_monthly_cash_flow = avg_monthly_noi - monthly_metrics['avg_monthly_mortgage']
+        
+        # Calculate DSCR
+        dscr = self._calculate_dscr(avg_monthly_noi, monthly_metrics['avg_monthly_mortgage'])
+        
+        # Calculate Cap Rate (using annualized NOI)
+        annual_noi = avg_monthly_noi * Decimal('12')
+        cap_rate = (annual_noi / purchase_price * Decimal('100')) if purchase_price else None
+        
+        # Calculate Cash on Cash Return
+        annual_cash_flow = avg_monthly_cash_flow * Decimal('12')
+        cash_on_cash = (annual_cash_flow / total_investment * Decimal('100')) if total_investment else None
+        
+        property_id = property_details.get('address', '')
+        
+        return {
+            'net_operating_income': {
+                'monthly': avg_monthly_noi,
+                'annual': annual_noi
+            },
+            'total_income': {
+                'monthly': monthly_metrics['avg_monthly_income'],
+                'annual': monthly_metrics['avg_monthly_income'] * Decimal('12')
+            },
+            'total_expenses': {
+                'monthly': monthly_metrics['avg_monthly_expenses'],
+                'annual': monthly_metrics['avg_monthly_expenses'] * Decimal('12')
+            },
+            'cap_rate': cap_rate,
+            'cash_on_cash_return': cash_on_cash,
+            'debt_service_coverage_ratio': dscr,
+            'cash_invested': total_investment,
+            'metadata': {
+                'has_complete_history': self._has_complete_history(property_id, transactions),
+                'data_quality': {
+                    'confidence_level': 'high',
+                    'refinance_info': self._calculate_refinance_impact(
+                        property_id, transactions, start_date, end_date
+                    )
+                }
+            }
+        }
+    
+    def _calculate_dscr(self, noi: Decimal, mortgage_payment: Decimal) -> Optional[Decimal]:
+        """Calculate debt service coverage ratio."""
+        return noi / mortgage_payment if mortgage_payment > 0 else None
 
     def _calculate_monthly_metrics(self, transactions: List[Dict]) -> Dict[str, Decimal]:
         """Calculate average monthly metrics from transactions."""
@@ -195,7 +225,9 @@ class PropertyKPIService:
                     monthly_expenses[month] = monthly_expenses.get(month, Decimal('0')) + amount
         
         # Calculate averages
-        num_months = len(set(monthly_income.keys()) | set(monthly_expenses.keys()) | set(monthly_mortgage.keys()))
+        all_months = set(monthly_income) | set(monthly_expenses) | set(monthly_mortgage)
+        num_months = len(all_months)
+        
         if num_months == 0:
             return {
                 'avg_monthly_income': Decimal('0'),
@@ -218,13 +250,18 @@ class PropertyKPIService:
 
     def _calculate_total_investment(self, property_details: Dict) -> Decimal:
         """Calculate total cash invested in the property."""
-        return sum([
-            Decimal(str(property_details.get('down_payment', 0))),
-            Decimal(str(property_details.get('closing_costs', 0))),
-            Decimal(str(property_details.get('renovation_costs', 0))),
-            Decimal(str(property_details.get('marketing_costs', 0))),
-            Decimal(str(property_details.get('holding_costs', 0)))
-        ])
+        investment_fields = [
+            'down_payment', 
+            'closing_costs', 
+            'renovation_costs', 
+            'marketing_costs', 
+            'holding_costs'
+        ]
+        
+        return sum(
+            Decimal(str(property_details.get(field, 0)))
+            for field in investment_fields
+        )
 
     def _has_complete_history(self, property_id: str, transactions: List[Dict]) -> bool:
         """Check if we have complete transaction history for meaningful KPI calculation."""
@@ -232,7 +269,7 @@ class PropertyKPIService:
             return False
             
         property_details = self.properties_data.get(property_id)
-        if not property_details:
+        if not property_details or not property_details.get('purchase_date'):
             return False
             
         purchase_date = datetime.strptime(property_details['purchase_date'], '%Y-%m-%d').date()
@@ -249,21 +286,18 @@ class PropertyKPIService:
         earliest_transaction = min(transaction_dates)
         latest_transaction = max(transaction_dates)
         
-        MAX_START_GAP_DAYS = 30  # Allow 30 days gap from purchase
-        MAX_END_GAP_DAYS = 45    # Allow 45 days gap to present
-        
-        has_start_coverage = (earliest_transaction - purchase_date).days <= MAX_START_GAP_DAYS
-        has_end_coverage = (today - latest_transaction).days <= MAX_END_GAP_DAYS
+        has_start_coverage = (earliest_transaction - purchase_date).days <= self.MAX_START_GAP_DAYS
+        has_end_coverage = (today - latest_transaction).days <= self.MAX_END_GAP_DAYS
         
         return has_start_coverage and has_end_coverage
 
-    def _calculate_refinance_impact(self, property_id: str, transactions: List[Dict],
-                                  start_date: Optional[str], end_date: Optional[str]) -> Dict:
+    def _calculate_refinance_impact(self, 
+                                  property_id: str, 
+                                  transactions: List[Dict],
+                                  start_date: Optional[str], 
+                                  end_date: Optional[str]) -> Dict:
         """Analyze impact of refinancing on debt service."""
-        mortgage_transactions = [
-            t for t in transactions
-            if t['category'] == 'Mortgage'
-        ]
+        mortgage_transactions = [t for t in transactions if t['category'] == 'Mortgage']
         
         if not mortgage_transactions:
             return {
@@ -277,21 +311,17 @@ class PropertyKPIService:
         payments = [Decimal(str(t['amount'])) for t in mortgage_transactions]
         
         # Look for significant changes in payment amounts
-        unique_payments = sorted(set(payments))
-        if len(unique_payments) > 1:
-            return {
-                'has_refinanced': True,
-                'original_debt_service': float(payments[0]),
-                'current_debt_service': float(payments[-1])
-            }
-            
+        unique_payments = set(payments)
+        has_refinanced = len(unique_payments) > 1
+        
         return {
-            'has_refinanced': False,
+            'has_refinanced': has_refinanced,
             'original_debt_service': float(payments[0]),
-            'current_debt_service': float(payments[0])
+            'current_debt_service': float(payments[-1])
         }
 
-    def _filter_transactions_by_date(self, transactions: List[Dict],
+    def _filter_transactions_by_date(self, 
+                                   transactions: List[Dict],
                                    start_date: Optional[str] = None,
                                    end_date: Optional[str] = None) -> List[Dict]:
         """Filter transactions by date range."""
