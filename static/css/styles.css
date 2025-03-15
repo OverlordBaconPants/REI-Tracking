@@ -1,3 +1,23 @@
+.dash-date-picker {
+    z-index: 1050 !important; /* Higher than Bootstrap modals */
+}
+
+.SingleDatePickerInput, .DateRangePicker {
+    width: 100%;
+}
+
+.SingleDatePicker, .DateRangePicker {
+    display: block;
+}
+
+/* Ensure the popup appears above other elements */
+.DateRangePicker_picker, .SingleDatePicker_picker {
+    position: fixed !important;
+    top: auto !important;
+    z-index: 1060 !important;
+}
+
+
 /* KPI Dashboard Styles */
 .kpi-dashboard .card {
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);

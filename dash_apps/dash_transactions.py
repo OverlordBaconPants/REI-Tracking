@@ -1,5 +1,5 @@
 import dash
-from dash import dcc, html, dash_table, Input, Output, State
+from dash import dcc, html, dash_table, Input, Output, State, callback_context as ctx
 import numpy as np
 import dash_bootstrap_components as dbc
 import pandas as pd
@@ -553,11 +553,25 @@ def create_transactions_dash(flask_app):
                     ], xs=12, md=6),
                     dbc.Col([
                         dbc.Label("Date Range", className='mb-1'),
-                        dcc.DatePickerRange(
-                            id='date-range',
-                            className='mb-3',
-                            style={'width': '100%'}
-                        )
+                        dbc.Row([
+                            dbc.Col([
+                                dcc.DatePickerRange(
+                                    id='date-range',
+                                    className='mb-3',
+                                    style={'width': '100%'}
+                                )
+                            ], xs=8),  # Take 8/12 of the width
+                            dbc.Col([
+                                dbc.Button(
+                                    [html.I(className="bi bi-calendar-x me-1"), "Clear"],  # Shorter text with icon
+                                    id="clear-date-range",
+                                    color="secondary",
+                                    size="md",
+                                    className="w-100 mb-3",
+                                    style={'height': '38px'}  # Match the height of the date picker
+                                )
+                            ], xs=4)  # Take 4/12 of the width
+                        ], className="g-0")  # Remove gutters between columns
                     ], xs=12, md=6)
                 ]),
                 dbc.Row([
@@ -694,6 +708,29 @@ def create_transactions_dash(flask_app):
                 })
         return property_options
 
+    @dash_app.callback(
+        [Output('date-range', 'start_date'),
+        Output('date-range', 'end_date')],
+        [Input('clear-date-range', 'n_clicks'),
+        Input('refresh-trigger', 'data')],
+        [State('filter-options', 'data')]
+    )
+    def manage_date_range(clear_clicks, refresh_trigger, filter_data):
+        ctx = dash.callback_context
+        
+        # Check which input triggered the callback
+        triggered_id = ctx.triggered[0]['prop_id'].split('.')[0] if ctx.triggered else None
+        
+        if triggered_id == 'clear-date-range':
+            # Clear button was clicked
+            return None, None
+        elif triggered_id == 'refresh-trigger' and filter_data:
+            # Restoring from filter_options
+            return filter_data.get('start_date'), filter_data.get('end_date')
+        
+        # If no relevant trigger, prevent update
+        raise dash.exceptions.PreventUpdate
+        
     # Register callbacks
     @dash_app.callback(
         [Output('transactions-table', 'data'),
@@ -973,17 +1010,33 @@ def create_transactions_dash(flask_app):
             return None
 
     @dash_app.callback(
-        Output('filter-options', 'data'),
+        [Output('filter-options', 'data'),
+        Output('refresh-trigger', 'data')],  # Add refresh-trigger as output
         [Input('property-filter', 'value'),
         Input('type-filter', 'value'),
         Input('date-range', 'start_date'),
         Input('date-range', 'end_date'),
-        Input('description-search', 'value')],
-        [State('reimbursement-filter', 'value')]
+        Input('description-search', 'value'),
+        Input('clear-date-range', 'n_clicks')],
+        [State('reimbursement-filter', 'value'),
+        State('refresh-trigger', 'data')]  # Add as state
     )
     def update_filter_options(property_id, transaction_type, 
-                            start_date, end_date, description_search, reimbursement_status):
-        return {
+                            start_date, end_date, description_search, 
+                            clear_date_clicks, reimbursement_status, refresh_data):
+        ctx = dash.callback_context
+        triggered_id = ctx.triggered[0]['prop_id'].split('.')[0] if ctx.triggered else None
+        
+        # Update refresh trigger with new timestamp
+        new_refresh = {'time': datetime.now().isoformat()}
+        
+        # Clear dates if clear button was clicked
+        if triggered_id == 'clear-date-range':
+            start_date = None
+            end_date = None
+        
+        # Update filter options
+        updated_filters = {
             'property_id': property_id,
             'transaction_type': transaction_type,
             'reimbursement_status': reimbursement_status,
@@ -991,31 +1044,8 @@ def create_transactions_dash(flask_app):
             'end_date': end_date,
             'description_search': description_search
         }
-
-    @dash_app.callback(
-        [Output('property-filter', 'value'),
-        Output('type-filter', 'value'),
-        Output('date-range', 'start_date'),
-        Output('date-range', 'end_date'),
-        Output('description-search', 'value')],
-        [Input('refresh-trigger', 'data')],
-        [State('filter-options', 'data')]
-    )
-    def restore_filters(trigger, filter_data):
-        if not filter_data:
-            return [None, None, None, None, None]
         
-        try:
-            return [
-                filter_data.get('property_id'),
-                filter_data.get('transaction_type'),
-                filter_data.get('start_date'),
-                filter_data.get('end_date'),
-                filter_data.get('description_search')
-            ]
-        except Exception as e:
-            logger.error(f"Error restoring filters: {str(e)}")
-            return [None, None, None, None, None]
+        return updated_filters, new_refresh
 
     def check_property_ownership(property_id):
         """Check if a property is wholly owned by the current user."""
