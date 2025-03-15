@@ -1218,13 +1218,6 @@ def create_transactions_dash(flask_app):
                     'type': 'text',
                     'dangerously_allow_html': True,
                     'sortable': False
-                },
-                {
-                    'name': 'Edit',
-                    'id': 'edit',
-                    'presentation': 'markdown',
-                    'type': 'text',
-                    'sortable': False
                 }
             ])
 
