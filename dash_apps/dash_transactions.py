@@ -711,11 +711,13 @@ def create_transactions_dash(flask_app):
     @dash_app.callback(
         [Output('date-range', 'start_date'),
         Output('date-range', 'end_date')],
-        [Input('clear-date-range', 'n_clicks'),
-        Input('refresh-trigger', 'data')],
-        [State('filter-options', 'data')]
+        [Input('clear-date-range', 'n_clicks')],
+        [State('filter-options', 'data'),
+        State('date-range', 'start_date'),
+        State('date-range', 'end_date')]
     )
-    def manage_date_range(clear_clicks, refresh_trigger, filter_data):
+    def manage_date_range(clear_clicks, filter_data, current_start, current_end):
+        """Handle clearing date range and initial loading."""
         ctx = dash.callback_context
         
         # Check which input triggered the callback
@@ -724,12 +726,12 @@ def create_transactions_dash(flask_app):
         if triggered_id == 'clear-date-range':
             # Clear button was clicked
             return None, None
-        elif triggered_id == 'refresh-trigger' and filter_data:
-            # Restoring from filter_options
+        elif not current_start and not current_end and filter_data:
+            # Only restore from filter_options on initial load when dates are empty
             return filter_data.get('start_date'), filter_data.get('end_date')
         
-        # If no relevant trigger, prevent update
-        raise dash.exceptions.PreventUpdate
+        # Return current values to prevent unnecessary updates
+        return current_start, current_end
         
     # Register callbacks
     @dash_app.callback(
@@ -1010,25 +1012,21 @@ def create_transactions_dash(flask_app):
             return None
 
     @dash_app.callback(
-        [Output('filter-options', 'data'),
-        Output('refresh-trigger', 'data')],  # Add refresh-trigger as output
+        Output('filter-options', 'data'),
         [Input('property-filter', 'value'),
         Input('type-filter', 'value'),
         Input('date-range', 'start_date'),
         Input('date-range', 'end_date'),
         Input('description-search', 'value'),
         Input('clear-date-range', 'n_clicks')],
-        [State('reimbursement-filter', 'value'),
-        State('refresh-trigger', 'data')]  # Add as state
+        [State('reimbursement-filter', 'value')]
     )
     def update_filter_options(property_id, transaction_type, 
                             start_date, end_date, description_search, 
-                            clear_date_clicks, reimbursement_status, refresh_data):
+                            clear_date_clicks, reimbursement_status):
+        """Store filter options in session storage for persistence."""
         ctx = dash.callback_context
         triggered_id = ctx.triggered[0]['prop_id'].split('.')[0] if ctx.triggered else None
-        
-        # Update refresh trigger with new timestamp
-        new_refresh = {'time': datetime.now().isoformat()}
         
         # Clear dates if clear button was clicked
         if triggered_id == 'clear-date-range':
@@ -1045,7 +1043,22 @@ def create_transactions_dash(flask_app):
             'description_search': description_search
         }
         
-        return updated_filters, new_refresh
+        return updated_filters
+
+    # And add a separate callback just to update the refresh trigger
+    @dash_app.callback(
+        Output('refresh-trigger', 'data'),
+        [Input('property-filter', 'value'),
+        Input('type-filter', 'value'),
+        Input('reimbursement-filter', 'value'),
+        Input('date-range', 'start_date'),
+        Input('date-range', 'end_date'),
+        Input('description-search', 'value'),
+        Input('clear-date-range', 'n_clicks')]
+    )
+    def update_refresh_trigger(*args):
+        """Update refresh trigger with new timestamp when any filter changes."""
+        return {'time': datetime.now().isoformat()}
 
     def check_property_ownership(property_id):
         """Check if a property is wholly owned by the current user."""

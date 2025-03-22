@@ -2,8 +2,7 @@ import requests
 from typing import Dict, Optional
 from datetime import datetime
 import logging
-from urllib.parse import quote
-from flask import session, current_app  # Add session import
+from flask import session, current_app
 
 logger = logging.getLogger(__name__)
 
@@ -161,7 +160,9 @@ def fetch_property_comps(
             'squareFootage': square_footage,
             'maxRadius': comp_defaults.get('maxRadius', 1.0),
             'daysOld': comp_defaults.get('daysOld', 180),
-            'compCount': comp_defaults.get('compCount', 5)
+            'compCount': comp_defaults.get('compCount', 5),
+            'includeActiveSoldPending': 'false',  # Only include sold properties
+            'includeSold': 'true'
         }
         
         # Set up headers with API key
@@ -171,7 +172,7 @@ def fetch_property_comps(
         }
         
         # Make API request
-        logger.debug("Making RentCast API request")
+        logger.debug("Making RentCast API request with parameters: %s", params)
         response = requests.get(url, params=params, headers=headers)
         
         # Check for successful response
@@ -180,6 +181,21 @@ def fetch_property_comps(
         # Parse response
         data = response.json()
         logger.debug("Successfully received comps data")
+        
+        # Filter comparables to ensure we only have sold properties
+        if 'comparables' in data and isinstance(data['comparables'], list):
+            filtered_comps = []
+            for comp in data['comparables']:
+                # Include only if property has a removedDate (which indicates it was sold)
+                # And must have a reasonable price
+                if comp.get('removedDate') and comp.get('price', 0) > 0:
+                    # Add the sale date for frontend display
+                    comp['saleDate'] = comp.get('removedDate')
+                    filtered_comps.append(comp)
+            
+            # Replace the comparables with filtered list
+            data['comparables'] = filtered_comps
+            logger.debug(f"Filtered {len(data.get('comparables', []))} sold properties")
         
         # Add timestamp for when comps were run
         data['last_run'] = datetime.utcnow().isoformat()

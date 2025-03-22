@@ -5,6 +5,7 @@ import traceback
 from io import BytesIO
 import json
 import math
+from typing import Dict, Any, Optional, Union, List  # Add this import
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -17,6 +18,7 @@ matplotlib.use('Agg')  # Use non-interactive backend
 import matplotlib.pyplot as plt
 import matplotlib.patheffects as patheffects
 from matplotlib.ticker import FuncFormatter
+from utils.standardized_metrics import extract_calculated_metrics
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -53,7 +55,34 @@ class KPICardFlowable(Flowable):
     def __init__(self, title, value, target, is_favorable, width=2*inch, height=0.9*inch):
         Flowable.__init__(self)
         self.title = title
-        self.value = value
+        
+        # Ensure value is formatted to hundredths place
+        if isinstance(value, str):
+            if '%' in value:
+                # Format percentage values
+                try:
+                    numeric_value = float(value.replace('%', '').replace(',', ''))
+                    self.value = f"{numeric_value:.2f}%"
+                except ValueError:
+                    self.value = value
+            elif '$' in value:
+                # Format currency values
+                try:
+                    numeric_value = float(value.replace('$', '').replace(',', ''))
+                    self.value = f"${numeric_value:.2f}"
+                except ValueError:
+                    self.value = value
+            elif value.replace('.', '', 1).isdigit():
+                # Format numeric values
+                try:
+                    self.value = f"{float(value):.2f}"
+                except ValueError:
+                    self.value = value
+            else:
+                self.value = value
+        else:
+            self.value = value
+            
         self.target = target
         self.is_favorable = is_favorable
         self.width = width
@@ -224,26 +253,47 @@ class ChartGenerator:
 
 # Main function to generate report that matches the original signature
 def generate_report(data, report_type='analysis'):
-    """Generate a PDF report from analysis data."""
+    """
+    Generate a PDF report from analysis data with consistent metrics.
+    
+    Args:
+        data: Analysis data dictionary
+        report_type: Type of report to generate
+        
+    Returns:
+        BytesIO containing PDF data
+    """
     try:
-        # Create report generator
+        # Extract and standardize calculated metrics
+        from utils.standardized_metrics import extract_calculated_metrics
+        extract_calculated_metrics(data)
+        
+        # Store analysis ID to help with tracking
+        analysis_id = data.get('id')
+        if analysis_id:
+            logger.info(f"Generating {report_type} report for analysis {analysis_id}")
+        
+        # Create report generator with standardized data
         generator = PropertyReportGenerator(data)
         
         # Generate report
         return generator.generate()
     
     except Exception as e:
-        logger.error(f"Error generating report: {str(e)}")
-        logger.error(f"Stack trace: {traceback.format_exc()}")
+        logger.error(f"Error generating report: {str(e)}", exc_info=True)
         raise RuntimeError(f"Failed to generate report: {str(e)}")
 
 class PropertyReportGenerator:
     """Generate property analysis reports."""
     
     def __init__(self, data):
-        """Initialize with property data."""
+        """Initialize with property data and standardized metrics."""
         self.data = data
         self.buffer = BytesIO()
+        self.analysis_id = data.get('id')
+        
+        # Apply standardized metrics approach
+        self._standardize_calculated_metrics()
         
         # Create document with proper margins
         self.doc = SimpleDocTemplate(
@@ -480,7 +530,7 @@ class PropertyReportGenerator:
         return elements
     
     def create_kpi_dashboard(self):
-        """Create KPI dashboard with card metrics."""
+        """Create KPI dashboard with card metrics using already calculated metrics."""
         elements = []
         colors = BRAND_CONFIG['colors']
         
@@ -488,8 +538,39 @@ class PropertyReportGenerator:
         elements.append(Paragraph("Key Performance Indicators", self.styles['BrandHeading3']))
         elements.append(Spacer(1, 0.05*inch))
         
-        # Calculate KPI metrics from data
-        kpi_data = self._calculate_kpi_metrics()
+        # Get the already calculated metrics
+        calculated_metrics = self.data.get('calculated_metrics', {})
+        logger.debug(f"Using calculated metrics for KPIs: {calculated_metrics}")
+        
+        # Create KPI data directly from calculated metrics
+        kpi_data = {
+            # Cash on Cash
+            'cash_on_cash': self._format_percentage_value(calculated_metrics.get('cash_on_cash_return')),
+            'cash_on_cash_target': '≥ 10.0%',
+            'cash_on_cash_favorable': self._extract_numeric_value(calculated_metrics.get('cash_on_cash_return', 0)) >= 10.0,
+            
+            # Cap Rate
+            'cap_rate': self._format_percentage_value(calculated_metrics.get('cap_rate')),
+            'cap_rate_target': '6.0% - 12.0%',
+            'cap_rate_favorable': 6.0 <= self._extract_numeric_value(calculated_metrics.get('cap_rate', 0)) <= 12.0,
+            
+            # NOI
+            'noi': self._format_currency_value(calculated_metrics.get('monthly_noi') or calculated_metrics.get('noi')),
+            'noi_target': '≥ $800.00',
+            'noi_favorable': self._extract_numeric_value(calculated_metrics.get('monthly_noi') or calculated_metrics.get('noi', 0)) >= 800,
+            
+            # DSCR
+            'dscr': self._format_numeric_value(calculated_metrics.get('dscr')),
+            'dscr_target': '≥ 1.25',
+            'dscr_favorable': self._extract_numeric_value(calculated_metrics.get('dscr', 0)) >= 1.25,
+            
+            # Expense Ratio
+            'expense_ratio': self._format_percentage_value(calculated_metrics.get('operating_expense_ratio') or calculated_metrics.get('expense_ratio')),
+            'expense_ratio_target': '≤ 40.0%',
+            'expense_ratio_favorable': self._extract_numeric_value(calculated_metrics.get('operating_expense_ratio') or calculated_metrics.get('expense_ratio', 0)) <= 40.0
+        }
+        
+        logger.debug(f"Generated KPI data for report: {kpi_data}")
         
         # Define KPI cards layout
         card_width = (self.doc.width - 0.5*inch) / 3  # Divide available width into 3 columns with some spacing
@@ -497,34 +578,49 @@ class PropertyReportGenerator:
         # First row of KPIs (3 cards)
         row1_cards = [
             ('Cash-on-Cash', 
-             kpi_data.get('cash_on_cash', '0%'), 
-             kpi_data.get('cash_on_cash_target', '≥ 10.0%'),
-             kpi_data.get('cash_on_cash_favorable', False)),
+            kpi_data.get('cash_on_cash', '0%'), 
+            kpi_data.get('cash_on_cash_target', '≥ 10.0%'),
+            kpi_data.get('cash_on_cash_favorable', False)),
             
             ('Cap Rate', 
-             kpi_data.get('cap_rate', '0%'), 
-             kpi_data.get('cap_rate_target', '6.0% - 12.0%'),
-             kpi_data.get('cap_rate_favorable', False)),
-             
+            kpi_data.get('cap_rate', '0%'), 
+            kpi_data.get('cap_rate_target', '6.0% - 12.0%'),
+            kpi_data.get('cap_rate_favorable', False)),
+            
             ('NOI', 
-             kpi_data.get('noi', '$0'), 
-             kpi_data.get('noi_target', '≥ $800'),
-             kpi_data.get('noi_favorable', False))
+            kpi_data.get('noi', '$0'), 
+            kpi_data.get('noi_target', '≥ $800'),
+            kpi_data.get('noi_favorable', False))
         ]
         
         # Create first row of KPI cards
         row1_data = []
         for title, value, target, is_favorable in row1_cards:
-            kpi_card = KPICardFlowable(title, value, target, is_favorable, width=card_width-0.1*inch)
+            # Ensure value is formatted to two decimal places
+            formatted_value = value
+            if '%' in value:
+                # Handle percentage values
+                percentage = self._extract_numeric_value(value)
+                formatted_value = f"{percentage:.2f}%"
+            elif '$' in value:
+                # Handle currency values
+                amount = self._extract_numeric_value(value)
+                formatted_value = f"${amount:.2f}"
+            elif value.replace('.', '', 1).isdigit():
+                # Handle numeric values
+                numeric = float(value)
+                formatted_value = f"{numeric:.2f}"
+                
+            kpi_card = KPICardFlowable(title, formatted_value, target, is_favorable, width=card_width-0.1*inch)
             row1_data.append(kpi_card)
             
         row1_table = Table([row1_data], colWidths=[card_width-0.1*inch]*3, 
-                         style=TableStyle([
-                             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                             ('LEFTPADDING', (0, 0), (-1, -1), 5),
-                             ('RIGHTPADDING', (0, 0), (-1, -1), 5),
-                         ]))
+                        style=TableStyle([
+                            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                            ('LEFTPADDING', (0, 0), (-1, -1), 5),
+                            ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+                        ]))
         
         elements.append(row1_table)
         elements.append(Spacer(1, 0.1*inch))
@@ -532,14 +628,14 @@ class PropertyReportGenerator:
         # Second row of KPIs (2 cards)
         row2_cards = [
             ('DSCR', 
-             kpi_data.get('dscr', '0'), 
-             kpi_data.get('dscr_target', '≥ 1.25'),
-             kpi_data.get('dscr_favorable', False)),
+            kpi_data.get('dscr', '0'), 
+            kpi_data.get('dscr_target', '≥ 1.25'),
+            kpi_data.get('dscr_favorable', False)),
             
             ('Expense Ratio', 
-             kpi_data.get('expense_ratio', '0%'), 
-             kpi_data.get('expense_ratio_target', '≤ 40.0%'),
-             kpi_data.get('expense_ratio_favorable', False))
+            kpi_data.get('expense_ratio', '0%'), 
+            kpi_data.get('expense_ratio_target', '≤ 40.0%'),
+            kpi_data.get('expense_ratio_favorable', False))
         ]
         
         # Create second row of KPI cards
@@ -552,12 +648,12 @@ class PropertyReportGenerator:
         row2_data.append("")
             
         row2_table = Table([row2_data], colWidths=[card_width-0.1*inch]*3, 
-                         style=TableStyle([
-                             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                             ('LEFTPADDING', (0, 0), (-1, -1), 5),
-                             ('RIGHTPADDING', (0, 0), (-1, -1), 5),
-                         ]))
+                        style=TableStyle([
+                            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                            ('LEFTPADDING', (0, 0), (-1, -1), 5),
+                            ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+                        ]))
         
         elements.append(row2_table)
         
@@ -569,7 +665,86 @@ class PropertyReportGenerator:
         elements.append(Paragraph(note_text, self.styles['BrandSmall']))
         
         return elements
+
+    def _format_currency_value(self, value):
+        """Format a value as currency rounded to two decimal places."""
+        if value is None:
+            return '$0.00'
+        
+        if isinstance(value, str):
+            if value.startswith('$'):
+                try:
+                    # Extract numeric value and reformat
+                    numeric_value = float(value.replace('$', '').replace(',', ''))
+                    return f"${numeric_value:.2f}"
+                except ValueError:
+                    return '$0.00'
+            try:
+                return f"${float(value.replace(',', '')):.2f}"
+            except ValueError:
+                return '$0.00'
+        
+        if isinstance(value, (int, float)):
+            return f"${value:.2f}"
+        
+        return '$0.00'
     
+    def _format_percentage_value(self, value):
+        """Format a value as percentage rounded to two decimal places."""
+        if value is None:
+            return '0.00%'
+        
+        if isinstance(value, str):
+            if value.endswith('%'):
+                try:
+                    # Extract numeric value and reformat
+                    numeric_value = float(value.replace('%', '').replace(',', ''))
+                    return f"{numeric_value:.2f}%"
+                except ValueError:
+                    return '0.00%'
+            try:
+                return f"{float(value.replace(',', '')):.2f}%"
+            except ValueError:
+                return '0.00%'
+        
+        if isinstance(value, (int, float)):
+            return f"{value:.2f}%"
+        
+        return '0.00%'
+
+    def _format_numeric_value(self, value):
+        """Format a numeric value rounded to two decimal places."""
+        if value is None:
+            return '0.00'
+        
+        if isinstance(value, str):
+            try:
+                return f"{float(value.replace(',', '')):.2f}"
+            except ValueError:
+                return '0.00'
+        
+        if isinstance(value, (int, float)):
+            return f"{value:.2f}"
+        
+        return '0.00'
+        
+    def _extract_numeric_value(self, value):
+        """Extract a numeric value from a string or number."""
+        if value is None:
+            return 0.0
+        
+        if isinstance(value, (int, float)):
+            return float(value)
+        
+        if isinstance(value, str):
+            value = value.replace(',', '').replace('$', '').replace('%', '')
+            try:
+                return float(value)
+            except ValueError:
+                return 0.0
+        
+        return 0.0
+
     def create_amortization_section(self):
         """Create loan amortization section with chart."""
         elements = []
@@ -723,56 +898,211 @@ class PropertyReportGenerator:
             logger.error(f"Stack trace: {traceback.format_exc()}")
             raise RuntimeError(f"Failed to generate report: {str(e)}")
     
-    def _calculate_kpi_metrics(self):
-        """Calculate KPI metrics from data."""
-        kpi_data = {}
+    def _standardize_metric_names(self, metrics: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Standardize metric names to snake_case and ensure consistent value types
+        without modifying the original calculated values.
         
-        # Get calculated metrics if available
+        Args:
+            metrics: Dictionary of metrics with potentially inconsistent naming
+            
+        Returns:
+            Dictionary with standardized metric names and preserved values
+        """
+        standardized = {}
+        
+        # Key mapping for known metrics (camelCase/other variations to snake_case)
+        key_mapping = {
+            # Cash on Cash variants
+            'cashOnCash': 'cash_on_cash_return',
+            'cash_on_cash': 'cash_on_cash_return',
+            'coc': 'cash_on_cash_return',
+            
+            # NOI variants
+            'noi': 'noi',
+            'netOperatingIncome': 'noi',
+            'monthly_noi': 'noi',
+            'net_operating_income': 'noi',
+            
+            # Cap Rate variants
+            'capRate': 'cap_rate',
+            'capitalization_rate': 'cap_rate',
+            
+            # DSCR variants
+            'dscr': 'dscr',
+            'debt_service_coverage_ratio': 'dscr',
+            'debtServiceCoverageRatio': 'dscr',
+            
+            # Expense Ratio variants
+            'operatingExpenseRatio': 'operating_expense_ratio',
+            'expense_ratio': 'operating_expense_ratio',
+            
+            # Cash flow variants
+            'monthlyCashFlow': 'monthly_cash_flow',
+            'annual_cash_flow': 'annual_cash_flow',
+            'annualCashFlow': 'annual_cash_flow',
+            
+            # ROI variants
+            'roi': 'roi',
+            'returnOnInvestment': 'roi',
+            
+            # BRRRR specific
+            'equity_captured': 'equity_captured',
+            'equityCaptured': 'equity_captured',
+            'cash_recouped': 'cash_recouped',
+            'cashRecouped': 'cash_recouped',
+        }
+        
+        # Process each metric
+        for key, value in metrics.items():
+            # Use mapping if available, otherwise convert camelCase to snake_case
+            if key in key_mapping:
+                snake_key = key_mapping[key]
+            else:
+                # Convert camelCase to snake_case
+                snake_key = ''.join(['_' + c.lower() if c.isupper() else c for c in key]).lstrip('_')
+            
+            # Preserve the original value (don't modify calculated values)
+            standardized[snake_key] = value
+                
+        return standardized
+
+    def _standardize_calculated_metrics(self):
+        """
+        Prioritize frontend metrics and ensure they're properly registered.
+        """
+        # Import utilities from standardized_metrics
+        from utils.standardized_metrics import extract_calculated_metrics, register_metrics
+
+        # Get analysis ID
+        analysis_id = getattr(self, 'analysis_id', self.data.get('id'))
+        
+        # IMPORTANT: Check for fullMetrics from JavaScript first (highest priority)
+        frontend_metrics = {}
+        if 'fullMetrics' in self.data:
+            frontend_metrics = self.data['fullMetrics']
+            # Convert string values to numbers where appropriate
+            for key, value in frontend_metrics.items():
+                if isinstance(value, str):
+                    if value.startswith('$'):
+                        frontend_metrics[key] = float(value.replace('$', '').replace(',', ''))
+                    elif value.endswith('%'):
+                        frontend_metrics[key] = float(value.rstrip('%'))
+        
+        # Then extract all other metrics to fill in any gaps
+        all_metrics = extract_calculated_metrics(self.data)
+        
+        # Merge with frontend metrics taking precedence
+        all_metrics.update(frontend_metrics)
+        
+        # Ensure calculated_metrics exists and update
+        if 'calculated_metrics' not in self.data:
+            self.data['calculated_metrics'] = {}
+        
+        # Update with standardized metrics
+        self.data['calculated_metrics'].update(all_metrics)
+        
+        # Register metrics with function if we have an analysis ID
+        if analysis_id:
+            from utils.standardized_metrics import register_metrics
+            register_metrics(analysis_id, all_metrics)
+            
+        # Log the final metrics to debug
+        logger.debug(f"Final standardized metrics: {self.data['calculated_metrics']}")
+
+    def _get_metric_value(self, metrics, primary_key, alternate_keys=None, default=0.0):
+        """
+        Get metric value from metrics dictionary, with optional fallback keys.
+        Handles string and numeric values consistently.
+        
+        Args:
+            metrics: Dictionary of metrics
+            primary_key: Primary key to look for
+            alternate_keys: List of alternate keys to try if primary key not found
+            default: Default value if no key is found
+            
+        Returns:
+            Metric value as float or default
+        """
+        # Try primary key first
+        if primary_key in metrics:
+            return self._parse_value(metrics[primary_key])
+        
+        # Try alternate keys if provided
+        if alternate_keys:
+            for key in alternate_keys:
+                if key in metrics:
+                    return self._parse_value(metrics[key])
+        
+        # For specific metrics, try to get calculated value from data if not in metrics
         calculated_metrics = self.data.get('calculated_metrics', {})
+        if primary_key not in metrics and primary_key in calculated_metrics:
+            return self._parse_value(calculated_metrics[primary_key])
         
-        # Cash on Cash Return
-        cash_on_cash = self._parse_percentage(calculated_metrics.get('cash_on_cash_return', '0%'))
-        kpi_data['cash_on_cash'] = f"{cash_on_cash:.1f}%"
-        kpi_data['cash_on_cash_target'] = '≥ 10.0%'
-        kpi_data['cash_on_cash_favorable'] = cash_on_cash >= 10.0
-        
-        # Net Operating Income (NOI)
-        noi_monthly = self._calculate_noi()
-        kpi_data['noi'] = f"${noi_monthly:.2f}"
-        kpi_data['noi_target'] = '≥ $800.00'
-        kpi_data['noi_favorable'] = noi_monthly >= 800
-        
-        # Cap Rate
-        purchase_price = self._parse_currency(self.data.get('purchase_price', 0))
-        if purchase_price > 0:
-            cap_rate = (noi_monthly * 12 / purchase_price) * 100
-            kpi_data['cap_rate'] = f"{cap_rate:.1f}%"
-            kpi_data['cap_rate_target'] = '6.0% - 12.0%'
-            kpi_data['cap_rate_favorable'] = 6.0 <= cap_rate <= 12.0
-        
-        # Debt Service Coverage Ratio (DSCR)
-        monthly_loan_payment = 0
-        for prefix in ['loan1', 'loan2', 'loan3']:
-            payment_str = calculated_metrics.get(f'{prefix}_loan_payment', '0')
-            monthly_loan_payment += self._parse_currency(payment_str)
-        
-        if monthly_loan_payment > 0:
-            dscr = noi_monthly / monthly_loan_payment
-            kpi_data['dscr'] = f"{dscr:.2f}"
-            kpi_data['dscr_target'] = '≥ 1.25'
-            kpi_data['dscr_favorable'] = dscr >= 1.25
-        
-        # Operating Expense Ratio
-        monthly_rent = self._parse_currency(self.data.get('monthly_rent', 0))
-        if monthly_rent > 0:
-            total_expenses = self._calculate_total_expenses(monthly_rent)
-            expense_ratio = (total_expenses / monthly_rent) * 100
-            kpi_data['expense_ratio'] = f"{expense_ratio:.1f}%"
-            kpi_data['expense_ratio_target'] = '≤ 40.0%'
-            kpi_data['expense_ratio_favorable'] = expense_ratio <= 40.0
-        
-        return kpi_data
+        # Log missing metric only if really not found anywhere
+        logger.debug(f"Metric '{primary_key}' not found in metrics, using default value {default}")
+        return default
+
+    def _parse_value(self, value):
+        """Parse any value to float, handling string formatting."""
+        if value is None:
+            return 0.0
+            
+        try:
+            if isinstance(value, str):
+                # Remove currency symbols and commas
+                value = value.replace('$', '').replace(',', '').replace('%', '')
+            return float(value)
+        except (ValueError, TypeError):
+            logger.warning(f"Failed to parse value '{value}', using 0.0")
+            return 0.0
     
+    def _parse_numeric_value(self, metrics, primary_key, alternate_key=None):
+        """
+        Parse a numeric value from metrics, handling string and number formats.
+        
+        Args:
+            metrics: Dictionary of metrics
+            primary_key: Primary key to look for
+            alternate_key: Alternate key to try if primary key not found
+            
+        Returns:
+            Parsed numeric value or 0.0
+        """
+        # Try primary key first
+        if primary_key in metrics:
+            value = metrics[primary_key]
+            if isinstance(value, (int, float)):
+                return float(value)
+            elif isinstance(value, str):
+                # Remove special characters like $ and %
+                value = value.replace('$', '').replace(',', '').rstrip('%')
+                try:
+                    return float(value)
+                except (ValueError, TypeError):
+                    pass
+        
+        # Try alternate key if provided
+        if alternate_key and alternate_key in metrics:
+            value = metrics[alternate_key]
+            if isinstance(value, (int, float)):
+                return float(value)
+            elif isinstance(value, str):
+                # Remove special characters like $ and %
+                value = value.replace('$', '').replace(',', '').rstrip('%')
+                try:
+                    return float(value)
+                except (ValueError, TypeError):
+                    pass
+        
+        # Check calculated_metrics as fallback
+        if 'calculated_metrics' in self.data:
+            for key in [primary_key, alternate_key]:
+                if key and key in self.data['calculated_metrics']:
+                    return self._parse_value(self.data['calculated_metrics'][key])
+        
+        return 0.0
+
     def _calculate_noi(self):
         """Calculate Net Operating Income."""
         # Get monthly rent
@@ -818,15 +1148,81 @@ class PropertyReportGenerator:
         return fixed_expenses + pct_expenses + padsplit_expenses
     
     def _calculate_amortization_data(self):
-        """Calculate amortization schedule data."""
-        # Check if this has a balloon payment
-        has_balloon = self._has_balloon_payment()
+        """Calculate amortization schedule data, prioritizing loan information from fullMetrics."""
+        # Check for BRRRR-specific loan data first
+        if 'PadSplit BRRRR' in self.data.get('analysis_type', '') or 'BRRRR' in self.data.get('analysis_type', ''):
+            initial_loan = self._parse_currency(self.data.get('initial_loan_amount', 0))
+            initial_rate = self._parse_percentage(self.data.get('initial_loan_interest_rate', 0))
+            initial_term = int(self.data.get('initial_loan_term', 0) or 0)
+            refinance_loan = self._parse_currency(self.data.get('refinance_loan_amount', 0))
+            
+            if initial_loan > 0 and refinance_loan > 0:
+                return self._calculate_brrrr_amortization(
+                    initial_loan, initial_rate, initial_term,
+                    refinance_loan, self._parse_percentage(self.data.get('refinance_loan_interest_rate', 0)),
+                    int(self.data.get('refinance_loan_term', 0) or 0)
+                )
         
-        if has_balloon:
-            return self._calculate_balloon_amortization()
-        else:
-            return self._calculate_standard_amortization()
+        # Fall back to regular amortization
+        return self._calculate_standard_amortization()
     
+    def _calculate_brrrr_amortization(self, initial_loan, initial_rate, initial_term,
+                               refinance_loan, refinance_rate, refinance_term):
+        """Calculate BRRRR-specific amortization with initial loan and refinance."""
+        schedules = []
+        
+        # Calculate initial loan schedule
+        if initial_loan > 0 and initial_term > 0:
+            is_interest_only = self.data.get('initial_interest_only', True)
+            initial_schedule = self._calculate_loan_schedule(
+                principal=initial_loan,
+                interest_rate=initial_rate / 100 / 12,
+                term_months=initial_term,
+                is_interest_only=is_interest_only,
+                label="Initial Loan"
+            )
+            schedules.append(initial_schedule)
+        
+        # Calculate refinance loan schedule
+        if refinance_loan > 0 and refinance_term > 0:
+            start_date = datetime.now() + timedelta(days=30 * initial_term)
+            refinance_schedule = self._calculate_loan_schedule(
+                principal=refinance_loan,
+                interest_rate=refinance_rate / 100 / 12,
+                term_months=refinance_term,
+                start_date=start_date,
+                label="Refinance Loan"
+            )
+            schedules.append(refinance_schedule)
+        
+        # Combine schedules
+        total_schedule = []
+        current_month = 1
+        
+        # Add initial loan period
+        if schedules and len(schedules) > 0 and len(schedules[0]['schedule']) > 0:
+            for entry in schedules[0]['schedule']:
+                modified_entry = entry.copy()
+                modified_entry['month'] = current_month
+                modified_entry['period'] = 'initial'
+                total_schedule.append(modified_entry)
+                current_month += 1
+        
+        # Add refinance loan period
+        if len(schedules) > 1 and len(schedules[1]['schedule']) > 0:
+            for entry in schedules[1]['schedule']:
+                modified_entry = entry.copy()
+                modified_entry['month'] = current_month
+                modified_entry['period'] = 'refinance'
+                total_schedule.append(modified_entry)
+                current_month += 1
+        
+        return {
+            'loans': schedules,
+            'balloon_data': None,
+            'total_schedule': total_schedule
+        }
+
     def _has_balloon_payment(self):
         """Check if this analysis has balloon payment."""
         has_balloon = self.data.get('has_balloon_payment', False)
@@ -1240,7 +1636,7 @@ class PropertyReportGenerator:
         return table_data
 
     def _calculate_projections_data(self):
-        """Calculate projection data for future years."""
+        """Calculate projection data for future years, using pre-calculated values without recalculating."""
         timeframes = [1, 3, 5, 10]  # Years to project
         
         # Initialize metrics dictionary
@@ -1252,15 +1648,20 @@ class PropertyReportGenerator:
             'equity_earned': []
         }
         
-        # Starting values
+        # Get pre-calculated values
+        calculated_metrics = self.data.get('calculated_metrics', {})
+        
+        # Starting values - use pre-calculated when available with fallbacks
         purchase_price = self._parse_currency(self.data.get('purchase_price', 0))
         monthly_rent = self._parse_currency(self.data.get('monthly_rent', 0))
-        monthly_expenses = self._calculate_total_expenses(monthly_rent)
         
-        # Get loan information for principal reduction calculation
-        amortization_data = self._calculate_amortization_data()
+        # Use pre-calculated values for the base metrics
+        noi_monthly = self._get_metric_value(calculated_metrics, 'noi', ['monthly_noi', 'net_operating_income'], 0.0)
+        monthly_cash_flow = self._get_metric_value(calculated_metrics, 'monthly_cash_flow', ['monthlyCashFlow'], 0.0)
+        cap_rate = self._get_metric_value(calculated_metrics, 'cap_rate', ['capRate'], 0.0)
+        equity_captured = self._get_metric_value(calculated_metrics, 'equity_captured', ['equityCaptured'], 0.0)
         
-        # Annual growth rates
+        # Annual growth rates (from constants or config)
         rent_growth_rate = 0.025  # 2.5% annual rent growth
         expense_growth_rate = 0.025  # 2.5% annual expense growth
         appreciation_rate = 0.03  # 3% annual property appreciation
@@ -1269,38 +1670,34 @@ class PropertyReportGenerator:
         for year in timeframes:
             # Apply growth rates
             projected_monthly_rent = monthly_rent * (1 + rent_growth_rate) ** year
-            projected_monthly_expenses = monthly_expenses * (1 + expense_growth_rate) ** year
+            projected_noi = noi_monthly * (1 + expense_growth_rate) ** year
+            projected_monthly_cash_flow = monthly_cash_flow * (1 + expense_growth_rate) ** year
             
-            # Calculate NOI
-            projected_noi = projected_monthly_rent - projected_monthly_expenses
             metrics['noi'].append(projected_noi)
+            metrics['monthly_cash_flow'].append(projected_monthly_cash_flow)
             
             # Calculate property value with appreciation
             projected_property_value = purchase_price * (1 + appreciation_rate) ** year
             
-            # Calculate loan balances and equity
-            loan_balance = self._get_loan_balance_at_year(amortization_data, year)
-            equity = projected_property_value - loan_balance
-            metrics['equity_earned'].append(equity)
+            # Get initial equity and apply appreciation
+            equity = equity_captured if equity_captured > 0 else (projected_property_value - purchase_price)
+            metrics['equity_earned'].append(equity * (1 + appreciation_rate) ** year)
             
-            # Calculate monthly cash flow
-            monthly_loan_payment = self._get_loan_payment_at_year(amortization_data, year)
-            projected_monthly_cash_flow = projected_noi - monthly_loan_payment
-            metrics['monthly_cash_flow'].append(projected_monthly_cash_flow)
-            
-            # Calculate cap rate
+            # Project cap rate
             if projected_property_value > 0:
                 projected_cap_rate = (projected_noi * 12 / projected_property_value) * 100
             else:
-                projected_cap_rate = 0
+                projected_cap_rate = cap_rate  # Use existing cap rate if we can't calculate
             metrics['cap_rate'].append(projected_cap_rate)
             
-            # Calculate cash-on-cash return
-            total_investment = self._calculate_total_investment()
+            # Project cash-on-cash return 
+            total_investment = self._get_metric_value(calculated_metrics, 'total_cash_invested', 
+                                                    ['totalCashInvested'], purchase_price * 0.2)
             if total_investment > 0:
                 projected_cash_on_cash = (projected_monthly_cash_flow * 12 / total_investment) * 100
             else:
-                projected_cash_on_cash = 0
+                projected_cash_on_cash = self._get_metric_value(calculated_metrics, 'cash_on_cash_return', 
+                                                            ['cash_on_cash'], 0.0)
             metrics['cash_on_cash'].append(projected_cash_on_cash)
         
         return {
@@ -1644,9 +2041,13 @@ class PropertyReportGenerator:
         return elements
     
     def _calculate_total_loan_payment(self):
-        """Calculate total monthly loan payment across all loans."""
+        """Get total monthly loan payment from pre-calculated metrics when available."""
         # Get calculated metrics
         calculated_metrics = self.data.get('calculated_metrics', {})
+        
+        # Check for direct total loan payment value
+        if 'total_loan_payment' in calculated_metrics:
+            return self._parse_currency(calculated_metrics['total_loan_payment'])
         
         # For BRRRR, use refinance loan payment or initial loan payment
         if 'BRRRR' in self.data.get('analysis_type', ''):
@@ -2151,6 +2552,13 @@ class PropertyReportGenerator:
         if amount <= 0:
             return Paragraph(f"No data for {title}", self.styles['BrandNormal'])
         
+        # Get the loan payment value and ensure it's a string
+        loan_payment = self.data.get('calculated_metrics', {}).get(f'{prefix}_loan_payment', '$0.00')
+        
+        # Convert to string if it's a float
+        if isinstance(loan_payment, (int, float)):
+            loan_payment = f"${loan_payment:.2f}"
+        
         # Add loan details
         table_data.extend([
             [Paragraph("Amount:", label_style),
@@ -2163,7 +2571,7 @@ class PropertyReportGenerator:
             Paragraph(f"{int(self.data.get(f'{prefix}_loan_term', 0))} months", value_style)],
             
             [Paragraph("Monthly Payment:", label_style),
-            Paragraph(self.data.get('calculated_metrics', {}).get(f'{prefix}_loan_payment', '$0.00'), value_bold_style)]
+            Paragraph(loan_payment, value_bold_style)]
         ])
         
         # Add interest only flag

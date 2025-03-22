@@ -200,6 +200,8 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in current_app.config['ALLOWED_EXTENSIONS']
 
+# Replace the bulk_import route with this updated version:
+
 @transactions_bp.route('/bulk_import', methods=['GET', 'POST'])
 @login_required
 def bulk_import():
@@ -230,11 +232,43 @@ def bulk_import():
                     import_service = TransactionImportService()
                     results = import_service.process_import_file(temp_path, column_mapping, file.filename)
 
+                    # Read existing transactions from data file
+                    data_file = os.path.join(current_app.config['DATA_DIR'], 'transactions.json')
+                    existing_transactions = []
+                    highest_id = 0
+                    
+                    if os.path.exists(data_file):
+                        try:
+                            with open(data_file, 'r') as f:
+                                existing_transactions = json.load(f)
+                            current_app.logger.info(f"Read {len(existing_transactions)} existing transactions from {data_file}")
+                            
+                            # Find highest existing ID
+                            if existing_transactions:
+                                highest_id = max(int(t.get('id', 0)) for t in existing_transactions)
+                                current_app.logger.debug(f"Highest existing ID: {highest_id}")
+                        except json.JSONDecodeError:
+                            current_app.logger.error(f"Error decoding JSON from {data_file}, starting with empty transaction list")
+                    
+                    # Prepare new transactions with unique IDs
                     transactions_saved = 0
+                    saved_transactions = []
                     for transaction in results['successful_rows']:
                         if any(transaction.values()):
-                            add_transaction(transaction)
+                            # Assign a new ID
+                            highest_id += 1
+                            transaction['id'] = highest_id
+                            saved_transactions.append(transaction)
                             transactions_saved += 1
+
+                    # Combine existing and new transactions
+                    all_transactions = existing_transactions + saved_transactions
+                    
+                    # Write all transactions back to file
+                    with open(data_file, 'w') as f:
+                        json.dump(all_transactions, f, indent=2)
+                    
+                    current_app.logger.info(f"Saved {transactions_saved} new transactions, total now: {len(all_transactions)}")
 
                     return jsonify({
                         'success': True,
@@ -243,7 +277,9 @@ def bulk_import():
                         'stats': {
                             'total_processed': results['stats']['processed_rows'],
                             'total_saved': transactions_saved,
-                            'total_modified': results['stats'].get('modified_rows', 0)
+                            'total_modified': results['stats'].get('modified_rows', 0),
+                            'existing_count': len(existing_transactions),
+                            'total_count': len(all_transactions)
                         }
                     })
 

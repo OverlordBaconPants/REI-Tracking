@@ -5130,13 +5130,49 @@ window.analysisModule = {
             fullMetrics: analysis.calculated_metrics
         });
     
-        // Add debugging for module and KPI config access
+        // Add debugging for KPI configuration access
         console.log('Analysis module:', this);
         console.log('KPI_CONFIGS access:', this.KPI_CONFIGS);
     
         // Generate KPI card
         const kpiCard = this.generateKPICard(analysis);
         console.log('Generated KPI card:', kpiCard ? 'Success' : 'Empty');
+        
+        // Calculate additional BRRRR specific values to display
+        const initialInvestment = this.toRawNumber(analysis.purchase_price) + 
+                                this.toRawNumber(analysis.renovation_costs) +
+                                (analysis.analysis_type.includes('PadSplit') ? this.toRawNumber(analysis.furnishing_costs) : 0);
+                                
+        const initialLoanAmount = this.toRawNumber(analysis.initial_loan_amount);
+        const refinanceLoanAmount = this.toRawNumber(analysis.refinance_loan_amount);
+        const refinanceClosingCosts = this.toRawNumber(analysis.refinance_loan_closing_costs);
+        
+        // Calculate initial out-of-pocket before refinance
+        const initialOutOfPocket = Math.max(0, initialInvestment - initialLoanAmount);
+        
+        // Calculate cash recouped after refinance
+        const cashRecouped = Math.max(0, refinanceLoanAmount - initialLoanAmount - refinanceClosingCosts);
+        
+        // Calculate final investment after refinance
+        const finalInvestment = Math.max(0, initialOutOfPocket - cashRecouped);
+        
+        // Calculate the actual cash-on-cash return based on final investment
+        const annualCashFlow = this.toRawNumber(analysis.calculated_metrics?.annual_cash_flow);
+        const cashOnCashReturn = finalInvestment > 0 ? 
+                                (annualCashFlow / finalInvestment) * 100 : 
+                                999.99; // Cap at 999.99% for near-zero investments
+        
+        console.log('BRRRR Investment Calculation:', {
+            initialInvestment,
+            initialLoanAmount,
+            initialOutOfPocket,
+            refinanceLoanAmount,
+            refinanceClosingCosts,
+            cashRecouped,
+            finalInvestment,
+            annualCashFlow,
+            cashOnCashReturn: cashOnCashReturn.toFixed(2) + '%'
+        });
     
         return `
             <!-- Purchase Details Card -->
@@ -5212,25 +5248,86 @@ window.analysisModule = {
                             <strong>${analysis.calculated_metrics?.annual_cash_flow || '$0.00'}</strong>
                         </div>
                         <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                            <span>Cash on Cash Return</span>
-                            <strong>${analysis.calculated_metrics?.cash_on_cash_return || '0%'}</strong>
+                            <span class="d-flex align-items-center">
+                                Cash-on-Cash Return
+                                <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" 
+                                   title="Based on remaining invested capital after refinancing">
+                                </i>
+                            </span>
+                            <strong>${finalInvestment > 0 ? 
+                                    this.formatDisplayValue(cashOnCashReturn, 'percentage') : 
+                                    '999.99%'}</strong>
                         </div>
                         <div class="list-group-item d-flex justify-content-between align-items-center py-3">
                             <span>ROI</span>
                             <strong>${analysis.calculated_metrics?.roi || '0%'}</strong>
                         </div>
+                    </div>
+                </div>
+            </div>
+    
+            <!-- BRRRR Strategy Details Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">BRRRR Strategy Analysis</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Initial Investment (Before Financing)</span>
+                            <strong>${this.formatDisplayValue(initialInvestment)}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Initial Loan Amount</span>
+                            <strong>${this.formatDisplayValue(analysis.initial_loan_amount)}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span class="d-flex align-items-center">
+                                Initial Out-of-Pocket
+                                <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" 
+                                   title="Initial investment minus initial loan amount">
+                                </i>
+                            </span>
+                            <strong>${this.formatDisplayValue(initialOutOfPocket)}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Refinance Loan Amount</span>
+                            <strong>${this.formatDisplayValue(analysis.refinance_loan_amount)}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span>Refinance Closing Costs</span>
+                            <strong>${this.formatDisplayValue(analysis.refinance_loan_closing_costs)}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <span class="d-flex align-items-center">
+                                Cash Recouped From Refinance
+                                <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" 
+                                   title="Refinance amount minus initial loan payoff minus closing costs">
+                                </i>
+                            </span>
+                            <strong>${this.formatDisplayValue(cashRecouped)}</strong>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3 bg-light">
+                            <span class="d-flex align-items-center fw-bold">
+                                Final Cash Invested 
+                                <i class="ms-2 bi bi-info-circle" data-bs-toggle="tooltip" 
+                                   title="Initial out-of-pocket minus cash recouped from refinance">
+                                </i>
+                            </span>
+                            <strong>${this.formatDisplayValue(finalInvestment)}</strong>
+                        </div>
                         <div class="list-group-item d-flex justify-content-between align-items-center py-3">
                             <span>Equity Captured</span>
                             <strong>${analysis.calculated_metrics?.equity_captured || '$0.00'}</strong>
-                        </div>
-                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                            <span>Cash Recouped</span>
-                            <strong>${analysis.calculated_metrics?.cash_recouped || '$0.00'}</strong>
                         </div>
                     </div>
                 </div>
             </div>
     
+            <!-- KPIs Card -->
+            ${kpiCard}
+    
+            <!-- The rest of the report content remains the same -->
             <!-- Financing Card -->
             <div class="card mb-4">
                 <div class="card-header">
@@ -5326,9 +5423,6 @@ window.analysisModule = {
                     </div>
                 </div>
             </div>
-    
-            <!-- KPIs Card -->
-            ${kpiCard}
     
             <!-- Operating Expenses Card -->
             <div class="card mb-4">
@@ -5956,29 +6050,42 @@ window.analysisModule = {
     },
     
     // Function to calculate KPIs for the analysis
-    calculateKPIs(analysis) {
+    calculateKPIs: function(analysis) {
         const metrics = {};
         
         try {
-            console.log('Starting KPI calculations for:', analysis.analysis_type);
-    
             // Get gross income
-            let grossIncome;
-            let totalUnits;
+            let grossIncome = 0;
+            let totalUnits = 1;  // Default for single-unit properties
             
             if (analysis.analysis_type === 'Multi-Family') {
-                const unitTypes = JSON.parse(analysis.unit_types || '[]');
-                grossIncome = unitTypes.reduce((total, ut) => total + (ut.count * ut.rent), 0);
-                totalUnits = unitTypes.reduce((total, ut) => total + ut.count, 0);
+                // For Multi-Family, calculate from unit types
+                let unitTypes = [];
+                if (analysis.unit_types) {
+                    try {
+                        if (typeof analysis.unit_types === 'string') {
+                            unitTypes = JSON.parse(analysis.unit_types);
+                        } else {
+                            unitTypes = analysis.unit_types;
+                        }
+                    } catch (error) {
+                        console.error('Error parsing unit types:', error);
+                        unitTypes = [];
+                    }
+                }
+                
+                grossIncome = unitTypes.reduce((total, ut) => 
+                    total + (ut.count || 0) * (ut.rent || 0), 0);
+                totalUnits = unitTypes.reduce((total, ut) => 
+                    total + (ut.count || 0), 0) || 1;  // Avoid division by zero
             } else {
-                grossIncome = this.parseNumericValue(analysis.monthly_rent);
-                totalUnits = 1;
+                // For single-unit properties
+                grossIncome = this.toRawNumber(analysis.monthly_rent);
             }
             
-            console.log('Gross Monthly Income:', grossIncome);
+            console.log(`Monthly Gross Income: ${grossIncome}, Total Units: ${totalUnits}`);
             const annualGrossIncome = grossIncome * 12;
-            console.log('Annual Gross Income:', annualGrossIncome);
-    
+            
             // Calculate expenses
             const expenseFields = [
                 'property_taxes',
@@ -5990,125 +6097,456 @@ window.analysisModule = {
                 'trash_removal',
                 'common_utilities'
             ];
-    
-            // Log each expense as it's calculated
+            
             const annualFixedExpenses = expenseFields.reduce((total, field) => {
-                const monthlyExpense = this.parseNumericValue(analysis[field]);
-                console.log(`${field} expense:`, monthlyExpense);
+                const monthlyExpense = this.toRawNumber(analysis[field]);
                 return total + (monthlyExpense * 12);
             }, 0);
-    
-            console.log('Annual Fixed Expenses:', annualFixedExpenses);
-    
+            
             // Calculate percentage-based expenses
             const percentageFields = {
-                management: this.parseNumericValue(analysis.management_fee_percentage),
-                capex: this.parseNumericValue(analysis.capex_percentage),
-                vacancy: this.parseNumericValue(analysis.vacancy_percentage),
-                repairs: this.parseNumericValue(analysis.repairs_percentage)
+                management: this.toRawNumber(analysis.management_fee_percentage),
+                capex: this.toRawNumber(analysis.capex_percentage),
+                vacancy: this.toRawNumber(analysis.vacancy_percentage),
+                repairs: this.toRawNumber(analysis.repairs_percentage)
             };
-    
-            console.log('Expense Percentages:', percentageFields);
-    
+            
             const annualPercentageExpenses = Object.entries(percentageFields).reduce((total, [name, percentage]) => {
                 const expense = annualGrossIncome * (percentage / 100);
-                console.log(`${name} expense (${percentage}%):`, expense);
                 return total + expense;
             }, 0);
-    
-            console.log('Annual Percentage-based Expenses:', annualPercentageExpenses);
-    
-            // Calculate NOI
-            const totalExpenses = annualFixedExpenses + annualPercentageExpenses;
-            const noi = annualGrossIncome - totalExpenses;
-            console.log('NOI (annual):', noi);
-    
-            // Set NOI metric
-            if (analysis.analysis_type === 'Multi-Family') {
-                metrics.noi = noi / totalUnits / 12; // Monthly NOI per unit
-            } else {
-                metrics.noi = noi / 12; // Monthly NOI
+            
+            // Add PadSplit-specific expenses if applicable
+            let additionalExpenses = 0;
+            if (analysis.analysis_type.includes('PadSplit')) {
+                const padsplitFields = [
+                    'utilities',
+                    'internet',
+                    'cleaning',
+                    'pest_control',
+                    'landscaping'
+                ];
+                
+                const padsplitExpenses = padsplitFields.reduce((total, field) => {
+                    return total + (this.toRawNumber(analysis[field]) * 12);
+                }, 0);
+                
+                // Add platform fee
+                const platformPercentage = this.toRawNumber(analysis.padsplit_platform_percentage);
+                const platformFee = annualGrossIncome * (platformPercentage / 100);
+                
+                additionalExpenses = padsplitExpenses + platformFee;
             }
-            console.log('NOI metric:', metrics.noi);
-    
+            
+            // Calculate NOI
+            const totalExpenses = annualFixedExpenses + annualPercentageExpenses + additionalExpenses;
+            const annualNOI = annualGrossIncome - totalExpenses;
+            
+            // Set NOI metric (monthly)
+            const monthlyNOI = annualNOI / 12;
+            if (analysis.analysis_type === 'Multi-Family') {
+                metrics.noi = monthlyNOI / totalUnits;  // Per unit for Multi-Family
+            } else {
+                metrics.noi = monthlyNOI;
+            }
+            
             // Calculate Operating Expense Ratio
             if (annualGrossIncome > 0) {
-                metrics.operatingExpenseRatio = (totalExpenses / annualGrossIncome) * 100;
-                console.log('Operating Expense Ratio:', metrics.operatingExpenseRatio);
+                metrics.operating_expense_ratio = (totalExpenses / annualGrossIncome) * 100;
+            } else {
+                metrics.operating_expense_ratio = 0;
             }
-    
+            
             // Calculate Cap Rate (except for Lease Option)
             if (analysis.analysis_type !== 'Lease Option') {
-                const purchasePrice = this.parseNumericValue(analysis.purchase_price);
+                const purchasePrice = this.toRawNumber(analysis.purchase_price);
                 if (purchasePrice > 0) {
-                    metrics.capRate = (noi / purchasePrice) * 100;
-                    console.log('Cap Rate:', metrics.capRate);
+                    metrics.cap_rate = (annualNOI / purchasePrice) * 100;
                 }
             }
-    
+            
             // Calculate DSCR (except for Lease Option)
             if (analysis.analysis_type !== 'Lease Option') {
                 let annualDebtService = 0;
-                ['loan1', 'loan2', 'loan3'].forEach(prefix => {
-                    const payment = analysis.calculated_metrics?.[`${prefix}_loan_payment`];
-                    if (payment) {
-                        const monthlyPayment = this.parseNumericValue(payment);
-                        console.log(`${prefix} monthly payment:`, monthlyPayment);
-                        annualDebtService += monthlyPayment * 12;
+                
+                // For BRRRR, use refinance loan payment
+                if (analysis.analysis_type.includes('BRRRR')) {
+                    // Get payment from calculated metrics if available
+                    const refinancePayment = analysis.calculated_metrics?.refinance_loan_payment;
+                    if (refinancePayment) {
+                        const monthlyPayment = this.toRawNumber(refinancePayment);
+                        annualDebtService = monthlyPayment * 12;
+                    } else {
+                        // Calculate if not available
+                        const loanAmount = this.toRawNumber(analysis.refinance_loan_amount);
+                        const interestRate = this.toRawNumber(analysis.refinance_loan_interest_rate) / 100 / 12;
+                        const term = this.toRawNumber(analysis.refinance_loan_term);
+                        
+                        if (loanAmount > 0 && interestRate > 0 && term > 0) {
+                            const monthlyPayment = loanAmount * interestRate * Math.pow(1 + interestRate, term) / (Math.pow(1 + interestRate, term) - 1);
+                            annualDebtService = monthlyPayment * 12;
+                        }
                     }
-                });
-    
-                console.log('Annual Debt Service:', annualDebtService);
+                } else {
+                    // For other types, sum all loan payments
+                    for (let i = 1; i <= 3; i++) {
+                        const prefix = `loan${i}`;
+                        const payment = analysis.calculated_metrics?.[`${prefix}_loan_payment`];
+                        if (payment) {
+                            const monthlyPayment = this.toRawNumber(payment);
+                            annualDebtService += monthlyPayment * 12;
+                        }
+                    }
+                }
+                
                 if (annualDebtService > 0) {
-                    metrics.dscr = noi / annualDebtService;
-                    console.log('DSCR:', metrics.dscr);
+                    metrics.dscr = annualNOI / annualDebtService;
                 }
             }
-    
-            // Calculate Cash on Cash Return
-            const totalCashInvested = this.parseNumericValue(analysis.calculated_metrics?.total_cash_invested);
-            console.log('Total Cash Invested:', totalCashInvested);
             
-            if (totalCashInvested > 0) {
-                const annualCashFlow = this.parseNumericValue(analysis.calculated_metrics?.annual_cash_flow);
-                console.log('Annual Cash Flow:', annualCashFlow);
+            // Calculate Cash on Cash Return
+            if (analysis.analysis_type.includes('BRRRR')) {
+                // Use the BRRRR-specific calculation
+                const totalInvestment = this.calculateBRRRRInvestment(analysis);
                 
-                metrics.cashOnCash = (annualCashFlow / totalCashInvested) * 100;
-                console.log('Cash on Cash Return:', metrics.cashOnCash);
+                // Get annual cash flow
+                let annualCashFlow = 0;
+                if (analysis.calculated_metrics?.annual_cash_flow) {
+                    annualCashFlow = this.toRawNumber(analysis.calculated_metrics.annual_cash_flow);
+                } else {
+                    // Calculate from monthly cash flow if available
+                    const monthlyCashFlow = analysis.calculated_metrics?.monthly_cash_flow;
+                    if (monthlyCashFlow) {
+                        annualCashFlow = this.toRawNumber(monthlyCashFlow) * 12;
+                    } else {
+                        // Calculate directly if no calculated value available
+                        let loanPayment = 0;
+                        const refinancePayment = analysis.calculated_metrics?.refinance_loan_payment;
+                        if (refinancePayment) {
+                            loanPayment = this.toRawNumber(refinancePayment);
+                        }
+                        annualCashFlow = annualNOI - (loanPayment * 12);
+                    }
+                }
+                
+                // Calculate Cash on Cash Return
+                if (totalInvestment > 0.01) {  // Avoid division by zero
+                    metrics.cash_on_cash_return = (annualCashFlow / totalInvestment) * 100;
+                } else {
+                    metrics.cash_on_cash_return = 999.99;  // Cap at 999.99% for near-zero investments
+                }
+            } else {
+                // Standard calculation
+                let totalCashInvested = 0;
+                
+                // Try to get from calculated metrics first
+                if (analysis.calculated_metrics?.total_cash_invested) {
+                    totalCashInvested = this.toRawNumber(analysis.calculated_metrics.total_cash_invested);
+                } else {
+                    // For Lease Option, use option fee
+                    if (analysis.analysis_type === 'Lease Option') {
+                        totalCashInvested = this.toRawNumber(analysis.option_consideration_fee);
+                    } else {
+                        // Calculate sum of down payments and costs
+                        let downPaymentTotal = 0;
+                        for (let i = 1; i <= 3; i++) {
+                            downPaymentTotal += this.toRawNumber(analysis[`loan${i}_loan_down_payment`]);
+                        }
+                        
+                        let closingCosts = 0;
+                        for (let i = 1; i <= 3; i++) {
+                            closingCosts += this.toRawNumber(analysis[`loan${i}_loan_closing_costs`]);
+                        }
+                        
+                        const renovationCosts = this.toRawNumber(analysis.renovation_costs);
+                        
+                        totalCashInvested = downPaymentTotal + closingCosts + renovationCosts;
+                    }
+                }
+                
+                // Get annual cash flow
+                let annualCashFlow = 0;
+                if (analysis.calculated_metrics?.annual_cash_flow) {
+                    annualCashFlow = this.toRawNumber(analysis.calculated_metrics.annual_cash_flow);
+                } else {
+                    const monthlyCashFlow = analysis.calculated_metrics?.monthly_cash_flow;
+                    if (monthlyCashFlow) {
+                        annualCashFlow = this.toRawNumber(monthlyCashFlow) * 12;
+                    } else {
+                        // For Lease Option, simple rent - expenses calculation
+                        if (analysis.analysis_type === 'Lease Option') {
+                            annualCashFlow = annualNOI;
+                        } else {
+                            // Get total loan payment
+                            let totalLoanPayment = 0;
+                            for (let i = 1; i <= 3; i++) {
+                                const prefix = `loan${i}`;
+                                const payment = analysis.calculated_metrics?.[`${prefix}_loan_payment`];
+                                if (payment) {
+                                    totalLoanPayment += this.toRawNumber(payment);
+                                }
+                            }
+                            
+                            annualCashFlow = annualNOI - (totalLoanPayment * 12);
+                        }
+                    }
+                }
+                
+                // Calculate Cash on Cash Return
+                if (totalCashInvested > 0) {
+                    metrics.cash_on_cash_return = (annualCashFlow / totalCashInvested) * 100;
+                }
             }
-    
-            console.log('Final calculated metrics:', metrics);
+            
             return metrics;
-    
+            
         } catch (error) {
             console.error('Error calculating KPIs:', error);
-            console.error(error.stack);
             return {};
         }
     },
     
+    calculateBRRRRInvestment: function(analysis) {
+        try {
+            // Step 1: Calculate initial investment (before financing)
+            const initialInvestment = 
+                this.toRawNumber(analysis.purchase_price) + 
+                this.toRawNumber(analysis.renovation_costs) + 
+                this.toRawNumber(analysis.initial_loan_closing_costs);
+            
+            // Add holding costs if available in calculated metrics
+            const holdingCosts = this.toRawNumber(analysis.calculated_metrics?.holding_costs);
+            
+            // Add furnishing costs for PadSplit
+            let furnishingCosts = 0;
+            if (analysis.analysis_type.includes('PadSplit')) {
+                furnishingCosts = this.toRawNumber(analysis.furnishing_costs);
+            }
+            
+            const totalInitialInvestment = initialInvestment + holdingCosts + furnishingCosts;
+            
+            // Step 2: Subtract initial financing to get out-of-pocket
+            const initialLoanAmount = this.toRawNumber(analysis.initial_loan_amount);
+            const initialOutOfPocket = Math.max(0, totalInitialInvestment - initialLoanAmount);
+            
+            // Step 3: Calculate cash recouped from refinance
+            const refinanceLoanAmount = this.toRawNumber(analysis.refinance_loan_amount);
+            const refinanceClosingCosts = this.toRawNumber(analysis.refinance_loan_closing_costs);
+            
+            const cashRecouped = Math.max(0, refinanceLoanAmount - initialLoanAmount - refinanceClosingCosts);
+            
+            // Step 4: Calculate final out-of-pocket investment
+            const finalInvestment = Math.max(0, initialOutOfPocket - cashRecouped);
+            
+            console.log("BRRRR Investment Calculation:", {
+                initialInvestment: totalInitialInvestment,
+                initialLoanAmount,
+                initialOutOfPocket,
+                refinanceLoanAmount,
+                refinanceClosingCosts,
+                cashRecouped,
+                finalInvestment
+            });
+            
+            return finalInvestment;
+            
+        } catch (error) {
+            console.error('Error calculating BRRRR investment:', error);
+            return 0;
+        }
+    },
+
     // Function to generate the KPI card HTML
-    generateKPICard(analysis) {
+    generateKPICard: function(analysis) {
         console.log('Generating KPI card for analysis:', {
             type: analysis.analysis_type,
-            data: analysis
+            id: analysis.id
         });
         
-        const metrics = this.calculateKPIs(analysis);
-        console.log('Calculated KPI metrics:', metrics);
-        
-        // Handle PadSplit variants
-        const type = analysis.analysis_type.includes('PadSplit') ? 'LTR' : analysis.analysis_type;
-        console.log('Using KPI config for type:', type);
-        
-        const config = this.KPI_CONFIGS[type];
-        console.log('KPI Config:', config);
-    
-        if (!config) {
-            console.error('No KPI configuration found for type:', type);
-            return '';
+        // If we don't have an analysis ID, we can't generate KPIs
+        if (!analysis.id) {
+            return `
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Key Performance Indicators</h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <p>KPIs unavailable - analysis has not been saved.</p>
+                    </div>
+                </div>`;
         }
+        
+        // Get KPI data directly from the analysis calculated metrics
+        const metrics = analysis.calculated_metrics || {};
+        console.log('Using calculated metrics for KPIs:', metrics);
+        
+        // Create KPI data structure
+        const kpiData = this.prepareKPIData(analysis);
+        
+        // Return the rendered KPI card
+        return this.renderKPICard(kpiData);
+    },
     
+    // New helper function to transform calculated metrics into KPI format
+    prepareKPIData: function(analysis) {
+        const metrics = analysis.calculated_metrics || {};
+        const analysisType = analysis.analysis_type || '';
+        
+        // Get KPI configuration based on analysis type
+        let kpiConfig = this.KPI_CONFIGS.LTR; // Default to LTR config
+        if (analysisType.includes('BRRRR')) {
+            kpiConfig = this.KPI_CONFIGS.BRRRR;
+        } else if (analysisType === 'Multi-Family') {
+            kpiConfig = this.KPI_CONFIGS['Multi-Family']; // Use bracket notation for property with spaces
+        } else if (analysisType === 'Lease Option') {
+            kpiConfig = this.KPI_CONFIGS['Lease Option']; // Use bracket notation for property with spaces
+        }
+        
+        // Process metrics into KPI data
+        const kpiData = {};
+        
+        // Process NOI
+        if (kpiConfig.noi) {
+            const noiValue = this.extractNumericValue(metrics.monthly_noi || metrics.noi);
+            kpiData.noi = {
+                label: kpiConfig.noi.label,
+                value: noiValue,
+                formatted_value: `$${noiValue.toFixed(2)}`,
+                threshold: `$${kpiConfig.noi.threshold.toFixed(2)}`,
+                info: kpiConfig.noi.info,
+                is_favorable: noiValue >= kpiConfig.noi.threshold
+            };
+        }
+        
+        // Process Cap Rate
+        if (kpiConfig.capRate && (metrics.cap_rate || metrics.capRate)) {
+            const capRateValue = this.extractPercentageValue(metrics.cap_rate || metrics.capRate);
+            const isFavorable = kpiConfig.capRate.goodMin <= capRateValue && capRateValue <= kpiConfig.capRate.goodMax;
+            kpiData.cap_rate = {
+                label: kpiConfig.capRate.label,
+                value: capRateValue,
+                formatted_value: `${capRateValue.toFixed(2)}%`,
+                threshold: `${kpiConfig.capRate.goodMin.toFixed(2)}%-${kpiConfig.capRate.goodMax.toFixed(2)}%`,
+                info: kpiConfig.capRate.info,
+                is_favorable: isFavorable
+            };
+        }
+        
+        // Process Cash on Cash Return
+        if (kpiConfig.cashOnCash && (metrics.cash_on_cash_return || metrics.cashOnCash)) {
+            const cocValue = this.extractPercentageValue(metrics.cash_on_cash_return || metrics.cashOnCash);
+            kpiData.cash_on_cash = {
+                label: kpiConfig.cashOnCash.label,
+                value: cocValue,
+                formatted_value: `${cocValue.toFixed(2)}%`,
+                threshold: `≥ ${kpiConfig.cashOnCash.threshold.toFixed(2)}%`,
+                info: kpiConfig.cashOnCash.info,
+                is_favorable: cocValue >= kpiConfig.cashOnCash.threshold
+            };
+        }
+        
+        // Process DSCR (if available)
+        if (kpiConfig.dscr && (metrics.dscr || metrics.DSCR)) {
+            const dscrValue = this.extractNumericValue(metrics.dscr || metrics.DSCR);
+            kpiData.dscr = {
+                label: kpiConfig.dscr.label,
+                value: dscrValue,
+                formatted_value: dscrValue.toFixed(2),
+                threshold: `≥ ${kpiConfig.dscr.threshold.toFixed(2)}`,
+                info: kpiConfig.dscr.info,
+                is_favorable: dscrValue >= kpiConfig.dscr.threshold
+            };
+        }
+        
+        // Process Operating Expense Ratio
+        if (kpiConfig.operatingExpenseRatio && (metrics.operating_expense_ratio || metrics.expenseRatio)) {
+            const expenseRatioValue = this.extractPercentageValue(metrics.operating_expense_ratio || metrics.expenseRatio);
+            kpiData.expense_ratio = {
+                label: kpiConfig.operatingExpenseRatio.label,
+                value: expenseRatioValue,
+                formatted_value: `${expenseRatioValue.toFixed(2)}%`,
+                threshold: `≤ ${kpiConfig.operatingExpenseRatio.threshold.toFixed(2)}%`,
+                info: kpiConfig.operatingExpenseRatio.info,
+                is_favorable: expenseRatioValue <= kpiConfig.operatingExpenseRatio.threshold
+            };
+        }
+        
+        return kpiData;
+    },
+    
+    // Helper function to extract numeric value from a string or formatted value
+    extractNumericValue: function(value) {
+        if (value === null || value === undefined) return 0;
+        if (typeof value === 'number') return value;
+        
+        // Handle string values
+        if (typeof value === 'string') {
+            // Remove currency symbols, commas, etc.
+            const cleanValue = value.replace(/[$,\s]+/g, '');
+            const parsedValue = parseFloat(cleanValue);
+            return isNaN(parsedValue) ? 0 : parsedValue;
+        }
+        
+        return 0;
+    },
+    
+    // Helper function to extract percentage value from a string or formatted value
+    extractPercentageValue: function(value) {
+        if (value === null || value === undefined) return 0;
+        if (typeof value === 'number') return value;
+        
+        // Handle string values
+        if (typeof value === 'string') {
+            // Remove percentage symbols, commas, etc.
+            const cleanValue = value.replace(/[%,\s]+/g, '');
+            const parsedValue = parseFloat(cleanValue);
+            return isNaN(parsedValue) ? 0 : parsedValue;
+        }
+        
+        return 0;
+    },
+    
+    // Add a method to refresh KPIs
+    refreshKPIs: function(analysisId, kpiCardId) {
+        const kpiCard = document.getElementById(kpiCardId);
+        if (kpiCard) {
+            kpiCard.querySelector('.card-body').innerHTML = `
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading KPI data...</p>`;
+                
+            // Fetch the analysis data to get fresh KPIs
+            this.getAnalysis(analysisId)
+                .then(analysis => {
+                    // Update the KPI card
+                    kpiCard.outerHTML = this.generateKPICard(analysis);
+                })
+                .catch(error => {
+                    console.error('Error refreshing KPIs:', error);
+                    kpiCard.querySelector('.card-body').innerHTML = `
+                        <div class="alert alert-danger mb-0">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Failed to refresh KPI data.
+                        </div>`;
+                });
+        }
+    },
+
+    renderKPICard: function(kpiData) {
+        if (!kpiData || Object.keys(kpiData).length === 0) {
+            return `
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Key Performance Indicators</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-0">No KPI data available</p>
+                    </div>
+                </div>`;
+        }
+        
+        // Format KPI data for display
         let html = `
             <div class="card mb-4">
                 <div class="card-header">
@@ -6126,83 +6564,30 @@ window.analysisModule = {
                                 </tr>
                             </thead>
                             <tbody>`;
-    
-        let rowCount = 0;
-        // Add each applicable KPI
-        Object.entries(config).forEach(([key, kpiConfig]) => {
-            console.log(`Processing KPI ${key}:`, {
-                config: kpiConfig,
-                value: metrics[key]
-            });
-            
-            const value = metrics[key];
-            if (value !== undefined) {
-                rowCount++;
-                // Format the values appropriately
-                let formattedValue;
-                let threshold;
-                let isFavorable;
-    
-                // Format current value
-                if (kpiConfig.format === 'money') {
-                    formattedValue = `$${value.toFixed(2)}`;
-                } else if (kpiConfig.format === 'percentage') {
-                    formattedValue = `${value.toFixed(1)}%`;
-                } else {
-                    formattedValue = value.toFixed(2);
-                }
-    
-                // Format threshold and determine if favorable
-                if (kpiConfig.direction === 'min') {
-                    threshold = kpiConfig.format === 'money' ? 
-                        `≥ $${kpiConfig.threshold.toFixed(2)}` :
-                        kpiConfig.format === 'percentage' ?
-                        `≥ ${kpiConfig.threshold.toFixed(1)}%` :
-                        `≥ ${kpiConfig.threshold.toFixed(2)}`;
-                    isFavorable = value >= kpiConfig.threshold;
-                } else if (kpiConfig.direction === 'max') {
-                    threshold = kpiConfig.format === 'money' ?
-                        `≤ $${kpiConfig.threshold.toFixed(2)}` :
-                        kpiConfig.format === 'percentage' ?
-                        `≤ ${kpiConfig.threshold.toFixed(1)}%` :
-                        `≤ ${kpiConfig.threshold.toFixed(2)}`;
-                    isFavorable = value <= kpiConfig.threshold;
-                } else {
-                    // Range threshold (Cap Rate)
-                    threshold = `${kpiConfig.goodMin.toFixed(1)}% - ${kpiConfig.goodMax.toFixed(1)}%`;
-                    isFavorable = value >= kpiConfig.goodMin && value <= kpiConfig.goodMax;
-                }
-    
-                console.log(`Adding KPI row for ${key}:`, {
-                    formattedValue,
-                    threshold,
-                    isFavorable
-                });
-    
-                html += `
-                    <tr>
-                        <td>
-                            <div class="d-flex align-items-center">
-                                ${kpiConfig.label}
-                                <i class="bi bi-info-circle ms-2" 
-                                   data-bs-toggle="tooltip" 
-                                   data-bs-placement="right" 
-                                   title="${kpiConfig.info}"></i>
-                            </div>
-                        </td>
-                        <td class="text-center">${threshold}</td>
-                        <td class="text-center">${formattedValue}</td>
-                        <td class="text-center">
-                            <span class="badge ${isFavorable ? 'bg-success' : 'bg-danger'}">
-                                ${isFavorable ? 'Favorable' : 'Unfavorable'}
-                            </span>
-                        </td>
-                    </tr>`;
-            }
-        });
-    
-        console.log(`Generated ${rowCount} KPI rows`);
-    
+        
+        // Add each KPI to the table
+        for (const [key, data] of Object.entries(kpiData)) {
+            html += `
+                <tr>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            ${data.label}
+                            <i class="bi bi-info-circle ms-2" 
+                               data-bs-toggle="tooltip" 
+                               data-bs-placement="right" 
+                               title="${data.info}"></i>
+                        </div>
+                    </td>
+                    <td class="text-center">${data.threshold}</td>
+                    <td class="text-center">${data.formatted_value}</td>
+                    <td class="text-center">
+                        <span class="badge ${data.is_favorable ? 'bg-success' : 'bg-danger'}">
+                            ${data.is_favorable ? 'Favorable' : 'Unfavorable'}
+                        </span>
+                    </td>
+                </tr>`;
+        }
+        
         html += `
                             </tbody>
                         </table>
@@ -6214,7 +6599,7 @@ window.analysisModule = {
                     </div>
                 </div>
             </div>`;
-    
+        
         return html;
     },
     

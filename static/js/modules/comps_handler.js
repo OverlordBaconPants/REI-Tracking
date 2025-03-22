@@ -170,17 +170,22 @@ const compsHandler = {
     
     // Generate table rows for comps
     generateCompsTableRows(comparables) {
-        return comparables.map(comp => `
-            <tr>
-                <td>${comp.formattedAddress}</td>
-                <td>${this.formatCurrency(comp.price)}</td>
-                <td>${comp.bedrooms}/${comp.bathrooms}</td>
-                <td>${comp.squareFootage.toLocaleString()}</td>
-                <td>${comp.yearBuilt}</td>
-                <td>${this.formatDate(comp.removedDate || comp.listedDate)}</td>
-                <td>${comp.distance.toFixed(2)} mi</td>
-            </tr>
-        `).join('');
+        return comparables.map(comp => {
+            // Use removedDate as the sale date for sold properties
+            const saleDate = comp.saleDate || comp.removedDate;
+            
+            return `
+                <tr>
+                    <td>${comp.formattedAddress || ''}</td>
+                    <td>${this.formatCurrency(comp.price)}</td>
+                    <td>${comp.bedrooms || 0}/${comp.bathrooms || 0}</td>
+                    <td>${(comp.squareFootage || 0).toLocaleString()}</td>
+                    <td>${comp.yearBuilt || 'N/A'}</td>
+                    <td>${this.formatDate(saleDate)}</td>
+                    <td>${(comp.distance || 0).toFixed(2)} mi</td>
+                </tr>
+            `;
+        }).join('');
     },
 
     displayExistingComps(compsData) {
@@ -256,6 +261,10 @@ const compsHandler = {
     
     // Helper: Format currency
     formatCurrency(value) {
+        if (value === undefined || value === null) {
+            return '$0';
+        }
+        
         return new Intl.NumberFormat('en-US', {
             style: 'currency',
             currency: 'USD',
@@ -267,12 +276,20 @@ const compsHandler = {
     // Helper: Format date
     formatDate(dateString) {
         if (!dateString) return 'N/A';
-        const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
+        
+        try {
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return 'N/A';
+            
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        } catch (error) {
+            console.error('Error formatting date:', error);
+            return 'N/A';
+        }
     }
 };
 

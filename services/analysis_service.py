@@ -478,7 +478,7 @@ class AnalysisService:
 
     def create_analysis(self, analysis_data: Dict, user_id: str) -> Dict:
         """
-        Create new analysis with validation and calculation.
+        Create new analysis with validation and calculation, ensuring metrics consistency.
         
         Args:
             analysis_data: Input analysis data
@@ -508,6 +508,10 @@ class AnalysisService:
             analysis = create_analysis(normalized_data)
             metrics = analysis.get_report_data()['metrics']
             
+            # Utilize standardized metrics functions instead of MetricsHandler
+            from utils.standardized_metrics import register_metrics
+            register_metrics(normalized_data['id'], metrics)
+            
             # Save to storage
             self._save_analysis(normalized_data, user_id)
             
@@ -520,13 +524,12 @@ class AnalysisService:
             }
             
         except Exception as e:
-            logger.error(f"Error creating analysis: {str(e)}")
-            logger.error(traceback.format_exc())
+            logger.error(f"Error creating analysis: {str(e)}", exc_info=True)
             raise
 
     def update_analysis(self, analysis_data: Dict, user_id: str) -> Dict:
         """
-        Update existing analysis with validation and recalculation.
+        Update existing analysis with validation and recalculation, ensuring metrics consistency.
         
         Args:
             analysis_data: Updated analysis data
@@ -575,6 +578,10 @@ class AnalysisService:
             analysis = create_analysis(normalized_data)
             metrics = analysis.get_report_data().get('metrics', {})
             
+            # Utilize standardized metrics functions instead of MetricsHandler
+            from utils.standardized_metrics import register_metrics
+            register_metrics(analysis_id, metrics)
+            
             # Debug log for comps data
             self._log_comps_data(normalized_data)
             
@@ -590,8 +597,7 @@ class AnalysisService:
             }
             
         except Exception as e:
-            logger.error(f"Error updating analysis: {str(e)}")
-            logger.error(traceback.format_exc())
+            logger.error(f"Error updating analysis: {str(e)}", exc_info=True)
             raise
 
     def _log_balloon_data(self, analysis_data: Dict) -> None:
@@ -619,7 +625,7 @@ class AnalysisService:
 
     def get_analysis(self, analysis_id: str, user_id: str) -> Optional[Dict]:
         """
-        Retrieve analysis with calculations.
+        Retrieve analysis with calculations and ensure metrics consistency.
         
         Args:
             analysis_id: Analysis ID
@@ -644,6 +650,10 @@ class AnalysisService:
             analysis = create_analysis(stored_data)
             metrics = analysis.get_report_data()['metrics']
             
+            # Utilize standardized metrics functions instead of MetricsHandler
+            from utils.standardized_metrics import register_metrics
+            register_metrics(analysis_id, metrics)
+            
             return {
                 **stored_data,
                 'calculated_metrics': metrics
@@ -653,6 +663,22 @@ class AnalysisService:
             logger.error(f"Error retrieving analysis: {str(e)}")
             logger.error(traceback.format_exc())
             raise
+
+    def find_analysis_owner(self, analysis_id):
+        """Find the user who owns a specific analysis"""
+        # Implementation will depend on your storage structure
+        # This is just a conceptual example
+        
+        # Check each user directory
+        users_dir = os.path.join(current_app.config['DATA_DIR'], 'users')
+        for user_id in os.listdir(users_dir):
+            user_analyses_dir = os.path.join(users_dir, user_id, 'analyses')
+            if os.path.exists(user_analyses_dir):
+                analysis_path = os.path.join(user_analyses_dir, f"{analysis_id}.json")
+                if os.path.exists(analysis_path):
+                    return user_id
+                    
+        return None
 
     def get_analyses_for_user(self, user_id: str, page: int = 1, per_page: int = 10) -> Tuple[List[Dict], int]:
         """
@@ -774,7 +800,7 @@ class AnalysisService:
 
     def generate_pdf_report(self, analysis_id: str, user_id: str) -> BytesIO:
         """
-        Generate a PDF report for an analysis.
+        Generate a PDF report for an analysis with consistent metrics.
         
         Args:
             analysis_id: Analysis ID
@@ -793,6 +819,18 @@ class AnalysisService:
 
             # Add current date to the analysis data
             analysis_data['generated_date'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            
+            # Use standardized metrics directly
+            from utils.standardized_metrics import extract_calculated_metrics, get_metrics
+
+            # Check if metrics are already registered
+            registered_metrics = get_metrics(analysis_id)
+            
+            if not registered_metrics:
+                # Extract and register metrics if not already registered
+                metrics = extract_calculated_metrics(analysis_data)
+                from utils.standardized_metrics import register_metrics
+                register_metrics(analysis_id, metrics)
             
             # Generate report using report generator
             buffer = generate_report(analysis_data, report_type='analysis')

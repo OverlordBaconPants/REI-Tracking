@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify, current_app, session
 import requests
 import json
 from typing import Dict, Any, List, Optional, Tuple
@@ -6,6 +6,10 @@ from urllib.parse import quote_plus
 import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
+import logging
+
+# Configure logger
+logger = logging.getLogger(__name__)
 
 api_bp = Blueprint('api', __name__)
    
@@ -176,6 +180,39 @@ class AutocompleteValidator(APIValidator):
             )
             
         return data
+
+class AnalysisValidator(APIValidator):
+    """Validator for analysis-related endpoints"""
+    
+    @staticmethod
+    def validate_analysis_id(analysis_id: str) -> str:
+        """Validate analysis ID format"""
+        if not analysis_id:
+            raise ValidationError(
+                "Missing analysis ID",
+                status_code=400
+            )
+            
+        # Check if UUID format (basic validation)
+        uuid_pattern = r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+        if not re.match(uuid_pattern, analysis_id, re.IGNORECASE):
+            raise ValidationError(
+                "Invalid analysis ID format",
+                status_code=400
+            )
+            
+        return analysis_id
+    
+    @staticmethod
+    def validate_user_auth(user_id: Optional[str]) -> str:
+        """Validate user is authenticated"""
+        if not user_id:
+            raise ValidationError(
+                "Authentication required",
+                status_code=401
+            )
+            
+        return user_id
 
 def error_response(error: Exception) -> Tuple[Dict[str, Any], int]:
     """Generate standardized error response"""
