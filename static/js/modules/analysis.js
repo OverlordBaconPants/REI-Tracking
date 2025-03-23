@@ -1376,6 +1376,39 @@ const getCompsHTML = (hasExistingComps = false) => `
                 </div>
             </div>
 
+            <!-- MAO Section - New Addition -->
+            <div id="maoSection" style="display: none;" class="alert alert-primary mb-4">
+                <div class="row align-items-center">
+                    <div class="col-12 col-md-6 mb-3 mb-md-0">
+                        <h6 class="mb-1">Maximum Allowable Offer (MAO):</h6>
+                        <h4 class="mb-0" id="maoValue">$0</h4>
+                        <p class="small mb-0 mt-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="useMaoButton">
+                                <i class="bi bi-pencil-square me-1"></i>Use MAO as Purchase Price
+                            </button>
+                        </p>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <div class="accordion" id="maoDetailsAccordion">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="maoDetailsHeading">
+                                    <button class="accordion-button collapsed py-2" type="button" 
+                                            data-bs-toggle="collapse" data-bs-target="#maoDetailsCollapse">
+                                        <small>Show Calculation Details</small>
+                                    </button>
+                                </h2>
+                                <div id="maoDetailsCollapse" class="accordion-collapse collapse" 
+                                    data-bs-parent="#maoDetailsAccordion">
+                                    <div class="accordion-body p-0" id="maoDetailsBody">
+                                        <!-- MAO details will be inserted here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Comps Table Section -->
             <div id="compsTableSection" style="display: none;">
                 <div class="table-responsive">

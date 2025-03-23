@@ -37,66 +37,73 @@ class AnalysisService:
 
     def run_property_comps(self, analysis_id: str, user_id: str) -> Optional[Dict]:
         """
-        Run property comps for an analysis and update the analysis data
+        Run property comps for an analysis and update it with the results.
         
         Args:
             analysis_id: ID of the analysis
-            user_id: ID of the user running comps
+            user_id: ID of the user
             
         Returns:
-            Updated analysis dictionary or None if analysis not found
-            
-        Raises:
-            RentcastAPIError: If API request fails
+            Updated analysis with comps data or None if not found
         """
         try:
-            # Get the analysis
+            # Get the full analysis data
             analysis = self.get_analysis(analysis_id, user_id)
             if not analysis:
                 logger.error(f"Analysis not found for ID: {analysis_id}")
                 return None
                 
-            # Check run count in session
-            session_key = f'comps_run_count_{analysis_id}'
-            run_count = session.get(session_key, 0)
+            # Extract property details
+            address = analysis.get('address')
+            property_type = analysis.get('property_type', 'Single Family')
+            bedrooms = float(analysis.get('bedrooms', 0))
+            bathrooms = float(analysis.get('bathrooms', 0))
+            square_footage = float(analysis.get('square_footage', 0))
             
-            logger.debug(f"Current comps run count for {analysis_id}: {run_count}")
+            # For multi-family, adjust property type
+            if analysis.get('analysis_type') == 'Multi-Family':
+                property_type = 'Multi-Family'
             
-            # Get max runs from config
-            max_runs = current_app.config.get('MAX_COMP_RUNS_PER_SESSION', 3)
+            # Validate required parameters
+            if not address:
+                logger.error("Missing address in analysis")
+                raise ValueError("Property address is required to fetch comps")
             
-            if run_count >= max_runs:
-                raise RentcastAPIError(
-                    f"Maximum comp runs ({max_runs}) reached for this session"
-                )
+            # Get comps data
+            from utils.comps_handler import fetch_property_comps
+            from flask import current_app
             
-            # Fetch comps from RentCast
             comps_data = fetch_property_comps(
                 current_app.config,
-                analysis['address'],
-                analysis['property_type'],
-                float(analysis['bedrooms']),
-                float(analysis['bathrooms']),
-                float(analysis['square_footage'])
+                address,
+                property_type,
+                bedrooms,
+                bathrooms,
+                square_footage,
+                analysis_data=analysis  # Pass full analysis data for MAO calculation
             )
             
-            # Increment run count
-            run_count += 1
-            session[session_key] = run_count
-            logger.debug(f"Updated comps run count to: {run_count}")
+            if not comps_data:
+                logger.error("No comps data returned")
+                return None
+                
+            # Update the run count from session
+            from flask import session
+            session_key = f'comps_run_count_{address}'
+            run_count = session.get(session_key, 0)
             
-            # Update analysis with comps data
+            # Add comps data to analysis
+            from utils.comps_handler import update_analysis_comps
             updated_analysis = update_analysis_comps(analysis, comps_data, run_count)
             
-            # Save updated analysis
-            self._save_analysis(updated_analysis, user_id)
-            logger.debug(f"Successfully saved updated analysis with comps data")
+            # Save updated analysis to database
+            self._save_analysis(updated_analysis, user_id)  # Pass user_id here
             
             return updated_analysis
             
         except Exception as e:
-            logger.error(f"Error running property comps: {str(e)}")
-            logger.error(traceback.format_exc())
+            logger.error(f"Error in run_property_comps: {str(e)}")
+            logger.exception("Full traceback:")
             raise
     
     def normalize_data(self, data: Dict, is_mobile: bool = False) -> Dict:

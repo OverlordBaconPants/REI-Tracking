@@ -3,6 +3,7 @@ from typing import Dict, Optional
 from datetime import datetime
 import logging
 from flask import session, current_app
+from utils.mao_calculator import calculate_mao
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +109,8 @@ def fetch_property_comps(
     property_type: str,
     bedrooms: float,
     bathrooms: float,
-    square_footage: float
+    square_footage: float,
+    analysis_data: Optional[Dict] = None  # New parameter
 ) -> Optional[Dict]:
     try:
         logger.debug(f"Fetching comps for address: {address}")
@@ -200,6 +202,25 @@ def fetch_property_comps(
         # Add timestamp for when comps were run
         data['last_run'] = datetime.utcnow().isoformat()
         
+        logger.debug(f"About to calculate MAO with analysis data: {bool(analysis_data)} and price: {'price' in data}")
+
+        # Calculate MAO if analysis data is provided and we have an estimated value
+        if analysis_data and 'price' in data:
+            try:
+                arv = data['price']
+                mao_data = calculate_mao(arv, analysis_data)
+                data['mao'] = mao_data
+                logger.debug(f"Calculated MAO: ${mao_data['value']:.2f} for ARV: ${arv:.2f}")
+            except Exception as e:
+                logger.error(f"Error calculating MAO: {str(e)}")
+                # Don't fail the entire operation if MAO calculation fails
+        
+        # After MAO calculation:
+        if 'mao' in data:
+            logger.debug(f"MAO calculation successful: {data['mao']['value']}")
+        else:
+            logger.debug("MAO calculation not included in response")
+
         # Increment and store run count
         run_count += 1
         session[session_key] = run_count
@@ -213,7 +234,87 @@ def fetch_property_comps(
     except Exception as e:
         logger.error(f"Error processing RentCast API response: {str(e)}")
         raise RentcastAPIError(f"Error processing comps data: {str(e)}")
+
+def calculate_mao_from_analysis(arv: float, analysis_data: Dict) -> Dict:
+    """
+    Calculate Maximum Allowable Offer using analysis data and ARV.
+    Returns dictionary with MAO value and calculation parameters.
+    """
+    try:
+        # Extract values from analysis data
+        renovation_costs = float(analysis_data.get('renovation_costs', 0))
+        renovation_duration = float(analysis_data.get('renovation_duration', 0))
+        closing_costs = float(analysis_data.get('closing_costs', 0))
+        
+        # Get expected LTV (conservative default of 75% if not specified)
+        expected_ltv = 75.0
+        
+        # Handle different analysis types
+        if 'BRRRR' in analysis_data.get('analysis_type', ''):
+            # Use refinance LTV for BRRRR
+            refinance_ltv = float(analysis_data.get('refinance_loan_interest_rate', 75.0))
+            expected_ltv = refinance_ltv
+        elif analysis_data.get('has_balloon_payment'):
+            # Use balloon refinance LTV if balloon payment is enabled
+            balloon_ltv = float(analysis_data.get('balloon_refinance_ltv_percentage', 75.0))
+            expected_ltv = balloon_ltv
+        
+        # Calculate monthly holding costs
+        monthly_holding_costs = calculate_monthly_holding_costs(analysis_data)
+        total_holding_costs = monthly_holding_costs * renovation_duration
+        
+        # Calculate loan amount based on LTV
+        loan_amount = arv * (expected_ltv / 100)
+        
+        # Default max cash left in deal
+        max_cash_left = 10000  # $10k default
+        
+        # Calculate MAO
+        mao = loan_amount - renovation_costs - closing_costs - total_holding_costs + max_cash_left
+        mao = max(0, mao)  # Ensure non-negative
+        
+        return {
+            'value': mao,
+            'arv': arv,
+            'ltv_percentage': expected_ltv,
+            'renovation_costs': renovation_costs,
+            'closing_costs': closing_costs,
+            'monthly_holding_costs': monthly_holding_costs,
+            'total_holding_costs': total_holding_costs,
+            'holding_months': renovation_duration,
+            'max_cash_left': max_cash_left
+        }
+    except Exception as e:
+        # Log error but don't crash
+        logger.error(f"Error calculating MAO: {str(e)}")
+        return {'value': 0, 'error': str(e)}
+
+def calculate_monthly_holding_costs(analysis_data: Dict) -> float:
+    """Calculate monthly holding costs during renovation phase."""
+    # Get basic fixed costs
+    property_taxes = float(analysis_data.get('property_taxes', 0))
+    insurance = float(analysis_data.get('insurance', 0))
+    utilities = float(analysis_data.get('utilities', 0))
+    hoa_coa = float(analysis_data.get('hoa_coa_coop', 0))
     
+    # Calculate loan interest payments for initial/hard money loan
+    loan_amount = 0
+    interest_rate = 0
+    
+    if 'BRRRR' in analysis_data.get('analysis_type', ''):
+        loan_amount = float(analysis_data.get('initial_loan_amount', 0))
+        interest_rate = float(analysis_data.get('initial_loan_interest_rate', 0))
+    else:
+        # Try to get the first loan data
+        loan_amount = float(analysis_data.get('loan1_loan_amount', 0))
+        interest_rate = float(analysis_data.get('loan1_loan_interest_rate', 0))
+    
+    # Calculate monthly interest
+    monthly_interest = loan_amount * (interest_rate / 100 / 12) if loan_amount > 0 and interest_rate > 0 else 0
+    
+    # Sum all monthly holding costs
+    return property_taxes + insurance + utilities + hoa_coa + monthly_interest
+
 def update_analysis_comps(analysis: Dict, comps_data: Dict, run_count: int) -> Dict:
     """
     Update analysis with new comps data
@@ -234,5 +335,9 @@ def update_analysis_comps(analysis: Dict, comps_data: Dict, run_count: int) -> D
         'value_range_high': comps_data['priceRangeHigh'],
         'comparables': comps_data['comparables']
     }
+    
+    # Add MAO data if available
+    if 'mao' in comps_data:
+        analysis['comps_data']['mao'] = comps_data['mao']
     
     return analysis

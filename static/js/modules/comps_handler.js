@@ -128,6 +128,9 @@ const compsHandler = {
     // Update the comps display
     updateCompsDisplay(compsData) {
         if (!compsData) return;
+    
+        console.log("Comps data received:", compsData);
+        console.log("MAO data present:", compsData.mao ? "Yes" : "No");
         
         // Show estimated value section
         const valueSection = document.getElementById('estimatedValueSection');
@@ -163,9 +166,96 @@ const compsHandler = {
                 document.getElementById('noCompsFound').style.display = 'block';
             }
         }
+
+        // Add MAO display if available
+        const maoSection = document.getElementById('maoSection');
+        if (maoSection && compsData.mao) {
+            maoSection.style.display = 'block';
+            document.getElementById('maoValue').textContent = this.formatCurrency(compsData.mao.value);
+            
+            // Add event handler for "Use as Purchase Price" button
+            const useMaoButton = document.getElementById('useMaoButton');
+            if (useMaoButton) {
+                useMaoButton.onclick = () => this.useMAOasPurchasePrice(compsData.mao.value);
+            }
+            
+            // Display calculation details
+            const maoDetails = document.getElementById('maoDetailsBody');
+            if (maoDetails) {
+                maoDetails.innerHTML = `
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <tbody>
+                                <tr>
+                                    <td>ARV (from comps):</td>
+                                    <td class="text-end">${this.formatCurrency(compsData.mao.arv)}</td>
+                                </tr>
+                                <tr>
+                                    <td>LTV Percentage:</td>
+                                    <td class="text-end">${compsData.mao.ltv_percentage.toFixed(1)}%</td>
+                                </tr>
+                                <tr>
+                                    <td>Renovation Costs:</td>
+                                    <td class="text-end">${this.formatCurrency(compsData.mao.renovation_costs)}</td>
+                                </tr>
+                                <tr>
+                                    <td>Monthly Holding Costs:</td>
+                                    <td class="text-end">${this.formatCurrency(compsData.mao.monthly_holding_costs)}</td>
+                                </tr>
+                                <tr>
+                                    <td>Holding Period:</td>
+                                    <td class="text-end">${compsData.mao.holding_months} months</td>
+                                </tr>
+                                <tr>
+                                    <td>Total Holding Costs:</td>
+                                    <td class="text-end">${this.formatCurrency(compsData.mao.total_holding_costs)}</td>
+                                </tr>
+                                <tr>
+                                    <td>Closing Costs:</td>
+                                    <td class="text-end">${this.formatCurrency(compsData.mao.closing_costs)}</td>
+                                </tr>
+                                <tr>
+                                    <td>Max Cash Left in Deal:</td>
+                                    <td class="text-end">${this.formatCurrency(compsData.mao.max_cash_left)}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+        }
         
         // Hide initial message
         document.getElementById('initialCompsMessage').style.display = 'none';
+    },
+
+    useMAOasPurchasePrice(maoValue) {
+        const purchasePriceField = document.getElementById('purchase_price');
+        if (purchasePriceField) {
+            // Store original value
+            const originalValue = purchasePriceField.value;
+            
+            // Update purchase price with MAO
+            purchasePriceField.value = maoValue.toFixed(0); // Round to nearest dollar
+            
+            // Trigger change event to ensure calculations update
+            const event = new Event('change', { bubbles: true });
+            purchasePriceField.dispatchEvent(event);
+            
+            // Show success message
+            toastr.success('Purchase price updated to Maximum Allowable Offer');
+            
+            // If we're on the financial tab, offer to update analysis
+            const updateBtn = document.getElementById('submitAnalysisBtn');
+            if (updateBtn) {
+                const confirmUpdate = confirm('Would you like to update the analysis with the new purchase price?');
+                if (confirmUpdate) {
+                    updateBtn.click();
+                }
+            }
+        } else {
+            toastr.error('Purchase price field not found');
+        }
     },
     
     // Generate table rows for comps
