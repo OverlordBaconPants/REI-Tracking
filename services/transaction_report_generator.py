@@ -295,7 +295,7 @@ class TransactionReportGenerator:
         # Add summary section
         if metadata:
             property_id = metadata.get('property')
-            if property_id and property_id != 'All Properties':
+            if not property_id or property_id == 'All Properties':
                 story.extend(self._create_property_summary(transactions))
             else:
                 story.extend(self._create_grand_summary(transactions))
@@ -305,7 +305,7 @@ class TransactionReportGenerator:
         # Add transactions section
         property_id = metadata.get('property') if metadata else None
         
-        if property_id and property_id != 'All Properties':
+        if not property_id or property_id == 'All Properties':
             # Sort transactions by date in descending order
             sorted_transactions = sorted(
                 transactions,

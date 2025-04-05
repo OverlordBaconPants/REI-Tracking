@@ -131,6 +131,7 @@ const compsHandler = {
     
         console.log("Comps data received:", compsData);
         console.log("MAO data present:", compsData.mao ? "Yes" : "No");
+        console.log("Rental comps present:", compsData.rental_comps ? "Yes" : "No");
         
         // Show estimated value section
         const valueSection = document.getElementById('estimatedValueSection');
@@ -225,8 +226,199 @@ const compsHandler = {
             }
         }
         
+        // Display rental comps if available
+        if (compsData.rental_comps) {
+            this.displayRentalComps(compsData.rental_comps);
+        }
+        
         // Hide initial message
         document.getElementById('initialCompsMessage').style.display = 'none';
+    },
+    
+    // Display rental comps data
+    displayRentalComps(rentalComps) {
+        if (!rentalComps) {
+            console.log('No rental comps data to display');
+            return;
+        }
+        
+        console.log('Displaying rental comps:', rentalComps);
+        
+        // Create or find rental section
+        let rentalSection = document.getElementById('rentalCompsSection');
+        
+        // If section doesn't exist, create it
+        if (!rentalSection) {
+            // Find the parent element where we'll add the rental comps section
+            const compsContainer = document.querySelector('.comps-container') || 
+                                   document.getElementById('compsTableSection')?.parentElement;
+            
+            if (!compsContainer) {
+                console.error('Comps Handler: Could not find comps container');
+                return;
+            }
+            
+            // Create rental comps section
+            rentalSection = document.createElement('div');
+            rentalSection.id = 'rentalCompsSection';
+            rentalSection.className = 'card mt-4';
+            rentalSection.innerHTML = `
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Rental Comps Analysis</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="card h-100">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title">Estimated Monthly Rent</h5>
+                                    <h2 id="estimatedRent" class="text-primary mt-3"></h2>
+                                    <p class="text-muted small">
+                                        Range: <span id="rentLow"></span> - <span id="rentHigh"></span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card h-100">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title">Cap Rate</h5>
+                                    <h2 id="capRate" class="text-success mt-3"></h2>
+                                    <p class="text-muted small">
+                                        Based on purchase price and estimated rent
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card h-100">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title">Annual Rental Income</h5>
+                                    <h2 id="annualRent" class="text-info mt-3"></h2>
+                                    <p class="text-muted small">
+                                        Projected annual gross rental income
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="rentalTableSection">
+                        <h5>Comparable Rentals</h5>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Address</th>
+                                        <th>Monthly Rent</th>
+                                        <th>Beds/Baths</th>
+                                        <th>Sq Ft</th>
+                                        <th>Year Built</th>
+                                        <th>Distance</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rentalTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div id="noRentalsFound" style="display:none;" class="alert alert-warning">
+                        No comparable rentals found in the area.
+                    </div>
+                    
+                    <div class="mt-3">
+                        <button id="useRentButton" class="btn btn-sm btn-success">
+                            <i class="bi bi-check-circle me-2"></i>Use as Monthly Rent
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            // Add the rental section after the property comps section
+            compsContainer.appendChild(rentalSection);
+            
+            // Add event listener for the "Use as Monthly Rent" button
+            const useRentButton = document.getElementById('useRentButton');
+            if (useRentButton) {
+                useRentButton.addEventListener('click', () => {
+                    this.useEstimatedRent(rentalComps.estimated_rent);
+                });
+            }
+        }
+        
+        // Update rental data
+        document.getElementById('estimatedRent').textContent = this.formatCurrency(rentalComps.estimated_rent);
+        document.getElementById('rentLow').textContent = this.formatCurrency(rentalComps.rent_range_low);
+        document.getElementById('rentHigh').textContent = this.formatCurrency(rentalComps.rent_range_high);
+        
+        // Calculate and display annual rent
+        const annualRent = rentalComps.estimated_rent * 12;
+        document.getElementById('annualRent').textContent = this.formatCurrency(annualRent);
+        
+        // Display cap rate if available
+        if (rentalComps.cap_rate) {
+            document.getElementById('capRate').textContent = rentalComps.cap_rate.toFixed(2) + '%';
+        } else {
+            document.getElementById('capRate').textContent = 'N/A';
+        }
+        
+        // Display rental comparables
+        const rentalTableBody = document.getElementById('rentalTableBody');
+        const noRentalsFound = document.getElementById('noRentalsFound');
+        const rentalTableSection = document.getElementById('rentalTableSection');
+        
+        if (rentalComps.comparable_rentals && rentalComps.comparable_rentals.length > 0) {
+            rentalTableBody.innerHTML = this.generateRentalTableRows(rentalComps.comparable_rentals);
+            rentalTableSection.style.display = 'block';
+            noRentalsFound.style.display = 'none';
+        } else {
+            rentalTableSection.style.display = 'none';
+            noRentalsFound.style.display = 'block';
+        }
+    },
+    
+    // Generate table rows for rental comps
+    generateRentalTableRows(comparables) {
+        return comparables.map(comp => {
+            return `
+                <tr>
+                    <td>${comp.formattedAddress || 'N/A'}</td>
+                    <td>${this.formatCurrency(comp.price || 0)}</td>
+                    <td>${comp.bedrooms || 0}/${comp.bathrooms || 0}</td>
+                    <td>${(comp.squareFootage || 0).toLocaleString()}</td>
+                    <td>${comp.yearBuilt || 'N/A'}</td>
+                    <td>${(comp.distance || 0).toFixed(2)} mi</td>
+                </tr>
+            `;
+        }).join('');
+    },
+    
+    // Use estimated rent as monthly rent
+    useEstimatedRent(estimatedRent) {
+        const monthlyRentField = document.getElementById('monthly_rent');
+        if (monthlyRentField) {
+            // Update monthly rent with estimated rent
+            monthlyRentField.value = estimatedRent.toFixed(0); // Round to nearest dollar
+            
+            // Trigger change event to ensure calculations update
+            const event = new Event('change', { bubbles: true });
+            monthlyRentField.dispatchEvent(event);
+            
+            // Show success message
+            toastr.success('Monthly rent updated to estimated rental value');
+            
+            // If we're on the financial tab, offer to update analysis
+            const updateBtn = document.getElementById('submitAnalysisBtn');
+            if (updateBtn) {
+                const confirmUpdate = confirm('Would you like to update the analysis with the new rental value?');
+                if (confirmUpdate) {
+                    updateBtn.click();
+                }
+            }
+        } else {
+            toastr.error('Monthly rent field not found');
+        }
     },
 
     useMAOasPurchasePrice(maoValue) {
@@ -324,6 +516,67 @@ const compsHandler = {
         
         if (runCompsBtn) {
             runCompsBtn.innerHTML = '<i class="bi bi-arrow-repeat me-2"></i>Re-Run Comps';
+        }
+        
+        // Display MAO if available
+        if (compsData.mao) {
+            console.log('Showing MAO:', compsData.mao);
+            const maoSection = document.getElementById('maoSection');
+            if (maoSection) {
+                maoSection.style.display = 'block';
+                document.getElementById('maoValue').textContent = this.formatCurrency(compsData.mao.value);
+                
+                // Display calculation details
+                const maoDetails = document.getElementById('maoDetailsBody');
+                if (maoDetails) {
+                    maoDetails.innerHTML = `
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <tbody>
+                                    <tr>
+                                        <td>ARV (from comps):</td>
+                                        <td class="text-end">${this.formatCurrency(compsData.mao.arv)}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>LTV Percentage:</td>
+                                        <td class="text-end">${compsData.mao.ltv_percentage.toFixed(1)}%</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Renovation Costs:</td>
+                                        <td class="text-end">${this.formatCurrency(compsData.mao.renovation_costs)}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Monthly Holding Costs:</td>
+                                        <td class="text-end">${this.formatCurrency(compsData.mao.monthly_holding_costs)}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Holding Period:</td>
+                                        <td class="text-end">${compsData.mao.holding_months} months</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Total Holding Costs:</td>
+                                        <td class="text-end">${this.formatCurrency(compsData.mao.total_holding_costs)}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Closing Costs:</td>
+                                        <td class="text-end">${this.formatCurrency(compsData.mao.closing_costs)}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Max Cash Left in Deal:</td>
+                                        <td class="text-end">${this.formatCurrency(compsData.mao.max_cash_left)}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                }
+            }
+        }
+        
+        // Display rental comps if available
+        if (compsData.rental_comps) {
+            console.log('Showing rental comps');
+            this.displayRentalComps(compsData.rental_comps);
         }
     },
     

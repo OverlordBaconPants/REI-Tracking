@@ -952,8 +952,17 @@ class LTRAnalysis(Analysis):
 
         # Only calculate balloon-related metrics if balloon payment is enabled
         if self.data.get('has_balloon_payment'):
-            # Calculate metrics as before...
-            # ...
+            # Calculate pre-balloon metrics
+            pre_balloon_monthly_cf = self.calculate_pre_balloon_monthly_cash_flow()
+            pre_balloon_payment = self._calculate_pre_balloon_loan_payments()
+            
+            # Calculate post-balloon metrics
+            post_balloon_monthly_cf = self._calculate_post_balloon_monthly_cash_flow()
+            post_balloon_payment = self._calculate_post_balloon_loan_payment()
+            
+            # Calculate payment difference
+            payment_difference = post_balloon_payment - pre_balloon_payment
+            
             # Add balloon-specific metrics
             metrics.update({
                 'pre_balloon_monthly_cash_flow': str(pre_balloon_monthly_cf),
@@ -967,6 +976,33 @@ class LTRAnalysis(Analysis):
             })
             
             # Add post-balloon metrics...
+            # Calculate post-balloon values with annual increases
+            post_balloon_values = self._calculate_post_balloon_values()
+
+            # Extract key post-balloon values
+            post_balloon_rent = post_balloon_values.get('monthly_rent', monthly_income)
+            post_balloon_taxes = post_balloon_values.get('property_taxes', self._get_money('property_taxes'))
+            post_balloon_insurance = post_balloon_values.get('insurance', self._get_money('insurance'))
+
+            # Calculate years to balloon
+            balloon_years = self._calculate_balloon_years()
+
+            # Add post-balloon detail metrics
+            metrics.update({
+                'post_balloon_monthly_rent': str(post_balloon_rent),
+                'post_balloon_property_taxes': str(post_balloon_taxes),
+                'post_balloon_insurance': str(post_balloon_insurance),
+                'balloon_years_from_now': str(balloon_years),
+                'estimated_annual_increase': str(Percentage(DEFAULT_ANNUAL_INCREASE_RATE * 100)),
+                'post_balloon_cap_rate': str(Percentage(
+                    (float(post_balloon_monthly_cf.dollars) * 12 / float(purchase_price.dollars)) * 100
+                    if purchase_price.dollars > 0 else 0.0
+                )),
+                'refinance_dscr': str(
+                    float(post_balloon_monthly_cf.dollars) / float(post_balloon_payment.dollars)
+                    if post_balloon_payment.dollars > 0 else 0.0
+                )
+            })
 
         return metrics
 

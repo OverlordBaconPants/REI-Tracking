@@ -69,9 +69,9 @@ class AnalysisService:
                 logger.error("Missing address in analysis")
                 raise ValueError("Property address is required to fetch comps")
             
-            # Get comps data
-            from utils.comps_handler import fetch_property_comps
-            from flask import current_app
+            # Get property comps data
+            from utils.comps_handler import fetch_property_comps, fetch_rental_comps, update_analysis_comps
+            from flask import current_app, session
             
             comps_data = fetch_property_comps(
                 current_app.config,
@@ -86,18 +86,34 @@ class AnalysisService:
             if not comps_data:
                 logger.error("No comps data returned")
                 return None
-                
+            
+            # Get rental comps data
+            rental_comps = None
+            try:
+                logger.debug("Fetching rental comps")
+                rental_comps = fetch_rental_comps(
+                    current_app.config,
+                    address,
+                    bedrooms,
+                    bathrooms,
+                    square_footage,
+                    property_type
+                )
+                logger.debug(f"Rental comps fetched successfully: {rental_comps is not None}")
+            except Exception as e:
+                logger.error(f"Error fetching rental comps: {str(e)}")
+                logger.exception("Full traceback:")
+                # Continue with property comps even if rental comps fail
+            
             # Update the run count from session
-            from flask import session
             session_key = f'comps_run_count_{address}'
             run_count = session.get(session_key, 0)
             
             # Add comps data to analysis
-            from utils.comps_handler import update_analysis_comps
-            updated_analysis = update_analysis_comps(analysis, comps_data, run_count)
+            updated_analysis = update_analysis_comps(analysis, comps_data, rental_comps, run_count)
             
             # Save updated analysis to database
-            self._save_analysis(updated_analysis, user_id)  # Pass user_id here
+            self._save_analysis(updated_analysis, user_id)
             
             return updated_analysis
             

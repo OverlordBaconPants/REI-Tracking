@@ -235,6 +235,114 @@ def fetch_property_comps(
         logger.error(f"Error processing RentCast API response: {str(e)}")
         raise RentcastAPIError(f"Error processing comps data: {str(e)}")
 
+def fetch_rental_comps(
+    app_config,
+    address: str,
+    bedrooms: float,
+    bathrooms: float,
+    square_footage: float,
+    property_type: str = 'single_family'
+) -> Optional[Dict]:
+    """
+    Fetch rental comps data from RentCast API
+    
+    Args:
+        app_config: Application configuration
+        address: Property address string
+        bedrooms: Number of bedrooms
+        bathrooms: Number of bathrooms
+        square_footage: Property square footage
+        property_type: Type of property (default: single_family)
+        
+    Returns:
+        Dictionary with rental comps data
+        
+    Raises:
+        RentcastAPIError: If the API call fails
+    """
+    try:
+        logger.debug(f"Fetching rental comps for address: {address}")
+        
+        # Access config values
+        api_base_url = app_config['RENTCAST_API_BASE_URL']
+        if not api_base_url:
+            raise RentcastAPIError("RENTCAST_API_BASE_URL missing from configuration")
+            
+        api_key = app_config['RENTCAST_API_KEY']
+        if not api_key:
+            raise RentcastAPIError("RENTCAST_API_KEY missing from configuration")
+            
+        comp_defaults = app_config['RENTCAST_COMP_DEFAULTS']
+        if not comp_defaults:
+            raise RentcastAPIError("RENTCAST_COMP_DEFAULTS missing from configuration")
+        
+        # Format address for URL
+        formatted_address = format_address(address)
+        
+        # Construct API URL with parameters
+        url = f"{api_base_url}/avm/rent/long-term"
+        params = {
+            'address': formatted_address,
+            'propertyType': property_type,
+            'bedrooms': bedrooms,
+            'bathrooms': bathrooms,
+            'squareFootage': square_footage,
+            'maxRadius': comp_defaults.get('maxRadius', 1.0),
+            'daysOld': comp_defaults.get('daysOld', 180),
+            'compCount': comp_defaults.get('compCount', 5)
+        }
+        
+        # Set up headers with API key
+        headers = {
+            'accept': 'application/json',
+            'X-Api-Key': api_key
+        }
+        
+        # Make API request
+        logger.debug("Making RentCast Rental API request with parameters: %s", params)
+        response = requests.get(url, params=params, headers=headers)
+        
+        # Check for successful response
+        response.raise_for_status()
+        
+        # Parse response
+        data = response.json()
+        logger.debug("Successfully received rental comps data")
+        
+        # Filter rental comps to ensure valid entries
+        if 'comparables' in data and isinstance(data['comparables'], list):
+            filtered_comps = []
+            for comp in data['comparables']:
+                # Ensure the rental has a valid price
+                if comp.get('price', 0) > 0:
+                    filtered_comps.append(comp)
+            
+            # Replace the comparables with filtered list
+            data['comparables'] = filtered_comps
+            logger.debug(f"Filtered {len(data.get('comparables', []))} rental properties")
+        
+        # Add timestamp for when comps were run
+        data['last_run'] = datetime.utcnow().isoformat()
+        
+        # Reformat the data for consistency with our existing structure
+        rental_comps = {
+            'last_run': data['last_run'],
+            'estimated_rent': data.get('rent', 0),
+            'rent_range_low': data.get('rentRangeLow', 0),
+            'rent_range_high': data.get('rentRangeHigh', 0),
+            'comparable_rentals': data.get('comparables', []),
+            'confidence_score': data.get('confidenceScore', 0)
+        }
+        
+        return rental_comps
+        
+    except requests.exceptions.RequestException as e:
+        logger.error(f"RentCast Rental API request failed: {str(e)}")
+        raise RentcastAPIError(f"Failed to fetch rental comps: {str(e)}")
+    except Exception as e:
+        logger.error(f"Error processing RentCast Rental API response: {str(e)}")
+        raise RentcastAPIError(f"Error processing rental comps data: {str(e)}")
+
 def calculate_mao_from_analysis(arv: float, analysis_data: Dict) -> Dict:
     """
     Calculate Maximum Allowable Offer using analysis data and ARV.
@@ -315,29 +423,47 @@ def calculate_monthly_holding_costs(analysis_data: Dict) -> float:
     # Sum all monthly holding costs
     return property_taxes + insurance + utilities + hoa_coa + monthly_interest
 
-def update_analysis_comps(analysis: Dict, comps_data: Dict, run_count: int) -> Dict:
+def update_analysis_comps(analysis: Dict, comps_data: Dict, rental_comps: Dict = None, run_count: int = 1) -> Dict:
     """
     Update analysis with new comps data
     
     Args:
         analysis: Current analysis dictionary
         comps_data: Comps data from RentCast API
+        rental_comps: Rental comps data from RentCast API (optional)
         run_count: Current session run count
         
     Returns:
         Updated analysis dictionary
     """
-    analysis['comps_data'] = {
+    # Initialize comps_data if it doesn't exist
+    if 'comps_data' not in analysis:
+        analysis['comps_data'] = {}
+    
+    # Update property comps data
+    analysis['comps_data'].update({
         'last_run': comps_data['last_run'],
         'run_count': run_count,
         'estimated_value': comps_data['price'],
         'value_range_low': comps_data['priceRangeLow'],
         'value_range_high': comps_data['priceRangeHigh'],
         'comparables': comps_data['comparables']
-    }
+    })
     
     # Add MAO data if available
     if 'mao' in comps_data:
         analysis['comps_data']['mao'] = comps_data['mao']
+    
+    # Add rental comps data if available
+    if rental_comps:
+        # Calculate cap rate if we have both estimated value and rent
+        if comps_data.get('price', 0) > 0 and rental_comps.get('estimated_rent', 0) > 0:
+            annual_rent = rental_comps['estimated_rent'] * 12
+            property_value = comps_data['price']
+            cap_rate = (annual_rent / property_value) * 100
+            rental_comps['cap_rate'] = round(cap_rate, 2)  # Store as percentage
+        
+        # Add rental comps to the analysis
+        analysis['comps_data']['rental_comps'] = rental_comps
     
     return analysis
