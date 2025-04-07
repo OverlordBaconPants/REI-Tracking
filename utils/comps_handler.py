@@ -184,6 +184,19 @@ def fetch_property_comps(
         data = response.json()
         logger.debug("Successfully received comps data")
         
+        # Verify required fields are present
+        required_fields = ['price', 'priceRangeLow', 'priceRangeHigh', 'comparables']
+        missing_fields = [field for field in required_fields if field not in data]
+        if missing_fields:
+            logger.error(f"Response missing required fields: {missing_fields}")
+            logger.debug(f"API Response keys: {list(data.keys())}")
+            # Create default values for missing fields
+            for field in missing_fields:
+                if field == 'comparables':
+                    data[field] = []
+                else:
+                    data[field] = 0
+        
         # Filter comparables to ensure we only have sold properties
         if 'comparables' in data and isinstance(data['comparables'], list):
             filtered_comps = []
@@ -198,6 +211,10 @@ def fetch_property_comps(
             # Replace the comparables with filtered list
             data['comparables'] = filtered_comps
             logger.debug(f"Filtered {len(data.get('comparables', []))} sold properties")
+        else:
+            # Ensure comparables is always a list
+            data['comparables'] = []
+            logger.warning("No comparables found in API response")
         
         # Add timestamp for when comps were run
         data['last_run'] = datetime.utcnow().isoformat()
@@ -225,6 +242,9 @@ def fetch_property_comps(
         run_count += 1
         session[session_key] = run_count
         logger.debug(f"Updated run count to {run_count}")
+        
+        # Verify all required data is present in the final result
+        logger.debug(f"Final comps data has keys: {list(data.keys())}")
         
         return data
         
@@ -424,31 +444,51 @@ def calculate_monthly_holding_costs(analysis_data: Dict) -> float:
     return property_taxes + insurance + utilities + hoa_coa + monthly_interest
 
 def update_analysis_comps(analysis: Dict, comps_data: Dict, rental_comps: Dict = None, run_count: int = 1) -> Dict:
-    """
-    Update analysis with new comps data
+    # Debug logs
+    logger.debug(f"update_analysis_comps called with analysis: {type(analysis)}, comps_data: {type(comps_data)}")
+    logger.debug(f"Analysis contains comps_data key: {'comps_data' in analysis}")
+    logger.debug(f"Analysis comps_data value: {analysis.get('comps_data')}")
     
-    Args:
-        analysis: Current analysis dictionary
-        comps_data: Comps data from RentCast API
-        rental_comps: Rental comps data from RentCast API (optional)
-        run_count: Current session run count
-        
-    Returns:
-        Updated analysis dictionary
-    """
-    # Initialize comps_data if it doesn't exist
-    if 'comps_data' not in analysis:
+    # Initialize comps_data if it doesn't exist or is None
+    if 'comps_data' not in analysis or analysis['comps_data'] is None:
+        logger.debug("Initializing empty comps_data dictionary")
         analysis['comps_data'] = {}
     
+    # Make sure comps_data parameter is not None
+    if comps_data is None:
+        logger.error("comps_data parameter is None")
+        comps_data = {}
+        return analysis  # Early return to avoid error
+    
+    # Check if comps_data has all required keys
+    required_keys = ['price', 'priceRangeLow', 'priceRangeHigh', 'comparables', 'last_run']
+    missing_keys = [key for key in required_keys if key not in comps_data]
+    if missing_keys:
+        logger.error(f"comps_data is missing required keys: {missing_keys}")
+        return analysis  # Early return to avoid error
+    
     # Update property comps data
-    analysis['comps_data'].update({
-        'last_run': comps_data['last_run'],
-        'run_count': run_count,
-        'estimated_value': comps_data['price'],
-        'value_range_low': comps_data['priceRangeLow'],
-        'value_range_high': comps_data['priceRangeHigh'],
-        'comparables': comps_data['comparables']
-    })
+    try:
+        analysis['comps_data'].update({
+            'last_run': comps_data['last_run'],
+            'run_count': run_count,
+            'estimated_value': comps_data['price'],
+            'value_range_low': comps_data['priceRangeLow'],
+            'value_range_high': comps_data['priceRangeHigh'],
+            'comparables': comps_data['comparables']
+        })
+        logger.debug("Successfully updated comps_data")
+    except Exception as e:
+        logger.error(f"Error updating comps_data: {str(e)}")
+        # Initialize comps_data as a new dictionary if update fails
+        analysis['comps_data'] = {
+            'last_run': comps_data.get('last_run'),
+            'run_count': run_count,
+            'estimated_value': comps_data.get('price'),
+            'value_range_low': comps_data.get('priceRangeLow'),
+            'value_range_high': comps_data.get('priceRangeHigh'),
+            'comparables': comps_data.get('comparables', [])
+        }
     
     # Add MAO data if available
     if 'mao' in comps_data:

@@ -73,19 +73,37 @@ class AnalysisService:
             from utils.comps_handler import fetch_property_comps, fetch_rental_comps, update_analysis_comps
             from flask import current_app, session
             
-            comps_data = fetch_property_comps(
-                current_app.config,
-                address,
-                property_type,
-                bedrooms,
-                bathrooms,
-                square_footage,
-                analysis_data=analysis  # Pass full analysis data for MAO calculation
-            )
-            
-            if not comps_data:
-                logger.error("No comps data returned")
-                return None
+            try:
+                comps_data = fetch_property_comps(
+                    current_app.config,
+                    address,
+                    property_type,
+                    bedrooms,
+                    bathrooms,
+                    square_footage,
+                    analysis_data=analysis  # Pass full analysis data for MAO calculation
+                )
+                
+                # Verify comps_data is valid and has required fields
+                if not comps_data:
+                    raise ValueError("No property comps data returned from API")
+                    
+                # Check for required fields
+                required_fields = ['price', 'priceRangeLow', 'priceRangeHigh', 'comparables', 'last_run']
+                missing_fields = [field for field in required_fields if field not in comps_data]
+                if missing_fields:
+                    logger.warning(f"Comps data missing fields: {missing_fields}")
+                    # Fill in missing fields with defaults
+                    for field in missing_fields:
+                        if field == 'comparables':
+                            comps_data[field] = []
+                        elif field == 'last_run':
+                            comps_data[field] = datetime.utcnow().isoformat()
+                        else:
+                            comps_data[field] = 0
+            except RentcastAPIError as e:
+                logger.error(f"RentCast API error: {str(e)}")
+                raise ValueError(f"Could not find property comps: {str(e)}")
             
             # Get rental comps data
             rental_comps = None
@@ -100,6 +118,12 @@ class AnalysisService:
                     property_type
                 )
                 logger.debug(f"Rental comps fetched successfully: {rental_comps is not None}")
+                
+                # Validate rental comps data
+                if rental_comps and 'estimated_rent' not in rental_comps:
+                    logger.warning("Rental comps missing estimated_rent field")
+                    rental_comps['estimated_rent'] = 0
+                    
             except Exception as e:
                 logger.error(f"Error fetching rental comps: {str(e)}")
                 logger.exception("Full traceback:")
@@ -109,14 +133,44 @@ class AnalysisService:
             session_key = f'comps_run_count_{address}'
             run_count = session.get(session_key, 0)
             
-            # Add comps data to analysis
-            updated_analysis = update_analysis_comps(analysis, comps_data, rental_comps, run_count)
+            # Make sure analysis['comps_data'] is initialized or reset if None
+            if 'comps_data' not in analysis or analysis['comps_data'] is None:
+                analysis['comps_data'] = {}
+                
+            # Add comps data to analysis with better error handling
+            try:
+                updated_analysis = update_analysis_comps(analysis, comps_data, rental_comps, run_count)
+            except Exception as e:
+                logger.error(f"Error in update_analysis_comps: {str(e)}")
+                # Fallback: manually update the analysis instead of using update_analysis_comps
+                analysis['comps_data'] = {
+                    'last_run': comps_data.get('last_run', datetime.utcnow().isoformat()),
+                    'run_count': run_count,
+                    'estimated_value': comps_data.get('price', 0),
+                    'value_range_low': comps_data.get('priceRangeLow', 0),
+                    'value_range_high': comps_data.get('priceRangeHigh', 0),
+                    'comparables': comps_data.get('comparables', [])
+                }
+                
+                # Add MAO data if available
+                if 'mao' in comps_data:
+                    analysis['comps_data']['mao'] = comps_data['mao']
+                
+                # Add rental data if available
+                if rental_comps:
+                    analysis['comps_data']['rental_comps'] = rental_comps
+                    
+                updated_analysis = analysis
             
             # Save updated analysis to database
             self._save_analysis(updated_analysis, user_id)
             
             return updated_analysis
-            
+                
+        except ValueError as e:
+            # Provide more specific error message for common issues
+            logger.error(f"Value error in run_property_comps: {str(e)}")
+            raise RentcastAPIError(f"Could not find property comps: {str(e)}")
         except Exception as e:
             logger.error(f"Error in run_property_comps: {str(e)}")
             logger.exception("Full traceback:")

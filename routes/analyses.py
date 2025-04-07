@@ -56,17 +56,28 @@ def run_property_comps(analysis_id):
         })
         
     except RentcastAPIError as e:
+        error_msg = str(e)
+        # Make user-friendly error messages
+        if "Failed to fetch property comps" in error_msg:
+            user_msg = "Unable to find comparable properties for this address. Please verify the address is correct."
+        elif "Maximum comp runs" in error_msg:
+            user_msg = error_msg  # This is already user-friendly
+        elif "'NoneType' object has no attribute" in error_msg:
+            user_msg = "Unable to process property comps. The property address may not be recognized."
+        else:
+            user_msg = f"Error running comps: {error_msg}"
+            
         current_app.logger.error(f'RentcastAPIError: {str(e)}')
         return jsonify({
             'success': False,
-            'message': f'Error running comps: {str(e)}'
+            'message': user_msg
         }), 500
     except Exception as e:
         current_app.logger.error(f'Error in run_property_comps: {str(e)}')
         current_app.logger.exception('Full traceback:')
         return jsonify({
             'success': False,
-            'message': f'Error running comps: {str(e)}'
+            'message': 'Error running comps: The property address may not be recognized by our data provider.'
         }), 500
 
 @analyses_bp.route('/create_analysis', methods=['GET', 'POST']) 
