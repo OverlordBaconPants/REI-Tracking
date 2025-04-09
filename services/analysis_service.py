@@ -639,9 +639,9 @@ class AnalysisService:
             # Normalize and validate new data
             normalized_data = self.normalize_data(analysis_data)
             
-            # Preserve metadata
+            # Preserve metadata and ID
             normalized_data.update({
-                'id': analysis_id,
+                'id': analysis_id,  # Ensure original ID is preserved
                 'user_id': user_id,
                 'created_at': current_analysis.get('created_at', datetime.now().strftime("%Y-%m-%d")),
                 'updated_at': datetime.now().strftime("%Y-%m-%d"),

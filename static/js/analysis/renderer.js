@@ -45,9 +45,9 @@ const AnalysisRenderer = {
                     <button type="button" class="btn btn-secondary" id="downloadPdfBtn" data-analysis-id="${analysisData.id}">
                         <i class="bi bi-file-earmark-pdf me-1"></i>Download PDF
                     </button>
-                    <button type="button" class="btn btn-primary" id="reEditButton">
-                        <i class="bi bi-pencil me-1"></i>Re-Edit Analysis
-                    </button>
+                    <button type="button" class="btn btn-primary" id="reEditButton" data-analysis-id="${analysisData.id}">
+                      <i class="bi bi-pencil me-1"></i>Re-Edit Analysis
+                  </button>
                 </div>
             </div>
         </div>
@@ -224,11 +224,32 @@ const AnalysisRenderer = {
    * @param {string} analysisId - The analysis ID
    */
   initReportEventHandlers(analysisId) {
-    // Handle Edit Analysis button
+    // Handle Re-Edit Analysis button
     const reEditButton = document.getElementById('reEditButton');
     if (reEditButton) {
       reEditButton.addEventListener('click', () => {
+        // Set the button's data attribute to ensure we have the ID
+        reEditButton.setAttribute('data-analysis-id', analysisId);
+        
+        // Check if we're already in edit mode with the correct ID
+        const currentForm = document.getElementById('analysisForm');
+        if (currentForm) {
+          const currentId = currentForm.getAttribute('data-analysis-id');
+          
+          // If we don't have an ID or it's different, set it explicitly
+          if (!currentId || currentId !== analysisId) {
+            currentForm.setAttribute('data-analysis-id', analysisId);
+            console.log(`Updated form with analysis ID: ${analysisId}`);
+          }
+        }
+        
+        // Switch to the financial tab to edit
         Utils.switchToFinancialTab();
+        
+        // Emit an event that can be caught by the core system
+        if (window.AnalysisCore && window.AnalysisCore.events) {
+          window.AnalysisCore.events.emit('edit:requested', analysisId);
+        }
       });
     }
     

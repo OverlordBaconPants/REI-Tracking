@@ -74,6 +74,29 @@ const AnalysisCore = {
       // Extract current analysis ID if present
       this.state.analysisId = this.getAnalysisIdFromUrl();
       
+      // Handle edit requests from the renderer
+      this.events.on('edit:requested', (analysisId) => {
+        console.log(`Edit requested for analysis: ${analysisId}`);
+        if (!analysisId) return;
+        
+        // Set the analysis ID in our state
+        this.state.analysisId = analysisId;
+        
+        // If we already have form data loaded, update the form
+        const form = document.getElementById('analysisForm');
+        if (form) {
+          form.setAttribute('data-analysis-id', analysisId);
+          
+          // If we need to load the analysis data
+          if (!this.state.analysisData || this.state.analysisData.id !== analysisId) {
+            this.loadAnalysis(analysisId).catch(error => {
+              console.error('Failed to load analysis for editing:', error);
+              this.ui.showToast('error', 'Failed to load analysis data for editing');
+            });
+          }
+        }
+      });
+
       // Initialize based on mode (create or edit)
       if (this.state.analysisId) {
         console.log(`Analysis Core: Edit mode for analysis ${this.state.analysisId}`);
@@ -409,11 +432,11 @@ const AnalysisCore = {
       const formData = new FormData(currentForm);
       const analysisData = {
         ...Object.fromEntries(formData.entries()),
-        id: analysisId,
+        id: analysisId,  // Preserve the original ID
         analysis_type: newType
       };
       
-      // Make API call
+      // Make API call to update the existing analysis
       const response = await fetch('/analyses/update_analysis', {
         method: 'POST',
         headers: {
@@ -429,26 +452,25 @@ const AnalysisCore = {
       
       const data = await response.json();
       if (!data.success) {
-        throw new Error(data.message || 'Error creating new analysis');
+        throw new Error(data.message || 'Error updating analysis');
       }
       
       // Update state
-      this.state.analysisId = data.analysis.id;
       this.state.analysisType = newType;
       this.state.initialAnalysisType = newType;
       
       // Load the new template
       await this.loadTemplateForType(newType);
       
-      // Update form
-      currentForm.setAttribute('data-analysis-id', data.analysis.id);
+      // Keep the same analysis ID in the form
+      currentForm.setAttribute('data-analysis-id', analysisId);
       
       // Populate form fields
       setTimeout(() => {
         this.populateFormFields(data.analysis);
       }, 100);
       
-      this.ui.showToast('success', `Created new ${newType} analysis`);
+      this.ui.showToast('success', `Updated to ${newType} analysis type`);
       
       return data.analysis;
     } catch (error) {
