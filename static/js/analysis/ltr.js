@@ -3,8 +3,8 @@
  * Long-Term Rental specific implementation
  */
 
-import UIHelpers from './ui-helpers.js';
-import Calculator from './calculator.js';
+import UIHelpers from './ui_helpers.js';
+import AnalysisCore from './core.js';
 
 const LTRHandler = {
   /**
@@ -12,7 +12,7 @@ const LTRHandler = {
    * @returns {string} HTML template
    */
   getTemplate() {
-    return `
+    const baseTemplate = `
       <!-- Property Details Card -->
       <div class="card mb-4">
         <div class="card-header">
@@ -350,6 +350,8 @@ const LTRHandler = {
         </div>
       </div>
     `;
+    const compsCardHTML = AnalysisCore.getCompsCardHTML();
+    return baseTemplate + compsCardHTML;
   },
   
   /**
@@ -615,26 +617,26 @@ const LTRHandler = {
     }
     
     // Set purchase details
-    UIHelpers.setFieldValue('purchase_price', analysis.purchase_price);
-    UIHelpers.setFieldValue('after_repair_value', analysis.after_repair_value);
-    UIHelpers.setFieldValue('renovation_costs', analysis.renovation_costs);
-    UIHelpers.setFieldValue('renovation_duration', analysis.renovation_duration);
-    UIHelpers.setFieldValue('cash_to_seller', analysis.cash_to_seller);
-    UIHelpers.setFieldValue('assignment_fee', analysis.assignment_fee);
-    UIHelpers.setFieldValue('closing_costs', analysis.closing_costs);
-    UIHelpers.setFieldValue('marketing_costs', analysis.marketing_costs);
+    AnalysisCore.setFieldValue('purchase_price', analysis.purchase_price);
+    AnalysisCore.setFieldValue('after_repair_value', analysis.after_repair_value);
+    AnalysisCore.setFieldValue('renovation_costs', analysis.renovation_costs);
+    AnalysisCore.setFieldValue('renovation_duration', analysis.renovation_duration);
+    AnalysisCore.setFieldValue('cash_to_seller', analysis.cash_to_seller);
+    AnalysisCore.setFieldValue('assignment_fee', analysis.assignment_fee);
+    AnalysisCore.setFieldValue('closing_costs', analysis.closing_costs);
+    AnalysisCore.setFieldValue('marketing_costs', analysis.marketing_costs);
     
     // Set monthly rent
-    UIHelpers.setFieldValue('monthly_rent', analysis.monthly_rent);
+    AnalysisCore.setFieldValue('monthly_rent', analysis.monthly_rent);
     
     // Set operating expenses
-    UIHelpers.setFieldValue('property_taxes', analysis.property_taxes);
-    UIHelpers.setFieldValue('insurance', analysis.insurance);
-    UIHelpers.setFieldValue('hoa_coa_coop', analysis.hoa_coa_coop);
-    UIHelpers.setFieldValue('management_fee_percentage', analysis.management_fee_percentage);
-    UIHelpers.setFieldValue('capex_percentage', analysis.capex_percentage);
-    UIHelpers.setFieldValue('vacancy_percentage', analysis.vacancy_percentage);
-    UIHelpers.setFieldValue('repairs_percentage', analysis.repairs_percentage);
+    AnalysisCore.setFieldValue('property_taxes', analysis.property_taxes);
+    AnalysisCore.setFieldValue('insurance', analysis.insurance);
+    AnalysisCore.setFieldValue('hoa_coa_coop', analysis.hoa_coa_coop);
+    AnalysisCore.setFieldValue('management_fee_percentage', analysis.management_fee_percentage);
+    AnalysisCore.setFieldValue('capex_percentage', analysis.capex_percentage);
+    AnalysisCore.setFieldValue('vacancy_percentage', analysis.vacancy_percentage);
+    AnalysisCore.setFieldValue('repairs_percentage', analysis.repairs_percentage);
     
     // Set balloon payment fields
     const hasBalloon = analysis.has_balloon_payment;
@@ -646,13 +648,13 @@ const LTRHandler = {
       balloonDetails.style.display = hasBalloon ? 'block' : 'none';
       
       if (hasBalloon) {
-        UIHelpers.setFieldValue('balloon_due_date', analysis.balloon_due_date);
-        UIHelpers.setFieldValue('balloon_refinance_ltv_percentage', analysis.balloon_refinance_ltv_percentage);
-        UIHelpers.setFieldValue('balloon_refinance_loan_amount', analysis.balloon_refinance_loan_amount);
-        UIHelpers.setFieldValue('balloon_refinance_loan_interest_rate', analysis.balloon_refinance_loan_interest_rate);
-        UIHelpers.setFieldValue('balloon_refinance_loan_term', analysis.balloon_refinance_loan_term);
-        UIHelpers.setFieldValue('balloon_refinance_loan_down_payment', analysis.balloon_refinance_loan_down_payment);
-        UIHelpers.setFieldValue('balloon_refinance_loan_closing_costs', analysis.balloon_refinance_loan_closing_costs);
+        AnalysisCore.setFieldValue('balloon_due_date', analysis.balloon_due_date);
+        AnalysisCore.setFieldValue('balloon_refinance_ltv_percentage', analysis.balloon_refinance_ltv_percentage);
+        AnalysisCore.setFieldValue('balloon_refinance_loan_amount', analysis.balloon_refinance_loan_amount);
+        AnalysisCore.setFieldValue('balloon_refinance_loan_interest_rate', analysis.balloon_refinance_loan_interest_rate);
+        AnalysisCore.setFieldValue('balloon_refinance_loan_term', analysis.balloon_refinance_loan_term);
+        AnalysisCore.setFieldValue('balloon_refinance_loan_down_payment', analysis.balloon_refinance_loan_down_payment);
+        AnalysisCore.setFieldValue('balloon_refinance_loan_closing_costs', analysis.balloon_refinance_loan_closing_costs);
         this.setBalloonFieldsRequired(true);
       } else {
         this.clearBalloonPaymentFields();
@@ -677,13 +679,13 @@ const LTRHandler = {
           loansContainer.insertAdjacentHTML('beforeend', this.getLoanFieldsHTML(loanCount));
           
           // Populate loan fields
-          UIHelpers.setFieldValue(`${prefix}_loan_name`, analysis[`${prefix}_loan_name`]);
-          UIHelpers.setFieldValue(`${prefix}_loan_amount`, analysis[`${prefix}_loan_amount`]);
-          UIHelpers.setFieldValue(`${prefix}_loan_interest_rate`, analysis[`${prefix}_loan_interest_rate`]);
-          UIHelpers.setFieldValue(`${prefix}_loan_term`, analysis[`${prefix}_loan_term`]);
-          UIHelpers.setFieldValue(`${prefix}_loan_down_payment`, analysis[`${prefix}_loan_down_payment`]);
-          UIHelpers.setFieldValue(`${prefix}_loan_closing_costs`, analysis[`${prefix}_loan_closing_costs`]);
-          UIHelpers.setFieldValue(`${prefix}_interest_only`, analysis[`${prefix}_interest_only`]);
+          AnalysisCore.setFieldValue(`${prefix}_loan_name`, analysis[`${prefix}_loan_name`]);
+          AnalysisCore.setFieldValue(`${prefix}_loan_amount`, analysis[`${prefix}_loan_amount`]);
+          AnalysisCore.setFieldValue(`${prefix}_loan_interest_rate`, analysis[`${prefix}_loan_interest_rate`]);
+          AnalysisCore.setFieldValue(`${prefix}_loan_term`, analysis[`${prefix}_loan_term`]);
+          AnalysisCore.setFieldValue(`${prefix}_loan_down_payment`, analysis[`${prefix}_loan_down_payment`]);
+          AnalysisCore.setFieldValue(`${prefix}_loan_closing_costs`, analysis[`${prefix}_loan_closing_costs`]);
+          AnalysisCore.setFieldValue(`${prefix}_interest_only`, analysis[`${prefix}_interest_only`]);
         }
       }
       
@@ -701,7 +703,7 @@ const LTRHandler = {
     
     // Set PadSplit-specific fields
     if (analysis.analysis_type === 'PadSplit LTR') {
-      UIHelpers.setFieldValue('furnishing_costs', analysis.furnishing_costs);
+      AnalysisCore.setFieldValue('furnishing_costs', analysis.furnishing_costs);
       // Ensure PadSplit fields are visible
       document.querySelectorAll('.padsplit-field').forEach(field => {
         field.style.display = 'block';

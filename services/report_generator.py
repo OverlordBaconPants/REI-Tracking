@@ -1963,7 +1963,9 @@ class PropertyReportGenerator:
                 value = f"${total:.2f}"
             # Use direct values for some fields
             elif key == 'monthly_rent':
-                value = f"${self._parse_currency(self.data.get('monthly_rent', 0)):.2f}"
+                # Format monthly rent with commas and two decimal places
+                monthly_rent = self._parse_currency(self.data.get('monthly_rent', 0))
+                value = f"${monthly_rent:,.2f}"
             elif key == 'total_rent_credits' and not value:
                 # Calculate for Lease Option if not provided
                 monthly_rent = self._parse_currency(self.data.get('monthly_rent', 0))
@@ -1987,6 +1989,17 @@ class PropertyReportGenerator:
                 
                 value = f"${strike_price - total_credits:.2f}"
             
+            # Apply special formatting for specific fields
+            if value and key in ['cash_on_cash_return', 'roi']:
+                # Format percentage values to 2 decimal places
+                numeric_value = self._extract_numeric_value(value)
+                value = f"{numeric_value:.2f}%"
+            elif value and key.endswith('_price') or key.endswith('_invested') or key.endswith('_flow'):
+                # Format currency values with commas
+                if isinstance(value, str) and value.startswith('$'):
+                    numeric_value = self._extract_numeric_value(value)
+                    value = f"${numeric_value:,.2f}"
+                
             if value:
                 table_data.append([
                     Paragraph(label + ":", label_style),

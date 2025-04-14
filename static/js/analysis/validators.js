@@ -3,7 +3,7 @@
  * Form validation utilities for the analysis module
  */
 
-import UIHelpers from './ui-helpers.js';
+import UIHelpers from './ui_helpers.js';
 
 const AnalysisValidator = {
   /**

@@ -75,17 +75,34 @@ const AnalysisCore = {
       this.state.analysisId = this.getAnalysisIdFromUrl();
       
       // Handle edit requests from the renderer
-      this.events.on('edit:requested', (analysisId) => {
-        console.log(`Edit requested for analysis: ${analysisId}`);
-        if (!analysisId) return;
+      this.events.on('edit:requested', (analysisData) => {
+        console.log(`Edit requested for analysis: ${typeof analysisData === 'object' ? analysisData.id : analysisData}`);
+        
+        // Get the ID whether we received an object or just the ID string
+        let analysisId = typeof analysisData === 'object' ? analysisData.id : analysisData;
+        
+        if (!analysisId) {
+          console.error('No analysis ID provided for edit request');
+          return;
+        }
         
         // Set the analysis ID in our state
         this.state.analysisId = analysisId;
         
-        // If we already have form data loaded, update the form
+        // Find the form and set the ID
         const form = document.getElementById('analysisForm');
         if (form) {
           form.setAttribute('data-analysis-id', analysisId);
+          
+          // Also add or update hidden input
+          let idInput = form.querySelector('input[name="id"]');
+          if (!idInput) {
+            idInput = document.createElement('input');
+            idInput.type = 'hidden';
+            idInput.name = 'id';
+            form.appendChild(idInput);
+          }
+          idInput.value = analysisId;
           
           // If we need to load the analysis data
           if (!this.state.analysisData || this.state.analysisData.id !== analysisId) {
@@ -96,7 +113,15 @@ const AnalysisCore = {
           }
         }
       });
-
+  
+      // Add event listener for reports tab population - NEW CODE ADDED HERE
+      this.events.on('reports:populated', (analysis) => {
+        if (this.comps && analysis.id) {
+          console.log('Initializing comps handler from event:', analysis.id);
+          this.comps.init(analysis.id);
+        }
+      });
+  
       // Initialize based on mode (create or edit)
       if (this.state.analysisId) {
         console.log(`Analysis Core: Edit mode for analysis ${this.state.analysisId}`);
@@ -127,8 +152,9 @@ const AnalysisCore = {
       // Import utility modules
       this.renderer = await import('./renderer.js').then(m => m.default);
       this.calculator = await import('./calculator.js').then(m => m.default);
-      this.validator = await import('./validator.js').then(m => m.default);
-      this.ui = await import('./ui-helpers.js').then(m => m.default);
+      this.validator = await import('./validators.js').then(m => m.default);
+      this.ui = await import('./ui_helpers.js').then(m => m.default);
+      this.comps = await import('./comps_handler.js').then(m => m.default);
       
       // Initialize registry
       await this.registry.init();
@@ -309,6 +335,12 @@ const AnalysisCore = {
         this.populateFormFields(data.analysis);
       }, 100);
       
+      // Initialize comps handler with the analysis ID - Add these lines
+      if (this.comps) {
+        console.log('Initializing comps handler with ID:', analysisId);
+        this.comps.init(analysisId);
+      }
+      
       return data.analysis;
     } catch (error) {
       console.error('Error loading analysis:', error);
@@ -363,6 +395,49 @@ const AnalysisCore = {
       this.state.initialAnalysisType = analysisType.value;
       this.loadTemplateForType(this.state.initialAnalysisType);
     }
+  },
+
+  getCompsCardHTML() {
+    return `
+      <!-- Comparable Properties Card -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Comparable Properties</h5>
+            <span id="compsRunCount" class="badge bg-info" style="display: none;">
+              Run <span id="runCountValue">0</span>
+            </span>
+          </div>
+        </div>
+        <div class="card-body comps-container">
+          <div id="initialCompsMessage">
+            <p class="mb-3">Run the comparables tool to see similar properties in the area and get an estimated After Repair Value (ARV).</p>
+          </div>
+          
+          <div id="compsLoading" style="display: none;">
+            <div class="d-flex justify-content-center my-5">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+            </div>
+            <p class="text-center">Fetching comparable properties...</p>
+          </div>
+          
+          <div id="compsError" class="alert alert-danger" style="display: none;">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <span id="compsErrorMessage">Error fetching comps</span>
+          </div>
+          
+          <!-- The key metrics section will be dynamically inserted here by comps_handler.js -->
+          
+          <!-- Comparable Sales section will be dynamically inserted here by comps_handler.js -->
+          
+          <!-- Comparable Rentals section will be dynamically inserted here by comps_handler.js -->
+          
+          <!-- Run Comps button will be inside key metrics section in the new design -->
+        </div>
+      </div>
+    `;
   },
   
   // Populate form fields with analysis data
@@ -545,6 +620,12 @@ const AnalysisCore = {
       
       // Populate reports tab and switch to it
       await this.renderer.populateReportsTab(data.analysis);
+
+      // Initialize comps handler for the new analysis
+      if (this.comps) {
+        console.log('Initializing comps handler for new analysis:', data.analysis.id);
+        this.comps.init(data.analysis.id);
+      }
       this.ui.switchToReportsTab();
       
       this.ui.showToast('success', 'Analysis created successfully');
@@ -573,12 +654,31 @@ const AnalysisCore = {
     }
     
     const form = event.target;
-    const analysisId = form.getAttribute('data-analysis-id') || this.state.analysisId;
+    
+    // Get analysis ID with better fallbacks
+    let analysisId = form.getAttribute('data-analysis-id');
+    
+    // If not found in attribute, check for hidden input
+    if (!analysisId) {
+      const hiddenIdField = form.querySelector('input[name="id"]');
+      if (hiddenIdField) {
+        analysisId = hiddenIdField.value;
+      }
+    }
+    
+    // If still not found, check state
+    if (!analysisId) {
+      analysisId = this.state.analysisId;
+    }
     
     if (!analysisId) {
+      console.error('No analysis ID found for edit operation');
       this.ui.showToast('error', 'No analysis ID found');
       return;
     }
+    
+    // Log found ID
+    console.log(`Editing analysis with ID: ${analysisId}`);
     
     try {
       this.state.isSubmitting = true;
@@ -595,13 +695,20 @@ const AnalysisCore = {
         throw new Error('Form validation failed');
       }
       
-      // Get current analysis type
-      const analysisType = form.querySelector('#analysis_type').value;
+      // Get form data
+      const formData = new FormData(form);
       
-      // Get handler for this analysis type
-      const handler = this.registry.getHandler(analysisType);
-      if (!handler) {
-        throw new Error(`No handler registered for analysis type: ${analysisType}`);
+      // CRITICAL: Force the ID to be included in the formData
+      if (!formData.has('id')) {
+        formData.append('id', analysisId);
+      }
+      
+      let analysisData = Object.fromEntries(formData.entries());
+      
+      // DOUBLE CHECK: Make sure the ID is explicitly set
+      if (analysisData.id !== analysisId) {
+        console.log(`Correcting analysis ID mismatch: ${analysisData.id} -> ${analysisId}`);
+        analysisData.id = analysisId;
       }
       
       // Get current analysis to preserve comps data
@@ -612,18 +719,19 @@ const AnalysisCore = {
       const currentData = await currentResponse.json();
       const existingComps = currentData.analysis?.comps_data;
       
-      // Get form data
-      const formData = new FormData(form);
-      let analysisData = Object.fromEntries(formData.entries());
+      // Add comps data back
+      if (existingComps) {
+        analysisData.comps_data = existingComps;
+      }
       
-      // Add ID and comps data
-      analysisData.id = analysisId;
-      analysisData.comps_data = existingComps;
+      // Log the final data to be sent
+      console.log(`Updating analysis ${analysisId} with data:`, {
+        id: analysisData.id,
+        analysis_name: analysisData.analysis_name,
+        analysis_type: analysisData.analysis_type
+      });
       
-      // Let the handler process its type-specific data
-      analysisData = await handler.processFormData(formData, analysisData);
-      
-      // Make API call
+      // Make API call - EXPLICITLY to update_analysis endpoint
       const response = await fetch('/analyses/update_analysis', {
         method: 'POST',
         headers: {
@@ -642,22 +750,25 @@ const AnalysisCore = {
         throw new Error(data.message || 'Error updating analysis');
       }
       
-      // Make sure comps data is preserved
-      let updatedAnalysis = data.analysis;
-      if (!updatedAnalysis.comps_data && existingComps) {
-        updatedAnalysis = {
-          ...updatedAnalysis,
-          comps_data: existingComps
-        };
+      // Verify returned analysis has same ID
+      if (data.analysis.id !== analysisId) {
+        console.error(`Server returned different analysis ID: ${data.analysis.id} vs original ${analysisId}`);
       }
       
       // Populate reports tab and switch to it
-      await this.renderer.populateReportsTab(updatedAnalysis);
+      await this.renderer.populateReportsTab(data.analysis);
+      
+      // Initialize comps handler
+      if (this.comps) {
+        console.log(`Initializing comps handler for updated analysis: ${data.analysis.id}`);
+        this.comps.init(data.analysis.id);
+      }
+
       this.ui.switchToReportsTab();
       
       this.ui.showToast('success', 'Analysis updated successfully');
       
-      return updatedAnalysis;
+      return data.analysis;
     } catch (error) {
       console.error('Error updating analysis:', error);
       this.ui.showToast('error', error.message || 'Error updating analysis');

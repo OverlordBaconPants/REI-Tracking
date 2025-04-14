@@ -3,8 +3,9 @@
  * BRRRR (Buy, Renovate, Rent, Refinance, Repeat) strategy specific implementation
  */
 
-import UIHelpers from './ui-helpers.js';
+import UIHelpers from './ui_helpers.js';
 import Calculator from './calculator.js';
+import AnalysisCore from './core.js';
 
 const BRRRRHandler = {
   /**
@@ -12,7 +13,7 @@ const BRRRRHandler = {
    * @returns {string} HTML template
    */
   getTemplate() {
-    return `
+    const baseTemplate = `
       <!-- Property Details Card -->
       <div class="card mb-4">
         <div class="card-header">
@@ -78,6 +79,14 @@ const BRRRRHandler = {
                 <span class="input-group-text">$</span>
                 <input type="number" class="form-control form-control-lg" id="purchase_price" 
                       name="purchase_price" placeholder="Sales price" required>
+              </div>
+            </div>
+            <div class="col-12 col-md-6">
+              <label for="closing_costs" class="form-label">Closing Costs</label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="number" class="form-control form-control-lg" id="closing_costs" 
+                      name="closing_costs" placeholder="Purchase closing costs" required>
               </div>
             </div>
             <div class="col-12 col-md-6">
@@ -325,6 +334,8 @@ const BRRRRHandler = {
         </div>
       </div>
     `;
+    const compsCardHTML = AnalysisCore.getCompsCardHTML();
+    return baseTemplate + compsCardHTML;
   },
   
   /**
@@ -334,6 +345,7 @@ const BRRRRHandler = {
     this.initRefinanceCalculations();
     this.initPadSplitFields();
     this.initMaximumAllowableOfferCalc();
+    this.initClosingCostSyncHandler();
   },
 
   /**
@@ -408,6 +420,23 @@ const BRRRRHandler = {
       
       // Add event listener
       maoButton.addEventListener('click', this.showMAOCalculator);
+    }
+  },
+
+  initClosingCostSyncHandler() {
+    const closingCostsInput = document.getElementById('closing_costs');
+    const initialLoanClosingCostsInput = document.getElementById('initial_loan_closing_costs');
+    
+    if (closingCostsInput && initialLoanClosingCostsInput) {
+      // Sync from closing_costs to initial_loan_closing_costs
+      closingCostsInput.addEventListener('input', () => {
+        initialLoanClosingCostsInput.value = closingCostsInput.value;
+      });
+      
+      // Sync from initial_loan_closing_costs to closing_costs
+      initialLoanClosingCostsInput.addEventListener('input', () => {
+        closingCostsInput.value = initialLoanClosingCostsInput.value;
+      });
     }
   },
   
@@ -562,40 +591,41 @@ const BRRRRHandler = {
     }
     
     // Set purchase details
-    UIHelpers.setFieldValue('purchase_price', analysis.purchase_price);
-    UIHelpers.setFieldValue('after_repair_value', analysis.after_repair_value);
-    UIHelpers.setFieldValue('renovation_costs', analysis.renovation_costs);
-    UIHelpers.setFieldValue('renovation_duration', analysis.renovation_duration);
+    AnalysisCore.setFieldValue('purchase_price', analysis.purchase_price);
+    AnalysisCore.setFieldValue('closing_costs', analysis.initial_loan_closing_costs);
+    AnalysisCore.setFieldValue('after_repair_value', analysis.after_repair_value);
+    AnalysisCore.setFieldValue('renovation_costs', analysis.renovation_costs);
+    AnalysisCore.setFieldValue('renovation_duration', analysis.renovation_duration);
     
     // Set initial loan details
-    UIHelpers.setFieldValue('initial_loan_amount', analysis.initial_loan_amount);
-    UIHelpers.setFieldValue('initial_loan_down_payment', analysis.initial_loan_down_payment);
-    UIHelpers.setFieldValue('initial_loan_interest_rate', analysis.initial_loan_interest_rate);
-    UIHelpers.setFieldValue('initial_loan_term', analysis.initial_loan_term);
-    UIHelpers.setFieldValue('initial_loan_closing_costs', analysis.initial_loan_closing_costs);
-    UIHelpers.setFieldValue('initial_interest_only', analysis.initial_interest_only);
+    AnalysisCore.setFieldValue('initial_loan_amount', analysis.initial_loan_amount);
+    AnalysisCore.setFieldValue('initial_loan_down_payment', analysis.initial_loan_down_payment);
+    AnalysisCore.setFieldValue('initial_loan_interest_rate', analysis.initial_loan_interest_rate);
+    AnalysisCore.setFieldValue('initial_loan_term', analysis.initial_loan_term);
+    AnalysisCore.setFieldValue('initial_loan_closing_costs', analysis.initial_loan_closing_costs);
+    AnalysisCore.setFieldValue('initial_interest_only', analysis.initial_interest_only);
     
     // Set refinance details
-    UIHelpers.setFieldValue('refinance_ltv_percentage', analysis.refinance_ltv_percentage);
-    UIHelpers.setFieldValue('refinance_loan_amount', analysis.refinance_loan_amount);
-    UIHelpers.setFieldValue('refinance_loan_interest_rate', analysis.refinance_loan_interest_rate);
-    UIHelpers.setFieldValue('refinance_loan_term', analysis.refinance_loan_term);
-    UIHelpers.setFieldValue('refinance_loan_closing_costs', analysis.refinance_loan_closing_costs);
+    AnalysisCore.setFieldValue('refinance_ltv_percentage', analysis.refinance_ltv_percentage);
+    AnalysisCore.setFieldValue('refinance_loan_amount', analysis.refinance_loan_amount);
+    AnalysisCore.setFieldValue('refinance_loan_interest_rate', analysis.refinance_loan_interest_rate);
+    AnalysisCore.setFieldValue('refinance_loan_term', analysis.refinance_loan_term);
+    AnalysisCore.setFieldValue('refinance_loan_closing_costs', analysis.refinance_loan_closing_costs);
     
     // Set monthly rent
-    UIHelpers.setFieldValue('monthly_rent', analysis.monthly_rent);
+    AnalysisCore.setFieldValue('monthly_rent', analysis.monthly_rent);
     
 // Set operating expenses
-UIHelpers.setFieldValue('property_taxes', analysis.property_taxes);
-UIHelpers.setFieldValue('insurance', analysis.insurance);
-UIHelpers.setFieldValue('management_fee_percentage', analysis.management_fee_percentage);
-UIHelpers.setFieldValue('capex_percentage', analysis.capex_percentage);
-UIHelpers.setFieldValue('vacancy_percentage', analysis.vacancy_percentage);
-UIHelpers.setFieldValue('repairs_percentage', analysis.repairs_percentage);
+AnalysisCore.setFieldValue('property_taxes', analysis.property_taxes);
+AnalysisCore.setFieldValue('insurance', analysis.insurance);
+AnalysisCore.setFieldValue('management_fee_percentage', analysis.management_fee_percentage);
+AnalysisCore.setFieldValue('capex_percentage', analysis.capex_percentage);
+AnalysisCore.setFieldValue('vacancy_percentage', analysis.vacancy_percentage);
+AnalysisCore.setFieldValue('repairs_percentage', analysis.repairs_percentage);
 
 // Set PadSplit-specific fields
 if (analysis.analysis_type.includes('PadSplit')) {
-  UIHelpers.setFieldValue('furnishing_costs', analysis.furnishing_costs);
+  AnalysisCore.setFieldValue('furnishing_costs', analysis.furnishing_costs);
   // Ensure PadSplit fields are visible
   document.querySelectorAll('.padsplit-field').forEach(field => {
     field.style.display = 'block';
@@ -621,11 +651,17 @@ if (!isPadSplit) {
   analysisData.furnishing_costs = 0;
 }
 
+
+// Sync closing_costs to initial_loan_closing_costs in case they're not already synced
+if ('closing_costs' in analysisData) {
+  analysisData.initial_loan_closing_costs = analysisData.closing_costs;
+}
+
 // Handle numeric fields
 const numericFields = [
   'purchase_price', 'after_repair_value', 'renovation_costs', 'renovation_duration',
   'initial_loan_amount', 'initial_loan_down_payment', 'initial_loan_interest_rate', 
-  'initial_loan_term', 'initial_loan_closing_costs',
+  'initial_loan_term', 'initial_loan_closing_costs', 'closing_costs',
   'refinance_ltv_percentage', 'refinance_loan_amount', 'refinance_loan_interest_rate', 
   'refinance_loan_term', 'refinance_loan_closing_costs',
   'monthly_rent', 'property_taxes', 'insurance'

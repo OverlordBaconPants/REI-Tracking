@@ -4,88 +4,191 @@
  */
 
 import AnalysisRegistry from './registry.js';
-import Utils from './ui-helpers.js';
+import Utils from './ui_helpers.js';
+import AnalysisCore from './core.js';
 
 const AnalysisRenderer = {
   /**
    * Populate the reports tab with analysis data
-   * @param {Object} analysisData - The analysis data to render
+   * @param {Object} analysisData - The analysis data
    * @returns {Promise<boolean>} Success indicator
    */
   async populateReportsTab(analysisData) {
     console.log('Renderer: Populating reports tab with data:', analysisData);
     
     try {
-      if (!analysisData) {
-        throw new Error('No analysis data provided');
+      const reportsTab = document.getElementById('reports');
+      if (!reportsTab) {
+        console.error('Reports tab container not found');
+        return false;
       }
       
-      const analysisType = analysisData.analysis_type;
-      
-      // Get the handler for this analysis type
-      const handler = AnalysisRegistry.getHandler(analysisType);
+      // Get handler for this analysis type
+      const handler = AnalysisCore.registry.getHandler(analysisData.analysis_type);
       if (!handler) {
-        throw new Error(`No handler registered for type: ${analysisType}`);
+        console.error(`No handler registered for analysis type: ${analysisData.analysis_type}`);
+        return false;
       }
       
-      // Generate report content
-      const reportContent = await handler.generateReport(analysisData);
+      // Get report content
+      const reportContent = handler.generateReport(analysisData);
       
-      // Generate comps HTML
-      const compsHtml = this.getCompsHTML(analysisData);
-      
-      // Combine everything into the final content
-      const finalContent = `
-        <div class="row align-items-center mb-4">
-            <div class="col">
-                <h4 class="mb-0">${analysisType || 'Analysis'}: ${analysisData.analysis_name || 'Untitled'}</h4>
-            </div>
-            <div class="col-auto">
-                <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-secondary" id="downloadPdfBtn" data-analysis-id="${analysisData.id}">
-                        <i class="bi bi-file-earmark-pdf me-1"></i>Download PDF
-                    </button>
-                    <button type="button" class="btn btn-primary" id="reEditButton" data-analysis-id="${analysisData.id}">
-                      <i class="bi bi-pencil me-1"></i>Re-Edit Analysis
+      // Create the reports page structure without the comps card
+      reportsTab.innerHTML = `
+        <div class="container-fluid my-4">
+          <div class="row">
+            <div class="col-12">
+              <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0">${analysisData.analysis_name || 'Analysis Results'}</h2>
+                <div>
+                  <button id="editAnalysisBtn" class="btn btn-primary">
+                    <i class="bi bi-pencil-square me-2"></i>Edit Analysis
+                  </button>
+                  <button id="exportPdfBtn" class="btn btn-outline-secondary ms-2">
+                    <i class="bi bi-file-earmark-pdf me-2"></i>Export PDF
                   </button>
                 </div>
+              </div>
             </div>
-        </div>
-        ${reportContent}
-        ${compsHtml}`;
+          </div>
+          
+          <div class="row">
+            <!-- Financial Results Column - Full width now -->
+            <div class="col-12 mb-4">
+              <div class="card">
+                <div class="card-header">
+                  <h4 class="mb-0">Financial Results</h4>
+                </div>
+                <div class="card-body px-0 py-0">
+                  <div class="financial-results">
+                    ${reportContent}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>`;
       
-      // Update the DOM
-      const reportsContent = document.querySelector('#reports');
-      if (reportsContent) {
-        reportsContent.innerHTML = finalContent;
-        
-        // Initialize comps if available
-        if (analysisData.comps_data && window.compsHandler) {
-          window.compsHandler.displayExistingComps(analysisData.comps_data);
-        }
-        
-        // Attach event handlers
-        this.initReportEventHandlers(analysisData.id);
+      // Add event handlers for reports tab buttons
+      this.addReportEventHandlers(analysisData);
+      
+      console.log('Reports tab populated successfully');
+      
+      // Emit event when reports tab is populated
+      if (window.analysisModule && window.analysisModule.core && 
+          window.analysisModule.core.events) {
+        window.analysisModule.core.events.emit('reports:populated', analysisData);
+      } else {
+        // Fallback - dispatch a custom DOM event
+        const event = new CustomEvent('reports:populated', { 
+          detail: { analysisData } 
+        });
+        document.dispatchEvent(event);
       }
       
       return true;
     } catch (error) {
       console.error('Error populating reports tab:', error);
-      
-      // Display error message in the reports tab
-      const reportsContent = document.querySelector('#reports');
-      if (reportsContent) {
-        reportsContent.innerHTML = `
-          <div class="alert alert-danger">
-            <i class="bi bi-exclamation-circle-fill me-2"></i>
-            Error generating report: ${error.message}
-          </div>`;
-      }
-      
       return false;
     }
   },
   
+  /**
+   * Add event handlers for the reports tab buttons
+   * @param {Object} analysisData - The analysis data
+   */
+  addReportEventHandlers(analysisData) {
+    const analysisId = analysisData.id;
+    console.log(`Adding report event handlers for analysis: ${analysisId}`);
+    
+    // Handle Edit Analysis button
+    const editAnalysisBtn = document.getElementById('editAnalysisBtn');
+    if (editAnalysisBtn) {
+      editAnalysisBtn.addEventListener('click', () => {
+        console.log(`Edit Analysis button clicked for: ${analysisId}`);
+        
+        // Set ID attribute on button for reference
+        editAnalysisBtn.setAttribute('data-analysis-id', analysisId);
+        
+        // Set core state if available
+        if (window.AnalysisCore) {
+          window.AnalysisCore.state.analysisId = analysisId;
+        }
+        
+        // Create a data object if needed
+        const editData = typeof analysisData === 'object' ? analysisData : { id: analysisId };
+        
+        // Emit edit request event with the data
+        if (window.AnalysisCore && window.AnalysisCore.events) {
+          window.AnalysisCore.events.emit('edit:requested', editData);
+        } else {
+          // Use custom event as fallback
+          const event = new CustomEvent('edit:requested', { 
+            detail: { analysisData: editData } 
+          });
+          document.dispatchEvent(event);
+        }
+        
+        // Switch to financial tab
+        const financialTab = document.getElementById('financial-tab');
+        if (financialTab) {
+          financialTab.click();
+        }
+      });
+    }
+    
+    // Export PDF button handler remains the same
+    const exportPdfBtn = document.getElementById('exportPdfBtn');
+    if (exportPdfBtn) {
+      exportPdfBtn.addEventListener('click', () => {
+        console.log(`Export PDF button clicked for: ${analysisId}`);
+        this.exportPdf(analysisId);
+      });
+    }
+  },
+
+  /**
+   * Export a PDF for the analysis
+   * @param {string} analysisId - The analysis ID
+   */
+  exportPdf(analysisId) {
+    if (!analysisId) {
+      console.error('No analysis ID available for PDF export');
+      if (typeof Utils.showToast === 'function') {
+        Utils.showToast('error', 'Unable to generate PDF: No analysis ID found');
+      } else {
+        alert('Unable to generate PDF: No analysis ID found');
+      }
+      return;
+    }
+    
+    // Get button reference
+    const exportBtn = document.getElementById('exportPdfBtn');
+    if (exportBtn) {
+      // Show loading state
+      exportBtn.disabled = true;
+      exportBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generating PDF...';
+    }
+    
+    // Create hidden form for download
+    const form = document.createElement('form');
+    form.method = 'GET';
+    form.action = `/analyses/generate_pdf/${analysisId}`; // Correct path to match your backend route
+    document.body.appendChild(form);
+    
+    // Submit form to trigger download
+    form.submit();
+    document.body.removeChild(form);
+    
+    // Reset button after delay
+    setTimeout(() => {
+      if (exportBtn) {
+        exportBtn.disabled = false;
+        exportBtn.innerHTML = '<i class="bi bi-file-earmark-pdf me-2"></i>Export PDF';
+      }
+    }, 2000);
+  },
+
   /**
    * Generate HTML for the comps section
    * @param {Object} analysisData - Analysis data object
@@ -94,8 +197,8 @@ const AnalysisRenderer = {
   getCompsHTML(analysisData) {
     // Check for existing comps
     const hasExistingComps = analysisData.comps_data && 
-                             Array.isArray(analysisData.comps_data.comparables) && 
-                             analysisData.comps_data.comparables.length > 0;
+                            Array.isArray(analysisData.comps_data.comparables) && 
+                            analysisData.comps_data.comparables.length > 0;
     
     return `
       <!-- Comps Card -->
@@ -106,94 +209,17 @@ const AnalysisRenderer = {
                   <span id="compsRunCount" class="badge bg-info me-2" style="display: none;">
                       Runs: <span id="runCountValue">0</span>/3
                   </span>
-                  <button type="button" class="btn btn-primary" id="runCompsBtn">
-                      <i class="bi bi-arrow-repeat me-2"></i>${hasExistingComps ? 'Re-Run Comps' : 'Run Comps'}
-                  </button>
               </div>
           </div>
-          <div class="card-body">
-              <!-- Estimated Value Section -->
-              <div id="estimatedValueSection" style="display: none;">
-                  <div class="alert alert-info mb-4">
-                      <div class="row align-items-center">
-                          <div class="col-12 col-md-4 mb-3 mb-md-0">
-                              <h6 class="mb-0">Estimated Value:</h6>
-                              <h4 class="mb-0" id="estimatedValue">$0</h4>
-                          </div>
-                          <div class="col-12 col-md-8">
-                              <h6 class="mb-0">Value Range:</h6>
-                              <div class="d-flex align-items-center">
-                                  <span id="valueLow" class="h5 mb-0">$0</span>
-                                  <div class="mx-3 flex-grow-1">
-                                      <div class="progress">
-                                          <div class="progress-bar bg-success" role="progressbar" style="width: 100%"></div>
-                                      </div>
-                                  </div>
-                                  <span id="valueHigh" class="h5 mb-0">$0</span>
-                              </div>
-                          </div>
-                      </div>
-                  </div>
-              </div>
-
-              <!-- MAO Section -->
-              <div id="maoSection" style="display: none;" class="alert alert-primary mb-4">
-                  <div class="row align-items-center">
-                      <div class="col-12 col-md-6 mb-3 mb-md-0">
-                          <h6 class="mb-1">Maximum Allowable Offer (MAO):</h6>
-                          <h4 class="mb-0" id="maoValue">$0</h4>
-                          <p class="small mb-0 mt-2">
-                              <button type="button" class="btn btn-sm btn-outline-primary" id="useMaoButton">
-                                  <i class="bi bi-pencil-square me-1"></i>Use MAO as Purchase Price
-                              </button>
-                          </p>
-                      </div>
-                      <div class="col-12 col-md-6">
-                          <div class="accordion" id="maoDetailsAccordion">
-                              <div class="accordion-item">
-                                  <h2 class="accordion-header" id="maoDetailsHeading">
-                                      <button class="accordion-button collapsed py-2" type="button" 
-                                              data-bs-toggle="collapse" data-bs-target="#maoDetailsCollapse">
-                                          <small>Show Calculation Details</small>
-                                      </button>
-                                  </h2>
-                                  <div id="maoDetailsCollapse" class="accordion-collapse collapse" 
-                                      data-bs-parent="#maoDetailsAccordion">
-                                      <div class="accordion-body p-0" id="maoDetailsBody">
-                                          <!-- MAO details will be inserted here -->
-                                      </div>
-                                  </div>
-                              </div>
-                          </div>
-                      </div>
-                  </div>
-              </div>
-
-              <!-- Comps Table Section -->
-              <div id="compsTableSection" style="display: none;">
-                  <div class="table-responsive">
-                      <table class="table table-bordered table-hover">
-                          <thead class="table-light">
-                              <tr>
-                                  <th>Address</th>
-                                  <th>Price</th>
-                                  <th>Bed/Bath</th>
-                                  <th>Sq Ft</th>
-                                  <th>Year Built</th>
-                                  <th>Date Sold</th>
-                                  <th>Distance</th>
-                              </tr>
-                          </thead>
-                          <tbody id="compsTableBody">
-                              <!-- Comps will be inserted here -->
-                          </tbody>
-                      </table>
-                  </div>
-              </div>
-
+          <div class="card-body comps-container">
               <!-- Initial State Message -->
               <div id="initialCompsMessage" class="text-center py-4" ${hasExistingComps ? 'style="display: none;"' : ''}>
-                  <p class="text-muted mb-0">Click "${hasExistingComps ? 'Re-Run Comps' : 'Run Comps'}" to fetch comparable properties</p>
+                  <p class="text-muted mb-0">Click "Run Comps" to fetch comparable properties and estimate values</p>
+                  <div class="mt-3">
+                      <button id="runCompsBtn" class="btn btn-primary">
+                          <i class="bi bi-graph-up me-2"></i>Run Comps
+                      </button>
+                  </div>
               </div>
 
               <!-- Loading State -->
@@ -210,11 +236,11 @@ const AnalysisRenderer = {
                   <span id="compsErrorMessage">Error fetching comps</span>
               </div>
 
-              <!-- No Comps Found State -->
-              <div id="noCompsFound" class="alert alert-warning mb-0" style="display: none;">
-                  <i class="bi bi-info-circle me-2"></i>
-                  No comparable properties found within the search criteria
-              </div>
+              <!-- The key metrics section will be dynamically inserted here by comps_handler.js -->
+              
+              <!-- Comparable Sales section will be dynamically inserted here by comps_handler.js -->
+              
+              <!-- Comparable Rentals section will be dynamically inserted here by comps_handler.js -->
           </div>
       </div>`;
   },
@@ -536,7 +562,7 @@ const AnalysisRenderer = {
         'goodMin': 5,
         'goodMax': 10,
         'format': 'percentage',
-        'info': '5-10% indicates good value for multi-family.'
+        'info': '5-10% indicates good value for Multi-Family.'
       },
       'dscr': {
         'label': 'Debt Service Coverage Ratio',

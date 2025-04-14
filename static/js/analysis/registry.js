@@ -6,8 +6,8 @@
 // Import handlers
 import LTRHandler from './ltr.js';
 import BRRRRHandler from './brrrr.js';
-import LeaseOptionHandler from './lease-option.js';
-import MultiFamilyHandler from './multi-family.js';
+import LeaseOptionHandler from './lease_option.js';
+import MultiFamilyHandler from './multi_family.js';
 
 const AnalysisRegistry = {
   _handlers: {},
@@ -29,7 +29,7 @@ const AnalysisRegistry = {
       this.register('LTR', LTRHandler);
       this.register('BRRRR', BRRRRHandler);
       this.register('Lease Option', LeaseOptionHandler);
-      this.register('Multi-Family', MultiFamilyHandler);
+      this.register('multi_family', MultiFamilyHandler);
       
       // Register PadSplit variants
       this.register('PadSplit LTR', LTRHandler);
