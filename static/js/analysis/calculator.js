@@ -38,6 +38,134 @@ const FinancialCalculator = {
       const factor = Math.pow(1 + monthlyRate, term);
       return amount * (monthlyRate * factor) / (factor - 1);
     },
+
+    formatPercentageOrInfinite(value) {
+      if (value === "Infinite") {
+        return "Infinite";
+      }
+      
+      // Check if it's a number
+      const numValue = parseFloat(value);
+      if (!isNaN(numValue)) {
+        // Format with one decimal place
+        return `${numValue.toFixed(1)}%`;
+      }
+      
+      // Handle unexpected types
+      return String(value);
+    },
+
+    /**
+     * Format metric values for display with appropriate handling of special cases
+     * @param {string} metricName - The name of the metric being formatted
+     * @param {any} value - The value to format
+     * @param {Object} options - Optional formatting options
+     * @returns {string} Formatted value for display
+     */
+    formatMetric(metricName, value, options = {}) {
+      // Default options
+      const defaults = {
+        decimalPlaces: 2,        // Default decimal places for numbers
+        currency: true,          // Whether to format as currency
+        percentageDecimalPlaces: 1, // Decimal places for percentages
+        showPercentSymbol: true, // Whether to show % symbol
+        showInfiniteFor: ['cash_on_cash_return', 'roi', 'option_roi'] // Metrics that can be "Infinite"
+      };
+      
+      // Merge options with defaults
+      const settings = { ...defaults, ...options };
+      
+      // Handle null/undefined values
+      if (value === null || value === undefined) {
+        return 'N/A';
+      }
+      
+      // Handle "Infinite" special case for relevant metrics
+      if (settings.showInfiniteFor.includes(metricName) && 
+          (value === "Infinite" || 
+          value === Infinity || 
+          (typeof value === 'string' && value.toLowerCase() === 'infinite'))) {
+        return "Infinite";
+      }
+      
+      // Handle percentage metrics
+      const percentageMetrics = [
+        'cash_on_cash_return', 'roi', 'cap_rate', 'option_roi', 
+        'operating_expense_ratio', 'expense_ratio', 'occupancy_rate',
+        'vacancy_rate', 'management_fee_percentage', 'vacancy_percentage',
+        'capex_percentage', 'repairs_percentage'
+      ];
+      
+      if (percentageMetrics.includes(metricName)) {
+        // Convert to number if it's a string
+        let numValue;
+        if (typeof value === 'string') {
+          // Remove % sign if present
+          const cleanValue = value.replace('%', '').trim();
+          numValue = parseFloat(cleanValue);
+        } else {
+          numValue = parseFloat(value);
+        }
+        
+        // Check if conversion succeeded
+        if (!isNaN(numValue)) {
+          const formattedValue = numValue.toFixed(settings.percentageDecimalPlaces);
+          return settings.showPercentSymbol ? `${formattedValue}%` : formattedValue;
+        }
+        
+        // If conversion failed, return the original value
+        return String(value);
+      }
+      
+      // Handle ratio metrics (DSCR, GRM)
+      const ratioMetrics = ['dscr', 'gross_rent_multiplier'];
+      if (ratioMetrics.includes(metricName)) {
+        const numValue = parseFloat(value);
+        if (!isNaN(numValue)) {
+          return numValue.toFixed(2);
+        }
+        return String(value);
+      }
+      
+      // Handle currency metrics (most other metrics)
+      const nonCurrencyMetrics = [
+        'renovation_duration', 'breakeven_months', 'total_units',
+        'occupied_units', 'vacancy_units', 'loan_term'
+      ];
+      
+      if (settings.currency && !nonCurrencyMetrics.includes(metricName)) {
+        // Convert to number if it's a string
+        let numValue;
+        if (typeof value === 'string') {
+          // Remove currency symbols and commas
+          const cleanValue = value.replace(/[$,]/g, '').trim();
+          numValue = parseFloat(cleanValue);
+        } else {
+          numValue = parseFloat(value);
+        }
+        
+        // Check if conversion succeeded
+        if (!isNaN(numValue)) {
+          // Format as currency
+          return `$${numValue.toFixed(settings.decimalPlaces).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
+        }
+        
+        // If conversion failed, return the original value
+        return String(value);
+      }
+      
+      // Handle integer metrics
+      if (nonCurrencyMetrics.includes(metricName)) {
+        const numValue = parseFloat(value);
+        if (!isNaN(numValue)) {
+          return Math.round(numValue).toString();
+        }
+        return String(value);
+      }
+      
+      // Default: return as string
+      return String(value);
+    },
     
     /**
      * Calculate net operating income (NOI)
@@ -183,16 +311,34 @@ const FinancialCalculator = {
       
       // Handle BRRRR-specific loans
       if (analysis.analysis_type && analysis.analysis_type.includes('BRRRR')) {
-        // For BRRRR, use refinance loan for final cash flow
+        // For BRRRR, ALWAYS use refinance loan for cash flow
+        // This represents the permanent financing scenario after renovation
         const refinanceLoan = {
           amount: parseFloat(analysis.refinance_loan_amount || 0),
           interestRate: parseFloat(analysis.refinance_loan_interest_rate || 0),
           term: parseInt(analysis.refinance_loan_term || 0),
-          isInterestOnly: false // Refinance loans are amortizing
+          isInterestOnly: false // Refinance loans are always amortizing
         };
         
         if (refinanceLoan.amount > 0) {
           totalPayment = this.calculateLoanPayment(refinanceLoan);
+          console.log(`Using refinance loan payment for BRRRR cash flow: $${totalPayment.toFixed(2)}`);
+        }
+        
+        // Calculate initial loan payment for reference only
+        const initialLoan = {
+          amount: parseFloat(analysis.initial_loan_amount || 0),
+          interestRate: parseFloat(analysis.initial_loan_interest_rate || 0),
+          term: parseInt(analysis.initial_loan_term || 0),
+          isInterestOnly: Boolean(analysis.initial_interest_only)
+        };
+        
+        if (initialLoan.amount > 0) {
+          const initialPayment = this.calculateLoanPayment(initialLoan);
+          console.log(`Initial loan payment (for reference only): $${initialPayment.toFixed(2)}`);
+          // Store for display but don't use for cash flow calculation
+          analysis.calculated_metrics = analysis.calculated_metrics || {};
+          analysis.calculated_metrics.initial_loan_payment = initialPayment;
         }
       } else {
         // For standard loans, check each loan
@@ -281,6 +427,8 @@ const FinancialCalculator = {
                                parseFloat(analysis.renovation_costs || 0) +
                                parseFloat(analysis.initial_loan_closing_costs || 0);
       
+
+      
       // Add holding costs (calculated from renovation period)
       const monthlyHoldingCosts = 
         parseFloat(analysis.property_taxes || 0) +
@@ -291,9 +439,8 @@ const FinancialCalculator = {
       let initialLoanRate = parseFloat(analysis.initial_loan_interest_rate || 0) / 100 / 12;
       let initialLoanPayment = initialLoanAmount * initialLoanRate;
       
-      const totalHoldingCosts = 
-        (monthlyHoldingCosts + initialLoanPayment) * 
-        parseInt(analysis.renovation_duration || 0);
+      // Add holding costs using dedicated function
+      const totalHoldingCosts = this.calculateHoldingCosts(analysis);
       
       // Add furnishing costs for PadSplit
       let furnishingCosts = 0;
@@ -304,18 +451,41 @@ const FinancialCalculator = {
       const totalInitialInvestment = initialInvestment + totalHoldingCosts + furnishingCosts;
       
       // Step 2: Subtract initial financing to get out-of-pocket
-      const initialOutOfPocket = Math.max(0, totalInitialInvestment - initialLoanAmount);
+      // Allow negative values for over-leveraged acquisitions
+      const initialOutOfPocket = totalInitialInvestment - initialLoanAmount;
       
       // Step 3: Calculate cash recouped from refinance
+      // Allow negative values for refinance shortfalls
       const refinanceLoanAmount = parseFloat(analysis.refinance_loan_amount || 0);
       const refinanceClosingCosts = parseFloat(analysis.refinance_loan_closing_costs || 0);
       
-      const cashRecouped = Math.max(0, refinanceLoanAmount - initialLoanAmount - refinanceClosingCosts);
+      const cashRecouped = refinanceLoanAmount - initialLoanAmount - refinanceClosingCosts;
       
       // Step 4: Calculate final out-of-pocket investment
-      const finalInvestment = Math.max(0, initialOutOfPocket - cashRecouped);
+      // Allow negative values to represent cash extracted beyond initial investment
+      const finalInvestment = initialOutOfPocket - cashRecouped;
       
       return finalInvestment;
+    },
+
+    calculateHoldingCosts(analysis) {
+      // Calculate monthly fixed expenses
+      const monthlyFixedExpenses = 
+        parseFloat(analysis.property_taxes || 0) +
+        parseFloat(analysis.insurance || 0) +
+        parseFloat(analysis.hoa_coa_coop || 0);
+      
+      // Calculate monthly interest on initial loan
+      const initialLoanAmount = parseFloat(analysis.initial_loan_amount || 0);
+      const initialLoanRate = parseFloat(analysis.initial_loan_interest_rate || 0) / 100 / 12;
+      const monthlyLoanInterest = initialLoanAmount * initialLoanRate;
+      
+      // Calculate total monthly holding costs
+      const monthlyHoldingCosts = monthlyFixedExpenses + monthlyLoanInterest;
+      
+      // Multiply by renovation duration
+      const renovationDuration = parseInt(analysis.renovation_duration || 0);
+      return monthlyHoldingCosts * renovationDuration;
     },
     
     /**
@@ -332,9 +502,9 @@ const FinancialCalculator = {
       const cashInvested = this.calculateTotalCashInvested(analysis);
       
       // Calculate cash on cash return
-      if (cashInvested <= 0.01) {
-        // Avoid division by zero or near-zero values
-        return 999.99; // Cap at 999.99% for near-zero investments
+      if (cashInvested <= 0) {
+        // Zero or negative cash invested means infinite return
+        return "Infinite";
       }
       
       return (annualCashFlow / cashInvested) * 100;

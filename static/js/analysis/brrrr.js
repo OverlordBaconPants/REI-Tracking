@@ -316,6 +316,65 @@ const BRRRRHandler = {
         </div>
       </div>
 
+      <!-- PadSplit-specific expenses -->
+      <div class="card mb-4 padsplit-field" style="display: none;">
+        <div class="card-header">
+          <h5 class="mb-0">PadSplit Expenses</h5>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-12 col-md-6">
+              <label for="utilities" class="form-label">Monthly Utilities</label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="number" class="form-control form-control-lg" id="utilities" 
+                      name="utilities" placeholder="Monthly utilities cost">
+              </div>
+            </div>
+            <div class="col-12 col-md-6">
+              <label for="internet" class="form-label">Monthly Internet</label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="number" class="form-control form-control-lg" id="internet" 
+                      name="internet" placeholder="Monthly internet cost">
+              </div>
+            </div>
+            <div class="col-12 col-md-6">
+              <label for="cleaning" class="form-label">Monthly Cleaning</label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="number" class="form-control form-control-lg" id="cleaning" 
+                      name="cleaning" placeholder="Monthly cleaning cost">
+              </div>
+            </div>
+            <div class="col-12 col-md-6">
+              <label for="pest_control" class="form-label">Monthly Pest Control</label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="number" class="form-control form-control-lg" id="pest_control" 
+                      name="pest_control" placeholder="Monthly pest control cost">
+              </div>
+            </div>
+            <div class="col-12 col-md-6">
+              <label for="landscaping" class="form-label">Monthly Landscaping</label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="number" class="form-control form-control-lg" id="landscaping" 
+                      name="landscaping" placeholder="Monthly landscaping cost">
+              </div>
+            </div>
+            <div class="col-12 col-md-6">
+              <label for="padsplit_platform_percentage" class="form-label">PadSplit Platform Fee</label>
+              <div class="input-group">
+                <input type="number" class="form-control form-control-lg" id="padsplit_platform_percentage" 
+                      name="padsplit_platform_percentage" placeholder="Platform fee percentage" min="0" max="100" step="0.5" value="15">
+                <span class="input-group-text">%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Notes Card -->
       <div class="card mb-4">
         <div class="card-header">
@@ -626,6 +685,13 @@ AnalysisCore.setFieldValue('repairs_percentage', analysis.repairs_percentage);
 // Set PadSplit-specific fields
 if (analysis.analysis_type.includes('PadSplit')) {
   AnalysisCore.setFieldValue('furnishing_costs', analysis.furnishing_costs);
+  AnalysisCore.setFieldValue('utilities', analysis.utilities);
+  AnalysisCore.setFieldValue('internet', analysis.internet);
+  AnalysisCore.setFieldValue('cleaning', analysis.cleaning);
+  AnalysisCore.setFieldValue('pest_control', analysis.pest_control);
+  AnalysisCore.setFieldValue('landscaping', analysis.landscaping);
+  AnalysisCore.setFieldValue('padsplit_platform_percentage', analysis.padsplit_platform_percentage);
+  
   // Ensure PadSplit fields are visible
   document.querySelectorAll('.padsplit-field').forEach(field => {
     field.style.display = 'block';
@@ -1025,6 +1091,48 @@ return `
             </div>
           </div>
         </div>
+        
+        ${analysis.analysis_type.includes('PadSplit') ? `
+        <!-- PadSplit-specific expenses -->
+        <div class="mt-3">
+          <h6 class="mb-2">PadSplit-Specific Expenses</h6>
+          <div class="row g-0">
+            <div class="col-12 col-md-6">
+              <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                <span>Utilities</span>
+                <strong>${UIHelpers.formatDisplayValue(analysis.utilities)}</strong>
+              </div>
+              <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                <span>Internet</span>
+                <strong>${UIHelpers.formatDisplayValue(analysis.internet)}</strong>
+              </div>
+              <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                <span>Cleaning</span>
+                <strong>${UIHelpers.formatDisplayValue(analysis.cleaning)}</strong>
+              </div>
+            </div>
+            <div class="col-12 col-md-6">
+              <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                <span>Pest Control</span>
+                <strong>${UIHelpers.formatDisplayValue(analysis.pest_control)}</strong>
+              </div>
+              <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                <span>Landscaping</span>
+                <strong>${UIHelpers.formatDisplayValue(analysis.landscaping)}</strong>
+              </div>
+              <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                <span>PadSplit Platform Fee</span>
+                <div class="text-end">
+                  <div class="small text-muted">
+                    ${UIHelpers.formatDisplayValue(analysis.padsplit_platform_percentage || 0, 'percentage')}
+                  </div>
+                  <strong>${UIHelpers.formatDisplayValue((analysis.monthly_rent * ((analysis.padsplit_platform_percentage || 0) / 100)))}</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        ` : ''}
       </div>
     </div>
   </div>

@@ -54,6 +54,26 @@ def safe_calculation(default_value: T = None) -> Callable:
         return wrapper
     return decorator
 
+def format_percentage_or_infinite(value: Union[Percentage, str]) -> str:
+    """
+    Format a percentage value or the string 'Infinite' for consistent display.
+    
+    Args:
+        value: Either a Percentage object or the string 'Infinite'
+        
+    Returns:
+        Formatted string representation for display
+    """
+    if value == "Infinite":
+        return "Infinite"
+    
+    if isinstance(value, Percentage):
+        # Format with one decimal place
+        return f"{value.value:.1f}%"
+    
+    # Handle unexpected types
+    return str(value)
+
 class Validator:
     """Utility class for validation logic."""
     
@@ -654,6 +674,20 @@ class LeaseOptionAnalysis(Analysis):
             'annual_cash_flow': str(monthly_cash_flow * 12)
         }
 
+    @safe_calculation(default_value=Money(0))
+    def calculate_total_cash_invested(self) -> Money:
+        """
+        Calculate total cash invested for Lease Option.
+        For lease options, the primary investment is the option consideration fee.
+        """
+        logger.debug("=== Starting Lease Option Total Cash Invested Calculation ===")
+        
+        # For Lease Option, the main investment is the option fee
+        option_fee = self._get_money('option_consideration_fee')
+        logger.debug(f"Option consideration fee: ${float(option_fee.dollars):.2f}")
+        
+        return option_fee
+
 class LTRAnalysis(Analysis):
     """Long-term rental analysis implementation."""
     
@@ -1125,20 +1159,44 @@ class BRRRRAnalysis(Analysis):
     @property
     @safe_calculation(default_value=Money(0))
     def holding_costs(self) -> Money:
-        """Calculate holding costs during renovation period."""
-        monthly_costs = sum([
+        """
+        Calculate holding costs during renovation period.
+        
+        Holding costs include property fixed expenses and loan interest during renovation:
+        - Property taxes
+        - Insurance
+        - HOA/COA fees
+        - Interest-only payment on initial loan
+        
+        These costs are multiplied by the renovation duration to get total holding costs.
+        """
+        # Calculate monthly fixed expenses
+        fixed_expenses = sum([
             self._get_money('property_taxes'),
             self._get_money('insurance'),
-            LoanCalculator.calculate_payment(LoanDetails(
-                amount=self._get_money('initial_loan_amount'),
-                interest_rate=self._get_percentage('initial_loan_interest_rate'),
-                term=self.data.get('initial_loan_term', 0),
-                is_interest_only=True
-            ))
+            self._get_money('hoa_coa_coop')
         ], Money(0))
         
+        # Calculate interest-only payment on initial loan
+        initial_loan_amount = self._get_money('initial_loan_amount')
+        initial_loan_rate = self._get_percentage('initial_loan_interest_rate')
+        
+        # Calculate monthly interest (don't use full payment calculation for clarity)
+        monthly_interest = Money(0)
+        if initial_loan_amount.dollars > 0 and initial_loan_rate.value > 0:
+            monthly_interest = initial_loan_amount * (initial_loan_rate / Percentage(1200))  # Convert to monthly rate
+            logger.debug(f"Monthly interest on initial loan: ${float(monthly_interest.dollars):.2f}")
+        
+        # Total monthly holding costs
+        monthly_costs = fixed_expenses + monthly_interest
+        logger.debug(f"Total monthly holding costs: ${float(monthly_costs.dollars):.2f}")
+        
+        # Multiply by renovation duration
         renovation_duration = self.data.get('renovation_duration', 0)
-        return monthly_costs * renovation_duration
+        total_holding_costs = monthly_costs * renovation_duration
+        logger.debug(f"Total holding costs over {renovation_duration} months: ${float(total_holding_costs.dollars):.2f}")
+        
+        return total_holding_costs
 
     @property
     @safe_calculation(default_value=Money(0))
@@ -1157,6 +1215,10 @@ class BRRRRAnalysis(Analysis):
         """
         Calculate total cash invested in BRRRR project accounting for cash-out refinance.
         Returns the true out-of-pocket costs after considering cash recouped in refinance.
+        
+        Note: This value can be negative if the refinance pulls out more cash than was
+        initially invested. A negative value represents cash extracted beyond the
+        initial investment - effectively profit while still owning the asset.
         """
         logger.debug("=== Starting BRRRR Total Cash Invested Calculation ===")
         
@@ -1178,8 +1240,7 @@ class BRRRRAnalysis(Analysis):
         initial_loan_amount = self._get_money('initial_loan_amount')
         initial_out_of_pocket = initial_investment - initial_loan_amount
         
-        # Ensure we don't go below zero for initial investment
-        initial_out_of_pocket = Money(max(0, float(initial_out_of_pocket.dollars)))
+        # Allow negative values to represent over-leveraged acquisition
         logger.debug(f"Initial out-of-pocket after financing: ${float(initial_out_of_pocket.dollars):.2f}")
         
         # Step 3: Calculate cash recouped from refinance
@@ -1187,16 +1248,15 @@ class BRRRRAnalysis(Analysis):
         refinance_closing_costs = self._get_money('refinance_loan_closing_costs')
         
         cash_recouped = refinance_loan_amount - initial_loan_amount - refinance_closing_costs
-        # Ensure cash recouped doesn't go below zero
-        cash_recouped = Money(max(0, float(cash_recouped.dollars)))
+        # Allow negative values to represent refinance shortfall
         logger.debug(f"Cash recouped from refinance: ${float(cash_recouped.dollars):.2f}")
         
         # Step 4: Calculate final out-of-pocket investment
         final_investment = initial_out_of_pocket - cash_recouped
-        # Ensure final investment doesn't go below zero
-        final_investment = Money(max(0, float(final_investment.dollars)))
-        
+        # Allow negative values to represent cash-out beyond initial investment
         logger.debug(f"Final out-of-pocket investment after refinance: ${float(final_investment.dollars):.2f}")
+        if final_investment.dollars < 0:
+            logger.debug("Negative cash invested indicates cash extracted beyond initial investment")
         
         return final_investment
 
@@ -1218,20 +1278,65 @@ class BRRRRAnalysis(Analysis):
         return Money(max(0, float(mao.dollars)))
 
     @property
-    def cash_on_cash_return(self) -> Percentage:
-        """Calculate Cash on Cash return accounting for refinance in BRRRR strategy."""
+    def cash_on_cash_return(self) -> Union[Percentage, str]:
+        """
+        Calculate Cash on Cash return.
+        
+        Returns:
+            Percentage: The calculated cash on cash return percentage
+            str: "Infinite" if the cash invested is zero or negative
+        """
         cash_invested = self.calculate_total_cash_invested()
         annual_cf = float(self.annual_cash_flow.dollars)
         
-        # Avoid division by zero - if cash invested is near zero, return a high percentage
-        if cash_invested.dollars < 0.01:
-            logger.debug(f"Cash invested is near zero (${cash_invested.dollars:.2f}), returning 999%")
-            return Percentage(999.99)  # Cap it at 999.99% for near-zero investments
-            
-        coc_return = (annual_cf / float(cash_invested.dollars)) * 100
-        logger.debug(f"Cash on Cash Return: {coc_return:.2f}% (Annual CF: ${annual_cf:.2f}, Cash Invested: ${cash_invested.dollars:.2f})")
+        # Special case: Zero or negative cash invested means infinite return
+        if cash_invested.dollars <= 0:
+            logger.debug("Cash invested is zero or negative, returning 'Infinite' for cash-on-cash return")
+            return "Infinite"
         
-        return Percentage(coc_return)
+        # Normal calculation
+        return Percentage((annual_cf / float(cash_invested.dollars)) * 100)
+
+    def _calculate_loan_payments(self) -> Money:
+        """
+        Calculate total monthly loan payments for BRRRR.
+        
+        For BRRRR analyses, we always use the refinance loan payment for cash flow calculations,
+        as this represents the permanent financing scenario for the property.
+        """
+        try:
+            # For BRRRR, we first calculate and store initial loan payment for reference
+            initial_loan_details = LoanDetails(
+                amount=self._get_money('initial_loan_amount'),
+                interest_rate=self._get_percentage('initial_loan_interest_rate'),
+                term=self.data.get('initial_loan_term', 0),
+                is_interest_only=self.data.get('initial_interest_only', False)
+            )
+            
+            initial_payment = LoanCalculator.calculate_payment(initial_loan_details)
+            self.calculated_metrics['initial_loan_payment'] = str(initial_payment)
+            logger.debug(f"Initial loan payment: ${float(initial_payment.dollars):.2f} (for reference only)")
+            
+            # Calculate and store refinance payment - this is what we use for cash flow
+            refinance_loan_details = LoanDetails(
+                amount=self._get_money('refinance_loan_amount'),
+                interest_rate=self._get_percentage('refinance_loan_interest_rate'),
+                term=self.data.get('refinance_loan_term', 0),
+                is_interest_only=False  # Refinance loans are always amortizing
+            )
+            
+            refinance_payment = LoanCalculator.calculate_payment(refinance_loan_details)
+            self.calculated_metrics['refinance_loan_payment'] = str(refinance_payment)
+            logger.debug(f"Refinance loan payment: ${float(refinance_payment.dollars):.2f} (used for cash flow)")
+            
+            # Always return refinance payment for monthly cash flow calculation
+            # This is the post-renovation permanent financing scenario
+            return refinance_payment
+        
+        except Exception as e:
+            logger.error(f"Error calculating BRRRR loan payments: {str(e)}")
+            logger.error(traceback.format_exc())
+            return Money(0)
 
     def _calculate_type_specific_metrics(self) -> Dict:
         """Calculate metrics specific to BRRRR analysis."""
@@ -1364,23 +1469,40 @@ class MultiFamilyAnalysis(Analysis):
     @property
     @safe_calculation(default_value=Money(0))
     def gross_potential_rent(self) -> Money:
-        """Calculate gross potential rent from all units."""
-        unit_types = json.loads(self.data.get('unit_types', '[]'))
-        total = sum(ut.get('count', 0) * ut.get('rent', 0) for ut in unit_types)
-        return Money(total)
+        """
+        Calculate gross potential rent from all units.
+        This is the total rent if all units were occupied.
+        """
+        try:
+            unit_types = json.loads(self.data.get('unit_types', '[]'))
+            total = sum(ut.get('count', 0) * ut.get('rent', 0) for ut in unit_types)
+            logger.debug(f"Calculated gross potential rent: ${total:.2f}")
+            return Money(total)
+        except (json.JSONDecodeError, TypeError) as e:
+            logger.error(f"Error calculating gross potential rent: {str(e)}")
+            return Money(0)
 
     @property
     @safe_calculation(default_value=Money(0))
     def actual_gross_income(self) -> Money:
-        """Calculate actual gross income including other income."""
-        # Get occupied unit rent
-        unit_types = json.loads(self.data.get('unit_types', '[]'))
-        occupied_rent = sum(ut.get('occupied', 0) * ut.get('rent', 0) for ut in unit_types)
-        
-        # Add other income
-        other_income = self._get_money('other_income')
-        
-        return Money(occupied_rent) + other_income
+        """
+        Calculate actual gross income including other income.
+        This uses occupied units only plus any other property income.
+        """
+        try:
+            # Get occupied unit rent
+            unit_types = json.loads(self.data.get('unit_types', '[]'))
+            occupied_rent = sum(ut.get('occupied', 0) * ut.get('rent', 0) for ut in unit_types)
+            
+            # Add other income
+            other_income = self._get_money('other_income')
+            
+            actual_income = Money(occupied_rent) + other_income
+            logger.debug(f"Calculated actual gross income: ${float(actual_income.dollars):.2f}")
+            return actual_income
+        except (json.JSONDecodeError, TypeError) as e:
+            logger.error(f"Error calculating actual gross income: {str(e)}")
+            return Money(0)
 
     @property
     @safe_calculation(default_value=Money(0))
@@ -1407,6 +1529,30 @@ class MultiFamilyAnalysis(Analysis):
                          float(purchase_price.dollars)) * 100)
 
     @property
+    @safe_calculation(default_value=Percentage(0))
+    def occupancy_rate(self) -> Percentage:
+        """Calculate current occupancy rate as percentage."""
+        total_units = self.data.get('total_units', 0)
+        occupied_units = self.data.get('occupied_units', 0)
+        
+        if total_units <= 0:
+            return Percentage(0)
+            
+        return Percentage((occupied_units / total_units) * 100)
+
+    @property
+    @safe_calculation(default_value=Money(0))
+    def price_per_unit(self) -> Money:
+        """Calculate purchase price per unit."""
+        total_units = self.data.get('total_units', 0)
+        purchase_price = self._get_money('purchase_price')
+        
+        if total_units <= 0:
+            return Money(0)
+            
+        return Money(float(purchase_price.dollars) / total_units)
+
+    @property
     @safe_calculation(default_value=0.0)
     def gross_rent_multiplier(self) -> float:
         """Calculate Gross Rent Multiplier."""
@@ -1417,11 +1563,19 @@ class MultiFamilyAnalysis(Analysis):
         return float(self._get_money('purchase_price').dollars) / annual_rent
 
     def _calculate_operating_expenses(self) -> Money:
-        """Calculate total monthly operating expenses."""
+        """
+        Calculate total monthly operating expenses for multi-family property.
+        Includes fixed expenses, percentage-based expenses, and multi-family specific expenses.
+        """
         # Fixed expenses
         fixed_expenses = sum([
             self._get_money('property_taxes'),
             self._get_money('insurance'),
+            self._get_money('hoa_coa_coop'),
+        ], Money(0))
+        
+        # Multi-family specific expenses
+        multi_family_expenses = sum([
             self._get_money('common_area_maintenance'),
             self._get_money('elevator_maintenance'),
             self._get_money('staff_payroll'),
@@ -1433,14 +1587,21 @@ class MultiFamilyAnalysis(Analysis):
         rent_based_expenses = sum([
             self.gross_potential_rent * self._get_percentage('management_fee_percentage'),
             self.gross_potential_rent * self._get_percentage('capex_percentage'),
+            self.gross_potential_rent * self._get_percentage('vacancy_percentage'),
             self.gross_potential_rent * self._get_percentage('repairs_percentage')
         ], Money(0))
         
-        return fixed_expenses + rent_based_expenses
+        total_expenses = fixed_expenses + multi_family_expenses + rent_based_expenses
+        logger.debug(f"Total multi-family operating expenses: ${float(total_expenses.dollars):.2f}")
+        
+        return total_expenses
 
     def _calculate_type_specific_metrics(self) -> Dict:
-        """Calculate metrics specific to multi-family analysis."""
-        # Multi-family specific metrics
+        """
+        Calculate metrics specific to multi-family analysis.
+        Includes both property-level and per-unit metrics.
+        """
+        # Get basic property data
         total_units = float(self.data.get('total_units', 1))
         
         # Calculate NOI and per-unit metrics
@@ -1451,38 +1612,59 @@ class MultiFamilyAnalysis(Analysis):
         loan_payments = self._calculate_loan_payments()
         dscr = float(monthly_noi.dollars) / float(loan_payments.dollars) if loan_payments.dollars > 0 else 0.0
         
+        # Calculate expense ratio
+        expense_ratio = self._calculate_operating_expense_ratio()
+        
         # Add multi-family specific metrics
         multi_family_metrics = {
+            # Income metrics
             'gross_potential_rent': str(self.gross_potential_rent),
             'actual_gross_income': str(self.actual_gross_income),
+            'other_income': str(self._get_money('other_income')),
+            
+            # NOI metrics
             'net_operating_income': str(monthly_noi),
             'monthly_noi': str(monthly_noi),
-            'noi': str(Money(noi_per_unit)),  # Per unit for multi-family
+            'noi_per_unit': str(Money(noi_per_unit)),  # Per unit for multi-family
+            'noi': str(Money(noi_per_unit)),  # Alias for noi_per_unit 
             'annual_noi': str(monthly_noi * 12),
+            
+            # Return metrics
             'cap_rate': str(self.cap_rate),
             'dscr': str(dscr),
             'gross_rent_multiplier': str(self.gross_rent_multiplier),
-            'price_per_unit': str(Money(float(self._get_money('purchase_price').dollars) / 
-                                    float(self.data.get('total_units', 1)))),
-            'occupancy_rate': str(Percentage((float(self.data.get('occupied_units', 0)) / 
-                                            float(self.data.get('total_units', 1))) * 100)),
-            'operating_expense_ratio': str(Percentage(self._calculate_operating_expense_ratio() * 100)),
-            'expense_ratio': str(Percentage(self._calculate_operating_expense_ratio() * 100))
+            
+            # Property metrics
+            'price_per_unit': str(self.price_per_unit),
+            'occupancy_rate': str(self.occupancy_rate),
+            'expense_ratio': str(Percentage(expense_ratio * 100)),
+            'operating_expense_ratio': str(Percentage(expense_ratio * 100)),
+            'total_units': str(self.data.get('total_units', 0)),
+            'occupied_units': str(self.data.get('occupied_units', 0)),
+            'vacancy_units': str(self.data.get('total_units', 0) - self.data.get('occupied_units', 0))
         }
         
-        # Add unit type metrics
-        unit_types = json.loads(self.data.get('unit_types', '[]'))
-        unit_metrics = {
-            'unit_type_summary': {
-                ut['type']: {
-                    'count': ut['count'],
-                    'occupied': ut['occupied'],
-                    'avg_sf': ut['square_footage'],
-                    'rent': str(Money(ut['rent'])),
-                    'total_potential_rent': str(Money(ut['rent'] * ut['count']))
-                } for ut in unit_types
+        # Calculate unit type metrics
+        try:
+            unit_types = json.loads(self.data.get('unit_types', '[]'))
+            unit_metrics = {
+                'unit_type_summary': {
+                    ut['type']: {
+                        'count': ut['count'],
+                        'occupied': ut['occupied'],
+                        'vacancy': ut['count'] - ut['occupied'],
+                        'vacancy_rate': (1 - (ut['occupied'] / ut['count'])) * 100 if ut['count'] > 0 else 0,
+                        'avg_sf': ut['square_footage'],
+                        'rent': str(Money(ut['rent'])),
+                        'rent_per_sf': str(Money(ut['rent'] / ut['square_footage'])) if ut['square_footage'] > 0 else str(Money(0)),
+                        'total_potential_rent': str(Money(ut['rent'] * ut['count'])),
+                        'actual_rent': str(Money(ut['rent'] * ut['occupied']))
+                    } for ut in unit_types
+                }
             }
-        }
+        except (json.JSONDecodeError, TypeError, KeyError) as e:
+            logger.error(f"Error processing unit types: {str(e)}")
+            unit_metrics = {'unit_type_summary': {}}
         
         return {**multi_family_metrics, **unit_metrics}
 
