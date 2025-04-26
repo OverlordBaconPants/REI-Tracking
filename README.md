@@ -1,4 +1,4 @@
-# 🧠 Enhanced AI Coding Assistant
+# 🏠  Real Estate Analysis and Portfolio Tracking 📊 
 
 ## Project Overview
 This project provides a Flask- and Dash-based Python web application for real estate investors and partners to manage their investment portfolios. The application enables comprehensive real estate investment tracking, analysis, and management with the following key features:
