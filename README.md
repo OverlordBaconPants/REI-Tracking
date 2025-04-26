@@ -10,7 +10,7 @@ This project provides a Flask- and Dash-based Python web application for real es
 📈 Property Valuation - Integrate with RentCast API for accurate property comps and market valuations
 🌐 Address Services - Leverage Geoapify for address validation, autocomplete, and geocoding
 📱 Dynamic Dashboards - View customized KPI reports, equity tracking, and portfolio summaries
-🔒 User Authentication - Secure multi-user access with role-based permissions and property-specific access controls
+🔒 User Authentication - Secure multi-user access with role-based permissions, session management, and security features
 📄 Report Generation - Create professional PDF reports for analyses, transactions, and portfolio performance
 
 ## Tech Stack

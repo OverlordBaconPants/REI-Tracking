@@ -1,36 +1,47 @@
-# 🧠 Enhanced AI Coding Assistant Workflow for Claude
+# 🧠 Enhanced AI Coding Assistant Workflow
 
-This guide provides a structured process for working with Claude to build production-quality software. The workflow is designed to maximize the effectiveness of our interactions and ensure consistent, high-quality results.
+This guide provides a structured process for working with Claude to build production-quality software. The workflow maximizes the effectiveness of our interactions and ensures consistent, high-quality results.
 
-## 1. 🔑 Golden Rules for Claude Collaboration
+## 📋 Table of Contents
 
-These high-level principles will guide our interactions:
+1. [Golden Rules](#1--golden-rules-for-collaboration)
+2. [Project Context Management](#2--project-awareness--context)
+3. [Communication Patterns](#3--effective-communication-patterns)
+4. [Code Structure & Quality](#4--code-structure--quality)
+5. [Task Management](#5--planning--task-management)
+6. [Testing Strategy](#6--testing--reliability)
+7. [Documentation Standards](#7--documentation--explainability)
+8. [Working With Claude](#8--working-with-claude-effectively)
+9. [File System & Version Control](#9--file-system--version-control-workflow)
+10. [Technical Debt Management](#10--technical-debt-management)
+11. [Decision Log](#11--decision-log)
 
-- **Use markdown files to manage the project** (README.md, PLANNING.md, TASK.md)
+## 1. 🔑 Golden Rules for Collaboration
+
+- **Use markdown files** for project management (README.md, PLANNING.md, TASK.md)
 - **Keep files under 500 lines** and split into modules when needed
-- **Start fresh conversations often** with sufficient context
+- **Start fresh conversations** with sufficient context
 - **One task per message** for clearer responses
-- **Test early, test often** with unit tests for each new function
+- **Test early and often** with unit tests for each new function
 - **Be specific and detailed** in your requests
-- **Write docs and comments as you go**
+- **Document as you go** with comments and documentation
 - **Handle sensitive information yourself** (API keys, credentials)
-- **Request clarification when needed** - If my requests are unclear, vague, or making too many assumptions, Claude will ask for clarification rather than guessing
-- **Accept feedback gracefully** - Be open to Claude pointing out when requirements are inconsistent or approaches might be problematic
-- **Provide the "why" behind requests** - Explain reasoning behind requirements to help Claude provide better solutions
-- **Acknowledge context limitations** - Recognize when Claude might be missing important context and proactively provide it
+- **Request clarification when needed** rather than guessing
+- **Accept feedback gracefully** on requirements or approaches
+- **Provide the "why"** behind requests to get better solutions
+- **Acknowledge context limitations** and proactively provide missing information
 
 ## 2. 🔄 Project Awareness & Context
 
-- **Always read `README.md` and `PLANNING.md`** at the start of a new conversation to understand the project's architecture, goals, style, and constraints
-- **Check `TASK.md`** before starting a new task. If the task isn't listed, add it with a brief description and today's date
-- **Use consistent naming conventions, file structure, and architecture patterns** as described in `PLANNING.md`
+### Essential Practices
+- **Always read `README.md` and `PLANNING.md`** at the start of new conversations
+- **Check `TASK.md`** before starting new tasks
+- **Use consistent naming conventions and architecture** as described in this document
 - **Upload relevant files** at the beginning of new conversations
-- **Summarize previous conclusions** when starting a new thread
+- **Summarize previous conclusions** when starting new threads
 - **Reference specific file paths** when discussing code
 
-### Project Summaries
-Keep a concise project summary in your README.md that you can paste at the start of new conversations:
-
+### Project Summary Template
 ```
 Project: [Name]
 Tech Stack: [Languages, frameworks, libraries]
@@ -43,26 +54,16 @@ Key Components:
 ## 3. 🗣️ Effective Communication Patterns
 
 ### Starting New Conversations
-When starting a new conversation, include:
-
 ```
 Context: [Brief project description]
 Current task: [What we're working on]
 Relevant files: [List key files/modules]
-Goals for this conversation: [What you want to accomplish]
-```
-
-Example:
-```
-Context: Building a FastAPI backend for a task management app
-Current task: Implementing user authentication
-Relevant files: auth.py, models/user.py, routes/auth_routes.py
-Goals: Complete JWT token validation function and test cases
+Goals: [What you want to accomplish]
 ```
 
 ### Request Templates
 
-#### For Code Implementation:
+#### Code Implementation
 ```
 Please implement [feature/function] with the following requirements:
 - Requirement 1
@@ -70,45 +71,59 @@ Please implement [feature/function] with the following requirements:
 
 Input: [describe inputs]
 Output: [describe expected outputs]
-Edge cases to handle: [list edge cases]
+Edge cases: [list edge cases]
 
 Related code: [paste relevant existing code if applicable]
 ```
 
-#### For Code Review/Debugging:
-
+#### Code Review/Debugging
+```
 Please review this code for [specific concerns/bugs]:
 
-```
- Code here
-```
+```code here```
 
-The issue I'm seeing is: [describe problem]
+Issue: [describe problem]
 Expected behavior: [what should happen]
 Actual behavior: [what's actually happening]
+```
 
-
-#### For Architecture/Design Decisions:
-
+#### Architecture/Design Decisions
+```
 I need guidance on [specific design challenge].
 
-```
 Current approach: [describe current implementation]
 Constraints: [list any constraints]
-Options I'm considering:
+Options:
 1. [Option 1]
 2. [Option 2]
 
 What would you recommend and why?
 ```
 
-## 4. 🧱 Code Structure & Modularity
+### Feedback Loop
+When responses don't meet expectations:
+1. **Be specific** about what's missing
+2. **Show examples** of preferred format/style
+3. **Request incremental improvements**
 
-- **Never create a file longer than 500 lines of code.** If a file approaches this limit, refactor by splitting it into modules or helper files
-- **Organize code into clearly separated modules**, grouped by feature or responsibility
-- **Use clear, consistent imports** (prefer relative imports within packages)
-- Maintain a consistent project structure. The following is an example that should work as we start developing the project and will likely need to be extended as we implement more requirements per TASKS.md.
+## 4. 🧱 Code Structure & Quality
 
+### Structure Guidelines
+- **Maximum file length: 500 lines** - Split larger files into modules
+- **Organize by feature or responsibility** with clear module separation
+- **Use consistent imports** (prefer relative imports within packages)
+
+### Style Conventions
+- **Language**: Python
+- **Style**: PEP8, formatted with `black`
+- **Validation**: Use `pydantic` for data validation
+- **Naming**:
+  - `snake_case` for variables and functions
+  - `PascalCase` for classes
+  - `UPPER_CASE` for constants
+- **Type hints**: Required for all function parameters and return values
+
+### Project Structure
 ```
 project_name/
 ├── README.md
@@ -135,126 +150,82 @@ project_name/
 
 ## 5. 📋 Planning & Task Management
 
-### ✅ Task Completion Requirements
-
-For any task to be considered complete, it must meet these criteria:
-- Core functionality is implemented and working
-- Documentation is complete:
+### Task Completion Criteria
+- Core functionality implemented and working
+- Documentation complete:
   - Code-level documentation (docstrings, comments)
   - User documentation (if applicable)
-  - README updates (if applicable)
-- Unit tests are written and passing:
+  - `README.md` updates (if applicable)
+  - `PLANNING.md` updates to Decision Log (if applicable)
+  - `TASKS.md` updates for Technical Debt (if applicable)
+- Unit tests written and passing:
   - Happy path tests
   - Edge case tests
   - Error handling tests
-- Code has been reviewed against our quality guidelines
+- Code reviewed against quality guidelines
 
-### Task Management
-
-- **Mark completed tasks in `TASK.md`** immediately after finishing them
-- Add new tasks or sub-tasks discovered during development to `TASK.md` in the appropriate sections, noting the items as "Discovered During Work" section along with the date of discovery
-
+### Task Tracking
+- **Mark completed tasks** in `TASK.md` immediately
+- **Add new tasks** discovered during development to `TASK.md` as Technical Debt
 
 ## 6. 🧪 Testing & Reliability
 
-- **Always create Pytest unit tests for new features** (functions, classes, routes, etc)
-- **After updating any logic**, check whether existing unit tests need to be updated. If so, do it
-- **Tests should live in a `/tests` folder** mirroring the main app structure
-  - Include at least:
-    - 1 test for expected use
-    - 1 edge case
-    - 1 failure case
-- For each new feature, include tests for:
+- **Create Pytest unit tests** for all new features
+- **Update existing tests** when logic changes
+- **Mirror app structure** in `/tests` folder
+- **Test coverage** for each feature:
   - Happy path (expected use case)
   - Edge cases (boundary conditions)
   - Failure cases (error handling)
 
 ## 7. 📚 Documentation & Explainability
 
-- **Update `README.md`** when new features are added, dependencies change, or setup steps are modified
-- **Comment non-obvious code** and ensure everything is understandable to a mid-level developer
-- When writing complex logic, **add an inline `# Reason:` comment** explaining the why, not just the what
-- **Write docs and comments as you go**, not after the fact
-
 ### Documentation Requirements
-- Google-style docstrings for all functions:
-  ```python
-  def function(param1: type, param2: type) -> return_type:
-      """Brief description of function.
-      
-      Args:
-          param1: Description of param1
-          param2: Description of param2
-          
-      Returns:
-          Description of return value
-          
-      Raises:
-          ExceptionType: When and why exception is raised
-      """
-  ```
-- Inline comments for complex logic with `# Reason:` prefix
-- README.md updates for all new features
+- **Update `README.md`** for new features, dependencies, or setup changes
+- **Comment non-obvious code** for mid-level developer understanding
+- **Add `# Reason:` comments** for complex logic
+- **Document as you go**, not after the fact
 
-## 8. 📎 Style & Conventions
-
-- **Use Python** as the primary language
-- **Follow PEP8**, use type hints, and format with `black`
-- **Use `pydantic` for data validation**
-- Use consistent naming conventions:
-  - `snake_case` for variables and functions
-  - `PascalCase` for classes
-  - `UPPER_CASE` for constants
-- Include type hints for all function parameters and return values
-
-## 9. 📊 Feedback Loop
-
-### Getting Better Results
-When my responses don't meet your expectations:
-
-1. **Be specific about what's missing**: "This is good, but I also need X included"
-2. **Show examples** of the format or style you prefer
-3. **Request incremental improvements**: "Let's improve the error handling by..."
-
-### Iteration Prompts
-```
-This looks good, but let's refine:
-- Change A to improve B
-- Add more detail to section C
-- Simplify the approach to D
+### Docstring Format (Google-style)
+```python
+def function(param1: type, param2: type) -> return_type:
+    """Brief description of function.
+    
+    Args:
+        param1: Description of param1
+        param2: Description of param2
+        
+    Returns:
+        Description of return value
+        
+    Raises:
+        ExceptionType: When and why exception is raised
+    """
 ```
 
-## 10. 🔄 Working With Claude Effectively
+## 8. 🔄 Working With Claude Effectively
 
-### DO:
+### Best Practices
 - **Upload code files** directly rather than pasting large blocks
-- **Break complex features** into smaller, manageable tasks
-- **Provide clear requirements** with examples when possible
-- **Ask for explanations** when you don't understand something
+- **Break complex features** into smaller tasks
+- **Provide clear requirements** with examples
+- **Ask for explanations** when needed
 - **Be explicit about priorities** (readability, performance, etc.)
 
-### DON'T:
-- **Overload with multiple questions** in a single message
-- **Assume I remember details** from far back in conversation
-- **Ask for complete applications** in one go
-- **Skip providing context** when switching topics
+### Avoid These Pitfalls
+- **Multiple questions** in a single message
+- **Assuming memory** of details from earlier in conversation
+- **Requesting complete applications** in one go
+- **Switching topics** without context
 
-### 🧠 AI Behavior Rules
-- **Never assume missing context. Ask questions if uncertain**
-- **Never hallucinate libraries or functions** – only use known, verified Python packages
-- **Always confirm file paths and module names** exist before referencing them in code or tests
-- **Never delete or overwrite existing code** unless explicitly instructed to or if part of a task from `TASK.md`
+### AI Behavior Rules
+- **Never assume missing context** - Ask questions if uncertain
+- **Never hallucinate libraries/functions** - Use only verified packages
+- **Always confirm file paths/module names** before referencing
+- **Never delete/overwrite existing code** without explicit instruction
 
-### When Things Go Wrong
-If I misunderstand or produce incorrect code:
-1. **Identify the specific issue**: "The database connection isn't being closed properly"
-2. **Provide error messages** if available
-3. **Ask for focused correction**: "Please fix the connection handling in this function"
-
-## 11. 🔍 Code Review Checklist
-
-When requesting code review, specify what to focus on:
-
+### Code Review Checklist
+When requesting review, specify focus areas:
 - [ ] Overall architecture and design patterns
 - [ ] Function and variable naming
 - [ ] Error handling approach
@@ -263,68 +234,8 @@ When requesting code review, specify what to focus on:
 - [ ] Test coverage
 - [ ] Documentation completeness
 
-## 12. 🖥️ MCP Integration & File System Workflow
-
-### File Access Boundaries
-To maintain project integrity, MCP filesystem access follows these guidelines:
-- **Read access**: All project files under `/home/python/rei-tracking/`
-- **Write access**: Limited to:
-  - Source code (`/home/python/rei-tracking/src/`)
-  - Tests (`/home/python/rei-tracking/tests/`)
-  - Documentation files (`/home/python/rei-tracking/*.md`)
-- **No access**: 
-  - Configuration files with secrets (`.env`)
-  - User data files
-  - Virtual environment directories
-
-### Version Control Workflow
-When working with Git through MCP or directly:
-
-1. **Before committing:**
-   - Ensure the newly implemented feature is complete
-   - Documentation and unit tests are written
-   - Run formatter (black) on modified code
-   - Run all unit tests with pytest
-   - Verify all tests pass
-
-2. **Commit message format:**
-   ```
-   [TYPE]: Brief description of what changed
-
-   Task: #task-reference
-   ```
-   Where TYPE is one of: FEAT (new feature), FIX (bug fix), DOCS (documentation), TEST (test addition), REFACTOR, or CHORE
-
-3. **When to create branches:**
-   - For complex changes that might take multiple days to complete
-   - For experimental features you're unsure about
-   - For major refactoring that could temporarily break functionality
-
-4. **When to commit:**
-   - After implementing a complete requirement with tests
-   - When taking a break from coding
-   - Before making major changes to existing code
-
-## 13. 🗣️ AI-Specific Communication Patterns
-
-### Code Context Handling
-- **MCP advantage**: With MCP filesystem access, the AI can find relevant surrounding code to provide proper context for modifications
-- **When MCP isn't available**: Include:
-  - The full function/method being discussed
-  - Any directly related functions it calls or depends on
-  - Relevant imports
-  - Class definition (if method is part of a class)
-
 ### Alternative Approaches
-For complex implementations, request multiple options before deciding:
-```
-Please provide 2-3 alternative approaches for implementing [feature], including:
-- Pros and cons of each approach
-- Implementation complexity estimate
-- Your recommendation with rationale
-```
-
-Example response format:
+For complex implementations, request multiple options:
 ```
 # Approach 1: [Brief description]
 Pros:
@@ -339,10 +250,49 @@ Implementation complexity: [Low/Medium/High]
 Recommendation: Approach [X] because [rationale]
 ```
 
-## 14. 🔍 Technical Debt Management
+## 9. 🖥️ File System & Version Control Workflow
+
+### File Access Boundaries
+- **Read access**: All project files under `/home/python/rei-tracking/`
+- **Write access**: Limited to:
+  - Source code (`/home/python/rei-tracking/src/`)
+  - Tests (`/home/python/rei-tracking/tests/`)
+  - Documentation files (`/home/python/rei-tracking/*.md`)
+- **No access**: 
+  - Configuration files with secrets (`.env`)
+  - User data files
+  - Virtual environment directories
+
+### Version Control Workflow
+
+#### Before Committing
+1. Ensure feature is complete
+2. Documentation and unit tests are written
+3. Run formatter (black) on modified code
+4. Run all unit tests with pytest
+5. Verify all tests pass
+
+#### Commit Message Format
+```
+[TYPE]: Brief description of what changed
+
+Task: #task-reference
+```
+Where TYPE is: FEAT, FIX, DOCS, TEST, REFACTOR, or CHORE
+
+#### When to Create Branches
+- For complex multi-day changes
+- For experimental features
+- For major refactoring
+
+#### When to Commit
+- After implementing a complete requirement with tests
+- Before taking breaks
+- Before making major changes to existing code
+
+## 10. 🔍 Technical Debt Management
 
 ### Technical Debt in TASKS.md
-For each task group in TASKS.md, a "Technical Debt" section will be added:
 ```
 ### Technical Debt - [Component Name]
 - [ ] TD-1: [Description of technical debt item]
@@ -352,23 +302,19 @@ For each task group in TASKS.md, a "Technical Debt" section will be added:
 ```
 
 ### Refactoring Schedule
-Best practices for refactoring as a solo developer:
-
 1. **When to refactor:**
-   - After completing each major task group in TASKS.md
-   - When technical debt impacts development velocity
-   - Before adding new features to an existing component
+   - After completing major task groups
+   - When debt impacts development velocity
+   - Before adding features to existing components
    - When test coverage drops below 80%
 
 2. **How to refactor:**
-   - Write tests before refactoring if coverage is lacking
+   - Write tests first if coverage is lacking
    - Refactor in small, testable increments
    - Run tests after each increment
    - Document changes in commit messages
 
 ### Code Smell Identification
-The AI will proactively flag potential code issues using this format:
-
 ```
 Code Smell Alert: [Type of smell]
 File: [File path]
@@ -378,7 +324,7 @@ Recommendation: [Suggested fix]
 Impact: [Low/Medium/High]
 ```
 
-Common code smells to watch for:
+Common code smells:
 - Long methods (>50 lines)
 - Duplicate code
 - Complex conditionals
@@ -388,29 +334,18 @@ Common code smells to watch for:
 - Poor naming
 
 ### Pattern Refinement
-When effective coding patterns are identified:
-1. Document the pattern in the Decision Log
-2. Create Technical Debt items to apply the pattern to existing code
-3. Use the pattern consistently in new development
-4. Implement changes incrementally rather than making wholesale changes
+1. Document effective patterns in Decision Log
+2. Create Technical Debt items to apply patterns to existing code
+3. Use patterns consistently in new development
+4. Implement changes incrementally
 
-## 15. 📝 Decision Log
+## 11. 📝 Decision Log
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
-| 2025-04-24 | Added MCP integration guidelines to PLANNING.md | To establish clear workflow for AI-assisted development with filesystem access and version control integration |
-
-## 16. 📋 Conversation Summaries
-
-At the end of each development session, the conversation will conclude with:
-
-1. **Summary of decisions made**: Key design and implementation choices
-2. **Code implemented/modified**: Brief overview of changes
-3. **Documentation updated**: Which docs were modified and how
-4. **Next steps**: Clear action items for the next session
-5. **Open questions**: Any unresolved issues
-
-If approved, this summary will be used to update PLANNING.md, TASKS.md, and other documentation as appropriate.
+| 2025-04-24 | Added MCP integration guidelines | To establish clear workflow for AI-assisted development with filesystem access and version control integration |
+| 2025-04-26 | Reorganized PLANNING.md | To improve clarity, conciseness, and organization of the development workflow documentation |
+| 2025-04-26 | Implemented user authentication system | To provide secure user management with login/registration, session handling, and role-based access control |
 
 ---
 

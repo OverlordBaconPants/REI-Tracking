@@ -1,44 +1,39 @@
 # Python
-__pycache__
-*.pyc
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
 
 # Virtual Environment
-bin/*
-share/*
-share/jupyter/*
-etc/*
-lib/*
-lib64/*
-pyvenv.config
-venv/*
+venv/
+bin/
+share/
+etc/
+lib/
+lib64/
+pyvenv.cfg
 
-# Config and Env
+# Config and Environment
 config.py
 .env
 
 # Logs
 /logs/*
 !/logs/.gitkeep
+app.log
 
 # Data
 /data/*
 !/data/categories.json
-!/data/uploads
+!/data/uploads/
 /data/uploads/*
 !/data/uploads/.gitkeep
-!/data/uploads/reimbursements
-/data/uploads/reimbursements/*
-!/data/uploads/reimbursements/.gitkeep
-!/data/analyses
+!/data/analyses/
 /data/analyses/*
 !/data/analyses/.gitkeep
-/data/users.json
-/data/transactions.json
 
-# Misc
-tree.txt
-app.log
-import_statement.txt
-__pycache__/
-.pytest_cache/
+# Test Results
 test-results/
+
+# Legacy Code
+/legacy_code/

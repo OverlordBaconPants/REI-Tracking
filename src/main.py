@@ -6,11 +6,15 @@ and other application components.
 """
 
 import os
-from flask import Flask, jsonify, request, send_from_directory
+from datetime import timedelta
+from flask import Flask, jsonify, request, send_from_directory, session
+from flask_session import Session
 from werkzeug.exceptions import HTTPException
 
 from src.config import current_config
 from src.utils.logging_utils import app_logger, audit_logger
+from src.services.auth_service import SESSION_TIMEOUT, EXTENDED_SESSION_TIMEOUT
+from src.utils.auth_middleware import init_auth_middleware
 
 # Create Flask application
 app = Flask(__name__)
@@ -21,6 +25,19 @@ app.config.from_object(current_config)
 # Configure application
 app.secret_key = current_config.SECRET_KEY
 app.config['MAX_CONTENT_LENGTH'] = current_config.MAX_CONTENT_LENGTH
+
+# Configure session
+app.config['SESSION_TYPE'] = 'filesystem'
+app.config['SESSION_PERMANENT'] = False
+app.config['SESSION_PERMANENT_LIFETIME'] = timedelta(seconds=SESSION_TIMEOUT)
+app.config['SESSION_USE_SIGNER'] = True
+app.config['SESSION_COOKIE_SECURE'] = current_config.SESSION_COOKIE_SECURE
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_FILE_DIR'] = os.path.join(current_config.DATA_DIR, 'flask_session')
+
+# Initialize Flask-Session
+Session(app)
 
 
 # Register error handlers
@@ -94,6 +111,9 @@ def init_app():
     audit_logger.log_system_event("startup", "application", {
         "environment": os.getenv("FLASK_ENV", "development")
     })
+    
+    # Initialize authentication middleware
+    init_auth_middleware(app)
     
     # Register routes
     register_routes()

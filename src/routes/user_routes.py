@@ -5,14 +5,15 @@ This module provides the user routes for the application, including
 authentication, registration, and user management.
 """
 
-from flask import Blueprint, jsonify, request, session
+from flask import Blueprint, jsonify, request, session, make_response
 import json
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Tuple
 from passlib.hash import pbkdf2_sha256
 
 from src.models.user import User
 from src.repositories.user_repository import UserRepository
 from src.services.validation_service import ValidationService
+from src.services.auth_service import AuthService
 from src.utils.logging_utils import get_logger, audit_logger
 
 # Set up logger
@@ -21,9 +22,24 @@ logger = get_logger(__name__)
 # Create blueprint
 blueprint = Blueprint('users', __name__, url_prefix='/api/users')
 
-# Create repositories
+# Create repositories and services
 user_repository = UserRepository()
+auth_service = AuthService(user_repository)
 
+
+# Add security headers to all responses
+@blueprint.after_request
+def add_security_headers(response):
+    """
+    Add security headers to all responses.
+    
+    Args:
+        response: The response to add headers to
+        
+    Returns:
+        The response with added headers
+    """
+    return auth_service.add_security_headers(response)
 
 @blueprint.route('/register', methods=['POST'])
 def register():
@@ -99,33 +115,19 @@ def login():
         data = request.get_json()
         email = data.get('email', '')
         password = data.get('password', '')
+        remember = data.get('remember', False)
         
-        # Get user by email
-        user = user_repository.get_by_email(email)
-        if not user:
+        # Authenticate user
+        success, user, error_message = auth_service.authenticate(email, password)
+        
+        if not success:
             return jsonify({
                 'success': False,
-                'errors': {'email': ['Invalid email or password']}
+                'errors': {'email': [error_message]}
             }), 401
         
-        # Verify password
-        if not pbkdf2_sha256.verify(password, user.password):
-            return jsonify({
-                'success': False,
-                'errors': {'email': ['Invalid email or password']}
-            }), 401
-        
-        # Set session
-        session['user_id'] = user.id
-        session['user_email'] = user.email
-        session['user_role'] = user.role
-        
-        # Log login
-        audit_logger.log_user_action(
-            user_id=user.id,
-            action="login",
-            resource_type="session"
-        )
+        # Create session
+        auth_service.create_session(user, remember)
         
         # Return success
         return jsonify({
@@ -149,16 +151,8 @@ def logout():
         The logout result
     """
     try:
-        # Log logout
-        if 'user_id' in session:
-            audit_logger.log_user_action(
-                user_id=session['user_id'],
-                action="logout",
-                resource_type="session"
-            )
-        
-        # Clear session
-        session.clear()
+        # End session
+        auth_service.end_session()
         
         # Return success
         return jsonify({
@@ -181,19 +175,17 @@ def get_current_user():
         The current user
     """
     try:
-        # Check if user is logged in
-        if 'user_id' not in session:
+        # Validate session
+        valid, error = auth_service.validate_session()
+        if not valid:
             return jsonify({
                 'success': False,
-                'errors': {'_error': ['Not logged in']}
+                'errors': {'_error': [error]}
             }), 401
         
-        # Get user by ID
-        user = user_repository.get_by_id(session['user_id'])
+        # Get current user
+        user = auth_service.get_current_user()
         if not user:
-            # Clear session
-            session.clear()
-            
             return jsonify({
                 'success': False,
                 'errors': {'_error': ['User not found']}
@@ -224,11 +216,12 @@ def get_user(user_id: str):
         The user
     """
     try:
-        # Check if user is logged in
-        if 'user_id' not in session:
+        # Validate session
+        valid, error = auth_service.validate_session()
+        if not valid:
             return jsonify({
                 'success': False,
-                'errors': {'_error': ['Not logged in']}
+                'errors': {'_error': [error]}
             }), 401
         
         # Get user by ID
@@ -240,7 +233,7 @@ def get_user(user_id: str):
             }), 404
         
         # Check if user is admin or requesting their own data
-        current_user = user_repository.get_by_id(session['user_id'])
+        current_user = auth_service.get_current_user()
         if not current_user.is_admin() and current_user.id != user.id:
             return jsonify({
                 'success': False,
@@ -272,11 +265,12 @@ def update_user(user_id: str):
         The updated user
     """
     try:
-        # Check if user is logged in
-        if 'user_id' not in session:
+        # Validate session
+        valid, error = auth_service.validate_session()
+        if not valid:
             return jsonify({
                 'success': False,
-                'errors': {'_error': ['Not logged in']}
+                'errors': {'_error': [error]}
             }), 401
         
         # Get user by ID
@@ -288,7 +282,7 @@ def update_user(user_id: str):
             }), 404
         
         # Check if user is admin or updating their own data
-        current_user = user_repository.get_by_id(session['user_id'])
+        current_user = auth_service.get_current_user()
         if not current_user.is_admin() and current_user.id != user.id:
             return jsonify({
                 'success': False,
@@ -367,15 +361,16 @@ def delete_user(user_id: str):
         The deletion result
     """
     try:
-        # Check if user is logged in
-        if 'user_id' not in session:
+        # Validate session
+        valid, error = auth_service.validate_session()
+        if not valid:
             return jsonify({
                 'success': False,
-                'errors': {'_error': ['Not logged in']}
+                'errors': {'_error': [error]}
             }), 401
         
         # Check if user is admin
-        current_user = user_repository.get_by_id(session['user_id'])
+        current_user = auth_service.get_current_user()
         if not current_user.is_admin():
             return jsonify({
                 'success': False,
