@@ -40,19 +40,19 @@ For any task to be considered complete, it must meet these criteria:
         - [x] Profile editing with field validation
     - [x] Password security with validation, hashing, and strength indicators
         - [x] Password strength requirements (minimum length, special characters, numbers, mixed case)
-        - [ ] Password strength meter with visual feedback
+        - [x] Password strength meter with visual feedback
         - [x] Secure password hashing with PBKDF2-SHA256
-        - [ ] Password visibility toggle for improved UX
+        - [x] Password visibility toggle for improved UX
 - [x] Create role-based access control system
     - [x] Implement basic roles (Admin/User) and role-based permissions
         - [x] Permission-based access control for routes and actions
         - [x] Admin dashboard for user management
-    - [ ] Build property-specific permissions and partner equity-based access controls
-        - [ ] Property-level access control based on ownership percentage
-        - [ ] Partner visibility settings for financial data
-    - [ ] Add property manager designation functionality
-        - [ ] Property manager role with specific permissions
-        - [ ] Manager assignment and removal workflow
+    - [x] Build property-specific permissions and partner equity-based access controls
+        - [x] Property-level access control based on ownership percentage
+        - [x] Partner visibility settings for financial data
+    - [x] Add property manager designation functionality
+        - [x] Property manager role with specific permissions
+        - [x] Manager assignment and removal workflow
 
 ## 3. 📊 Data Structure Implementation
 
@@ -77,13 +77,13 @@ For any task to be considered complete, it must meet these criteria:
 
 ## 5. 💰 Financial Calculation Engine
 
-- [ ] Build core calculation components
-    - [ ] Implement validation framework with error collection and reporting
-    - [ ] Create Money and Percentage classes with proper decimal handling
-    - [ ] Develop LoanDetails model with support for various loan types
-    - [ ] Implement safe calculation decorator for error handling
-    - [ ] Add support for handling infinite values in calculations
-    - [ ] Create MonthlyPayment class for principal/interest breakdown
+- [x] Build core calculation components
+    - [x] Implement validation framework with error collection and reporting
+    - [x] Create Money and Percentage classes with proper decimal handling
+    - [x] Develop LoanDetails model with support for various loan types
+    - [x] Implement safe calculation decorator for error handling
+    - [x] Add support for handling infinite values in calculations
+    - [x] Create MonthlyPayment class for principal/interest breakdown
 - [ ] Implement analysis system
     - [ ] Create base Analysis class with validation and cash flow calculation
     - [ ] Build specialized analysis types (LTR, BRRRR, Lease Option, Multi-Family, PadSplit)

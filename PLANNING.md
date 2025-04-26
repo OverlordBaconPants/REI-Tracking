@@ -346,6 +346,8 @@ Common code smells:
 | 2025-04-24 | Added MCP integration guidelines | To establish clear workflow for AI-assisted development with filesystem access and version control integration |
 | 2025-04-26 | Reorganized PLANNING.md | To improve clarity, conciseness, and organization of the development workflow documentation |
 | 2025-04-26 | Implemented user authentication system | To provide secure user management with login/registration, session handling, and role-based access control |
+| 2025-04-26 | Implemented property access controls | To enable fine-grained property access management with owner, manager, and viewer roles, supporting partner equity-based permissions |
+| 2025-04-26 | Implemented core calculation components | To provide a robust foundation for financial calculations with proper decimal handling, validation, and support for various loan types |
 
 ---
 

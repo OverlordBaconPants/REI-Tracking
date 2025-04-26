@@ -13,6 +13,17 @@ This project provides a Flask- and Dash-based Python web application for real es
 🔒 User Authentication - Secure multi-user access with role-based permissions, session management, and security features
 📄 Report Generation - Create professional PDF reports for analyses, transactions, and portfolio performance
 
+## Core Calculation Components
+
+The application includes robust financial calculation components:
+
+- **Money and Percentage Classes**: Handle monetary values and percentages with proper decimal precision
+- **Validation Framework**: Comprehensive validation with error collection and reporting
+- **LoanDetails Model**: Support for various loan types (standard amortizing, interest-only, zero-interest)
+- **MonthlyPayment Class**: Track principal and interest components of payments
+- **Safe Calculation Decorator**: Error handling for calculations with default values
+- **Infinite Value Support**: Handle special cases like infinite ROI when no cash is invested
+
 ## Tech Stack
 - Python
 - Pydantic for data validation
