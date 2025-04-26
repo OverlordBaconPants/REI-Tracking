@@ -71,6 +71,9 @@ REI-Tracker/
 │       └── test_file_utils.py # File utility tests
 ├── data/                     # Data files
 │   ├── categories.json       # Category data
+│   ├── properties.json       # Property data
+│   ├── transactions.json     # Transaction data
+│   ├── users.json            # User data
 │   ├── analyses/             # Analysis data files
 │   └── uploads/              # Uploaded files
 └── docs/                     # Documentation
