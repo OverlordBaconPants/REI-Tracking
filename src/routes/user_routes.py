@@ -1,0 +1,416 @@
+"""
+User routes module for the REI-Tracker application.
+
+This module provides the user routes for the application, including
+authentication, registration, and user management.
+"""
+
+from flask import Blueprint, jsonify, request, session
+import json
+from typing import Dict, Any, Optional
+from passlib.hash import pbkdf2_sha256
+
+from src.models.user import User
+from src.repositories.user_repository import UserRepository
+from src.services.validation_service import ValidationService
+from src.utils.logging_utils import get_logger, audit_logger
+
+# Set up logger
+logger = get_logger(__name__)
+
+# Create blueprint
+blueprint = Blueprint('users', __name__, url_prefix='/api/users')
+
+# Create repositories
+user_repository = UserRepository()
+
+
+@blueprint.route('/register', methods=['POST'])
+def register():
+    """
+    Register a new user.
+    
+    Returns:
+        The registration result
+    """
+    try:
+        data = request.get_json()
+        
+        # Validate email
+        email_result = ValidationService.validate_email(data.get('email', ''))
+        if not email_result.is_valid:
+            return jsonify({
+                'success': False,
+                'errors': email_result.errors
+            }), 400
+        
+        # Check if email already exists
+        if user_repository.email_exists(data.get('email', '')):
+            return jsonify({
+                'success': False,
+                'errors': {'email': ['Email already exists']}
+            }), 400
+        
+        # Hash password
+        data['password'] = pbkdf2_sha256.hash(data.get('password', ''))
+        
+        # Validate user data
+        validation_result = ValidationService.validate_model(data, User)
+        if not validation_result.is_valid:
+            return jsonify({
+                'success': False,
+                'errors': validation_result.errors
+            }), 400
+        
+        # Create user
+        user = validation_result.data
+        user_repository.create(user)
+        
+        # Log user creation
+        audit_logger.log_user_action(
+            user_id=user.id,
+            action="create",
+            resource_type="user",
+            resource_id=user.id
+        )
+        
+        # Return success
+        return jsonify({
+            'success': True,
+            'user': user.dict()
+        }), 201
+    except Exception as e:
+        logger.error(f"Error registering user: {str(e)}")
+        return jsonify({
+            'success': False,
+            'errors': {'_error': [str(e)]}
+        }), 500
+
+
+@blueprint.route('/login', methods=['POST'])
+def login():
+    """
+    Log in a user.
+    
+    Returns:
+        The login result
+    """
+    try:
+        data = request.get_json()
+        email = data.get('email', '')
+        password = data.get('password', '')
+        
+        # Get user by email
+        user = user_repository.get_by_email(email)
+        if not user:
+            return jsonify({
+                'success': False,
+                'errors': {'email': ['Invalid email or password']}
+            }), 401
+        
+        # Verify password
+        if not pbkdf2_sha256.verify(password, user.password):
+            return jsonify({
+                'success': False,
+                'errors': {'email': ['Invalid email or password']}
+            }), 401
+        
+        # Set session
+        session['user_id'] = user.id
+        session['user_email'] = user.email
+        session['user_role'] = user.role
+        
+        # Log login
+        audit_logger.log_user_action(
+            user_id=user.id,
+            action="login",
+            resource_type="session"
+        )
+        
+        # Return success
+        return jsonify({
+            'success': True,
+            'user': user.dict()
+        }), 200
+    except Exception as e:
+        logger.error(f"Error logging in user: {str(e)}")
+        return jsonify({
+            'success': False,
+            'errors': {'_error': [str(e)]}
+        }), 500
+
+
+@blueprint.route('/logout', methods=['POST'])
+def logout():
+    """
+    Log out a user.
+    
+    Returns:
+        The logout result
+    """
+    try:
+        # Log logout
+        if 'user_id' in session:
+            audit_logger.log_user_action(
+                user_id=session['user_id'],
+                action="logout",
+                resource_type="session"
+            )
+        
+        # Clear session
+        session.clear()
+        
+        # Return success
+        return jsonify({
+            'success': True
+        }), 200
+    except Exception as e:
+        logger.error(f"Error logging out user: {str(e)}")
+        return jsonify({
+            'success': False,
+            'errors': {'_error': [str(e)]}
+        }), 500
+
+
+@blueprint.route('/me', methods=['GET'])
+def get_current_user():
+    """
+    Get the current user.
+    
+    Returns:
+        The current user
+    """
+    try:
+        # Check if user is logged in
+        if 'user_id' not in session:
+            return jsonify({
+                'success': False,
+                'errors': {'_error': ['Not logged in']}
+            }), 401
+        
+        # Get user by ID
+        user = user_repository.get_by_id(session['user_id'])
+        if not user:
+            # Clear session
+            session.clear()
+            
+            return jsonify({
+                'success': False,
+                'errors': {'_error': ['User not found']}
+            }), 401
+        
+        # Return user
+        return jsonify({
+            'success': True,
+            'user': user.dict()
+        }), 200
+    except Exception as e:
+        logger.error(f"Error getting current user: {str(e)}")
+        return jsonify({
+            'success': False,
+            'errors': {'_error': [str(e)]}
+        }), 500
+
+
+@blueprint.route('/<user_id>', methods=['GET'])
+def get_user(user_id: str):
+    """
+    Get a user by ID.
+    
+    Args:
+        user_id: The user ID
+        
+    Returns:
+        The user
+    """
+    try:
+        # Check if user is logged in
+        if 'user_id' not in session:
+            return jsonify({
+                'success': False,
+                'errors': {'_error': ['Not logged in']}
+            }), 401
+        
+        # Get user by ID
+        user = user_repository.get_by_id(user_id)
+        if not user:
+            return jsonify({
+                'success': False,
+                'errors': {'_error': ['User not found']}
+            }), 404
+        
+        # Check if user is admin or requesting their own data
+        current_user = user_repository.get_by_id(session['user_id'])
+        if not current_user.is_admin() and current_user.id != user.id:
+            return jsonify({
+                'success': False,
+                'errors': {'_error': ['Unauthorized']}
+            }), 403
+        
+        # Return user
+        return jsonify({
+            'success': True,
+            'user': user.dict()
+        }), 200
+    except Exception as e:
+        logger.error(f"Error getting user: {str(e)}")
+        return jsonify({
+            'success': False,
+            'errors': {'_error': [str(e)]}
+        }), 500
+
+
+@blueprint.route('/<user_id>', methods=['PUT'])
+def update_user(user_id: str):
+    """
+    Update a user.
+    
+    Args:
+        user_id: The user ID
+        
+    Returns:
+        The updated user
+    """
+    try:
+        # Check if user is logged in
+        if 'user_id' not in session:
+            return jsonify({
+                'success': False,
+                'errors': {'_error': ['Not logged in']}
+            }), 401
+        
+        # Get user by ID
+        user = user_repository.get_by_id(user_id)
+        if not user:
+            return jsonify({
+                'success': False,
+                'errors': {'_error': ['User not found']}
+            }), 404
+        
+        # Check if user is admin or updating their own data
+        current_user = user_repository.get_by_id(session['user_id'])
+        if not current_user.is_admin() and current_user.id != user.id:
+            return jsonify({
+                'success': False,
+                'errors': {'_error': ['Unauthorized']}
+            }), 403
+        
+        # Get request data
+        data = request.get_json()
+        
+        # Don't allow changing email
+        if 'email' in data and data['email'] != user.email:
+            return jsonify({
+                'success': False,
+                'errors': {'email': ['Email cannot be changed']}
+            }), 400
+        
+        # Don't allow changing role unless admin
+        if 'role' in data and data['role'] != user.role and not current_user.is_admin():
+            return jsonify({
+                'success': False,
+                'errors': {'role': ['Only admins can change roles']}
+            }), 403
+        
+        # Hash password if provided
+        if 'password' in data and data['password']:
+            data['password'] = pbkdf2_sha256.hash(data['password'])
+        else:
+            # Keep existing password
+            data['password'] = user.password
+        
+        # Update user data
+        for key, value in data.items():
+            setattr(user, key, value)
+        
+        # Validate user data
+        validation_result = ValidationService.validate_model(user.dict(), User)
+        if not validation_result.is_valid:
+            return jsonify({
+                'success': False,
+                'errors': validation_result.errors
+            }), 400
+        
+        # Update user
+        user_repository.update(user)
+        
+        # Log user update
+        audit_logger.log_user_action(
+            user_id=current_user.id,
+            action="update",
+            resource_type="user",
+            resource_id=user.id
+        )
+        
+        # Return success
+        return jsonify({
+            'success': True,
+            'user': user.dict()
+        }), 200
+    except Exception as e:
+        logger.error(f"Error updating user: {str(e)}")
+        return jsonify({
+            'success': False,
+            'errors': {'_error': [str(e)]}
+        }), 500
+
+
+@blueprint.route('/<user_id>', methods=['DELETE'])
+def delete_user(user_id: str):
+    """
+    Delete a user.
+    
+    Args:
+        user_id: The user ID
+        
+    Returns:
+        The deletion result
+    """
+    try:
+        # Check if user is logged in
+        if 'user_id' not in session:
+            return jsonify({
+                'success': False,
+                'errors': {'_error': ['Not logged in']}
+            }), 401
+        
+        # Check if user is admin
+        current_user = user_repository.get_by_id(session['user_id'])
+        if not current_user.is_admin():
+            return jsonify({
+                'success': False,
+                'errors': {'_error': ['Unauthorized']}
+            }), 403
+        
+        # Don't allow deleting self
+        if current_user.id == user_id:
+            return jsonify({
+                'success': False,
+                'errors': {'_error': ['Cannot delete self']}
+            }), 400
+        
+        # Delete user
+        if not user_repository.delete(user_id):
+            return jsonify({
+                'success': False,
+                'errors': {'_error': ['User not found']}
+            }), 404
+        
+        # Log user deletion
+        audit_logger.log_user_action(
+            user_id=current_user.id,
+            action="delete",
+            resource_type="user",
+            resource_id=user_id
+        )
+        
+        # Return success
+        return jsonify({
+            'success': True
+        }), 200
+    except Exception as e:
+        logger.error(f"Error deleting user: {str(e)}")
+        return jsonify({
+            'success': False,
+            'errors': {'_error': [str(e)]}
+        }), 500

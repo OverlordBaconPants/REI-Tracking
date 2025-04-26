@@ -29,7 +29,7 @@ These high-level principles will guide our interactions:
 - **Reference specific file paths** when discussing code
 
 ### Project Summaries
-Keep a concise project summary in your PLANNING.md that you can paste at the start of new conversations:
+Keep a concise project summary in your README.md that you can paste at the start of new conversations:
 
 ```
 Project: [Name]
@@ -107,7 +107,7 @@ What would you recommend and why?
 - **Never create a file longer than 500 lines of code.** If a file approaches this limit, refactor by splitting it into modules or helper files
 - **Organize code into clearly separated modules**, grouped by feature or responsibility
 - **Use clear, consistent imports** (prefer relative imports within packages)
-- Maintain a consistent project structure:
+- Maintain a consistent project structure. The following is an example that should work as we start developing the project and will likely need to be extended as we implement more requirements per TASKS.md.
 
 ```
 project_name/
@@ -154,26 +154,6 @@ For any task to be considered complete, it must meet these criteria:
 - **Mark completed tasks in `TASK.md`** immediately after finishing them
 - Add new tasks or sub-tasks discovered during development to `TASK.md` in the appropriate sections, noting the items as "Discovered During Work" section along with the date of discovery
 
-### Project Overview
-[Project description and goals]
-
-### Architecture
-[High-level architecture description]
-
-### Tech Stack
-- [Language]
-- [Framework]
-- [Database]
-- [Other tools]
-
-### Data Models
-[Describe key data models]
-
-### API Endpoints
-[List planned endpoints]
-
-### Components
-[Describe main components/modules]
 
 ## 6. 🧪 Testing & Reliability
 
@@ -282,6 +262,155 @@ When requesting code review, specify what to focus on:
 - [ ] Security considerations
 - [ ] Test coverage
 - [ ] Documentation completeness
+
+## 12. 🖥️ MCP Integration & File System Workflow
+
+### File Access Boundaries
+To maintain project integrity, MCP filesystem access follows these guidelines:
+- **Read access**: All project files under `/home/python/rei-tracking/`
+- **Write access**: Limited to:
+  - Source code (`/home/python/rei-tracking/src/`)
+  - Tests (`/home/python/rei-tracking/tests/`)
+  - Documentation files (`/home/python/rei-tracking/*.md`)
+- **No access**: 
+  - Configuration files with secrets (`.env`)
+  - User data files
+  - Virtual environment directories
+
+### Version Control Workflow
+When working with Git through MCP or directly:
+
+1. **Before committing:**
+   - Ensure the newly implemented feature is complete
+   - Documentation and unit tests are written
+   - Run formatter (black) on modified code
+   - Run all unit tests with pytest
+   - Verify all tests pass
+
+2. **Commit message format:**
+   ```
+   [TYPE]: Brief description of what changed
+
+   Task: #task-reference
+   ```
+   Where TYPE is one of: FEAT (new feature), FIX (bug fix), DOCS (documentation), TEST (test addition), REFACTOR, or CHORE
+
+3. **When to create branches:**
+   - For complex changes that might take multiple days to complete
+   - For experimental features you're unsure about
+   - For major refactoring that could temporarily break functionality
+
+4. **When to commit:**
+   - After implementing a complete requirement with tests
+   - When taking a break from coding
+   - Before making major changes to existing code
+
+## 13. 🗣️ AI-Specific Communication Patterns
+
+### Code Context Handling
+- **MCP advantage**: With MCP filesystem access, the AI can find relevant surrounding code to provide proper context for modifications
+- **When MCP isn't available**: Include:
+  - The full function/method being discussed
+  - Any directly related functions it calls or depends on
+  - Relevant imports
+  - Class definition (if method is part of a class)
+
+### Alternative Approaches
+For complex implementations, request multiple options before deciding:
+```
+Please provide 2-3 alternative approaches for implementing [feature], including:
+- Pros and cons of each approach
+- Implementation complexity estimate
+- Your recommendation with rationale
+```
+
+Example response format:
+```
+# Approach 1: [Brief description]
+Pros:
+- [List of advantages]
+Cons:
+- [List of disadvantages]
+Implementation complexity: [Low/Medium/High]
+
+# Approach 2: [Brief description]
+...
+
+Recommendation: Approach [X] because [rationale]
+```
+
+## 14. 🔍 Technical Debt Management
+
+### Technical Debt in TASKS.md
+For each task group in TASKS.md, a "Technical Debt" section will be added:
+```
+### Technical Debt - [Component Name]
+- [ ] TD-1: [Description of technical debt item]
+  - Impact: [Low/Medium/High]
+  - Effort: [Low/Medium/High]
+  - Added: [Date]
+```
+
+### Refactoring Schedule
+Best practices for refactoring as a solo developer:
+
+1. **When to refactor:**
+   - After completing each major task group in TASKS.md
+   - When technical debt impacts development velocity
+   - Before adding new features to an existing component
+   - When test coverage drops below 80%
+
+2. **How to refactor:**
+   - Write tests before refactoring if coverage is lacking
+   - Refactor in small, testable increments
+   - Run tests after each increment
+   - Document changes in commit messages
+
+### Code Smell Identification
+The AI will proactively flag potential code issues using this format:
+
+```
+Code Smell Alert: [Type of smell]
+File: [File path]
+Line(s): [Line numbers]
+Description: [Brief description of the issue]
+Recommendation: [Suggested fix]
+Impact: [Low/Medium/High]
+```
+
+Common code smells to watch for:
+- Long methods (>50 lines)
+- Duplicate code
+- Complex conditionals
+- Deep nesting
+- Large classes with multiple responsibilities
+- Excessive comments (might indicate unclear code)
+- Poor naming
+
+### Pattern Refinement
+When effective coding patterns are identified:
+1. Document the pattern in the Decision Log
+2. Create Technical Debt items to apply the pattern to existing code
+3. Use the pattern consistently in new development
+4. Implement changes incrementally rather than making wholesale changes
+
+## 15. 📝 Decision Log
+
+| Date | Decision | Rationale |
+|------|----------|-----------|
+| 2025-04-24 | Added MCP integration guidelines to PLANNING.md | To establish clear workflow for AI-assisted development with filesystem access and version control integration |
+
+## 16. 📋 Conversation Summaries
+
+At the end of each development session, the conversation will conclude with:
+
+1. **Summary of decisions made**: Key design and implementation choices
+2. **Code implemented/modified**: Brief overview of changes
+3. **Documentation updated**: Which docs were modified and how
+4. **Next steps**: Clear action items for the next session
+5. **Open questions**: Any unresolved issues
+
+If approved, this summary will be used to update PLANNING.md, TASKS.md, and other documentation as appropriate.
 
 ---
 

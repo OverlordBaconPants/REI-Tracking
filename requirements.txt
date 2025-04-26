@@ -1,0 +1,32 @@
+# Core dependencies
+Flask==2.3.3
+Werkzeug==2.3.7
+Jinja2==3.1.2
+gunicorn==21.2.0
+python-dotenv==1.0.0
+pydantic==2.4.2
+typing-extensions==4.7.1
+
+# API integrations
+requests==2.31.0
+httpx==0.24.1
+
+# Data handling
+PyJWT==2.8.0
+passlib==1.7.4
+uuid==1.30
+python-dateutil==2.8.2
+
+# File handling
+Pillow==10.0.0
+reportlab==4.0.4
+
+# Testing
+pytest==7.4.0
+pytest-cov==4.1.0
+pytest-mock==3.11.1
+
+# Development tools
+black==23.7.0
+flake8==6.1.0
+mypy==1.5.1
