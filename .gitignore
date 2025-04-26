@@ -15,6 +15,7 @@ pyvenv.cfg
 
 # Config and Environment
 config.py
+.clinerules
 .env
 
 # Logs
