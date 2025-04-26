@@ -24,6 +24,26 @@ The application includes robust financial calculation components:
 - **Safe Calculation Decorator**: Error handling for calculations with default values
 - **Infinite Value Support**: Handle special cases like infinite ROI when no cash is invested
 
+## Analysis System
+
+The application features a comprehensive property investment analysis system:
+
+- **Base Analysis Class**: Provides common functionality for all analysis types, including validation and core financial calculations
+- **Specialized Analysis Types**:
+  - **LTR (Long-Term Rental)**: Traditional rental property analysis
+  - **BRRRR (Buy, Rehab, Rent, Refinance, Repeat)**: Analysis for the BRRRR investment strategy
+  - **Lease Option**: Analysis for lease-to-own arrangements
+  - **Multi-Family**: Analysis for multi-unit properties with specialized metrics
+  - **PadSplit**: Analysis for room-by-room rental strategy
+- **Key Metrics**:
+  - Cash flow calculation (monthly and annual)
+  - Cash-on-cash return and ROI
+  - Cap rate and GRM (Gross Rent Multiplier)
+  - DSCR (Debt Service Coverage Ratio)
+  - Expense ratio and breakeven occupancy
+  - MAO (Maximum Allowable Offer) calculation
+- **Factory Pattern**: Simple API for creating the appropriate analysis type based on strategy
+
 ## Tech Stack
 - Python
 - Pydantic for data validation
