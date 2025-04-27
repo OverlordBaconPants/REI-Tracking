@@ -19,7 +19,8 @@ This guide provides a structured process for working with Claude to build produc
 ## 1. 🔑 Golden Rules for Collaboration
 
 - **Use markdown files** for project management (README.md, PLANNING.md, TASK.md)
-- **Keep files under 500 lines** and split into modules when needed
+- **Keep development and test files under 500 lines** and split into modules when needed
+- *** Markdown files can be more than 500 lines** since this is just documentation
 - **Start fresh conversations** with sufficient context
 - **One task per message** for clearer responses
 - **Test early and often** with unit tests for each new function
@@ -365,6 +366,8 @@ Common code smells:
 | 2025-04-27 | Implemented KPI comparison reports | To enable property owners to generate detailed PDF reports comparing planned vs. actual metrics, with property details, performance summaries, and visualizations |
 | 2025-04-27 | Implemented portfolio dashboard | To provide property owners with a comprehensive view of their portfolio, including equity distribution, cash flow by property, income and expense breakdowns, and key metrics in a mobile-responsive design with time period filtering |
 | 2025-04-27 | Implemented loan tracking and management | To provide comprehensive loan management with support for primary and secondary financing, loan details tracking, remaining balance and equity calculations, and monthly equity gain tracking |
+| 2025-04-27 | Implemented dashboard routing system with authentication | To create a secure dashboard system with login requirements, property-based access control, and mobile-responsive layouts |
+| 2025-04-27 | Built portfolio dashboard | To provide users with comprehensive portfolio overview including equity distribution, cash flow visualizations, and property metrics in a mobile-responsive design |
 
 ---
 

@@ -198,6 +198,35 @@ The application features a robust KPI comparison reporting system:
   - NOI and cash flow comparisons
   - Investment metrics comparisons
 
+## Dashboard Routing System with Authentication
+
+The application features a secure dashboard routing system with authentication:
+
+- **Secure Dashboard Routes**: All dashboard routes require authentication
+  - Login requirement for all dashboard access
+  - Session-based authentication with proper timeout
+  - CSRF protection for all dashboard routes
+  
+- **Dashboard Landing Page**: Central hub for accessing specialized dashboards
+  - Card-based navigation to different dashboard types
+  - Visual indicators for dashboard status (available, coming soon)
+  - Mobile-responsive layout for all screen sizes
+  
+- **Dashboard-Specific Permissions**: Fine-grained access control
+  - Property-based access control for dashboards
+  - Role-based permissions (owner, manager, viewer)
+  - Admin override for full access
+  
+- **Mobile-Responsive Design**: Access dashboards from any device
+  - Responsive layouts for different screen sizes
+  - Touch-friendly controls and visualizations
+  - Optimized chart rendering for mobile devices
+  
+- **Error Handling**: Comprehensive error handling for dashboard routes
+  - Custom error pages for authentication failures
+  - Access denied page for permission issues
+  - Detailed logging for security events
+
 ## Portfolio Dashboard
 
 The application features a comprehensive portfolio dashboard:
@@ -233,6 +262,28 @@ The application features a comprehensive portfolio dashboard:
   - Filter by last 30 days, 90 days, 6 months, 12 months, or all time
   - Dynamic recalculation of metrics based on selected period
   - Consistent date range application across all visualizations
+
+## Additional Dashboards
+
+The application includes several specialized dashboards:
+
+- **Amortization Dashboard**: Track loan amortization schedules and equity growth
+  - Loan balance and equity visualization
+  - Principal and interest breakdown
+  - Amortization schedule
+  - Equity growth projections
+  
+- **Transactions Dashboard**: Analyze property transactions with advanced filtering
+  - Transaction filtering by property, date, and category
+  - Income and expense trends
+  - Category breakdown analysis
+  - Transaction reporting tools
+  
+- **KPI Dashboard**: Monitor key performance indicators for properties
+  - Actual vs. projected metrics
+  - Performance trends over time
+  - Return on investment tracking
+  - Property-specific KPI reports
 
 ## Loan Tracking and Management
 

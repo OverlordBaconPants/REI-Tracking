@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}KPI Dashboard{% endblock %}
+{% block body_class %}kpi-page{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card mt-3">
+                <div class="card-header bg-navy">
+                    <h4 class="mb-0 text-white">KPI Dashboard</h4>
+                </div>
+                <div class="card-body p-0">
+                    <!-- KPI Dashboard -->
+                    <div id="dash-container" class="dashboard-wrapper">
+                        <iframe src="{{ url_for('dashboards.kpi_dash', path='') }}"
+                                id="kpi-frame"
+                                style="width: 100%; height: calc(100vh - 150px); min-height: 500px; border: none;"
+                                onload="console.log('iframe loaded')"
+                                onerror="console.log('iframe error')">
+                        </iframe>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
