@@ -12,7 +12,7 @@ from src.routes.loan_routes import loan_routes as loan_blueprint
 
 # Import other blueprints as they are created
 # from src.routes.property_routes import blueprint as property_blueprint
-# from src.routes.transaction_routes import blueprint as transaction_blueprint
+from src.routes.transaction_routes import transaction_bp as transaction_blueprint
 
 # List of all blueprints
 blueprints = [
@@ -21,7 +21,7 @@ blueprints = [
     analysis_blueprint,
     loan_blueprint,
     # property_blueprint,
-    # transaction_blueprint,
+    transaction_blueprint,
 ]
 
 __all__ = [
@@ -31,5 +31,5 @@ __all__ = [
     'analysis_blueprint',
     'loan_blueprint',
     # 'property_blueprint',
-    # 'transaction_blueprint',
+    'transaction_blueprint',
 ]

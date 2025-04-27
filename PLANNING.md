@@ -354,6 +354,7 @@ Common code smells:
 | 2025-04-26 | Refactored Loan model to use Pydantic V2 | To improve validation robustness, separate data models from validation models, and implement custom validators for Money and Percentage types |
 | 2025-04-26 | Implemented property comps functionality | To provide accurate property valuation with correlation scoring, range indicators, and market statistics integration |
 | 2025-04-26 | Implemented financial calculations | To provide comprehensive financial analysis capabilities including detailed cash flow breakdowns, balloon payment analysis, lease option calculations, and refinance impact analysis |
+| 2025-04-26 | Implemented transaction operations | To enable comprehensive transaction management with property association, categorization, reimbursement tracking, and property-specific permissions |
 
 ---
 

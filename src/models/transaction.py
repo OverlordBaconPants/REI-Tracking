@@ -37,8 +37,10 @@ class Reimbursement(BaseModel):
         Raises:
             ValueError: If the date shared is invalid
         """
-        if v is not None and not validate_date(v):
+        if v is not None and v != "" and not validate_date(v):
             raise ValueError("Invalid date shared format (should be YYYY-MM-DD)")
+        if v == "":
+            return None
         return v
     
     @validator("reimbursement_status")
@@ -202,3 +204,34 @@ class Transaction(BaseModel):
         self.reimbursement.date_shared = date_shared
         self.reimbursement.share_description = share_description
         self.reimbursement.reimbursement_status = "completed"
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Convert the transaction to a dictionary.
+        
+        Returns:
+            Dictionary representation of the transaction
+        """
+        result = {
+            "id": self.id,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+            "property_id": self.property_id,
+            "type": self.type,
+            "category": self.category,
+            "description": self.description,
+            "amount": str(self.amount),  # Convert Decimal to string for JSON serialization
+            "date": self.date,
+            "collector_payer": self.collector_payer,
+            "documentation_file": self.documentation_file
+        }
+        
+        # Add reimbursement if it exists
+        if self.reimbursement:
+            result["reimbursement"] = {
+                "date_shared": self.reimbursement.date_shared,
+                "share_description": self.reimbursement.share_description,
+                "reimbursement_status": self.reimbursement.reimbursement_status
+            }
+        
+        return result

@@ -141,19 +141,19 @@ For any task to be considered complete, it must meet these criteria:
 
 ## 7. 💵 Transaction Management System
 
-- [ ] Build transaction operations
-    - [ ] Create/edit/delete transactions with validation
-        - [ ] Implement transaction data structure with property association, type, category, amount, date, collector/payer, notes, and documentation
-        - [ ] Add validation for required fields and data types
-        - [ ] Implement secure file upload for transaction documentation
-        - [ ] Add property manager permissions for transaction management
-    - [ ] Implement categorization, documentation, and property association
-        - [ ] Support for income and expense categories with validation
-        - [ ] Allow file attachments for transaction documentation
-        - [ ] Associate transactions with specific properties
-    - [ ] Build collector/payer tracking with property-specific options
-        - [ ] Track who paid/collected for each transaction
-        - [ ] Provide property-specific collector/payer options
+- [x] Build transaction operations
+    - [x] Create/edit/delete transactions with validation
+        - [x] Implement transaction data structure with property association, type, category, amount, date, collector/payer, notes, and documentation
+        - [x] Add validation for required fields and data types
+        - [x] Implement secure file upload for transaction documentation
+        - [x] Add property manager permissions for transaction management
+    - [x] Implement categorization, documentation, and property association
+        - [x] Support for income and expense categories with validation
+        - [x] Allow file attachments for transaction documentation
+        - [x] Associate transactions with specific properties
+    - [x] Build collector/payer tracking with property-specific options
+        - [x] Track who paid/collected for each transaction
+        - [x] Provide property-specific collector/payer options
 - [ ] Implement filtering system
     - [ ] Property, date range, category, and type filters
         - [ ] Filter transactions by property with consistent address handling

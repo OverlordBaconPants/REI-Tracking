@@ -5,7 +5,7 @@ This project provides a Flask- and Dash-based Python web application for real es
 
 🏠 Property Portfolio Management - Track properties, assign partner equity shares, designate property managers, and monitor performance metrics
 💰 Financial Calculation Engine - Calculate investment metrics including CoC return, ROI, cap rates, and DSCR with proper decimal handling
-💵 Transaction Management System - Record, categorize, and report on property-related financial transactions with equity-based splitting
+💵 Transaction Management System - Record, categorize, and report on property-related financial transactions with equity-based splitting, reimbursement tracking, and property-specific permissions
 📊 Analysis System - Conduct detailed property analyses across multiple strategies (LTR, BRRRR, Lease Option, Multi-Family, PadSplit)
 📈 Property Valuation - Integrate with RentCast API for accurate property comps and market valuations with correlation scoring, range indicators, and market statistics
 🌐 Address Services - Leverage Geoapify for address validation, autocomplete, and geocoding

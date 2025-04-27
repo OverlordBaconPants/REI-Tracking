@@ -391,3 +391,88 @@ class PropertyAccessService:
         
         # Return the first manager (there should be at most one)
         return managers[0] if managers else None
+    
+    def get_accessible_properties(self, user_id: str) -> List[Property]:
+        """
+        Get properties that a user has access to.
+        
+        Args:
+            user_id: The ID of the user to check
+            
+        Returns:
+            A list of properties the user has access to
+        """
+        # Get user
+        user = self.user_repository.get_by_id(user_id)
+        
+        if not user:
+            logger.warning(f"Failed to get accessible properties: User not found")
+            return []
+        
+        # Get all properties
+        all_properties = self.property_repository.get_all()
+        
+        # If user is admin, return all properties
+        if user.is_admin():
+            return all_properties
+        
+        # Get property IDs the user has access to
+        accessible_property_ids = {
+            access.property_id for access in user.property_access
+        }
+        
+        # Filter properties by access
+        return [
+            prop for prop in all_properties
+            if prop.id in accessible_property_ids
+        ]
+    
+    def can_access_property(self, user_id: str, property_id: str) -> bool:
+        """
+        Check if a user can access a property.
+        
+        Args:
+            user_id: The ID of the user to check
+            property_id: The ID of the property to check
+            
+        Returns:
+            Whether the user can access the property
+        """
+        # Get user
+        user = self.user_repository.get_by_id(user_id)
+        
+        if not user:
+            logger.warning(f"Failed to check property access: User not found")
+            return False
+        
+        # If user is admin, they can access all properties
+        if user.is_admin():
+            return True
+        
+        # Check if user has access to the property
+        return user.has_property_access(property_id)
+    
+    def can_manage_property(self, user_id: str, property_id: str) -> bool:
+        """
+        Check if a user can manage a property.
+        
+        Args:
+            user_id: The ID of the user to check
+            property_id: The ID of the property to check
+            
+        Returns:
+            Whether the user can manage the property
+        """
+        # Get user
+        user = self.user_repository.get_by_id(user_id)
+        
+        if not user:
+            logger.warning(f"Failed to check property management: User not found")
+            return False
+        
+        # If user is admin, they can manage all properties
+        if user.is_admin():
+            return True
+        
+        # Check if user has manager or owner access to the property
+        return user.has_property_access(property_id, "manager")

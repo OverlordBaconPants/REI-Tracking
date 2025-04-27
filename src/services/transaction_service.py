@@ -1,0 +1,315 @@
+"""
+Transaction service module for the REI-Tracker application.
+
+This module provides services for transaction management.
+"""
+
+import logging
+from typing import List, Dict, Any, Optional
+from datetime import datetime
+
+from src.models.transaction import Transaction, Reimbursement
+from src.repositories.transaction_repository import TransactionRepository
+from src.services.property_access_service import PropertyAccessService
+
+# Set up logger
+logger = logging.getLogger(__name__)
+
+
+class TransactionService:
+    """
+    Service for transaction management.
+    
+    This class provides methods for transaction operations, such as
+    creating, updating, and deleting transactions.
+    """
+    
+    def __init__(self):
+        """Initialize the transaction service."""
+        self.transaction_repo = TransactionRepository()
+        self.property_access_service = PropertyAccessService()
+    
+    def get_transactions(self, user_id: str, filters: Dict[str, Any] = None) -> List[Transaction]:
+        """
+        Get transactions with optional filtering.
+        
+        Args:
+            user_id: ID of the user
+            filters: Optional filters to apply
+            
+        Returns:
+            List of transactions
+        """
+        try:
+            # Get all transactions
+            all_transactions = self.transaction_repo.get_all()
+            
+            # Filter by user access
+            accessible_properties = self.property_access_service.get_accessible_properties(user_id)
+            all_transactions = [
+                t for t in all_transactions 
+                if t.property_id in [p.id for p in accessible_properties]
+            ]
+            
+            # Apply filters if provided
+            if filters:
+                # Filter by property ID
+                if 'property_id' in filters and filters['property_id']:
+                    all_transactions = [t for t in all_transactions if t.property_id == filters['property_id']]
+                
+                # Filter by transaction type
+                if 'type' in filters and filters['type']:
+                    all_transactions = [t for t in all_transactions if t.type == filters['type']]
+                
+                # Filter by category
+                if 'category' in filters and filters['category']:
+                    all_transactions = [t for t in all_transactions if t.category == filters['category']]
+                
+                # Filter by date range
+                if 'start_date' in filters or 'end_date' in filters:
+                    all_transactions = self._filter_by_date_range(
+                        all_transactions, 
+                        filters.get('start_date'), 
+                        filters.get('end_date')
+                    )
+                
+                # Filter by reimbursement status
+                if 'reimbursement_status' in filters and filters['reimbursement_status']:
+                    all_transactions = self._filter_by_reimbursement_status(
+                        all_transactions, 
+                        filters['reimbursement_status']
+                    )
+            
+            return all_transactions
+            
+        except Exception as e:
+            logger.error(f"Error getting transactions: {str(e)}")
+            raise
+    
+    def get_transaction(self, transaction_id: str, user_id: str) -> Optional[Transaction]:
+        """
+        Get a specific transaction by ID.
+        
+        Args:
+            transaction_id: ID of the transaction
+            user_id: ID of the user
+            
+        Returns:
+            Transaction if found and accessible, None otherwise
+        """
+        try:
+            # Get transaction
+            transaction = self.transaction_repo.get_by_id(transaction_id)
+            if not transaction:
+                return None
+            
+            # Check if user has access to the property
+            if not self.property_access_service.can_access_property(user_id, transaction.property_id):
+                return None
+            
+            return transaction
+            
+        except Exception as e:
+            logger.error(f"Error getting transaction: {str(e)}")
+            raise
+    
+    def create_transaction(self, transaction_data: Dict[str, Any], user_id: str) -> Optional[Transaction]:
+        """
+        Create a new transaction.
+        
+        Args:
+            transaction_data: Transaction data
+            user_id: ID of the user
+            
+        Returns:
+            Created transaction if successful, None otherwise
+        """
+        try:
+            # Check if user has access to the property
+            if not self.property_access_service.can_manage_property(user_id, transaction_data["property_id"]):
+                return None
+            
+            # Create transaction object
+            transaction = Transaction(**transaction_data)
+            
+            # Save transaction
+            return self.transaction_repo.create(transaction)
+            
+        except Exception as e:
+            logger.error(f"Error creating transaction: {str(e)}")
+            raise
+    
+    def update_transaction(self, transaction_id: str, update_data: Dict[str, Any], user_id: str) -> Optional[Transaction]:
+        """
+        Update a specific transaction.
+        
+        Args:
+            transaction_id: ID of the transaction
+            update_data: Data to update
+            user_id: ID of the user
+            
+        Returns:
+            Updated transaction if successful, None otherwise
+        """
+        try:
+            # Get transaction
+            transaction = self.transaction_repo.get_by_id(transaction_id)
+            if not transaction:
+                return None
+            
+            # Check if user has access to the property
+            if not self.property_access_service.can_manage_property(user_id, transaction.property_id):
+                return None
+            
+            # Update transaction fields
+            for key, value in update_data.items():
+                if key != "id" and hasattr(transaction, key):
+                    setattr(transaction, key, value)
+            
+            # Handle reimbursement data if provided
+            if "reimbursement" in update_data:
+                reimbursement_data = update_data["reimbursement"]
+                if transaction.reimbursement is None:
+                    transaction.reimbursement = Reimbursement(**reimbursement_data)
+                else:
+                    for key, value in reimbursement_data.items():
+                        setattr(transaction.reimbursement, key, value)
+            
+            # Save updated transaction
+            return self.transaction_repo.update(transaction)
+            
+        except Exception as e:
+            logger.error(f"Error updating transaction: {str(e)}")
+            raise
+    
+    def delete_transaction(self, transaction_id: str, user_id: str) -> bool:
+        """
+        Delete a specific transaction.
+        
+        Args:
+            transaction_id: ID of the transaction
+            user_id: ID of the user
+            
+        Returns:
+            True if deleted successfully, False otherwise
+        """
+        try:
+            # Get transaction
+            transaction = self.transaction_repo.get_by_id(transaction_id)
+            if not transaction:
+                return False
+            
+            # Check if user has access to the property
+            if not self.property_access_service.can_manage_property(user_id, transaction.property_id):
+                return False
+            
+            # Delete transaction
+            self.transaction_repo.delete(transaction_id)
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error deleting transaction: {str(e)}")
+            raise
+    
+    def update_reimbursement(self, transaction_id: str, reimbursement_data: Dict[str, Any], user_id: str) -> Optional[Transaction]:
+        """
+        Update reimbursement status for a transaction.
+        
+        Args:
+            transaction_id: ID of the transaction
+            reimbursement_data: Reimbursement data
+            user_id: ID of the user
+            
+        Returns:
+            Updated transaction if successful, None otherwise
+        """
+        try:
+            # Get transaction
+            transaction = self.transaction_repo.get_by_id(transaction_id)
+            if not transaction:
+                return None
+            
+            # Check if user has access to the property
+            if not self.property_access_service.can_manage_property(user_id, transaction.property_id):
+                return None
+            
+            # Create reimbursement if it doesn't exist
+            if transaction.reimbursement is None:
+                transaction.reimbursement = Reimbursement()
+            
+            # Update reimbursement fields
+            transaction.reimbursement.date_shared = reimbursement_data.get("date_shared", transaction.reimbursement.date_shared)
+            transaction.reimbursement.share_description = reimbursement_data.get("share_description", transaction.reimbursement.share_description)
+            transaction.reimbursement.reimbursement_status = reimbursement_data.get("reimbursement_status", transaction.reimbursement.reimbursement_status)
+            
+            # Save updated transaction
+            return self.transaction_repo.update(transaction)
+            
+        except Exception as e:
+            logger.error(f"Error updating reimbursement: {str(e)}")
+            raise
+    
+    def _filter_by_date_range(
+        self, 
+        transactions: List[Transaction], 
+        start_date: Optional[str] = None, 
+        end_date: Optional[str] = None
+    ) -> List[Transaction]:
+        """
+        Filter transactions by date range.
+        
+        Args:
+            transactions: List of transactions
+            start_date: Start date (YYYY-MM-DD)
+            end_date: End date (YYYY-MM-DD)
+            
+        Returns:
+            Filtered transactions
+        """
+        filtered = transactions
+        
+        if start_date:
+            start = datetime.strptime(start_date, "%Y-%m-%d").date()
+            filtered = [
+                t for t in filtered 
+                if datetime.strptime(t.date, "%Y-%m-%d").date() >= start
+            ]
+        
+        if end_date:
+            end = datetime.strptime(end_date, "%Y-%m-%d").date()
+            filtered = [
+                t for t in filtered 
+                if datetime.strptime(t.date, "%Y-%m-%d").date() <= end
+            ]
+        
+        return filtered
+    
+    def _filter_by_reimbursement_status(
+        self, 
+        transactions: List[Transaction],
+        status: str
+    ) -> List[Transaction]:
+        """
+        Filter transactions by reimbursement status.
+        
+        Args:
+            transactions: List of transactions
+            status: Reimbursement status
+            
+        Returns:
+            Filtered transactions
+        """
+        if status == "all":
+            return transactions
+        
+        if status == "pending":
+            return [t for t in transactions if t.is_pending_reimbursement()]
+        
+        if status == "in_progress":
+            return [t for t in transactions if t.is_in_progress_reimbursement()]
+        
+        if status == "completed":
+            return [t for t in transactions if t.is_reimbursed()]
+        
+        return transactions

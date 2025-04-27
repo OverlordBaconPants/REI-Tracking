@@ -14,14 +14,20 @@ class LoanRepository(BaseRepository):
     loan records, as well as specialized queries for loan management.
     """
     
-    def __init__(self, data_dir: str = "data"):
+    def __init__(self, data_dir: str = None):
         """
         Initialize the loan repository.
         
         Args:
             data_dir: Directory where data files are stored
         """
-        super().__init__(data_dir, "loans.json")
+        from src.config import current_config
+        
+        if data_dir is None:
+            data_dir = current_config.DATA_DIR
+            
+        file_path = os.path.join(data_dir, "loans.json")
+        super().__init__(file_path, Loan)
         
     def get_loans_by_property(self, property_id: str) -> List[Loan]:
         """
