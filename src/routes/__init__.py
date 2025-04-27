@@ -2,7 +2,7 @@
 Routes package for the REI-Tracker application.
 
 This package provides the routes for the application, including
-base, user, property, transaction, analysis, loan, and partner equity routes.
+base, user, property, transaction, analysis, loan, partner equity, and property financial routes.
 """
 
 from src.routes.base_routes import blueprint as base_blueprint
@@ -14,6 +14,7 @@ from src.routes.loan_routes import loan_routes as loan_blueprint
 from src.routes.property_routes import property_bp as property_blueprint
 from src.routes.transaction_routes import transaction_bp as transaction_blueprint
 from src.routes.partner_equity_routes import partner_equity_bp as partner_equity_blueprint
+from src.routes.property_financial_routes import property_financial_bp as property_financial_blueprint
 
 # List of all blueprints
 blueprints = [
@@ -24,6 +25,7 @@ blueprints = [
     property_blueprint,
     transaction_blueprint,
     partner_equity_blueprint,
+    property_financial_blueprint,
 ]
 
 __all__ = [
@@ -35,4 +37,5 @@ __all__ = [
     'property_blueprint',
     'transaction_blueprint',
     'partner_equity_blueprint',
+    'property_financial_blueprint',
 ]

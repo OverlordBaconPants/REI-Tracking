@@ -216,31 +216,31 @@ For any task to be considered complete, it must meet these criteria:
     - [x] Equity validation (must total 100%)
     - [x] Support for partner visibility settings based on equity share
     - [x] Track partner contributions and distributions
-- [ ] Implement property financial tracking
-    - [ ] Income tracking (rental, parking, laundry, other)
-    - [ ] Expense tracking (property tax, insurance, repairs, capex, property management, HOA fees)
-    - [ ] Utility expense tracking (water, electricity, gas, trash)
-    - [ ] Maintenance and capital expenditure recording
-    - [ ] Support for expense notes and categorization
+- [x] Implement property financial tracking
+    - [x] Income tracking (rental, parking, laundry, other)
+    - [x] Expense tracking (property tax, insurance, repairs, capex, property management, HOA fees)
+    - [x] Utility expense tracking (water, electricity, gas, trash)
+    - [x] Maintenance and capital expenditure recording
+    - [x] Support for expense notes and categorization
 - [ ] Create property KPI calculations
-    - [ ] Equity tracking and cash flow calculations
-    - [ ] Compare actual performance to analysis projections
-        - [ ] Side-by-side comparison of planned vs. actual metrics
-        - [ ] Variance calculation and highlighting
+    - [x] Equity tracking and cash flow calculations
+    - [x] Compare actual performance to analysis projections
+        - [x] Side-by-side comparison of planned vs. actual metrics
+        - [x] Variance calculation and highlighting
         - [ ] Support for creating analyses from KPI comparison interface
-    - [ ] Calculate KPIs based on actual transaction data
-        - [ ] Net Operating Income (NOI) calculations (monthly and annual)
-        - [ ] Cap rate calculations based on purchase price and NOI
-        - [ ] Cash-on-cash return calculations
-        - [ ] Debt Service Coverage Ratio (DSCR) calculations
-    - [ ] Implement data quality assessment for KPI calculations
-        - [ ] Validate transaction data completeness
-        - [ ] Identify gaps in transaction history
-        - [ ] Calculate confidence levels for KPI metrics
-    - [ ] Support for tracking refinance impact on property performance
-        - [ ] Detect refinance events from transaction data
-        - [ ] Compare pre-refinance and post-refinance metrics
-    - [ ] Calculate monthly and annual averages for income, expenses, and NOI
+    - [x] Calculate KPIs based on actual transaction data
+        - [x] Net Operating Income (NOI) calculations (monthly and annual)
+        - [x] Cap rate calculations based on purchase price and NOI
+        - [x] Cash-on-cash return calculations
+        - [x] Debt Service Coverage Ratio (DSCR) calculations
+    - [x] Implement data quality assessment for KPI calculations
+        - [x] Validate transaction data completeness
+        - [x] Identify gaps in transaction history
+        - [x] Calculate confidence levels for KPI metrics
+    - [x] Support for tracking refinance impact on property performance
+        - [x] Detect refinance events from transaction data
+        - [x] Compare pre-refinance and post-refinance metrics
+    - [x] Calculate monthly and annual averages for income, expenses, and NOI
     - [ ] Generate KPI comparison reports
         - [ ] PDF report generation with planned vs. actual metrics
         - [ ] Include property details and performance summary

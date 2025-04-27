@@ -88,7 +88,23 @@ class Utilities(BaseModel):
     gas: Decimal = Decimal("0")
     trash: Decimal = Decimal("0")
     
-    _validate_decimal = percentage_validator()
+    @validator("water", "electricity", "gas", "trash")
+    def validate_decimal_fields(cls, v: Decimal) -> Decimal:
+        """
+        Validate decimal fields.
+        
+        Args:
+            v: The value to validate
+            
+        Returns:
+            The validated value
+            
+        Raises:
+            ValueError: If the value is invalid
+        """
+        if not validate_decimal(v, 0):
+            raise ValueError("Value must be a positive decimal")
+        return v
 
 
 class MonthlyIncome(BaseModel):
@@ -104,7 +120,23 @@ class MonthlyIncome(BaseModel):
     other_income: Decimal = Decimal("0")
     income_notes: Optional[str] = None
     
-    _validate_decimal = percentage_validator()
+    @validator("rental_income", "parking_income", "laundry_income", "other_income")
+    def validate_decimal_fields(cls, v: Decimal) -> Decimal:
+        """
+        Validate decimal fields.
+        
+        Args:
+            v: The value to validate
+            
+        Returns:
+            The validated value
+            
+        Raises:
+            ValueError: If the value is invalid
+        """
+        if not validate_decimal(v, 0):
+            raise ValueError("Value must be a positive decimal")
+        return v
     
     def total(self) -> Decimal:
         """
@@ -138,7 +170,23 @@ class MonthlyExpenses(BaseModel):
     other_expenses: Decimal = Decimal("0")
     expense_notes: Optional[str] = None
     
-    _validate_decimal = percentage_validator()
+    @validator("property_tax", "insurance", "repairs", "capex", "property_management", "hoa_fees", "other_expenses")
+    def validate_decimal_fields(cls, v: Decimal) -> Decimal:
+        """
+        Validate decimal fields.
+        
+        Args:
+            v: The value to validate
+            
+        Returns:
+            The validated value
+            
+        Raises:
+            ValueError: If the value is invalid
+        """
+        if not validate_decimal(v, 0):
+            raise ValueError("Value must be a positive decimal")
+        return v
     
     def total(self) -> Decimal:
         """

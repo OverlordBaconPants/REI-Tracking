@@ -361,6 +361,7 @@ Common code smells:
 | 2025-04-27 | Implemented bulk transaction import | To provide a robust system for importing transactions from CSV and Excel files with flexible column mapping, data validation, duplicate detection, and detailed import reporting |
 | 2025-04-27 | Implemented property management operations | To enable comprehensive property management with add/edit/remove functionality, property listing with filtering and sorting, address standardization, and permission-based access |
 | 2025-04-27 | Implemented partner equity management | To provide comprehensive partner management with equity share assignment, property manager designation, visibility settings, and contribution/distribution tracking |
+| 2025-04-27 | Implemented equity tracking and cash flow calculations | To provide property owners with detailed equity tracking based on loan paydown and appreciation, comprehensive cash flow metrics based on actual transaction data, and comparison of actual performance to analysis projections |
 
 ---
 
