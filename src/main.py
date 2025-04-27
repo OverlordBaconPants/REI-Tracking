@@ -103,6 +103,20 @@ def register_routes():
         raise
 
 
+# Initialize dashboards
+def init_dashboards():
+    """Initialize Dash applications."""
+    try:
+        from src.dash_apps.dash_portfolio import create_portfolio_dash
+        
+        # Create and attach portfolio dashboard
+        app.portfolio_dash = create_portfolio_dash(app)
+        app_logger.info("Portfolio dashboard initialized successfully")
+    except Exception as e:
+        app_logger.error(f"Error initializing dashboards: {str(e)}")
+        app_logger.exception("Dashboard initialization error details:")
+
+
 # Initialize application
 def init_app():
     """Initialize the application."""
@@ -117,6 +131,9 @@ def init_app():
     
     # Register routes
     register_routes()
+    
+    # Initialize dashboards
+    init_dashboards()
     
     # Return the configured app
     return app

@@ -362,6 +362,9 @@ Common code smells:
 | 2025-04-27 | Implemented property management operations | To enable comprehensive property management with add/edit/remove functionality, property listing with filtering and sorting, address standardization, and permission-based access |
 | 2025-04-27 | Implemented partner equity management | To provide comprehensive partner management with equity share assignment, property manager designation, visibility settings, and contribution/distribution tracking |
 | 2025-04-27 | Implemented equity tracking and cash flow calculations | To provide property owners with detailed equity tracking based on loan paydown and appreciation, comprehensive cash flow metrics based on actual transaction data, and comparison of actual performance to analysis projections |
+| 2025-04-27 | Implemented KPI comparison reports | To enable property owners to generate detailed PDF reports comparing planned vs. actual metrics, with property details, performance summaries, and visualizations |
+| 2025-04-27 | Implemented portfolio dashboard | To provide property owners with a comprehensive view of their portfolio, including equity distribution, cash flow by property, income and expense breakdowns, and key metrics in a mobile-responsive design with time period filtering |
+| 2025-04-27 | Implemented loan tracking and management | To provide comprehensive loan management with support for primary and secondary financing, loan details tracking, remaining balance and equity calculations, and monthly equity gain tracking |
 
 ---
 

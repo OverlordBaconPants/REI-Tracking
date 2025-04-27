@@ -4,6 +4,7 @@ Property financial service module for the REI-Tracker application.
 This module provides services for property financial tracking, including
 income and expense tracking, utility expense tracking, maintenance/capex recording,
 equity tracking, cash flow calculations, and comparison of actual performance to analysis projections.
+It also provides functions for retrieving property data for dashboards.
 """
 
 import logging
@@ -11,17 +12,59 @@ from typing import Dict, List, Any, Optional, Tuple
 from decimal import Decimal
 from datetime import datetime, date
 from collections import defaultdict
+from flask_login import current_user
 
 from src.models.transaction import Transaction
 from src.models.property import Property, MonthlyIncome, MonthlyExpenses, Utilities
 from src.models.analysis import Analysis
+from src.models.loan import Loan, LoanType, LoanStatus
 from src.repositories.transaction_repository import TransactionRepository
 from src.repositories.property_repository import PropertyRepository
 from src.repositories.analysis_repository import AnalysisRepository
+from src.repositories.loan_repository import LoanRepository
 from src.services.property_access_service import PropertyAccessService
+from src.services.loan_service import LoanService
 
 # Set up logger
 logger = logging.getLogger(__name__)
+
+# Function to get properties for a user (used by dashboards)
+def get_properties_for_user(user_id: str, username: str) -> List[Dict[str, Any]]:
+    """
+    Get properties accessible to a user with financial data for dashboard display.
+    
+    Args:
+        user_id: ID of the user
+        username: Username of the user
+        
+    Returns:
+        List of property dictionaries with financial data
+    """
+    try:
+        service = PropertyFinancialService()
+        property_access_service = PropertyAccessService()
+        
+        # Get properties accessible to the user
+        accessible_properties = property_access_service.get_accessible_properties(user_id)
+        
+        # Convert to dictionaries with financial data
+        property_dicts = []
+        for prop in accessible_properties:
+            prop_dict = prop.to_dict()
+            
+            # Add financial data
+            financial_summary = service._calculate_financial_summary(prop, [])
+            
+            # Merge financial data into property dictionary
+            prop_dict.update(financial_summary)
+            
+            property_dicts.append(prop_dict)
+        
+        return property_dicts
+        
+    except Exception as e:
+        logger.error(f"Error getting properties for user: {str(e)}")
+        return []
 
 
 class PropertyFinancialService:
@@ -88,6 +131,79 @@ class PropertyFinancialService:
         self.property_repo = PropertyRepository()
         self.analysis_repo = AnalysisRepository()
         self.property_access_service = PropertyAccessService()
+        self.loan_repo = LoanRepository()
+        
+    def _get_loan_details(self, property_id: str) -> Dict[str, Any]:
+        """
+        Get loan details for a property using the LoanService.
+        
+        Args:
+            property_id: ID of the property
+            
+        Returns:
+            Dictionary with loan details
+        """
+        try:
+            loan_service = LoanService()
+            active_loans = loan_service.get_active_loans_by_property(property_id)
+            
+            if not active_loans:
+                return {
+                    "has_loans": False,
+                    "total_debt": Decimal("0"),
+                    "monthly_payment": Decimal("0"),
+                    "loans": []
+                }
+            
+            # Calculate total debt and monthly payment
+            total_debt = loan_service.get_total_debt_for_property(property_id)
+            monthly_payment = loan_service.get_total_monthly_payment_for_property(property_id)
+            
+            # Get details for each loan
+            loan_details = []
+            for loan in active_loans:
+                # Calculate remaining balance and equity from principal
+                current_balance = loan.calculate_remaining_balance()
+                
+                # Calculate monthly equity gain (principal portion of payment)
+                loan_details_obj = loan.to_loan_details()
+                monthly_payment_obj = loan_details_obj.calculate_payment()
+                monthly_equity_gain = monthly_payment_obj.principal
+                
+                loan_details.append({
+                    "id": loan.id,
+                    "name": loan.name or f"{loan.loan_type.value.capitalize()} Loan",
+                    "loan_type": loan.loan_type.value,
+                    "amount": loan.amount,
+                    "interest_rate": loan.interest_rate,
+                    "term_months": loan.term_months,
+                    "start_date": loan.start_date,
+                    "is_interest_only": loan.is_interest_only,
+                    "lender": loan.lender,
+                    "loan_number": loan.loan_number,
+                    "current_balance": current_balance,
+                    "monthly_payment": monthly_payment_obj.total,
+                    "monthly_principal": monthly_payment_obj.principal,
+                    "monthly_interest": monthly_payment_obj.interest,
+                    "equity_from_principal": loan.amount - current_balance,
+                    "monthly_equity_gain": monthly_equity_gain
+                })
+            
+            return {
+                "has_loans": True,
+                "total_debt": total_debt,
+                "monthly_payment": monthly_payment,
+                "loans": loan_details
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting loan details for property {property_id}: {str(e)}")
+            return {
+                "has_loans": False,
+                "total_debt": Decimal("0"),
+                "monthly_payment": Decimal("0"),
+                "loans": []
+            }
     
     def update_property_financials(self, property_id: str) -> Optional[Property]:
         """
@@ -463,26 +579,28 @@ class PropertyFinancialService:
             today = date.today()
             months_owned = (today.year - purchase_date.year) * 12 + (today.month - purchase_date.month)
             
-            # Get loan details
-            primary_loan_balance = Decimal("0")
-            if property_obj.primary_loan:
-                primary_loan_balance = self._calculate_loan_balance(
-                    property_obj.primary_loan.amount,
-                    property_obj.primary_loan.interest_rate,
-                    property_obj.primary_loan.term,
-                    months_owned
-                )
+            # Get loan details using the comprehensive loan model
+            loan_details = self._get_loan_details(property_id)
+            total_loan_balance = loan_details["total_debt"]
+            if hasattr(total_loan_balance, "dollars"):
+                total_loan_balance = Decimal(str(total_loan_balance.dollars))
+            else:
+                total_loan_balance = Decimal(str(total_loan_balance))
+            monthly_equity_gain_from_loans = Decimal("0")
             
-            secondary_loan_balance = Decimal("0")
-            if property_obj.secondary_loan:
-                secondary_loan_balance = self._calculate_loan_balance(
-                    property_obj.secondary_loan.amount,
-                    property_obj.secondary_loan.interest_rate,
-                    property_obj.secondary_loan.term,
-                    months_owned
-                )
-            
-            total_loan_balance = primary_loan_balance + secondary_loan_balance
+            # Calculate total initial loan balance and monthly equity gain
+            initial_loan_balance = Decimal("0")
+            monthly_equity_gain_from_loans = Decimal("0")
+            for loan in loan_details["loans"]:
+                if hasattr(loan["amount"], "dollars"):
+                    initial_loan_balance += Decimal(str(loan["amount"].dollars))
+                else:
+                    initial_loan_balance += Decimal(str(loan["amount"]))
+                    
+                if hasattr(loan["monthly_principal"], "dollars"):
+                    monthly_equity_gain_from_loans += Decimal(str(loan["monthly_principal"].dollars))
+                else:
+                    monthly_equity_gain_from_loans += Decimal(str(loan["monthly_principal"]))
             
             # Estimate current property value (using 3% annual appreciation as default)
             annual_appreciation_rate = Decimal("0.03")  # 3% annual appreciation
@@ -490,12 +608,11 @@ class PropertyFinancialService:
             estimated_value = purchase_price * (Decimal("1") + annual_appreciation_rate) ** years_owned
             
             # Calculate equity
-            initial_equity = purchase_price - (property_obj.primary_loan.amount if property_obj.primary_loan else Decimal("0")) - (property_obj.secondary_loan.amount if property_obj.secondary_loan else Decimal("0"))
+            initial_equity = purchase_price - initial_loan_balance
             current_equity = estimated_value - total_loan_balance
             equity_gain = current_equity - initial_equity
             
             # Calculate equity from loan paydown
-            initial_loan_balance = (property_obj.primary_loan.amount if property_obj.primary_loan else Decimal("0")) + (property_obj.secondary_loan.amount if property_obj.secondary_loan else Decimal("0"))
             equity_from_loan_paydown = initial_loan_balance - total_loan_balance
             
             # Calculate equity from appreciation
@@ -528,6 +645,8 @@ class PropertyFinancialService:
                 "equity_from_loan_paydown": str(equity_from_loan_paydown),
                 "equity_from_appreciation": str(equity_from_appreciation),
                 "monthly_equity_gain": str(monthly_equity_gain),
+                "monthly_equity_gain_from_loans": str(monthly_equity_gain_from_loans),
+                "loan_details": loan_details,
                 "partner_equity": partner_equity
             }
             

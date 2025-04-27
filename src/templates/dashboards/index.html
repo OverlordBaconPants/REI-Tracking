@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Dashboards{% endblock %}
+{% block body_class %}dashboards-page{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mt-4 mb-4">Dashboards</h1>
+            <p class="lead">Select a dashboard to view detailed metrics and visualizations for your real estate portfolio.</p>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-navy text-white">
+                    <h5 class="mb-0">Portfolio Dashboard</h5>
+                </div>
+                <div class="card-body">
+                    <p>View your entire portfolio at a glance with key metrics including equity distribution, cash flow, income, and expenses.</p>
+                    <ul>
+                        <li>Portfolio value and equity visualizations</li>
+                        <li>Cash flow by property</li>
+                        <li>Income and expense breakdown</li>
+                        <li>Property comparison metrics</li>
+                    </ul>
+                </div>
+                <div class="card-footer bg-white border-0">
+                    <a href="{{ url_for('dashboards.portfolio_view') }}" class="btn btn-primary w-100">View Portfolio Dashboard</a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Placeholder for future dashboards -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">Amortization Dashboard</h5>
+                </div>
+                <div class="card-body">
+                    <p>Track your loan amortization schedules and equity growth over time.</p>
+                    <ul>
+                        <li>Loan balance and equity visualization</li>
+                        <li>Principal and interest breakdown</li>
+                        <li>Amortization schedule</li>
+                        <li>Equity growth projections</li>
+                    </ul>
+                </div>
+                <div class="card-footer bg-white border-0">
+                    <button class="btn btn-secondary w-100" disabled>Coming Soon</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">Transactions Dashboard</h5>
+                </div>
+                <div class="card-body">
+                    <p>Analyze your property transactions with advanced filtering and visualization tools.</p>
+                    <ul>
+                        <li>Transaction filtering by property, date, and category</li>
+                        <li>Income and expense trends</li>
+                        <li>Category breakdown analysis</li>
+                        <li>Transaction reporting tools</li>
+                    </ul>
+                </div>
+                <div class="card-footer bg-white border-0">
+                    <button class="btn btn-secondary w-100" disabled>Coming Soon</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

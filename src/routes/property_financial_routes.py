@@ -6,9 +6,13 @@ and comparison of actual performance to analysis projections.
 """
 
 import logging
-from flask import Blueprint, request, jsonify, g
+import io
+import traceback
+from datetime import datetime
+from flask import Blueprint, request, jsonify, g, send_file
 
 from src.services.property_financial_service import PropertyFinancialService
+from src.services.kpi_comparison_report_generator import KPIComparisonReportGenerator
 from src.utils.auth_middleware import login_required, property_access_required
 
 # Set up logger
@@ -17,8 +21,9 @@ logger = logging.getLogger(__name__)
 # Create blueprint
 property_financial_bp = Blueprint('property_financials', __name__, url_prefix='/api/property-financials')
 
-# Create service
+# Create services
 property_financial_service = PropertyFinancialService()
+kpi_report_generator = KPIComparisonReportGenerator()
 
 
 @property_financial_bp.route('/update/<property_id>', methods=['POST'])
@@ -339,4 +344,93 @@ def compare_actual_to_projected(property_id):
         return jsonify({
             'success': False,
             'error': f"Error comparing actual to projected: {str(e)}"
+        }), 500
+
+
+@property_financial_bp.route('/kpi-report/<property_id>', methods=['GET'])
+@login_required
+def generate_kpi_comparison_report(property_id):
+    """
+    Generate a PDF report comparing planned vs. actual KPI metrics for a property.
+    
+    Args:
+        property_id: ID of the property
+        
+    Returns:
+        PDF file download
+    """
+    try:
+        # Get user ID from session
+        user_id = g.current_user.id
+        
+        # Get query parameters
+        analysis_id = request.args.get('analysis_id')
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        
+        # Get property details for filename
+        property_obj = property_financial_service.property_repo.get_by_id(property_id)
+        if not property_obj:
+            return jsonify({
+                'success': False,
+                'error': 'Property not found'
+            }), 404
+        
+        # Create a buffer for the PDF
+        buffer = io.BytesIO()
+        
+        # Create metadata for the report
+        metadata = {
+            "generated_by": g.current_user.name,
+            "date_range": "All Dates"
+        }
+        
+        # Set date range in metadata if provided
+        if start_date and end_date:
+            metadata["date_range"] = f"{start_date} to {end_date}"
+        elif start_date:
+            metadata["date_range"] = f"From {start_date}"
+        elif end_date:
+            metadata["date_range"] = f"Until {end_date}"
+        
+        # Generate report
+        kpi_report_generator.generate(
+            property_id,
+            user_id,
+            buffer,
+            analysis_id=analysis_id,
+            start_date=start_date,
+            end_date=end_date,
+            metadata=metadata
+        )
+        
+        # Reset buffer position
+        buffer.seek(0)
+        
+        # Create filename
+        property_name = property_obj.address.split(',')[0].strip().replace(' ', '_')
+        date_part = datetime.now().strftime('%Y%m%d')
+        filename = f"KPI_Comparison_Report_{property_name}_{date_part}.pdf"
+        
+        # Return PDF file
+        return send_file(
+            buffer,
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=filename
+        )
+        
+    except ValueError as e:
+        logger.error(f"Value error generating KPI comparison report: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 404
+        
+    except Exception as e:
+        logger.error(f"Error generating KPI comparison report: {str(e)}")
+        logger.error(f"Stack trace: {traceback.format_exc()}")
+        return jsonify({
+            'success': False,
+            'error': f"Error generating KPI comparison report: {str(e)}"
         }), 500

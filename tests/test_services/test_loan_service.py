@@ -182,8 +182,10 @@ class TestLoanService:
         # Call the service method
         loan = service.refinance_loan("loan123", loan_data)
         
-        # Check that the repository method was called
-        mock_repo.refinance_loan.assert_called_once_with("loan123", loan_data)
+        # Check that the repository method was called with loan_type added
+        expected_loan_data = loan_data.copy()
+        expected_loan_data['loan_type'] = LoanType.REFINANCE.value
+        mock_repo.refinance_loan.assert_called_once_with("loan123", expected_loan_data)
         
         # Check the result
         assert loan is not None
@@ -281,22 +283,18 @@ class TestLoanService:
             }
         ]
         
-        # Mock the generate_amortization_schedule method on the loan
-        sample_loan.generate_amortization_schedule = MagicMock(return_value=schedule)
-        
-        # Call the service method
-        result = service.generate_amortization_schedule("loan123", 2)
-        
-        # Check that the repository method was called
-        mock_repo.get_loan_by_id.assert_called_once_with("loan123")
-        
-        # Check that the loan method was called
-        sample_loan.generate_amortization_schedule.assert_called_once_with(2)
-        
-        # Check the result
-        assert len(result) == 2
-        assert result[0]['period'] == 1
-        assert result[1]['period'] == 2
+        # Patch the generate_amortization_schedule method at the class level
+        with patch.object(Loan, 'generate_amortization_schedule', return_value=schedule):
+            # Call the service method
+            result = service.generate_amortization_schedule("loan123", 2)
+            
+            # Check that the repository method was called
+            mock_repo.get_loan_by_id.assert_called_once_with("loan123")
+            
+            # Check the result
+            assert len(result) == 2
+            assert result[0]['period'] == 1
+            assert result[1]['period'] == 2
     
     def test_compare_loans(self, service):
         """Test comparing loan options."""

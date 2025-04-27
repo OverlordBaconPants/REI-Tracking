@@ -170,6 +170,104 @@ The application includes comprehensive transaction reporting capabilities:
   - Support for various document types
   - Secure file handling and naming
 
+## KPI Comparison Reports
+
+The application features a robust KPI comparison reporting system:
+
+- **Planned vs. Actual Metrics**: Compare projected performance from analyses with actual results
+  - Side-by-side comparison of key financial metrics
+  - Variance calculation and highlighting
+  - Performance scoring based on metric comparisons
+  
+- **Comprehensive Metrics Coverage**: Compare a wide range of investment metrics
+  - Monthly income and expenses
+  - Net Operating Income (NOI)
+  - Cash flow
+  - Cap rate
+  - Cash-on-cash return
+  - Debt Service Coverage Ratio (DSCR)
+  
+- **PDF Report Generation**: Create professional PDF reports with detailed comparisons
+  - Property details and performance summary
+  - KPI comparison tables with variance calculations
+  - Data visualizations for key metrics
+  - Support for custom date ranges
+  
+- **Data Visualizations**: Dynamic charts for metric comparisons
+  - Income vs. expenses bar charts
+  - NOI and cash flow comparisons
+  - Investment metrics comparisons
+
+## Portfolio Dashboard
+
+The application features a comprehensive portfolio dashboard:
+
+- **Portfolio Value and Equity Visualizations**: View your entire portfolio at a glance
+  - Equity distribution pie chart with property breakdown
+  - Total portfolio value calculation and display
+  - Total equity and monthly equity gain metrics
+  
+- **Cash Flow Visualizations**: Analyze cash flow across your portfolio
+  - Cash flow by property bar chart
+  - Net monthly cash flow calculation and display
+  - Color-coded indicators for positive/negative cash flow
+  
+- **Income and Expense Breakdown**: Understand your financial performance
+  - Monthly income by property pie chart
+  - Monthly expenses breakdown by category
+  - Detailed expense category analysis
+  
+- **Property Comparison Table**: Compare key metrics across properties
+  - Property details with equity share percentages
+  - Monthly income and expense breakdown
+  - Net cash flow with visual indicators
+  - Total equity and monthly equity gain
+  - Cash on cash return calculation
+  
+- **Mobile-Responsive Design**: Access your dashboard from any device
+  - Responsive layout for different screen sizes
+  - Touch-friendly controls and visualizations
+  - Optimized chart rendering for mobile devices
+  
+- **Time Period Filtering**: Analyze performance over different time periods
+  - Filter by last 30 days, 90 days, 6 months, 12 months, or all time
+  - Dynamic recalculation of metrics based on selected period
+  - Consistent date range application across all visualizations
+
+## Loan Tracking and Management
+
+The application includes a comprehensive loan tracking and management system:
+
+- **Multiple Loan Types**: Support for various financing scenarios
+  - Primary mortgage financing
+  - Secondary/seller financing
+  - Refinance loans
+  - Additional loans for renovations or improvements
+
+- **Loan Details Tracking**: Comprehensive tracking of loan information
+  - Loan amount and interest rate
+  - Loan term and start date
+  - Payment frequency and amount
+  - Loan type classification
+
+- **Balance and Equity Calculations**: Track your loan progress over time
+  - Remaining balance calculation based on amortization
+  - Principal equity calculation from loan payments
+  - Total equity tracking including appreciation
+  - Loan-to-value ratio monitoring
+
+- **Monthly Equity Gain Tracking**: Understand the equity building process
+  - Principal vs. interest breakdown for each payment
+  - Monthly equity gain from loan payments
+  - Cumulative equity gained over time
+  - Amortization schedule generation
+
+- **Loan Comparison Tools**: Compare different loan scenarios
+  - Side-by-side comparison of loan terms
+  - Total interest paid calculation
+  - Monthly payment comparison
+  - Break-even analysis for refinancing
+
 ## Bulk Transaction Import
 
 The application features a robust bulk transaction import system:

@@ -117,11 +117,15 @@ class LoanService:
         Returns:
             Optional[Loan]: The new loan if successful, None otherwise
         """
+        # Add loan_type field for refinance
+        loan_data = new_loan_data.copy()
+        loan_data['loan_type'] = LoanType.REFINANCE.value
+        
         # Validate the new loan data
-        self._validate_loan_data(new_loan_data)
+        self._validate_loan_data(loan_data)
         
         # Perform the refinance
-        return self.loan_repository.refinance_loan(old_loan_id, new_loan_data)
+        return self.loan_repository.refinance_loan(old_loan_id, loan_data)
     
     def pay_off_loan(self, loan_id: str, payoff_date: Optional[date] = None) -> Optional[Loan]:
         """
