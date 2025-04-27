@@ -86,3 +86,46 @@ def app_client():
     # Create a test client
     with app.test_client() as client:
         yield client
+
+
+@pytest.fixture
+def client(app_client):
+    """
+    Alias for app_client fixture.
+    
+    This fixture is an alias for the app_client fixture.
+    
+    Returns:
+        A Flask test client
+    """
+    return app_client
+
+
+@pytest.fixture
+def auth_headers():
+    """
+    Create authentication headers for testing.
+    
+    This fixture creates authentication headers for testing routes
+    that require authentication.
+    
+    Returns:
+        A dictionary of authentication headers
+    """
+    from unittest.mock import patch
+    
+    # Mock the current_user in flask_login
+    with patch('flask_login.utils._get_user') as mock_get_user:
+        # Create a mock user
+        mock_user = type('User', (), {
+            'id': 'test-user-id',
+            'is_authenticated': True,
+            'is_active': True
+        })
+        mock_get_user.return_value = mock_user
+        
+        # Return headers with a mock session token
+        return {
+            'Authorization': 'Bearer test-token',
+            'Content-Type': 'application/json'
+        }

@@ -113,12 +113,12 @@ For any task to be considered complete, it must meet these criteria:
     - [x] Support for interest-only loan options
     - [x] Amortization schedule generation
     - [x] Loan comparison tools
-- [ ] Create property comps functionality
-    - [ ] Integrate comps API with session-based rate limiting
-    - [ ] Build comps visualization and data storage
-    - [ ] Implement property estimation with range indicators (low, high, estimated)
-    - [ ] Support for market statistics by location
-    - [ ] Implement correlation scoring for comparable properties
+- [x] Create property comps functionality
+    - [x] Integrate comps API with session-based rate limiting
+    - [x] Build comps visualization and data storage
+    - [x] Implement property estimation with range indicators (low, high, estimated)
+    - [x] Support for market statistics by location
+    - [x] Implement correlation scoring for comparable properties
 - [ ] Implement financial calculations
     - [ ] Monthly cash flow calculation with comprehensive expense categories
     - [ ] Cash-on-cash return calculation

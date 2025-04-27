@@ -352,6 +352,7 @@ Common code smells:
 | 2025-04-26 | Implemented investment metrics calculator | To provide specialized calculators for ROI, equity tracking with appreciation projections, and other investment-specific metrics |
 | 2025-04-26 | Implemented analysis CRUD operations | To provide complete API for creating, reading, updating, and deleting analyses with specialized validation and normalization for different analysis types |
 | 2025-04-26 | Refactored Loan model to use Pydantic V2 | To improve validation robustness, separate data models from validation models, and implement custom validators for Money and Percentage types |
+| 2025-04-26 | Implemented property comps functionality | To provide accurate property valuation with correlation scoring, range indicators, and market statistics integration |
 
 ---
 

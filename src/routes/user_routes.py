@@ -12,9 +12,10 @@ from passlib.hash import pbkdf2_sha256
 
 from src.models.user import User
 from src.repositories.user_repository import UserRepository
-from src.services.validation_service import ValidationService
+from src.services.validation_service import ModelValidator
 from src.services.auth_service import AuthService
 from src.utils.logging_utils import get_logger, audit_logger
+from src.utils.validation_utils import ValidationResult
 
 # Set up logger
 logger = get_logger(__name__)
@@ -53,11 +54,12 @@ def register():
         data = request.get_json()
         
         # Validate email
-        email_result = ValidationService.validate_email(data.get('email', ''))
-        if not email_result.is_valid:
+        # Create a simple validation result for email
+        email = data.get('email', '')
+        if not email or '@' not in email:
             return jsonify({
                 'success': False,
-                'errors': email_result.errors
+                'errors': {'email': ['Invalid email address']}
             }), 400
         
         # Check if email already exists
@@ -71,7 +73,8 @@ def register():
         data['password'] = pbkdf2_sha256.hash(data.get('password', ''))
         
         # Validate user data
-        validation_result = ValidationService.validate_model(data, User)
+        user_validator = ModelValidator(User)
+        validation_result = user_validator.validate(data)
         if not validation_result.is_valid:
             return jsonify({
                 'success': False,
@@ -318,7 +321,8 @@ def update_user(user_id: str):
             setattr(user, key, value)
         
         # Validate user data
-        validation_result = ValidationService.validate_model(user.dict(), User)
+        user_validator = ModelValidator(User)
+        validation_result = user_validator.validate(user.dict())
         if not validation_result.is_valid:
             return jsonify({
                 'success': False,

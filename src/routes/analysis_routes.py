@@ -7,12 +7,13 @@ and specialized analysis features.
 
 from typing import Dict, Any, List, Optional
 import json
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify, current_app, session
 from flask_login import login_required, current_user
 
 from src.models.analysis import Analysis, UnitType, CompsData
 from src.repositories.analysis_repository import AnalysisRepository
 from src.services.validation_service import AnalysisValidator
+from src.services.rentcast_service import RentcastService
 from src.utils.calculations.analysis import create_analysis as create_analysis_calculator
 from src.utils.logging_utils import get_logger
 
@@ -27,6 +28,9 @@ analysis_repository = AnalysisRepository()
 
 # Initialize validator
 analysis_validator = AnalysisValidator(Analysis)
+
+# Initialize RentcastService
+rentcast_service = RentcastService()
 
 
 @analysis_bp.route('/', methods=['GET'])
@@ -380,6 +384,134 @@ def get_analyses_by_type(analysis_type: str):
             'message': f"Error getting analyses by type: {str(e)}"
         }), 500
 
+
+@analysis_bp.route('/run_comps/<analysis_id>', methods=['POST'])
+@login_required
+def run_property_comps(analysis_id: str):
+    """
+    Run property comps for an analysis.
+    
+    Args:
+        analysis_id: ID of the analysis to run comps for
+        
+    Returns:
+        JSON response with the updated analysis
+    """
+    try:
+        # Get the analysis
+        analysis = analysis_repository.get_by_id(analysis_id)
+        
+        # Check if the analysis exists
+        if not analysis:
+            return jsonify({
+                'success': False,
+                'message': 'Analysis not found'
+            }), 404
+        
+        # Check if the user has access to the analysis
+        if analysis.user_id != current_user.id:
+            return jsonify({
+                'success': False,
+                'message': 'You do not have access to this analysis'
+            }), 403
+        
+        # Get max runs from config with default fallback
+        max_runs = current_app.config.get('MAX_COMP_RUNS_PER_SESSION', 3)
+        
+        # Check session run count
+        session_key = f'comps_run_count_{analysis_id}'
+        run_count = session.get(session_key, 0)
+        
+        logger.debug(f"Current run count for {analysis_id}: {run_count}")
+        logger.debug(f"Max runs allowed: {max_runs}")
+        
+        if run_count >= max_runs:
+            return jsonify({
+                'success': False,
+                'message': f'Maximum comp runs ({max_runs}) reached for this session'
+            }), 429  # Too Many Requests
+        
+        # Get property details from analysis
+        address = analysis.address
+        bedrooms = analysis.bedrooms or 3  # Default to 3 bedrooms if not specified
+        bathrooms = analysis.bathrooms or 2  # Default to 2 bathrooms if not specified
+        square_feet = analysis.square_footage or 1500  # Default to 1500 sq ft if not specified
+        year_built = analysis.year_built or 2000  # Default to 2000 if not specified
+        
+        # Get property comparables
+        property_comps = rentcast_service.get_property_comparables(
+            address=address,
+            bedrooms=bedrooms,
+            bathrooms=bathrooms,
+            square_feet=square_feet,
+            radius_miles=1.0,
+            limit=10
+        )
+        
+        # Get rental estimate
+        rental_estimate = rentcast_service.get_rental_estimate(
+            address=address,
+            bedrooms=bedrooms,
+            bathrooms=bathrooms,
+            square_feet=square_feet
+        )
+        
+        # Get property value estimate
+        property_value = rentcast_service.get_property_value_estimate(
+            address=address,
+            bedrooms=bedrooms,
+            bathrooms=bathrooms,
+            square_feet=square_feet,
+            year_built=year_built
+        )
+        
+        # Format comparables for analysis
+        formatted_comps = rentcast_service.format_comparables_for_analysis(property_comps)
+        
+        # Update run count in formatted comps
+        formatted_comps['run_count'] = run_count + 1
+        
+        # Add rental estimate data
+        if rental_estimate:
+            formatted_comps['rental_comps'] = {
+                'estimated_rent': rental_estimate.get('rent', 0),
+                'rent_range_low': rental_estimate.get('rentRangeLow', 0),
+                'rent_range_high': rental_estimate.get('rentRangeHigh', 0),
+                'comparable_rentals': rental_estimate.get('comparables', []),
+                'confidence_score': rental_estimate.get('confidenceScore', 0)
+            }
+        
+        # Create CompsData object
+        comps_data = CompsData(
+            last_run=formatted_comps['last_run'],
+            run_count=formatted_comps['run_count'],
+            estimated_value=formatted_comps['estimated_value'],
+            value_range_low=formatted_comps['value_range_low'],
+            value_range_high=formatted_comps['value_range_high'],
+            comparables=formatted_comps['comparables']
+        )
+        
+        # Update analysis with comps data
+        analysis.comps_data = comps_data
+        
+        # Save updated analysis
+        updated_analysis = analysis_repository.update(analysis)
+        
+        # Increment run count in session
+        session[session_key] = run_count + 1
+        
+        # Return updated analysis
+        return jsonify({
+            'success': True,
+            'message': 'Comps updated successfully',
+            'analysis': updated_analysis.dict()
+        })
+    except Exception as e:
+        logger.error(f"Error running property comps: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f"Error running property comps: {str(e)}"
+        }), 500
 
 @analysis_bp.route('/calculate', methods=['POST'])
 @login_required

@@ -7,7 +7,7 @@ This project provides a Flask- and Dash-based Python web application for real es
 💰 Financial Calculation Engine - Calculate investment metrics including CoC return, ROI, cap rates, and DSCR with proper decimal handling
 💵 Transaction Management System - Record, categorize, and report on property-related financial transactions with equity-based splitting
 📊 Analysis System - Conduct detailed property analyses across multiple strategies (LTR, BRRRR, Lease Option, Multi-Family, PadSplit)
-📈 Property Valuation - Integrate with RentCast API for accurate property comps and market valuations
+📈 Property Valuation - Integrate with RentCast API for accurate property comps and market valuations with correlation scoring, range indicators, and market statistics
 🌐 Address Services - Leverage Geoapify for address validation, autocomplete, and geocoding
 📱 Dynamic Dashboards - View customized KPI reports, equity tracking, and portfolio summaries
 🔒 User Authentication - Secure multi-user access with role-based permissions, session management, and security features
@@ -65,6 +65,25 @@ The application includes specialized investment metric calculators:
   - Gross rent multiplier (GRM)
   - Price per unit for multi-family properties
   - Breakeven occupancy calculation
+
+## Property Comps & Valuation
+
+The application features a sophisticated property valuation system:
+
+- **Comparable Properties**: Fetch and analyze comparable properties from RentCast API
+- **Correlation Scoring**: Calculate similarity scores between subject property and comps based on:
+  - Distance from subject property
+  - Bedroom count similarity
+  - Bathroom count similarity
+  - Square footage similarity
+  - Year built similarity
+- **Value Estimation**: Generate property value estimates with range indicators:
+  - Low value estimate
+  - High value estimate
+  - Weighted average estimate based on correlation scores
+- **Market Statistics**: Access location-based market data for comprehensive analysis
+- **Session-based Rate Limiting**: Prevent API abuse with configurable rate limits
+- **Data Persistence**: Store comps data for historical analysis and comparison
 
 ## Tech Stack
 - Python
