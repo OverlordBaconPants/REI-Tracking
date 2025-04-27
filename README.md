@@ -18,7 +18,8 @@ This project provides a Flask- and Dash-based Python web application for real es
 The application includes robust financial calculation components:
 
 - **Money and Percentage Classes**: Handle monetary values and percentages with proper decimal precision
-- **Validation Framework**: Comprehensive validation with error collection and reporting
+- **Validation Framework**: Comprehensive validation with error collection and reporting using Pydantic V2
+- **Loan Model**: Fully Pydantic-based model with custom validators for Money and Percentage types
 - **LoanDetails Model**: Support for various loan types (standard amortizing, interest-only, zero-interest)
 - **MonthlyPayment Class**: Track principal and interest components of payments
 - **Safe Calculation Decorator**: Error handling for calculations with default values
