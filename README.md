@@ -109,6 +109,18 @@ The application includes a comprehensive transaction filtering system:
 - **Admin Override**: Administrators have full visibility across all properties
 - **API Endpoints**: RESTful API endpoints for filtered transactions, grouped transactions, and property summaries
 
+## Reimbursement System
+
+The application features a sophisticated reimbursement tracking system:
+
+- **Status Tracking**: Track reimbursement status (pending, in_progress, completed) with appropriate validations
+- **Documentation Support**: Upload and store documentation for reimbursements
+- **Automatic Processing**: Automatically handle reimbursements for wholly-owned properties
+- **Equity-Based Calculation**: Calculate reimbursement amounts based on partner equity shares
+- **Partner Shares**: Track individual partner shares for each reimbursement
+- **API Endpoints**: RESTful API endpoints for updating reimbursement status, calculating shares, and retrieving pending/owed reimbursements
+- **User-Specific Views**: View reimbursements pending for the current user and reimbursements owed to others
+
 ## Property Comps & Valuation
 
 The application features a sophisticated property valuation system:

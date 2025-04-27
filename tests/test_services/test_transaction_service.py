@@ -73,9 +73,11 @@ def mock_transactions():
 class TestTransactionService:
     """Test class for transaction service."""
 
+    @patch('src.services.transaction_service.ReimbursementService')
+    @patch('src.services.transaction_service.PropertyRepository')
     @patch('src.services.transaction_service.TransactionRepository')
     @patch('src.services.transaction_service.PropertyAccessService')
-    def test_get_transactions(self, mock_property_access_class, mock_repo_class, mock_transactions):
+    def test_get_transactions(self, mock_property_access_class, mock_repo_class, mock_property_repo_class, mock_reimbursement_class, mock_transactions):
         """Test getting transactions."""
         # Set up mocks
         mock_repo = mock_repo_class.return_value
@@ -90,8 +92,22 @@ class TestTransactionService:
             MagicMock(id="456 Oak Ave")
         ]
         
+        # Set up ReimbursementService mock
+        mock_reimbursement = mock_reimbursement_class.return_value
+        
+        # Create a user mock
+        mock_user = MagicMock()
+        mock_user.is_admin.return_value = False
+        mock_property_access.user_repository.get_by_id.return_value = mock_user
+        
         # Create service and call method
         service = TransactionService()
+        
+        # Override the service's property_access_service with our mock
+        service.property_access_service = mock_property_access
+        service.transaction_repo = mock_repo
+        
+        # Call the method
         result = service.get_transactions("test-user")
         
         # Check result
@@ -104,9 +120,11 @@ class TestTransactionService:
         mock_repo.get_all.assert_called_once()
         mock_property_access.get_accessible_properties.assert_called_once_with("test-user")
 
+    @patch('src.services.transaction_service.ReimbursementService')
+    @patch('src.services.transaction_service.PropertyRepository')
     @patch('src.services.transaction_service.TransactionRepository')
     @patch('src.services.transaction_service.PropertyAccessService')
-    def test_get_transactions_with_filters(self, mock_property_access_class, mock_repo_class, mock_transactions):
+    def test_get_transactions_with_filters(self, mock_property_access_class, mock_repo_class, mock_property_repo_class, mock_reimbursement_class, mock_transactions):
         """Test getting transactions with filters."""
         # Set up mocks
         mock_repo = mock_repo_class.return_value
@@ -139,9 +157,11 @@ class TestTransactionService:
         assert result[1].property_id == "123 Main St"
         assert result[1].type == "expense"
 
+    @patch('src.services.transaction_service.ReimbursementService')
+    @patch('src.services.transaction_service.PropertyRepository')
     @patch('src.services.transaction_service.TransactionRepository')
     @patch('src.services.transaction_service.PropertyAccessService')
-    def test_create_transaction(self, mock_property_access_class, mock_repo_class, mock_transaction):
+    def test_create_transaction(self, mock_property_access_class, mock_repo_class, mock_property_repo_class, mock_reimbursement_class, mock_transaction):
         """Test creating a transaction."""
         # Set up mocks
         mock_repo = mock_repo_class.return_value
@@ -152,6 +172,10 @@ class TestTransactionService:
         
         # Mock property access service
         mock_property_access.can_manage_property.return_value = True
+        
+        # Mock reimbursement service
+        mock_reimbursement = mock_reimbursement_class.return_value
+        mock_reimbursement.process_new_transaction.return_value = mock_transaction
         
         # Create transaction data
         transaction_data = {
@@ -178,9 +202,11 @@ class TestTransactionService:
             "test-user", "123 Main St"
         )
 
+    @patch('src.services.transaction_service.ReimbursementService')
+    @patch('src.services.transaction_service.PropertyRepository')
     @patch('src.services.transaction_service.TransactionRepository')
     @patch('src.services.transaction_service.PropertyAccessService')
-    def test_create_transaction_unauthorized(self, mock_property_access_class, mock_repo_class):
+    def test_create_transaction_unauthorized(self, mock_property_access_class, mock_repo_class, mock_property_repo_class, mock_reimbursement_class):
         """Test creating a transaction without permission."""
         # Set up mocks
         mock_repo = mock_repo_class.return_value
@@ -213,9 +239,11 @@ class TestTransactionService:
             "test-user", "123 Main St"
         )
 
+    @patch('src.services.transaction_service.ReimbursementService')
+    @patch('src.services.transaction_service.PropertyRepository')
     @patch('src.services.transaction_service.TransactionRepository')
     @patch('src.services.transaction_service.PropertyAccessService')
-    def test_get_transaction(self, mock_property_access_class, mock_repo_class, mock_transaction):
+    def test_get_transaction(self, mock_property_access_class, mock_repo_class, mock_property_repo_class, mock_reimbursement_class, mock_transaction):
         """Test getting a specific transaction."""
         # Set up mocks
         mock_repo = mock_repo_class.return_value
@@ -241,9 +269,11 @@ class TestTransactionService:
             "test-user", "123 Main St"
         )
 
+    @patch('src.services.transaction_service.ReimbursementService')
+    @patch('src.services.transaction_service.PropertyRepository')
     @patch('src.services.transaction_service.TransactionRepository')
     @patch('src.services.transaction_service.PropertyAccessService')
-    def test_update_transaction(self, mock_property_access_class, mock_repo_class, mock_transaction):
+    def test_update_transaction(self, mock_property_access_class, mock_repo_class, mock_property_repo_class, mock_reimbursement_class, mock_transaction):
         """Test updating a transaction."""
         # Set up mocks
         mock_repo = mock_repo_class.return_value
@@ -255,6 +285,10 @@ class TestTransactionService:
         
         # Mock property access service
         mock_property_access.can_manage_property.return_value = True
+        
+        # Mock reimbursement service
+        mock_reimbursement = mock_reimbursement_class.return_value
+        mock_reimbursement.update_reimbursement.return_value = mock_transaction
         
         # Update data
         update_data = {
@@ -277,9 +311,11 @@ class TestTransactionService:
             "test-user", "123 Main St"
         )
 
+    @patch('src.services.transaction_service.ReimbursementService')
+    @patch('src.services.transaction_service.PropertyRepository')
     @patch('src.services.transaction_service.TransactionRepository')
     @patch('src.services.transaction_service.PropertyAccessService')
-    def test_delete_transaction(self, mock_property_access_class, mock_repo_class, mock_transaction):
+    def test_delete_transaction(self, mock_property_access_class, mock_repo_class, mock_property_repo_class, mock_reimbursement_class, mock_transaction):
         """Test deleting a transaction."""
         # Set up mocks
         mock_repo = mock_repo_class.return_value
@@ -305,9 +341,11 @@ class TestTransactionService:
             "test-user", "123 Main St"
         )
 
+    @patch('src.services.transaction_service.ReimbursementService')
+    @patch('src.services.transaction_service.PropertyRepository')
     @patch('src.services.transaction_service.TransactionRepository')
     @patch('src.services.transaction_service.PropertyAccessService')
-    def test_update_reimbursement(self, mock_property_access_class, mock_repo_class, mock_transaction):
+    def test_update_reimbursement(self, mock_property_access_class, mock_repo_class, mock_property_repo_class, mock_reimbursement_class, mock_transaction):
         """Test updating reimbursement status."""
         # Set up mocks
         mock_repo = mock_repo_class.return_value
@@ -320,6 +358,10 @@ class TestTransactionService:
         # Mock property access service
         mock_property_access.can_manage_property.return_value = True
         
+        # Mock reimbursement service
+        mock_reimbursement = mock_reimbursement_class.return_value
+        mock_reimbursement.update_reimbursement.return_value = mock_transaction
+        
         # Update data
         update_data = {
             "date_shared": "2025-02-01",
@@ -329,15 +371,14 @@ class TestTransactionService:
         
         # Create service and call method
         service = TransactionService()
+        service.reimbursement_service = mock_reimbursement
         result = service.update_reimbursement("test-transaction-1", update_data, "test-user")
         
         # Check result
         assert result is not None
         assert result.id == "test-transaction-1"
         
-        # Verify repository was called
-        mock_repo.get_by_id.assert_called_once_with("test-transaction-1")
-        mock_repo.update.assert_called_once()
-        mock_property_access.can_manage_property.assert_called_once_with(
-            "test-user", "123 Main St"
+        # Verify reimbursement service was called
+        mock_reimbursement.update_reimbursement.assert_called_once_with(
+            "test-transaction-1", update_data, "test-user"
         )

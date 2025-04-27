@@ -166,17 +166,17 @@ For any task to be considered complete, it must meet these criteria:
     - [x] User-specific transaction visibility
         - [x] Limit transaction visibility based on user's property access
         - [x] Implement admin override for full visibility
-- [ ] Create reimbursement system
-    - [ ] Status tracking with appropriate validations
-        - [ ] Track reimbursement status (pending/completed)
-        - [ ] Add date shared and share description fields
-        - [ ] Support documentation upload for reimbursements
-    - [ ] Automatic handling for single-owner properties
-        - [ ] Auto-complete reimbursements for wholly-owned properties
-        - [ ] Hide reimbursement UI elements for wholly-owned properties
-    - [ ] Equity-based reimbursement calculation
-        - [ ] Calculate reimbursement amounts based on partner equity shares
-        - [ ] Validate total equity equals 100%
+- [x] Create reimbursement system
+    - [x] Status tracking with appropriate validations
+        - [x] Track reimbursement status (pending/completed)
+        - [x] Add date shared and share description fields
+        - [x] Support documentation upload for reimbursements
+    - [x] Automatic handling for single-owner properties
+        - [x] Auto-complete reimbursements for wholly-owned properties
+        - [x] Hide reimbursement UI elements for wholly-owned properties
+    - [x] Equity-based reimbursement calculation
+        - [x] Calculate reimbursement amounts based on partner equity shares
+        - [x] Validate total equity equals 100%
 - [ ] Develop transaction reporting
     - [ ] Generate transaction reports with documentation
         - [ ] Create PDF reports with transaction details

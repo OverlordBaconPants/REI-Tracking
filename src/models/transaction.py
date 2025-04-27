@@ -9,6 +9,7 @@ from decimal import Decimal
 from pydantic import Field, validator
 
 from src.models.base_model import BaseModel
+from src.models.property import Partner
 from src.utils.validation_utils import validate_date, validate_decimal
 
 
@@ -22,6 +23,8 @@ class Reimbursement(BaseModel):
     date_shared: Optional[str] = None
     share_description: Optional[str] = None
     reimbursement_status: str = "pending"  # "pending", "in_progress", "completed"
+    documentation: Optional[str] = None
+    partner_shares: Dict[str, Decimal] = Field(default_factory=dict)
     
     @validator("date_shared")
     def validate_date_shared(cls, v: Optional[str]) -> Optional[str]:
@@ -205,6 +208,67 @@ class Transaction(BaseModel):
         self.reimbursement.share_description = share_description
         self.reimbursement.reimbursement_status = "completed"
     
+    def calculate_reimbursement_shares(self, partners: List[Partner]) -> Dict[str, Decimal]:
+        """
+        Calculate reimbursement amounts based on partner equity shares.
+        
+        Args:
+            partners: List of partners with equity shares
+            
+        Returns:
+            Dictionary mapping partner names to reimbursement amounts
+            
+        Raises:
+            ValueError: If the total equity share is not 100%
+        """
+        if not partners:
+            return {}
+            
+        # Validate total equity is 100%
+        total_equity = sum(partner.equity_share for partner in partners)
+        if total_equity != Decimal("100"):
+            raise ValueError(f"Total equity must be 100% (currently {total_equity}%)")
+            
+        # Calculate reimbursement amounts based on equity shares
+        reimbursement_shares = {}
+        for partner in partners:
+            # Skip the partner who paid (collector_payer)
+            if partner.name == self.collector_payer:
+                continue
+                
+            # Calculate share based on equity percentage
+            share_amount = (self.amount * partner.equity_share) / Decimal("100")
+            reimbursement_shares[partner.name] = share_amount
+            
+        return reimbursement_shares
+    
+    def is_wholly_owned(self, partners: List[Partner]) -> bool:
+        """
+        Check if the property is wholly owned by a single partner.
+        
+        Args:
+            partners: List of partners with equity shares
+            
+        Returns:
+            True if the property is wholly owned by a single partner, False otherwise
+        """
+        return len(partners) == 1 and partners[0].equity_share == Decimal("100")
+    
+    def is_owned_by_payer(self, partners: List[Partner]) -> bool:
+        """
+        Check if the property is wholly owned by the transaction payer.
+        
+        Args:
+            partners: List of partners with equity shares
+            
+        Returns:
+            True if the property is wholly owned by the transaction payer, False otherwise
+        """
+        return (
+            self.is_wholly_owned(partners) and 
+            partners[0].name == self.collector_payer
+        )
+    
     def to_dict(self) -> Dict[str, Any]:
         """
         Convert the transaction to a dictionary.
@@ -228,10 +292,20 @@ class Transaction(BaseModel):
         
         # Add reimbursement if it exists
         if self.reimbursement:
-            result["reimbursement"] = {
+            reimbursement_dict = {
                 "date_shared": self.reimbursement.date_shared,
                 "share_description": self.reimbursement.share_description,
-                "reimbursement_status": self.reimbursement.reimbursement_status
+                "reimbursement_status": self.reimbursement.reimbursement_status,
+                "documentation": self.reimbursement.documentation
             }
+            
+            # Add partner shares if they exist
+            if self.reimbursement.partner_shares:
+                reimbursement_dict["partner_shares"] = {
+                    partner: str(amount)
+                    for partner, amount in self.reimbursement.partner_shares.items()
+                }
+                
+            result["reimbursement"] = reimbursement_dict
         
         return result

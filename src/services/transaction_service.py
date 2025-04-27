@@ -7,11 +7,14 @@ This module provides services for transaction management.
 import logging
 from typing import List, Dict, Any, Optional, Set, Tuple
 from datetime import datetime
+from decimal import Decimal
 from collections import defaultdict
 
 from src.models.transaction import Transaction, Reimbursement
 from src.repositories.transaction_repository import TransactionRepository
+from src.repositories.property_repository import PropertyRepository
 from src.services.property_access_service import PropertyAccessService
+from src.services.reimbursement_service import ReimbursementService
 from src.models.property import Property
 
 # Set up logger
@@ -29,7 +32,13 @@ class TransactionService:
     def __init__(self):
         """Initialize the transaction service."""
         self.transaction_repo = TransactionRepository()
+        self.property_repo = PropertyRepository()
         self.property_access_service = PropertyAccessService()
+        self.reimbursement_service = ReimbursementService(
+            self.transaction_repo,
+            self.property_repo,
+            self.property_access_service
+        )
     
     def get_transactions(self, user_id: str, filters: Dict[str, Any] = None) -> List[Transaction]:
         """
@@ -151,7 +160,14 @@ class TransactionService:
             transaction = Transaction(**transaction_data)
             
             # Save transaction
-            return self.transaction_repo.create(transaction)
+            created_transaction = self.transaction_repo.create(transaction)
+            
+            # Process for reimbursement (auto-complete for wholly-owned properties)
+            if created_transaction:
+                processed_transaction = self.reimbursement_service.process_new_transaction(created_transaction)
+                return processed_transaction
+            
+            return created_transaction
             
         except Exception as e:
             logger.error(f"Error creating transaction: {str(e)}")
@@ -243,26 +259,12 @@ class TransactionService:
             Updated transaction if successful, None otherwise
         """
         try:
-            # Get transaction
-            transaction = self.transaction_repo.get_by_id(transaction_id)
-            if not transaction:
-                return None
-            
-            # Check if user has access to the property
-            if not self.property_access_service.can_manage_property(user_id, transaction.property_id):
-                return None
-            
-            # Create reimbursement if it doesn't exist
-            if transaction.reimbursement is None:
-                transaction.reimbursement = Reimbursement()
-            
-            # Update reimbursement fields
-            transaction.reimbursement.date_shared = reimbursement_data.get("date_shared", transaction.reimbursement.date_shared)
-            transaction.reimbursement.share_description = reimbursement_data.get("share_description", transaction.reimbursement.share_description)
-            transaction.reimbursement.reimbursement_status = reimbursement_data.get("reimbursement_status", transaction.reimbursement.reimbursement_status)
-            
-            # Save updated transaction
-            return self.transaction_repo.update(transaction)
+            # Use the reimbursement service to update the reimbursement
+            return self.reimbursement_service.update_reimbursement(
+                transaction_id, 
+                reimbursement_data, 
+                user_id
+            )
             
         except Exception as e:
             logger.error(f"Error updating reimbursement: {str(e)}")
@@ -450,3 +452,53 @@ class TransactionService:
             return [t for t in transactions if t.is_reimbursed()]
         
         return transactions
+    
+    def calculate_reimbursement_shares(
+        self,
+        transaction_id: str,
+        user_id: str
+    ) -> Dict[str, Decimal]:
+        """
+        Calculate reimbursement shares for a transaction.
+        
+        Args:
+            transaction_id: ID of the transaction
+            user_id: ID of the user requesting the calculation
+            
+        Returns:
+            Dictionary mapping partner names to reimbursement amounts
+            
+        Raises:
+            ValueError: If the transaction is not found or user doesn't have access
+        """
+        return self.reimbursement_service.calculate_reimbursement_shares(transaction_id, user_id)
+    
+    def get_pending_reimbursements_for_user(
+        self,
+        user_id: str
+    ) -> List[Tuple[Transaction, Property]]:
+        """
+        Get pending reimbursements for a user.
+        
+        Args:
+            user_id: ID of the user
+            
+        Returns:
+            List of tuples containing (transaction, property)
+        """
+        return self.reimbursement_service.get_pending_reimbursements_for_user(user_id)
+    
+    def get_reimbursements_owed_by_user(
+        self,
+        user_id: str
+    ) -> List[Tuple[Transaction, Property]]:
+        """
+        Get reimbursements that a user owes to others.
+        
+        Args:
+            user_id: ID of the user
+            
+        Returns:
+            List of tuples containing (transaction, property)
+        """
+        return self.reimbursement_service.get_reimbursements_owed_by_user(user_id)
