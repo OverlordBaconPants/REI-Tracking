@@ -205,17 +205,17 @@ For any task to be considered complete, it must meet these criteria:
 
 ## 8. 🏢 Property Portfolio Management
 
-- [ ] Create property management operations
-    - [ ] Add/edit/remove properties with comprehensive validation
-    - [ ] Implement property listing with filtering and sorting
-    - [ ] Support for property address standardization and geocoding
-    - [ ] Implement permission-based access to property data
-- [ ] Build partner equity management
-    - [ ] Partner addition with equity share assignment
-    - [ ] Property manager designation with specific permissions
-    - [ ] Equity validation (must total 100%)
-    - [ ] Support for partner visibility settings based on equity share
-    - [ ] Track partner contributions and distributions
+- [x] Create property management operations
+    - [x] Add/edit/remove properties with comprehensive validation
+    - [x] Implement property listing with filtering and sorting
+    - [x] Support for property address standardization and geocoding
+    - [x] Implement permission-based access to property data
+- [x] Build partner equity management
+    - [x] Partner addition with equity share assignment
+    - [x] Property manager designation with specific permissions
+    - [x] Equity validation (must total 100%)
+    - [x] Support for partner visibility settings based on equity share
+    - [x] Track partner contributions and distributions
 - [ ] Implement property financial tracking
     - [ ] Income tracking (rental, parking, laundry, other)
     - [ ] Expense tracking (property tax, insurance, repairs, capex, property management, HOA fees)

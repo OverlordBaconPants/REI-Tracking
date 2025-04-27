@@ -23,6 +23,12 @@ class Partner(BaseModel):
     name: str
     equity_share: Decimal
     is_property_manager: bool = False
+    visibility_settings: Dict[str, bool] = Field(default_factory=lambda: {
+        "financial_details": True,
+        "transaction_history": True,
+        "partner_contributions": True,
+        "property_documents": True
+    })
     
     @validator("equity_share")
     def validate_equity_share(cls, v: Decimal) -> Decimal:
@@ -40,6 +46,33 @@ class Partner(BaseModel):
         """
         if not validate_decimal(v, 0, 100):
             raise ValueError("Equity share must be between 0 and 100")
+        return v
+    
+    @validator("visibility_settings")
+    def validate_visibility_settings(cls, v: Dict[str, bool]) -> Dict[str, bool]:
+        """
+        Validate visibility settings.
+        
+        Args:
+            v: The visibility settings to validate
+            
+        Returns:
+            The validated visibility settings
+            
+        Raises:
+            ValueError: If the visibility settings are invalid
+        """
+        required_settings = [
+            "financial_details",
+            "transaction_history",
+            "partner_contributions",
+            "property_documents"
+        ]
+        
+        for setting in required_settings:
+            if setting not in v:
+                v[setting] = True
+        
         return v
 
 

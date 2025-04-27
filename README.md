@@ -109,6 +109,27 @@ The application includes a comprehensive transaction filtering system:
 - **Admin Override**: Administrators have full visibility across all properties
 - **API Endpoints**: RESTful API endpoints for filtered transactions, grouped transactions, and property summaries
 
+## Partner Equity Management
+
+The application includes a comprehensive partner equity management system:
+
+- **Partner Management**: Add, update, and remove partners with equity share assignment
+- **Property Manager Designation**: Designate a partner as property manager with specific permissions
+- **Equity Validation**: Ensure total equity shares equal 100% with automatic validation
+- **Visibility Settings**: Configure partner-specific visibility settings for financial data
+  - Financial details visibility
+  - Transaction history visibility
+  - Partner contributions visibility
+  - Property documents visibility
+- **Contribution Tracking**: Record and track partner contributions and distributions
+  - Support for both contributions (money in) and distributions (money out)
+  - Date tracking for all financial movements
+  - Notes and documentation for contributions and distributions
+- **Contribution Reporting**: Generate reports on partner contributions and distributions
+  - Total contributions by partner
+  - Contribution history with filtering options
+  - Distribution tracking and history
+
 ## Reimbursement System
 
 The application features a sophisticated reimbursement tracking system:

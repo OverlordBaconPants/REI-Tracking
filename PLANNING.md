@@ -359,6 +359,8 @@ Common code smells:
 | 2025-04-26 | Implemented reimbursement system | To provide equity-based reimbursement tracking with automatic handling for single-owner properties, status tracking, and documentation support |
 | 2025-04-27 | Implemented transaction reporting | To enable comprehensive transaction reporting with PDF generation, financial summaries with visualizations, and documentation bundling in ZIP archives |
 | 2025-04-27 | Implemented bulk transaction import | To provide a robust system for importing transactions from CSV and Excel files with flexible column mapping, data validation, duplicate detection, and detailed import reporting |
+| 2025-04-27 | Implemented property management operations | To enable comprehensive property management with add/edit/remove functionality, property listing with filtering and sorting, address standardization, and permission-based access |
+| 2025-04-27 | Implemented partner equity management | To provide comprehensive partner management with equity share assignment, property manager designation, visibility settings, and contribution/distribution tracking |
 
 ---
 
