@@ -5,11 +5,13 @@ This module provides the AnalysisRepository class for analysis data persistence
 and retrieval.
 """
 
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 import os
+import json
+from datetime import datetime
 
 from src.config import current_config
-from src.models.analysis import Analysis
+from src.models.analysis import Analysis, UnitType
 from src.repositories.base_repository import BaseRepository
 from src.utils.file_utils import AtomicJsonFile
 from src.utils.logging_utils import get_logger
@@ -18,7 +20,7 @@ from src.utils.logging_utils import get_logger
 logger = get_logger(__name__)
 
 
-class AnalysisRepository:
+class AnalysisRepository(BaseRepository[Analysis]):
     """
     Analysis repository for analysis data persistence and retrieval.
     
@@ -28,66 +30,11 @@ class AnalysisRepository:
     
     def __init__(self) -> None:
         """Initialize the analysis repository."""
-        self.analyses_dir = current_config.ANALYSES_DIR
+        analyses_dir = current_config.ANALYSES_DIR
+        os.makedirs(analyses_dir, exist_ok=True)
         
-        # Ensure directory exists
-        os.makedirs(self.analyses_dir, exist_ok=True)
-    
-    def get_all(self) -> List[Analysis]:
-        """
-        Get all analyses.
-        
-        Returns:
-            List of all analyses
-        """
-        try:
-            analyses = []
-            
-            # Iterate through files in the analyses directory
-            for filename in os.listdir(self.analyses_dir):
-                if filename.endswith(".json"):
-                    file_path = os.path.join(self.analyses_dir, filename)
-                    json_file = AtomicJsonFile[Dict[str, Any]](file_path)
-                    
-                    try:
-                        data = json_file.read()
-                        analysis = Analysis.from_dict(data)
-                        analyses.append(analysis)
-                    except Exception as e:
-                        logger.error(f"Error parsing analysis file {filename}: {str(e)}")
-            
-            return analyses
-        except Exception as e:
-            logger.error(f"Error getting all analyses: {str(e)}")
-            raise
-    
-    def get_by_id(self, analysis_id: str) -> Optional[Analysis]:
-        """
-        Get an analysis by ID.
-        
-        Args:
-            analysis_id: ID of the analysis to get
-            
-        Returns:
-            The analysis, or None if not found
-        """
-        try:
-            # Check all files in the analyses directory
-            for filename in os.listdir(self.analyses_dir):
-                if filename.startswith(f"{analysis_id}_") and filename.endswith(".json"):
-                    file_path = os.path.join(self.analyses_dir, filename)
-                    json_file = AtomicJsonFile[Dict[str, Any]](file_path)
-                    
-                    try:
-                        data = json_file.read()
-                        return Analysis.from_dict(data)
-                    except Exception as e:
-                        logger.error(f"Error parsing analysis file {filename}: {str(e)}")
-            
-            return None
-        except Exception as e:
-            logger.error(f"Error getting analysis by ID: {str(e)}")
-            raise
+        # Initialize with a file path that will be used for each analysis
+        super().__init__(os.path.join(analyses_dir, "analyses.json"), Analysis)
     
     def get_by_user(self, user_id: str) -> List[Analysis]:
         """
@@ -141,6 +88,114 @@ class AnalysisRepository:
             logger.error(f"Error getting analyses by user and type: {str(e)}")
             raise
     
+    def get_paginated(self, page: int = 1, per_page: int = 10) -> Tuple[List[Analysis], int]:
+        """
+        Get paginated list of analyses.
+        
+        Args:
+            page: Page number (1-based)
+            per_page: Items per page
+            
+        Returns:
+            Tuple of (list of analyses, total pages)
+        """
+        try:
+            analyses = self.get_all()
+            
+            # Sort by updated_at timestamp (newest first)
+            analyses.sort(key=lambda x: x.updated_at, reverse=True)
+            
+            # Calculate pagination
+            total_analyses = len(analyses)
+            total_pages = max((total_analyses + per_page - 1) // per_page, 1)
+            
+            # Get requested page
+            start_idx = (page - 1) * per_page
+            end_idx = min(start_idx + per_page, total_analyses)
+            page_analyses = analyses[start_idx:end_idx]
+            
+            return page_analyses, total_pages
+        except Exception as e:
+            logger.error(f"Error getting paginated analyses: {str(e)}")
+            raise
+    
+    def get_by_user_paginated(self, user_id: str, page: int = 1, per_page: int = 10) -> Tuple[List[Analysis], int]:
+        """
+        Get paginated list of analyses for a user.
+        
+        Args:
+            user_id: ID of the user
+            page: Page number (1-based)
+            per_page: Items per page
+            
+        Returns:
+            Tuple of (list of analyses, total pages)
+        """
+        try:
+            # Get all analyses for the user
+            user_analyses = self.get_by_user(user_id)
+            
+            # Sort by updated_at timestamp (newest first)
+            user_analyses.sort(key=lambda x: x.updated_at, reverse=True)
+            
+            # Calculate pagination
+            total_analyses = len(user_analyses)
+            total_pages = max((total_analyses + per_page - 1) // per_page, 1)
+            
+            # Get requested page
+            start_idx = (page - 1) * per_page
+            end_idx = min(start_idx + per_page, total_analyses)
+            page_analyses = user_analyses[start_idx:end_idx]
+            
+            return page_analyses, total_pages
+        except Exception as e:
+            logger.error(f"Error getting paginated analyses for user: {str(e)}")
+            raise
+    
+    def normalize_analysis_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Normalize analysis data for storage.
+        
+        Args:
+            data: Analysis data to normalize
+            
+        Returns:
+            Normalized analysis data
+        """
+        try:
+            normalized = {}
+            
+            # Process each field
+            for field, value in data.items():
+                # Handle unit_types specially
+                if field == "unit_types" and value is not None:
+                    if isinstance(value, list):
+                        # Convert each unit type to a dictionary
+                        normalized[field] = [
+                            unit.dict() if hasattr(unit, "dict") else unit
+                            for unit in value
+                        ]
+                    else:
+                        # If it's a string (JSON), parse it
+                        try:
+                            normalized[field] = json.loads(value)
+                        except (json.JSONDecodeError, TypeError):
+                            normalized[field] = None
+                # Handle comps_data specially
+                elif field == "comps_data" and value is not None:
+                    if hasattr(value, "dict"):
+                        normalized[field] = value.dict()
+                    else:
+                        normalized[field] = value
+                # Handle other fields
+                else:
+                    normalized[field] = value
+            
+            return normalized
+        except Exception as e:
+            logger.error(f"Error normalizing analysis data: {str(e)}")
+            raise
+    
     def create(self, analysis: Analysis) -> Analysis:
         """
         Create a new analysis.
@@ -152,19 +207,14 @@ class AnalysisRepository:
             The created analysis
         """
         try:
-            # Generate filename
-            filename = f"{analysis.id}_{analysis.user_id}.json"
-            file_path = os.path.join(self.analyses_dir, filename)
+            # Normalize data if needed
+            normalized_data = self.normalize_analysis_data(analysis.dict())
             
-            # Check if file already exists
-            if os.path.exists(file_path):
-                raise ValueError(f"Analysis with ID {analysis.id} already exists")
+            # Create a new Analysis instance with normalized data
+            normalized_analysis = Analysis.parse_obj(normalized_data)
             
-            # Write to file
-            json_file = AtomicJsonFile[Dict[str, Any]](file_path)
-            json_file.write(analysis.dict())
-            
-            return analysis
+            # Call the parent create method
+            return super().create(normalized_analysis)
         except Exception as e:
             logger.error(f"Error creating analysis: {str(e)}")
             raise
@@ -183,72 +233,21 @@ class AnalysisRepository:
             ValueError: If the analysis doesn't exist
         """
         try:
-            # Find the file
-            filename = None
-            for fname in os.listdir(self.analyses_dir):
-                if fname.startswith(f"{analysis.id}_") and fname.endswith(".json"):
-                    filename = fname
-                    break
-            
-            if not filename:
+            # Check if analysis exists
+            if not self.exists(analysis.id):
                 raise ValueError(f"Analysis with ID {analysis.id} not found")
             
-            # Update the file
-            file_path = os.path.join(self.analyses_dir, filename)
-            json_file = AtomicJsonFile[Dict[str, Any]](file_path)
-            json_file.write(analysis.dict())
+            # Normalize data if needed
+            normalized_data = self.normalize_analysis_data(analysis.dict())
             
-            return analysis
+            # Create a new Analysis instance with normalized data
+            normalized_analysis = Analysis.parse_obj(normalized_data)
+            
+            # Update the updated_at timestamp
+            normalized_analysis.updated_at = datetime.now().isoformat()
+            
+            # Call the parent update method
+            return super().update(normalized_analysis)
         except Exception as e:
             logger.error(f"Error updating analysis: {str(e)}")
-            raise
-    
-    def delete(self, analysis_id: str) -> bool:
-        """
-        Delete an analysis by ID.
-        
-        Args:
-            analysis_id: ID of the analysis to delete
-            
-        Returns:
-            True if the analysis was deleted, False if not found
-        """
-        try:
-            # Find the file
-            filename = None
-            for fname in os.listdir(self.analyses_dir):
-                if fname.startswith(f"{analysis_id}_") and fname.endswith(".json"):
-                    filename = fname
-                    break
-            
-            if not filename:
-                return False
-            
-            # Delete the file
-            file_path = os.path.join(self.analyses_dir, filename)
-            os.remove(file_path)
-            
-            return True
-        except Exception as e:
-            logger.error(f"Error deleting analysis: {str(e)}")
-            raise
-    
-    def exists(self, analysis_id: str) -> bool:
-        """
-        Check if an analysis exists by ID.
-        
-        Args:
-            analysis_id: ID of the analysis to check
-            
-        Returns:
-            True if the analysis exists, False otherwise
-        """
-        try:
-            for filename in os.listdir(self.analyses_dir):
-                if filename.startswith(f"{analysis_id}_") and filename.endswith(".json"):
-                    return True
-            
-            return False
-        except Exception as e:
-            logger.error(f"Error checking if analysis exists: {str(e)}")
             raise

@@ -350,6 +350,7 @@ Common code smells:
 | 2025-04-26 | Implemented core calculation components | To provide a robust foundation for financial calculations with proper decimal handling, validation, and support for various loan types |
 | 2025-04-26 | Implemented analysis system | To enable comprehensive property investment analysis with specialized support for different investment strategies (LTR, BRRRR, Lease Option, Multi-Family, PadSplit) |
 | 2025-04-26 | Implemented investment metrics calculator | To provide specialized calculators for ROI, equity tracking with appreciation projections, and other investment-specific metrics |
+| 2025-04-26 | Implemented analysis CRUD operations | To provide complete API for creating, reading, updating, and deleting analyses with specialized validation and normalization for different analysis types |
 
 ---
 

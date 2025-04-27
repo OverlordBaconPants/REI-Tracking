@@ -43,6 +43,11 @@ The application features a comprehensive property investment analysis system:
   - Expense ratio and breakeven occupancy
   - MAO (Maximum Allowable Offer) calculation
 - **Factory Pattern**: Simple API for creating the appropriate analysis type based on strategy
+- **Complete CRUD Operations**:
+  - Create, read, update, and delete analyses via RESTful API
+  - Specialized validation for each analysis type
+  - Data normalization for consistent storage
+  - Calculation endpoint for real-time metrics
 
 ## Investment Metrics Calculator
 

@@ -1,285 +1,146 @@
 """
 Validation service module for the REI-Tracker application.
 
-This module provides the ValidationService class for data validation,
-including input validation and error handling.
+This module provides validation services for various data types.
 """
 
-from typing import Dict, List, Any, Optional, Type, TypeVar, Generic, Union
-from decimal import Decimal
+from typing import Dict, Any, List, Optional, Type, TypeVar, Generic
+import json
+from datetime import datetime
 
 from pydantic import BaseModel, ValidationError
 
-from src.utils.validation_utils import ValidationResult, ModelValidator, FunctionValidator
+from src.utils.validation_utils import ValidationResult
 from src.utils.logging_utils import get_logger
 
 # Set up logger
 logger = get_logger(__name__)
 
-# Type variable for generic validation
-T = TypeVar('T')
+T = TypeVar('T', bound=BaseModel)
 
 
-class ValidationService:
+class ModelValidator(Generic[T]):
     """
-    Validation service for data validation.
+    Validator for Pydantic models.
     
-    This class provides methods for data validation, including input validation
-    and error handling.
+    This class provides validation for Pydantic models with standardized
+    error handling and formatting.
     """
     
-    @staticmethod
-    def validate_model(data: Dict[str, Any], model_class: Type[BaseModel]) -> ValidationResult[BaseModel]:
+    def __init__(self, model_class: Type[T]) -> None:
         """
-        Validate data against a Pydantic model.
+        Initialize with a Pydantic model class.
+        
+        Args:
+            model_class: The Pydantic model class to use for validation
+        """
+        self.model_class = model_class
+    
+    def validate(self, data: Dict[str, Any]) -> ValidationResult[T]:
+        """
+        Validate the provided data using the Pydantic model.
         
         Args:
             data: The data to validate
-            model_class: The Pydantic model class
             
         Returns:
             A validation result
         """
         try:
-            validator = ModelValidator(model_class)
-            return validator.validate(data)
-        except Exception as e:
-            logger.error(f"Error validating model: {str(e)}")
-            return ValidationResult.failure({"_error": [str(e)]})
-    
-    @staticmethod
-    def validate_email(email: str) -> ValidationResult[str]:
-        """
-        Validate an email address.
-        
-        Args:
-            email: The email address to validate
+            # Preprocess data if needed
+            processed_data = self._preprocess_data(data)
             
-        Returns:
-            A validation result
-        """
-        from src.utils.validation_utils import validate_email
-        
-        result = ValidationResult[str](True, email)
-        
-        if not validate_email(email):
-            result.add_error("email", "Invalid email format")
-        
-        return result
-    
-    @staticmethod
-    def validate_phone(phone: str) -> ValidationResult[str]:
-        """
-        Validate a phone number.
-        
-        Args:
-            phone: The phone number to validate
+            # Validate using Pydantic
+            validated_data = self.model_class.parse_obj(processed_data)
             
-        Returns:
-            A validation result
-        """
-        from src.utils.validation_utils import validate_phone
-        
-        result = ValidationResult[str](True, phone)
-        
-        if not validate_phone(phone):
-            result.add_error("phone", "Invalid phone number format")
-        
-        return result
-    
-    @staticmethod
-    def validate_date(date_str: str, format_str: str = '%Y-%m-%d') -> ValidationResult[str]:
-        """
-        Validate a date string.
-        
-        Args:
-            date_str: The date string to validate
-            format_str: The expected date format
+            return ValidationResult.success(validated_data)
+        except ValidationError as e:
+            # Convert Pydantic validation errors to our format
+            errors: Dict[str, List[str]] = {}
             
-        Returns:
-            A validation result
-        """
-        from src.utils.validation_utils import validate_date
-        
-        result = ValidationResult[str](True, date_str)
-        
-        if not validate_date(date_str, format_str):
-            result.add_error("date", f"Invalid date format (expected {format_str})")
-        
-        return result
-    
-    @staticmethod
-    def validate_decimal(value: Union[str, float, int, Decimal], min_value: Optional[float] = None, 
-                        max_value: Optional[float] = None) -> ValidationResult[Decimal]:
-        """
-        Validate a decimal value.
-        
-        Args:
-            value: The value to validate
-            min_value: The minimum allowed value
-            max_value: The maximum allowed value
-            
-        Returns:
-            A validation result
-        """
-        from src.utils.validation_utils import validate_decimal
-        
-        try:
-            # Convert to Decimal
-            if isinstance(value, str):
-                decimal_value = Decimal(value)
-            elif isinstance(value, (float, int)):
-                decimal_value = Decimal(str(value))
-            else:
-                decimal_value = value
-            
-            result = ValidationResult[Decimal](True, decimal_value)
-            
-            if not validate_decimal(decimal_value, min_value, max_value):
-                min_str = f">= {min_value}" if min_value is not None else ""
-                max_str = f"<= {max_value}" if max_value is not None else ""
-                range_str = f" ({min_str} {max_str})".strip() if min_str or max_str else ""
+            for error in e.errors():
+                field = '.'.join(str(loc) for loc in error['loc'])
+                message = error['msg']
                 
-                result.add_error("value", f"Invalid decimal value{range_str}: {value}")
+                if field not in errors:
+                    errors[field] = []
+                
+                errors[field].append(message)
             
-            return result
-        except (ValueError, TypeError, ArithmeticError) as e:
-            return ValidationResult.failure({"value": [f"Invalid decimal value: {str(e)}"]})
+            logger.warning(f"Validation error: {errors}")
+            return ValidationResult.failure(errors)
+        except Exception as e:
+            logger.error(f"Unexpected validation error: {str(e)}")
+            return ValidationResult.failure({"_general": [f"Validation error: {str(e)}"]})
     
-    @staticmethod
-    def validate_percentage(value: Union[str, float, int, Decimal]) -> ValidationResult[Decimal]:
+    def _preprocess_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Validate a percentage value (0-100).
+        Preprocess data before validation.
         
         Args:
-            value: The value to validate
+            data: The data to preprocess
             
         Returns:
-            A validation result
+            The preprocessed data
         """
-        return ValidationService.validate_decimal(value, 0, 100)
+        # Default implementation does nothing
+        return data
+
+
+class AnalysisValidator(ModelValidator):
+    """
+    Validator for Analysis models.
     
-    @staticmethod
-    def validate_required(value: Any, field_name: str) -> ValidationResult[Any]:
+    This class provides validation for Analysis models with specialized
+    preprocessing for analysis-specific fields.
+    """
+    
+    def _preprocess_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Validate that a value is not None or empty.
+        Preprocess analysis data before validation.
         
         Args:
-            value: The value to validate
-            field_name: The name of the field
+            data: The analysis data to preprocess
             
         Returns:
-            A validation result
+            The preprocessed analysis data
         """
-        result = ValidationResult[Any](True, value)
+        processed = data.copy()
         
-        if value is None:
-            result.add_error(field_name, "This field is required")
-        elif isinstance(value, str) and not value.strip():
-            result.add_error(field_name, "This field is required")
-        elif isinstance(value, (list, dict)) and not value:
-            result.add_error(field_name, "This field is required")
-        
-        return result
-    
-    @staticmethod
-    def validate_min_length(value: str, min_length: int, field_name: str) -> ValidationResult[str]:
-        """
-        Validate that a string has a minimum length.
-        
-        Args:
-            value: The value to validate
-            min_length: The minimum length
-            field_name: The name of the field
+        # Handle unit_types for MultiFamily analysis
+        if processed.get('analysis_type') == 'MultiFamily' and 'unit_types' in processed:
+            unit_types = processed['unit_types']
             
-        Returns:
-            A validation result
-        """
-        result = ValidationResult[str](True, value)
+            # If unit_types is a string, try to parse it as JSON
+            if isinstance(unit_types, str):
+                try:
+                    processed['unit_types'] = json.loads(unit_types)
+                except json.JSONDecodeError:
+                    logger.error(f"Invalid unit_types JSON: {unit_types}")
+                    processed['unit_types'] = None
         
-        if len(value) < min_length:
-            result.add_error(field_name, f"Must be at least {min_length} characters")
-        
-        return result
-    
-    @staticmethod
-    def validate_max_length(value: str, max_length: int, field_name: str) -> ValidationResult[str]:
-        """
-        Validate that a string has a maximum length.
-        
-        Args:
-            value: The value to validate
-            max_length: The maximum length
-            field_name: The name of the field
+        # Handle comps_data
+        if 'comps_data' in processed and processed['comps_data'] is not None:
+            comps_data = processed['comps_data']
             
-        Returns:
-            A validation result
-        """
-        result = ValidationResult[str](True, value)
+            # If comps_data is a string, try to parse it as JSON
+            if isinstance(comps_data, str):
+                try:
+                    processed['comps_data'] = json.loads(comps_data)
+                except json.JSONDecodeError:
+                    logger.error(f"Invalid comps_data JSON: {comps_data}")
+                    processed['comps_data'] = None
         
-        if len(value) > max_length:
-            result.add_error(field_name, f"Must be at most {max_length} characters")
+        # Ensure ID is present
+        if 'id' not in processed or not processed['id']:
+            from uuid import uuid4
+            processed['id'] = str(uuid4())
         
-        return result
-    
-    @staticmethod
-    def validate_min_value(value: Union[int, float, Decimal], min_value: Union[int, float, Decimal], 
-                          field_name: str) -> ValidationResult[Union[int, float, Decimal]]:
-        """
-        Validate that a value is at least a minimum value.
+        # Ensure timestamps are present
+        now = datetime.now().isoformat()
+        if 'created_at' not in processed or not processed['created_at']:
+            processed['created_at'] = now
+        if 'updated_at' not in processed or not processed['updated_at']:
+            processed['updated_at'] = now
         
-        Args:
-            value: The value to validate
-            min_value: The minimum value
-            field_name: The name of the field
-            
-        Returns:
-            A validation result
-        """
-        result = ValidationResult[Union[int, float, Decimal]](True, value)
-        
-        if value < min_value:
-            result.add_error(field_name, f"Must be at least {min_value}")
-        
-        return result
-    
-    @staticmethod
-    def validate_max_value(value: Union[int, float, Decimal], max_value: Union[int, float, Decimal], 
-                          field_name: str) -> ValidationResult[Union[int, float, Decimal]]:
-        """
-        Validate that a value is at most a maximum value.
-        
-        Args:
-            value: The value to validate
-            max_value: The maximum value
-            field_name: The name of the field
-            
-        Returns:
-            A validation result
-        """
-        result = ValidationResult[Union[int, float, Decimal]](True, value)
-        
-        if value > max_value:
-            result.add_error(field_name, f"Must be at most {max_value}")
-        
-        return result
-    
-    @staticmethod
-    def validate_in_list(value: Any, valid_values: List[Any], field_name: str) -> ValidationResult[Any]:
-        """
-        Validate that a value is in a list of valid values.
-        
-        Args:
-            value: The value to validate
-            valid_values: The list of valid values
-            field_name: The name of the field
-            
-        Returns:
-            A validation result
-        """
-        result = ValidationResult[Any](True, value)
-        
-        if value not in valid_values:
-            result.add_error(field_name, f"Must be one of: {', '.join(str(v) for v in valid_values)}")
-        
-        return result
+        return processed
