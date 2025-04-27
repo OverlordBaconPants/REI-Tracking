@@ -222,7 +222,7 @@ For any task to be considered complete, it must meet these criteria:
     - [x] Utility expense tracking (water, electricity, gas, trash)
     - [x] Maintenance and capital expenditure recording
     - [x] Support for expense notes and categorization
-- [ ] Create property KPI calculations
+- [x] Create property KPI calculations
     - [x] Equity tracking and cash flow calculations
     - [x] Compare actual performance to analysis projections
         - [x] Side-by-side comparison of planned vs. actual metrics
@@ -314,31 +314,31 @@ For any task to be considered complete, it must meet these criteria:
         - [x] Touch-friendly controls for mobile interaction
         - [x] Visual indicators for transaction types and status
         - [x] Inline document access and preview
-- [ ] Implement KPI dashboard
-    - [ ] Create property selector with standardized address display
-    - [ ] Build KPI metric displays
-        - [ ] Year-to-date and since-acquisition metrics
-        - [ ] Net Operating Income (NOI) calculation and display
-        - [ ] Cap rate calculation and display
-        - [ ] Cash-on-cash return calculation and display
-        - [ ] Debt Service Coverage Ratio (DSCR) calculation and display
-    - [ ] Implement data quality assessment
-        - [ ] Transaction data completeness evaluation
-        - [ ] Visual indicators for data quality
-        - [ ] Confidence level calculation for metrics
-    - [ ] Create analysis comparison functionality
-        - [ ] Analysis selector for projected values
-        - [ ] Side-by-side comparison of actual vs. projected metrics
-        - [ ] Variance calculation and highlighting
-- [ ] Build KPI comparison tool
-    - [ ] Create property selection interface
-    - [ ] Implement planned vs. actual metrics comparison
-        - [ ] Monthly income comparison
-        - [ ] Monthly expenses comparison
-        - [ ] Monthly and annual cash flow comparison
-        - [ ] Return metrics comparison
-    - [ ] Build PDF report generation
-    - [ ] Add integration with analysis creation
+- [x] Implement KPI dashboard
+    - [x] Create property selector with standardized address display
+    - [x] Build KPI metric displays
+        - [x] Year-to-date and since-acquisition metrics
+        - [x] Net Operating Income (NOI) calculation and display
+        - [x] Cap rate calculation and display
+        - [x] Cash-on-cash return calculation and display
+        - [x] Debt Service Coverage Ratio (DSCR) calculation and display
+    - [x] Implement data quality assessment
+        - [x] Transaction data completeness evaluation
+        - [x] Visual indicators for data quality
+        - [x] Confidence level calculation for metrics
+    - [x] Create analysis comparison functionality
+        - [x] Analysis selector for projected values
+        - [x] Side-by-side comparison of actual vs. projected metrics
+        - [x] Variance calculation and highlighting
+- [x] Build KPI comparison tool
+    - [x] Create property selection interface
+    - [x] Implement planned vs. actual metrics comparison
+        - [x] Monthly income comparison
+        - [x] Monthly expenses comparison
+        - [x] Monthly and annual cash flow comparison
+        - [x] Return metrics comparison
+    - [x] Build PDF report generation
+    - [x] Add integration with analysis creation
 
 ## 10. 🎨 User Interface & Frontend Architecture
 

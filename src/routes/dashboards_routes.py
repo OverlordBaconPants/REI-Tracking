@@ -90,6 +90,7 @@ def dashboards():
             <li><a href="/dashboards/amortization">Amortization Dashboard</a></li>
             <li><a href="/dashboards/transactions">Transactions Dashboard</a></li>
             <li><a href="/dashboards/kpi">KPI Dashboard</a></li>
+            <li><a href="/dashboards/kpi-comparison">KPI Comparison Tool</a></li>
         </ul>
     </body>
     </html>
@@ -193,6 +194,33 @@ def kpi_view():
         <body>
             <h1>KPI Dashboard</h1>
             <p>Coming soon...</p>
+        </body>
+        </html>
+        """
+
+@blueprint.route('/kpi-comparison')
+@dashboard_access_required
+def kpi_comparison_view():
+    """KPI comparison tool page."""
+    try:
+        if hasattr(current_user, 'name'):
+            logger.info(f"User {current_user.name} accessed KPI comparison tool")
+        else:
+            logger.info("Anonymous user accessed KPI comparison tool")
+        
+        # Get properties accessible to the user for the dropdown
+        from src.services.property_financial_service import get_properties_for_user
+        properties = get_properties_for_user(current_user.id, current_user.name)
+        
+        return render_template('dashboards/kpi_comparison.html', properties=properties)
+    except Exception as e:
+        logger.error(f"Error rendering KPI comparison view: {str(e)}")
+        return """
+        <html>
+        <head><title>KPI Comparison Tool</title></head>
+        <body>
+            <h1>KPI Comparison Tool</h1>
+            <p>An error occurred while loading the tool. Please try again later.</p>
         </body>
         </html>
         """

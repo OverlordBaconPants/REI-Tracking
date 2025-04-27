@@ -284,10 +284,20 @@ The application includes several specialized dashboards:
   - Touch-friendly controls and inline document access
   
 - **KPI Dashboard**: Monitor key performance indicators for properties
-  - Actual vs. projected metrics
-  - Performance trends over time
-  - Return on investment tracking
-  - Property-specific KPI reports
+  - Actual vs. projected metrics comparison with variance highlighting
+  - Interactive property selector with standardized address display
+  - Comprehensive KPI metrics including NOI, cap rate, cash-on-cash return, and DSCR
+  - Data quality assessment with confidence level indicators
+  - Mobile-responsive design with optimized visualizations
+  - Integration with KPI comparison tool for detailed analysis
+  
+- **KPI Comparison Tool**: Compare planned vs. actual property performance
+  - Side-by-side comparison of projected and actual metrics
+  - Monthly income and expense comparison with variance calculation
+  - Investment metrics comparison (cap rate, cash-on-cash return, DSCR)
+  - Performance status indicators (favorable/unfavorable)
+  - PDF report generation with detailed metrics and visualizations
+  - Support for custom date ranges for targeted analysis
 
 ## User Interface & Frontend Architecture
 
