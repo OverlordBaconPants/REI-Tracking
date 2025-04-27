@@ -34,7 +34,7 @@ class BaseModel(PydanticBaseModel):
         extra = "ignore"
         
         # Allow field population by name or alias
-        allow_population_by_field_name = True
+        populat_by_name_by_field_name = True
         
         # Validate assignment
         validate_assignment = True

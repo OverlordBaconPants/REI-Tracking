@@ -5,7 +5,7 @@ This module provides middleware functions for authentication and session managem
 """
 
 from functools import wraps
-from typing import Callable, Any, List, Optional
+from typing import Callable, Any, List, Optional, Union
 
 from flask import request, session, jsonify, current_app, g
 
@@ -151,3 +151,109 @@ def admin_required(f: Callable) -> Callable:
         return f(*args, **kwargs)
     
     return decorated_function
+
+
+def property_access_required(access_level: Optional[str] = None) -> Callable:
+    """
+    Decorator to require property access for a route.
+    
+    This decorator checks if the user has access to the property specified
+    in the route parameters. The property ID should be in the route parameters
+    as 'property_id'.
+    
+    Args:
+        access_level: The minimum required access level (optional)
+        
+    Returns:
+        A decorator function
+    """
+    def decorator(f: Callable) -> Callable:
+        @wraps(f)
+        def decorated_function(*args: Any, **kwargs: Any) -> Any:
+            # First check if user is authenticated
+            if 'user_id' not in session:
+                if request.path.startswith('/api/'):
+                    return jsonify({
+                        'success': False,
+                        'errors': {'_error': ['Authentication required']}
+                    }), 401
+                else:
+                    # For non-API routes, redirect to login page
+                    # This would be implemented if we had HTML routes
+                    pass
+            
+            # Get property ID from route parameters
+            property_id = kwargs.get('property_id')
+            if not property_id:
+                # Try to get from query parameters
+                property_id = request.args.get('property_id')
+            
+            if not property_id:
+                # Try to get from JSON body
+                if request.is_json:
+                    property_id = request.json.get('property_id')
+            
+            if not property_id:
+                return jsonify({
+                    'success': False,
+                    'errors': {'_error': ['Property ID not provided']}
+                }), 400
+            
+            # Check if user has access to the property
+            current_user = g.get('current_user')
+            if not current_user:
+                return jsonify({
+                    'success': False,
+                    'errors': {'_error': ['User not found']}
+                }), 401
+            
+            # Admins have access to all properties
+            if current_user.is_admin():
+                return f(*args, **kwargs)
+            
+            # Check if user has the required access level
+            if not current_user.has_property_access(property_id, access_level):
+                return jsonify({
+                    'success': False,
+                    'errors': {'_error': ['Insufficient property access']}
+                }), 403
+            
+            return f(*args, **kwargs)
+        
+        return decorated_function
+    
+    return decorator
+
+
+def property_manager_required(f: Callable) -> Callable:
+    """
+    Decorator to require property manager role for a route.
+    
+    This decorator checks if the user is a manager for the property specified
+    in the route parameters. The property ID should be in the route parameters
+    as 'property_id'.
+    
+    Args:
+        f: The route function
+        
+    Returns:
+        The decorated function
+    """
+    return property_access_required(access_level="manager")(f)
+
+
+def property_owner_required(f: Callable) -> Callable:
+    """
+    Decorator to require property owner role for a route.
+    
+    This decorator checks if the user is an owner of the property specified
+    in the route parameters. The property ID should be in the route parameters
+    as 'property_id'.
+    
+    Args:
+        f: The route function
+        
+    Returns:
+        The decorated function
+    """
+    return property_access_required(access_level="owner")(f)
