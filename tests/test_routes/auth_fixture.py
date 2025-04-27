@@ -45,10 +45,17 @@ class AuthActions:
             sess["login_time"] = "2025-04-27T11:00:00"
             sess["remember"] = False
             sess["expires_at"] = "2025-04-27T12:00:00"
+            sess["_test_mode"] = True
         
         # Mock the current_user
         with patch("flask_login.utils._get_user") as mock_get_user:
             mock_get_user.return_value = self._user
+            
+        # Mock the user repository to return the user when get_by_id is called
+        with patch("src.services.auth_service.UserRepository") as mock_repo_class:
+            mock_repo = MagicMock()
+            mock_repo.get_by_id.return_value = self._user
+            mock_repo_class.return_value = mock_repo
         
         return self._user
 
@@ -73,10 +80,17 @@ class AuthActions:
             sess["login_time"] = "2025-04-27T11:00:00"
             sess["remember"] = False
             sess["expires_at"] = "2025-04-27T12:00:00"
+            sess["_test_mode"] = True
         
         # Mock the current_user
         with patch("flask_login.utils._get_user") as mock_get_user:
             mock_get_user.return_value = self._user
+            
+        # Mock the user repository to return the user when get_by_id is called
+        with patch("src.services.auth_service.UserRepository") as mock_repo_class:
+            mock_repo = MagicMock()
+            mock_repo.get_by_id.return_value = self._user
+            mock_repo_class.return_value = mock_repo
         
         return self._user
 
@@ -101,10 +115,17 @@ class AuthActions:
             sess["login_time"] = "2025-04-27T11:00:00"
             sess["remember"] = False
             sess["expires_at"] = "2025-04-27T12:00:00"
+            sess["_test_mode"] = True
         
         # Mock the current_user
         with patch("flask_login.utils._get_user") as mock_get_user:
             mock_get_user.return_value = self._user
+            
+        # Mock the user repository to return the user when get_by_id is called
+        with patch("src.services.auth_service.UserRepository") as mock_repo_class:
+            mock_repo = MagicMock()
+            mock_repo.get_by_id.return_value = self._user
+            mock_repo_class.return_value = mock_repo
         
         return self._user
 

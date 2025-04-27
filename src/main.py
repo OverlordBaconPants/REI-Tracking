@@ -9,6 +9,7 @@ import os
 from datetime import timedelta
 from flask import Flask, jsonify, request, send_from_directory, session
 from flask_session import Session
+from flask_login import LoginManager
 from werkzeug.exceptions import HTTPException
 
 from src.config import current_config
@@ -39,6 +40,17 @@ app.config['SESSION_FILE_DIR'] = os.path.join(current_config.DATA_DIR, 'flask_se
 # Initialize Flask-Session
 Session(app)
 
+# Initialize Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'users.login'
+
+@login_manager.user_loader
+def load_user(user_id):
+    from src.repositories.user_repository import UserRepository
+    user_repo = UserRepository()
+    return user_repo.get_by_id(user_id)
+
 
 # Register error handlers
 @app.errorhandler(HTTPException)
@@ -52,6 +64,13 @@ def handle_http_exception(error):
         }
     }
     return jsonify(response), error.code
+
+# Add response headers to allow framing from same origin
+@app.after_request
+def add_header(response):
+    """Add headers to allow framing from same origin."""
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    return response
 
 
 @app.errorhandler(Exception)
@@ -108,10 +127,15 @@ def init_dashboards():
     """Initialize Dash applications."""
     try:
         from src.dash_apps.dash_portfolio import create_portfolio_dash
+        from src.dash_apps.dash_amortization import create_amortization_dash
         
         # Create and attach portfolio dashboard
         app.portfolio_dash = create_portfolio_dash(app)
         app_logger.info("Portfolio dashboard initialized successfully")
+        
+        # Create and attach amortization dashboard
+        app.amortization_dash = create_amortization_dash(app)
+        app_logger.info("Amortization dashboard initialized successfully")
     except Exception as e:
         app_logger.error(f"Error initializing dashboards: {str(e)}")
         app_logger.exception("Dashboard initialization error details:")

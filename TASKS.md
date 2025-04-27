@@ -283,21 +283,21 @@ For any task to be considered complete, it must meet these criteria:
         - [x] Responsive layout for different screen sizes
         - [x] Touch-friendly controls and visualizations
         - [x] Optimized chart rendering for mobile devices
-- [ ] Implement amortization dashboard
-    - [ ] Create property selector with standardized address display
-    - [ ] Build loan overview section
-        - [ ] Current loan status display (months into loan)
-        - [ ] Monthly principal and interest breakdown
-        - [ ] Total equity gained calculation
-    - [ ] Implement amortization visualization
-        - [ ] Interactive chart showing balance, interest, and principal over time
-        - [ ] Current position indicator on timeline
-        - [ ] Mobile-optimized chart controls
-    - [ ] Create amortization schedule table
-        - [ ] Monthly payment breakdown (principal/interest)
-        - [ ] Running balance calculation
-        - [ ] Cumulative interest and principal tracking
-        - [ ] Responsive table with optimized mobile view
+- [x] Implement amortization dashboard
+    - [x] Create property selector with standardized address display
+    - [x] Build loan overview section
+        - [x] Current loan status display (months into loan)
+        - [x] Monthly principal and interest breakdown
+        - [x] Total equity gained calculation
+    - [x] Implement amortization visualization
+        - [x] Interactive chart showing balance, interest, and principal over time
+        - [x] Current position indicator on timeline
+        - [x] Mobile-optimized chart controls
+    - [x] Create amortization schedule table
+        - [x] Monthly payment breakdown (principal/interest)
+        - [x] Running balance calculation
+        - [x] Cumulative interest and principal tracking
+        - [x] Responsive table with optimized mobile view
 - [ ] Develop transactions dashboard
     - [ ] Implement comprehensive filtering system
         - [ ] Property filter with standardized address display

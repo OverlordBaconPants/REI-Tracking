@@ -368,6 +368,7 @@ Common code smells:
 | 2025-04-27 | Implemented loan tracking and management | To provide comprehensive loan management with support for primary and secondary financing, loan details tracking, remaining balance and equity calculations, and monthly equity gain tracking |
 | 2025-04-27 | Implemented dashboard routing system with authentication | To create a secure dashboard system with login requirements, property-based access control, and mobile-responsive layouts |
 | 2025-04-27 | Built portfolio dashboard | To provide users with comprehensive portfolio overview including equity distribution, cash flow visualizations, and property metrics in a mobile-responsive design |
+| 2025-04-27 | Implemented amortization dashboard | To provide property owners with detailed loan amortization tracking including property selector, loan overview with equity gained calculation, interactive amortization visualization with current position indicator, and responsive amortization schedule table with principal/interest breakdown |
 
 ---
 
