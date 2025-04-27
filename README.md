@@ -66,6 +66,35 @@ The application includes specialized investment metric calculators:
   - Price per unit for multi-family properties
   - Breakeven occupancy calculation
 
+## Financial Calculations
+
+The application provides comprehensive financial calculations for real estate investments:
+
+- **Detailed Cash Flow Breakdown**: Calculate monthly cash flow with comprehensive expense categories
+  - Income tracking (rental, parking, laundry, storage, other)
+  - Expense tracking (property taxes, insurance, utilities, management fees, CapEx, vacancy, repairs)
+  - Multi-family specific expenses (common area maintenance, elevator maintenance, staff payroll, security)
+  - Loan payment tracking for multiple loans
+  
+- **Balloon Payment Analysis**: Analyze the impact of balloon payments on investment returns
+  - Pre-balloon and post-balloon cash flow calculations
+  - Balloon amount and date projections
+  - Refinance loan modeling after balloon payment
+  - Post-balloon value calculations with annual increases
+  
+- **Lease Option Calculations**: Specialized calculations for lease option investments
+  - Total rent credits calculation over option term
+  - Effective purchase price calculation (strike price minus credits)
+  - Rent credit percentage calculation
+  - Option equity calculation based on property appreciation
+  
+- **Refinance Impact Analysis**: Analyze the impact of refinancing on cash flow and returns
+  - Pre-refinance and post-refinance cash flow comparison
+  - Monthly and annual savings calculations
+  - Break-even analysis for closing costs
+  - Interest savings calculation over loan term
+  - Cash-out amount calculation
+
 ## Property Comps & Valuation
 
 The application features a sophisticated property valuation system:

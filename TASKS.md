@@ -119,19 +119,19 @@ For any task to be considered complete, it must meet these criteria:
     - [x] Implement property estimation with range indicators (low, high, estimated)
     - [x] Support for market statistics by location
     - [x] Implement correlation scoring for comparable properties
-- [ ] Implement financial calculations
-    - [ ] Monthly cash flow calculation with comprehensive expense categories
-    - [ ] Cash-on-cash return calculation
-    - [ ] Cap rate calculation
-    - [ ] ROI and other investment metrics
-    - [ ] Debt service coverage ratio (DSCR) calculation
-    - [ ] Expense ratio calculation
-    - [ ] Support for various expense categories (utilities, internet, cleaning, pest control, landscaping)
-    - [ ] Support for Multi-Family specific expenses (common area maintenance, elevator maintenance, staff payroll)
-    - [ ] Support for calculating pre-balloon and post-balloon cash flows
-    - [ ] Support for calculating post-balloon values with annual increases
-    - [ ] Support for lease option specific calculations (rent credits, effective purchase price)
-    - [ ] Support for refinance impact analysis
+- [x] Implement financial calculations
+    - [x] Monthly cash flow calculation with comprehensive expense categories
+    - [x] Cash-on-cash return calculation
+    - [x] Cap rate calculation
+    - [x] ROI and other investment metrics
+    - [x] Debt service coverage ratio (DSCR) calculation
+    - [x] Expense ratio calculation
+    - [x] Support for various expense categories (utilities, internet, cleaning, pest control, landscaping)
+    - [x] Support for Multi-Family specific expenses (common area maintenance, elevator maintenance, staff payroll)
+    - [x] Support for calculating pre-balloon and post-balloon cash flows
+    - [x] Support for calculating post-balloon values with annual increases
+    - [x] Support for lease option specific calculations (rent credits, effective purchase price)
+    - [x] Support for refinance impact analysis
 - [ ] Develop reporting functionality
     - [ ] PDF report generation with ReportLab
     - [ ] KPI visualization with dynamic charts

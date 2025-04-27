@@ -942,6 +942,89 @@ class LeaseOptionAnalysis(BaseAnalysis):
             strike_price -= Money(self.data['option_consideration_fee'])
         
         return Money(max(0, strike_price.dollars))
+    
+    @safe_calculation(Money(0))
+    def calculate_total_rent_credits(self) -> Money:
+        """
+        Calculate total rent credits over the option term.
+        
+        Returns:
+            Total rent credits as Money object
+        """
+        if 'monthly_rent_credit' in self.data and self.data['monthly_rent_credit'] and 'option_term_months' in self.data:
+            monthly_rent_credit = Money(self.data['monthly_rent_credit'])
+            option_term_months = int(self.data['option_term_months'])
+            return monthly_rent_credit * option_term_months
+        
+        return Money(0)
+    
+    @safe_calculation(Percentage(0))
+    def calculate_rent_credit_percentage(self) -> Percentage:
+        """
+        Calculate rent credit as a percentage of monthly rent.
+        
+        Returns:
+            Rent credit percentage as Percentage object
+        """
+        if 'monthly_rent_credit' in self.data and self.data['monthly_rent_credit'] and 'monthly_rent' in self.data:
+            monthly_rent_credit = Money(self.data['monthly_rent_credit'])
+            monthly_rent = Money(self.data['monthly_rent'])
+            
+            if monthly_rent.dollars == 0:
+                return Percentage(0)
+            
+            return Percentage((monthly_rent_credit.dollars / monthly_rent.dollars) * 100)
+        
+        return Percentage(0)
+    
+    @safe_calculation(Money(0))
+    def calculate_option_equity(self) -> Money:
+        """
+        Calculate equity built through option (difference between strike price and current value).
+        
+        Returns:
+            Option equity as Money object
+        """
+        strike_price = Money(self.data.get('strike_price', 0) or 0)
+        current_value = Money(self.data.get('current_value', 0) or 0)
+        
+        if current_value.dollars == 0:
+            # Use purchase price if current value is not specified
+            current_value = Money(self.data.get('purchase_price', 0) or 0)
+        
+        # Apply appreciation if specified
+        if 'appreciation_rate' in self.data and self.data['appreciation_rate'] and 'option_term_months' in self.data:
+            appreciation_rate = Percentage(self.data['appreciation_rate'])
+            option_term_years = int(self.data['option_term_months']) / 12
+            
+            for _ in range(int(option_term_years)):
+                current_value = Money(current_value.dollars * (1 + appreciation_rate.as_decimal()))
+            
+            # Handle partial year
+            partial_year = option_term_years - int(option_term_years)
+            if partial_year > 0:
+                current_value = Money(current_value.dollars * (1 + appreciation_rate.as_decimal() * partial_year))
+        
+        # Calculate equity (current value - strike price)
+        if current_value.dollars > strike_price.dollars:
+            return current_value - strike_price
+        
+        return Money(0)
+    
+    def analyze(self) -> AnalysisResult:
+        """
+        Perform the analysis and return results.
+        
+        Returns:
+            AnalysisResult object containing calculated metrics
+        """
+        # Get base analysis results
+        result = super().analyze()
+        
+        # Add Lease Option specific calculations to the result
+        # These could be added to the AnalysisResult class if needed
+        
+        return result
 
 
 class MultiFamilyAnalysis(BaseAnalysis):
@@ -986,8 +1069,54 @@ class MultiFamilyAnalysis(BaseAnalysis):
         # Get number of occupied units
         occupied_units = int(self.data.get('occupied_units', 0) or 0)
         
-        # Calculate total income
-        return rent_per_unit * occupied_units
+        # Calculate base rental income
+        monthly_income = rent_per_unit * occupied_units
+        
+        # Add other income sources if available
+        if 'parking_income' in self.data and self.data['parking_income']:
+            monthly_income += Money(self.data['parking_income'])
+            
+        if 'laundry_income' in self.data and self.data['laundry_income']:
+            monthly_income += Money(self.data['laundry_income'])
+            
+        if 'storage_income' in self.data and self.data['storage_income']:
+            monthly_income += Money(self.data['storage_income'])
+            
+        if 'other_income' in self.data and self.data['other_income']:
+            monthly_income += Money(self.data['other_income'])
+        
+        return monthly_income
+    
+    @safe_calculation(Money(0))
+    def calculate_monthly_expenses(self) -> Money:
+        """
+        Calculate monthly expenses for Multi-Family.
+        
+        Returns:
+            Monthly expenses as Money object
+        """
+        # Get base expenses
+        expenses = super().calculate_monthly_expenses()
+        
+        # Add Multi-Family specific expenses
+        
+        # Common area maintenance
+        if 'common_area_maintenance' in self.data and self.data['common_area_maintenance']:
+            expenses += Money(self.data['common_area_maintenance'])
+        
+        # Elevator maintenance
+        if 'elevator_maintenance' in self.data and self.data['elevator_maintenance']:
+            expenses += Money(self.data['elevator_maintenance'])
+        
+        # Staff payroll
+        if 'staff_payroll' in self.data and self.data['staff_payroll']:
+            expenses += Money(self.data['staff_payroll'])
+        
+        # Security
+        if 'security' in self.data and self.data['security']:
+            expenses += Money(self.data['security'])
+        
+        return expenses
     
     @safe_calculation(Money(0))
     def calculate_price_per_unit(self) -> Money:
@@ -1004,6 +1133,22 @@ class MultiFamilyAnalysis(BaseAnalysis):
             purchase_price=purchase_price,
             unit_count=total_units
         )
+    
+    @safe_calculation(Percentage(0))
+    def calculate_occupancy_rate(self) -> Percentage:
+        """
+        Calculate occupancy rate for Multi-Family.
+        
+        Returns:
+            Occupancy rate as Percentage object
+        """
+        total_units = int(self.data.get('total_units', 0) or 0)
+        occupied_units = int(self.data.get('occupied_units', 0) or 0)
+        
+        if total_units == 0:
+            return Percentage(0)
+        
+        return Percentage((occupied_units / total_units) * 100)
     
     def analyze(self) -> AnalysisResult:
         """
