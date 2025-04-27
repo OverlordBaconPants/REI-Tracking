@@ -273,11 +273,14 @@ The application includes several specialized dashboards:
   - Amortization schedule
   - Equity growth projections
   
-- **Transactions Dashboard**: Analyze property transactions with advanced filtering
-  - Transaction filtering by property, date, and category
-  - Income and expense trends
-  - Category breakdown analysis
-  - Transaction reporting tools
+- **Transactions Dashboard**: Analyze property transactions with advanced filtering and reporting
+  - Comprehensive filtering system with property, type, date range, and description search
+  - Reimbursement status filtering with conditional display for wholly-owned properties
+  - Mobile-optimized transaction table with responsive column layout
+  - Visual indicators for transaction types and status
+  - PDF report generation with transaction details and financial summaries
+  - Document bundling with ZIP archive creation for transaction documentation
+  - Touch-friendly controls and inline document access
   
 - **KPI Dashboard**: Monitor key performance indicators for properties
   - Actual vs. projected metrics

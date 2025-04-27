@@ -128,6 +128,7 @@ def init_dashboards():
     try:
         from src.dash_apps.dash_portfolio import create_portfolio_dash
         from src.dash_apps.dash_amortization import create_amortization_dash
+        from src.dash_apps.dash_transactions import create_transactions_dash
         
         # Create and attach portfolio dashboard
         app.portfolio_dash = create_portfolio_dash(app)
@@ -136,6 +137,10 @@ def init_dashboards():
         # Create and attach amortization dashboard
         app.amortization_dash = create_amortization_dash(app)
         app_logger.info("Amortization dashboard initialized successfully")
+        
+        # Create and attach transactions dashboard
+        app.transactions_dash = create_transactions_dash(app)
+        app_logger.info("Transactions dashboard initialized successfully")
     except Exception as e:
         app_logger.error(f"Error initializing dashboards: {str(e)}")
         app_logger.exception("Dashboard initialization error details:")
