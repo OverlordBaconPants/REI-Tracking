@@ -22,6 +22,7 @@ config.py
 /logs/*
 !/logs/.gitkeep
 app.log
+FAILED_TESTS.md
 
 # Data
 /data/*
