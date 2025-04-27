@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+{% block title %}Occupancy Rate Calculator{% endblock %}
+{% block body_class %}occupancy-calculator-page{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mt-4 mb-4">Occupancy Rate Calculator</h1>
+            <p class="lead">Calculate and analyze occupancy rates for multi-family properties.</p>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-navy text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-building me-2"></i>Occupancy Calculator
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="occupancy-calculator-form">
+                        <div class="mb-3">
+                            <label for="property-selector" class="form-label">Property (Optional)</label>
+                            <select class="form-select" id="property-selector">
+                                <option value="" selected>Select a property or enter details manually</option>
+                                {% for property in properties %}
+                                <option value="{{ property.id }}">{{ property.address }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Select a property from your portfolio or enter details manually below.</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="property-name" class="form-label">Property Name/Address</label>
+                            <input type="text" class="form-control" id="property-name" placeholder="123 Main St Apartments">
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="total-units" class="form-label">Total Units</label>
+                                <input type="number" class="form-control" id="total-units" placeholder="0" min="1" step="1" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="occupied-units" class="form-label">Occupied Units</label>
+                                <input type="number" class="form-control" id="occupied-units" placeholder="0" min="0" step="1" required>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="average-rent" class="form-label">Average Rent per Unit</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="average-rent" placeholder="0" min="0" step="1" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="target-occupancy" class="form-label">Target Occupancy Rate</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="target-occupancy" placeholder="95" min="0" max="100" step="1" value="95">
+                                    <span class="input-group-text">%</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="monthly-fixed-expenses" class="form-label">Monthly Fixed Expenses</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="monthly-fixed-expenses" placeholder="0" min="0" step="1">
+                                </div>
+                                <div class="form-text">Expenses that don't change with occupancy (mortgage, property tax, etc.)</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="variable-expense-per-unit" class="form-label">Variable Expense per Unit</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="variable-expense-per-unit" placeholder="0" min="0" step="1">
+                                </div>
+                                <div class="form-text">Expenses that vary with occupancy (utilities, maintenance, etc.)</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="market-occupancy" class="form-label">Market Average Occupancy Rate</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="market-occupancy" placeholder="90" min="0" max="100" step="1" value="90">
+                                <span class="input-group-text">%</span>
+                            </div>
+                            <div class="form-text">Average occupancy rate in your market for comparison</div>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-calculator me-2"></i>Calculate Occupancy Metrics
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-navy text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-graph-up me-2"></i>Results
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="results-container" style="display: none;">
+                        <div class="alert mb-4" id="occupancy-alert">
+                            <h4 class="alert-heading">Current Occupancy Rate</h4>
+                            <h2 class="text-center my-4" id="occupancy-rate-result">0%</h2>
+                            <p class="mb-0" id="occupancy-status-message">Occupancy rate status message will appear here.</p>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Potential Monthly Revenue</h5>
+                                        <p class="card-text text-center fs-4" id="potential-revenue-result">$0</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Actual Monthly Revenue</h5>
+                                        <p class="card-text text-center fs-4" id="actual-revenue-result">$0</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Revenue Gap</h5>
+                                        <p class="card-text text-center fs-4" id="revenue-gap-result">$0</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Units Needed for Target</h5>
+                                        <p class="card-text text-center fs-4" id="units-needed-result">0</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Breakeven Occupancy</h5>
+                                        <p class="card-text text-center fs-4" id="breakeven-occupancy-result">0%</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Monthly Net Income</h5>
+                                        <p class="card-text text-center fs-4" id="net-income-result">$0</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <h5>Market Comparison</h5>
+                            <div class="progress mb-3" style="height: 25px;">
+                                <div class="progress-bar bg-info" id="market-occupancy-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                            </div>
+                            <div class="progress" style="height: 25px;">
+                                <div class="progress-bar" id="current-occupancy-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                            </div>
+                            <div class="mt-2 text-muted small">
+                                <span class="text-info"><i class="bi bi-square-fill"></i> Market Average</span>
+                                <span class="ms-3"><i class="bi bi-square-fill"></i> Your Property</span>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="button" class="btn btn-outline-primary" id="print-results">
+                                <i class="bi bi-printer me-2"></i>Print Results
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="no-results-container" class="text-center py-5">
+                        <i class="bi bi-building display-1 text-muted"></i>
+                        <p class="lead mt-3">Fill out the form and click "Calculate Occupancy Metrics" to see your results.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script type="module" src="{{ url_for('static', filename='js/occupancy_calculator.js') }}"></script>
+{% endblock %}

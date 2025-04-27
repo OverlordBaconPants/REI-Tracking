@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+{% block title %}Welcome to REI Tracker{% endblock %}
+{% block body_class %}welcome-page{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12 text-center">
+            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="REI Tracker Logo" class="welcome-logo my-4" style="max-width: 200px;">
+            <h1 class="display-4 mb-4">Welcome to REI Tracker</h1>
+            <p class="lead mb-5">Your comprehensive solution for real estate investment tracking, analysis, and management.</p>
+        </div>
+    </div>
+    
+    <div class="row justify-content-center mb-5">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <h2 class="card-title mb-4">Getting Started</h2>
+                    <div class="row">
+                        <div class="col-md-4 text-center mb-4 mb-md-0">
+                            <div class="welcome-step">
+                                <div class="welcome-step-number">1</div>
+                                <h5>Add Your Properties</h5>
+                                <p>Start by adding your real estate properties to your portfolio.</p>
+                                <i class="bi bi-building display-4 text-navy"></i>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-center mb-4 mb-md-0">
+                            <div class="welcome-step">
+                                <div class="welcome-step-number">2</div>
+                                <h5>Track Transactions</h5>
+                                <p>Record income and expenses for each of your properties.</p>
+                                <i class="bi bi-cash-stack display-4 text-navy"></i>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <div class="welcome-step">
+                                <div class="welcome-step-number">3</div>
+                                <h5>Analyze Performance</h5>
+                                <p>View dashboards and reports to analyze your portfolio's performance.</p>
+                                <i class="bi bi-graph-up display-4 text-navy"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-grid gap-2 mt-4">
+                        <a href="{{ url_for('dashboards.dashboards') }}" class="btn btn-primary btn-lg">
+                            <i class="bi bi-arrow-right-circle me-2"></i>Go to Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-navy text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-calculator me-2"></i>Powerful Calculators
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p>Access specialized calculators designed for real estate investors:</p>
+                    <ul>
+                        <li>Maximum Allowable Offer (MAO) Calculator</li>
+                        <li>Cash-on-Cash Return Calculator</li>
+                        <li>Cap Rate Calculator</li>
+                        <li>Occupancy Rate Calculator for Multi-Family Properties</li>
+                    </ul>
+                    <div class="d-grid gap-2 mt-4">
+                        <a href="{{ url_for('dashboards.mao_calculator_view') }}" class="btn btn-outline-primary">
+                            <i class="bi bi-calculator me-2"></i>Try MAO Calculator
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-navy text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-pie-chart me-2"></i>Interactive Dashboards
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p>Visualize your real estate portfolio with interactive dashboards:</p>
+                    <ul>
+                        <li>Portfolio Overview Dashboard</li>
+                        <li>Amortization Schedule Dashboard</li>
+                        <li>Transactions Dashboard</li>
+                        <li>KPI Dashboard with Performance Metrics</li>
+                    </ul>
+                    <div class="d-grid gap-2 mt-4">
+                        <a href="{{ url_for('dashboards.portfolio_view') }}" class="btn btn-outline-primary">
+                            <i class="bi bi-pie-chart me-2"></i>View Portfolio Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-navy text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-file-earmark-text me-2"></i>Comprehensive Reports
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p>Generate detailed reports for your real estate investments:</p>
+                    <ul>
+                        <li>Transaction Reports with Documentation</li>
+                        <li>KPI Comparison Reports</li>
+                        <li>Cash Flow Reports</li>
+                        <li>Equity Growth Reports</li>
+                    </ul>
+                    <div class="d-grid gap-2 mt-4">
+                        <a href="{{ url_for('dashboards.kpi_comparison_view') }}" class="btn btn-outline-primary">
+                            <i class="bi bi-file-earmark-text me-2"></i>Generate KPI Report
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+    .welcome-page {
+        background-color: #f8f9fa;
+    }
+    
+    .welcome-logo {
+        max-width: 200px;
+        height: auto;
+    }
+    
+    .welcome-step {
+        padding: 1rem;
+        position: relative;
+    }
+    
+    .welcome-step-number {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        background-color: var(--navy-color);
+        color: white;
+        border-radius: 50%;
+        font-size: 1.25rem;
+        font-weight: bold;
+        margin: 0 auto 1rem;
+    }
+    
+    @media (min-width: 768px) {
+        .welcome-step:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            top: 20px;
+            right: -15px;
+            width: 30px;
+            height: 2px;
+            background-color: var(--navy-color);
+        }
+    }
+    
+    @media print {
+        .welcome-step-number {
+            border: 1px solid #000;
+            color: #000;
+            background-color: transparent;
+        }
+        
+        .welcome-step:not(:last-child)::after {
+            background-color: #000;
+        }
+    }
+</style>
+{% endblock %}

@@ -374,6 +374,11 @@ Common code smells:
 | 2025-04-27 | Implemented Frontend Testing Framework | To establish a comprehensive testing framework for JavaScript components using pytest, Selenium WebDriver, and Chrome headless browser, with minimal tests for core modules (base.js, notifications.js, form_validator.js, data_formatter.js, main.js) |
 | 2025-04-27 | Implemented KPI dashboard | To provide property owners with a comprehensive view of their property KPIs including NOI, cap rate, cash-on-cash return, and DSCR, with data quality assessment, analysis comparison functionality, and mobile-responsive design |
 | 2025-04-27 | Implemented KPI comparison tool | To enable property owners to compare planned vs. actual metrics with side-by-side comparison tables, variance calculation, performance status indicators, and PDF report generation |
+| 2025-04-27 | Created MAO calculator | To provide a comprehensive tool for calculating maximum allowable offers based on different investment strategies, with support for BRRRR-specific calculations and integration with property comps data |
+| 2025-04-27 | Implemented welcome and landing page modules | To create an intuitive onboarding experience for new users with clear navigation to key features and getting started guidance |
+| 2025-04-27 | Built loan term toggle functionality | To allow users to easily switch between years and months when entering loan terms, improving usability and flexibility |
+| 2025-04-27 | Enhanced print-specific styling and layouts | To provide optimized printing capabilities for reports, calculators, and dashboards with proper page breaks, headers, and formatting |
+| 2025-04-27 | Implemented occupancy rate calculator | To enable multi-family property owners to analyze occupancy rates, calculate revenue impact, compare to market averages, and determine breakeven occupancy |
 
 ---
 

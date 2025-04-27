@@ -1,0 +1,323 @@
+{% extends "base.html" %}
+{% block title %}MAO Calculator{% endblock %}
+{% block body_class %}mao-calculator-page{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mt-4 mb-4">Maximum Allowable Offer (MAO) Calculator</h1>
+            <p class="lead">Calculate the maximum amount you should offer for a property based on your investment strategy.</p>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-navy text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-calculator me-2"></i>MAO Calculator
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="mao-calculator-form">
+                        <div class="mb-3">
+                            <label for="analysis-type" class="form-label">Investment Strategy</label>
+                            <select class="form-select" id="analysis-type" required>
+                                <option value="" selected disabled>Select a strategy</option>
+                                <option value="LTR">Long-Term Rental (LTR)</option>
+                                <option value="BRRRR">Buy, Rehab, Rent, Refinance, Repeat (BRRRR)</option>
+                                <option value="LeaseOption">Lease Option</option>
+                                <option value="MultiFamily">Multi-Family</option>
+                                <option value="PadSplit">PadSplit</option>
+                            </select>
+                            <div class="form-text">Choose the investment strategy you plan to use for this property.</div>
+                        </div>
+                        
+                        <!-- Common Fields -->
+                        <div class="mb-3">
+                            <label for="address" class="form-label">Property Address</label>
+                            <input type="text" class="form-control" id="address" placeholder="123 Main St, City, State, ZIP" required>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="monthly-rent" class="form-label">Monthly Rent</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="monthly-rent" placeholder="0" min="0" step="1" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="property-taxes" class="form-label">Annual Property Taxes</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="property-taxes" placeholder="0" min="0" step="1" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="insurance" class="form-label">Annual Insurance</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="insurance" placeholder="0" min="0" step="1" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="closing-costs" class="form-label">Closing Costs</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="closing-costs" placeholder="0" min="0" step="1">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- BRRRR-specific fields -->
+                        <div id="brrrr-fields" class="strategy-fields" style="display: none;">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="after-repair-value" class="form-label">After Repair Value (ARV)</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" class="form-control" id="after-repair-value" placeholder="0" min="0" step="1">
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="renovation-costs" class="form-label">Renovation Costs</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" class="form-control" id="renovation-costs" placeholder="0" min="0" step="1">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="renovation-duration" class="form-label">Renovation Duration (months)</label>
+                                    <input type="number" class="form-control" id="renovation-duration" placeholder="0" min="0" step="1">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="refinance-ltv-percentage" class="form-label">Refinance LTV %</label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" id="refinance-ltv-percentage" placeholder="75" min="0" max="100" step="1" value="75">
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- LTR-specific fields -->
+                        <div id="ltr-fields" class="strategy-fields" style="display: none;">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="target-monthly-cash-flow" class="form-label">Target Monthly Cash Flow</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" class="form-control" id="target-monthly-cash-flow" placeholder="200" min="0" step="1" value="200">
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="target-cap-rate" class="form-label">Target Cap Rate %</label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" id="target-cap-rate" placeholder="8" min="0" max="100" step="0.1" value="8">
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Expense percentages -->
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="management-fee-percentage" class="form-label">Management Fee %</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="management-fee-percentage" placeholder="10" min="0" max="100" step="0.1" value="10">
+                                    <span class="input-group-text">%</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="vacancy-percentage" class="form-label">Vacancy %</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="vacancy-percentage" placeholder="5" min="0" max="100" step="0.1" value="5">
+                                    <span class="input-group-text">%</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="repairs-percentage" class="form-label">Repairs %</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="repairs-percentage" placeholder="5" min="0" max="100" step="0.1" value="5">
+                                    <span class="input-group-text">%</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="capex-percentage" class="form-label">CapEx %</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="capex-percentage" placeholder="5" min="0" max="100" step="0.1" value="5">
+                                    <span class="input-group-text">%</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Loan details with toggle -->
+                        <div class="mb-3">
+                            <label class="form-label">Loan Details</label>
+                            <div class="loan-term-container">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="loan-amount" class="form-label">Loan Amount</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">$</span>
+                                            <input type="number" class="form-control" id="loan-amount" placeholder="0" min="0" step="1">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="loan-interest-rate" class="form-label">Interest Rate %</label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" id="loan-interest-rate" placeholder="6.5" min="0" max="100" step="0.01" value="6.5">
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="loan-term" class="form-label">Loan Term</label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" id="loan-term" placeholder="30" min="1" step="1" value="30">
+                                            <button type="button" class="btn btn-outline-secondary loan-term-toggle" data-term-type="years">Years</button>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <div class="form-check mt-4">
+                                            <input class="form-check-input" type="checkbox" id="is-interest-only">
+                                            <label class="form-check-label" for="is-interest-only">
+                                                Interest-Only Loan
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-calculator me-2"></i>Calculate MAO
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-navy text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-graph-up me-2"></i>Results
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="results-container" style="display: none;">
+                        <div class="alert alert-info mb-4">
+                            <h4 class="alert-heading">Maximum Allowable Offer (MAO)</h4>
+                            <h2 class="text-center my-4" id="mao-result">$0</h2>
+                            <p class="mb-0">This is the maximum amount you should offer for this property based on your investment strategy and criteria.</p>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Monthly Cash Flow</h5>
+                                        <p class="card-text text-center fs-4" id="monthly-cash-flow-result">$0</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Cash-on-Cash Return</h5>
+                                        <p class="card-text text-center fs-4" id="cash-on-cash-return-result">0%</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Cap Rate</h5>
+                                        <p class="card-text text-center fs-4" id="cap-rate-result">0%</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Total Investment</h5>
+                                        <p class="card-text text-center fs-4" id="total-investment-result">$0</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- BRRRR-specific results -->
+                        <div id="brrrr-results" class="strategy-results" style="display: none;">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <h5 class="card-title">Loan Amount (Refinance)</h5>
+                                            <p class="card-text text-center fs-4" id="refinance-loan-amount-result">$0</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <h5 class="card-title">Cash Left In Deal</h5>
+                                            <p class="card-text text-center fs-4" id="cash-left-in-deal-result">$0</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <h5>Calculation Breakdown</h5>
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <tbody id="calculation-breakdown">
+                                        <!-- Calculation breakdown will be inserted here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="button" class="btn btn-outline-primary" id="print-results">
+                                <i class="bi bi-printer me-2"></i>Print Results
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="no-results-container" class="text-center py-5">
+                        <i class="bi bi-calculator display-1 text-muted"></i>
+                        <p class="lead mt-3">Fill out the form and click "Calculate MAO" to see your results.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script type="module" src="{{ url_for('static', filename='js/mao_calculator.js') }}"></script>
+{% endblock %}

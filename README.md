@@ -264,9 +264,9 @@ The application features a comprehensive portfolio dashboard:
   - Dynamic recalculation of metrics based on selected period
   - Consistent date range application across all visualizations
 
-## Additional Dashboards
+## Additional Dashboards and Tools
 
-The application includes several specialized dashboards:
+The application includes several specialized dashboards and tools:
 
 - **Amortization Dashboard**: Track loan amortization schedules and equity growth
   - Loan balance and equity visualization
@@ -298,6 +298,20 @@ The application includes several specialized dashboards:
   - Performance status indicators (favorable/unfavorable)
   - PDF report generation with detailed metrics and visualizations
   - Support for custom date ranges for targeted analysis
+
+- **MAO Calculator**: Calculate the maximum allowable offer for a property
+  - Support for BRRRR-specific MAO calculation
+  - Support for different investment strategies (LTR, BRRRR, Lease Option, Multi-Family, PadSplit)
+  - Detailed calculation breakdown with step-by-step explanation
+  - Print-friendly results for sharing and documentation
+  - Integration with property comps data
+
+- **Occupancy Rate Calculator**: Calculate and analyze occupancy rates for multi-family properties
+  - Track occupancy over time with visual indicators
+  - Calculate revenue impact of occupancy changes
+  - Compare to market averages with progress bar visualization
+  - Calculate breakeven occupancy rate based on fixed and variable expenses
+  - Print-friendly results for sharing and documentation
 
 ## User Interface & Frontend Architecture
 

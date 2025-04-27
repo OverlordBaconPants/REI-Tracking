@@ -80,21 +80,40 @@ def dashboards():
         logger.info(f"User {current_user.name} accessed dashboards landing page")
     else:
         logger.info("Anonymous user accessed dashboards landing page")
-    return """
-    <html>
-    <head><title>Dashboards</title></head>
-    <body>
-        <h1>Dashboards</h1>
-        <ul>
-            <li><a href="/dashboards/portfolio">Portfolio Dashboard</a></li>
-            <li><a href="/dashboards/amortization">Amortization Dashboard</a></li>
-            <li><a href="/dashboards/transactions">Transactions Dashboard</a></li>
-            <li><a href="/dashboards/kpi">KPI Dashboard</a></li>
-            <li><a href="/dashboards/kpi-comparison">KPI Comparison Tool</a></li>
-        </ul>
-    </body>
-    </html>
-    """
+    try:
+        return render_template('dashboards/index.html')
+    except Exception as e:
+        logger.error(f"Error rendering dashboards index: {str(e)}")
+        return """
+        <html>
+        <head><title>Dashboards</title></head>
+        <body>
+            <h1>Dashboards</h1>
+            <ul>
+                <li><a href="/dashboards/portfolio">Portfolio Dashboard</a></li>
+                <li><a href="/dashboards/amortization">Amortization Dashboard</a></li>
+                <li><a href="/dashboards/transactions">Transactions Dashboard</a></li>
+                <li><a href="/dashboards/kpi">KPI Dashboard</a></li>
+                <li><a href="/dashboards/kpi-comparison">KPI Comparison Tool</a></li>
+                <li><a href="/dashboards/mao-calculator">MAO Calculator</a></li>
+            </ul>
+        </body>
+        </html>
+        """
+
+@blueprint.route('/welcome')
+@dashboard_access_required
+def welcome():
+    """Welcome page for new users."""
+    try:
+        if hasattr(current_user, 'name'):
+            logger.info(f"User {current_user.name} accessed welcome page")
+        else:
+            logger.info("Anonymous user accessed welcome page")
+        return render_template('dashboards/welcome.html')
+    except Exception as e:
+        logger.error(f"Error rendering welcome page: {str(e)}")
+        return redirect(url_for('dashboards.dashboards'))
 
 @blueprint.route('/portfolio')
 @dashboard_access_required
@@ -194,6 +213,55 @@ def kpi_view():
         <body>
             <h1>KPI Dashboard</h1>
             <p>Coming soon...</p>
+        </body>
+        </html>
+        """
+
+@blueprint.route('/mao-calculator')
+@dashboard_access_required
+def mao_calculator_view():
+    """MAO calculator page."""
+    try:
+        if hasattr(current_user, 'name'):
+            logger.info(f"User {current_user.name} accessed MAO calculator")
+        else:
+            logger.info("Anonymous user accessed MAO calculator")
+        return render_template('dashboards/mao_calculator.html')
+    except Exception as e:
+        logger.error(f"Error rendering MAO calculator view: {str(e)}")
+        return """
+        <html>
+        <head><title>MAO Calculator</title></head>
+        <body>
+            <h1>MAO Calculator</h1>
+            <p>An error occurred while loading the calculator. Please try again later.</p>
+        </body>
+        </html>
+        """
+
+@blueprint.route('/occupancy-calculator')
+@dashboard_access_required
+def occupancy_calculator_view():
+    """Occupancy rate calculator page."""
+    try:
+        if hasattr(current_user, 'name') and hasattr(current_user, 'id'):
+            logger.info(f"User {current_user.name} accessed occupancy rate calculator")
+            # Get properties accessible to the user for the dropdown
+            from src.services.property_financial_service import get_properties_for_user
+            properties = get_properties_for_user(current_user.id, current_user.name)
+        else:
+            logger.info("Anonymous user accessed occupancy rate calculator")
+            properties = []
+        
+        return render_template('dashboards/occupancy_calculator.html', properties=properties)
+    except Exception as e:
+        logger.error(f"Error rendering occupancy calculator view: {str(e)}")
+        return """
+        <html>
+        <head><title>Occupancy Rate Calculator</title></head>
+        <body>
+            <h1>Occupancy Rate Calculator</h1>
+            <p>An error occurred while loading the calculator. Please try again later.</p>
         </body>
         </html>
         """

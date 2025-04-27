@@ -402,11 +402,11 @@ For any task to be considered complete, it must meet these criteria:
 
 ## 14. 📄 Special Tools & Enhancements
 
-- [ ] Create MAO (Maximum Allowable Offer) calculator
-    - [ ] Support for BRRRR-specific MAO calculation
-    - [ ] Support for different investment strategies
-    - [ ] Integration with property comps data
-- [ ] Implement welcome and landing page modules
-- [ ] Build loan term toggle functionality
-- [ ] Create print-specific styling and layouts
-- [ ] Implement occupancy rate calculator for multi-family properties
+- [x] Create MAO (Maximum Allowable Offer) calculator
+    - [x] Support for BRRRR-specific MAO calculation
+    - [x] Support for different investment strategies
+    - [x] Integration with property comps data
+- [x] Implement welcome and landing page modules
+- [x] Build loan term toggle functionality
+- [x] Create print-specific styling and layouts
+- [x] Implement occupancy rate calculator for multi-family properties

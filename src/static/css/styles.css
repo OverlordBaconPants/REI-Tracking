@@ -763,42 +763,191 @@ input[type="file"],
 
 /* ===== Print Styles ===== */
 @media print {
+    /* Basic page setup */
     body {
         padding-top: 0;
+        background-color: white !important;
+        color: black !important;
+        font-size: 12pt;
+        line-height: 1.4;
     }
 
+    /* Hide non-printable elements */
     .sidebar,
     .navbar,
-    .no-print {
+    .no-print,
+    .btn-group,
+    .dropdown-menu,
+    .nav-tabs,
+    .toast-container,
+    .modal,
+    .form-select,
+    input[type="submit"],
+    button:not(.print-show) {
         display: none !important;
     }
 
+    /* Layout adjustments */
     main {
         margin: 0 !important;
         width: 100% !important;
+        padding: 0 !important;
     }
     
+    .container-fluid,
+    .container {
+        width: 100%;
+        padding: 0;
+        margin: 0;
+    }
+    
+    /* Page breaks */
+    h1, h2, h3, h4, h5, h6 {
+        page-break-after: avoid;
+        page-break-inside: avoid;
+    }
+    
+    img, svg, table, pre, blockquote {
+        page-break-inside: avoid;
+    }
+    
+    ul, ol, dl {
+        page-break-before: avoid;
+    }
+    
+    /* Card styling */
     .card {
         break-inside: avoid;
-        box-shadow: none;
-        border: 1px solid #ddd;
+        box-shadow: none !important;
+        border: 1px solid #ddd !important;
+        margin-bottom: 20px !important;
     }
     
+    .card-header {
+        background-color: #f8f9fa !important;
+        color: black !important;
+        border-bottom: 1px solid #ddd !important;
+    }
+    
+    .card-header h4,
+    .card-header h5 {
+        color: black !important;
+    }
+    
+    /* Table styling */
     .table {
-        border-collapse: collapse;
+        border-collapse: collapse !important;
+        width: 100% !important;
+    }
+    
+    .table th,
+    .table td {
+        background-color: white !important;
+        color: black !important;
+        border: 1px solid #ddd !important;
+        padding: 8px !important;
     }
     
     .table th {
         background-color: #f8f9fa !important;
-        color: #333 !important;
+        font-weight: bold !important;
+    }
+    
+    /* Link handling */
+    a {
+        color: black !important;
+        text-decoration: underline !important;
     }
     
     a[href]:after {
         content: " (" attr(href) ")";
+        font-size: 90%;
+        color: #666;
     }
     
+    /* Don't show URL for internal links or javascript */
+    a[href^="#"]:after,
+    a[href^="javascript:"]:after {
+        content: "";
+    }
+    
+    /* Abbreviation handling */
     abbr[title]:after {
         content: " (" attr(title) ")";
+    }
+    
+    /* Chart and visualization adjustments */
+    .chart-container {
+        height: auto !important;
+        width: 100% !important;
+        page-break-inside: avoid;
+    }
+    
+    /* Dashboard-specific adjustments */
+    .kpi-dashboard .card {
+        width: 100% !important;
+        margin-bottom: 15px !important;
+    }
+    
+    .kpi-value {
+        background-color: white !important;
+        border: 1px solid #ddd !important;
+    }
+    
+    /* MAO Calculator specific styles */
+    #mao-calculator-form {
+        display: none !important;
+    }
+    
+    #results-container {
+        display: block !important;
+        width: 100% !important;
+    }
+    
+    #print-results {
+        display: none !important;
+    }
+    
+    /* Add a header with the application name */
+    @page {
+        margin: 2cm;
+    }
+    
+    @page :first {
+        margin-top: 3cm;
+    }
+    
+    body:before {
+        content: "REI Tracker";
+        display: block;
+        text-align: center;
+        font-size: 18pt;
+        font-weight: bold;
+        margin-bottom: 20px;
+    }
+    
+    /* Add page numbers */
+    @page {
+        @bottom-right {
+            content: "Page " counter(page) " of " counter(pages);
+        }
+    }
+    
+    /* Print-specific classes */
+    .print-only {
+        display: block !important;
+    }
+    
+    .print-break-before {
+        page-break-before: always;
+    }
+    
+    .print-break-after {
+        page-break-after: always;
+    }
+    
+    .print-no-break {
+        page-break-inside: avoid;
     }
 }
 
