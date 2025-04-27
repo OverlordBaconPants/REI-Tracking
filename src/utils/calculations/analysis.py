@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from src.utils.money import Money, Percentage, MonthlyPayment
 from src.utils.calculations.validation import ValidationResult, Validator, safe_calculation
 from src.utils.calculations.loan_details import LoanDetails
+from src.utils.calculations.investment_metrics import InvestmentMetricsCalculator, EquityProjection, YearlyProjection
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +40,8 @@ class AnalysisResult:
         price_per_unit: Price per unit (for multi-family)
         breakeven_occupancy: Breakeven occupancy rate as a percentage
         mao: Maximum Allowable Offer amount
+        equity_projection: Equity projection over time
+        yearly_projections: Year-by-year equity projections
     """
     monthly_cash_flow: Money = field(default_factory=lambda: Money(0))
     annual_cash_flow: Money = field(default_factory=lambda: Money(0))
@@ -54,10 +57,12 @@ class AnalysisResult:
     price_per_unit: Money = field(default_factory=lambda: Money(0))
     breakeven_occupancy: Percentage = field(default_factory=lambda: Percentage(0))
     mao: Money = field(default_factory=lambda: Money(0))
+    equity_projection: Optional[EquityProjection] = None
+    yearly_projections: List[YearlyProjection] = field(default_factory=list)
     
     def __str__(self) -> str:
         """Format analysis results as a string."""
-        return (
+        result = (
             f"Monthly Cash Flow: {self.monthly_cash_flow}\n"
             f"Annual Cash Flow: {self.annual_cash_flow}\n"
             f"Cash-on-Cash Return: {self.cash_on_cash_return}\n"
@@ -73,6 +78,17 @@ class AnalysisResult:
             f"Breakeven Occupancy: {self.breakeven_occupancy}\n"
             f"Maximum Allowable Offer: {self.mao}"
         )
+        
+        if self.equity_projection:
+            result += f"\n\nEquity Projection (over {self.equity_projection.projection_years} years):\n"
+            result += f"  Initial Equity: {self.equity_projection.initial_equity}\n"
+            result += f"  Final Property Value: {self.equity_projection.property_value}\n"
+            result += f"  Final Equity: {self.equity_projection.current_equity}\n"
+            result += f"  Equity from Appreciation: {self.equity_projection.equity_from_appreciation}\n"
+            result += f"  Equity from Principal Paydown: {self.equity_projection.equity_from_principal}\n"
+            result += f"  Total Equity Gain: {self.equity_projection.total_equity_gain}"
+        
+        return result
 
 class BaseAnalysis:
     """
@@ -368,10 +384,10 @@ class BaseAnalysis:
         annual_cash_flow = self.calculate_monthly_cash_flow() * 12
         total_investment = self.calculate_total_investment()
         
-        if total_investment.dollars == 0:
-            return Percentage('∞')  # Infinite return if no investment
-        
-        return Percentage((annual_cash_flow.dollars / total_investment.dollars) * 100)
+        return InvestmentMetricsCalculator.calculate_cash_on_cash_return(
+            annual_cash_flow=annual_cash_flow,
+            total_investment=total_investment
+        )
     
     @safe_calculation(Percentage(0))
     def calculate_cap_rate(self) -> Percentage:
@@ -384,14 +400,14 @@ class BaseAnalysis:
         # Calculate NOI (income - expenses, excluding debt service)
         income = self.calculate_monthly_income()
         expenses = self.calculate_monthly_expenses()
-        noi = (income - expenses) * 12  # Annual NOI
+        annual_noi = (income - expenses) * 12  # Annual NOI
         
         purchase_price = Money(self.data.get('purchase_price', 0) or 0)
         
-        if purchase_price.dollars == 0:
-            return Percentage(0)
-        
-        return Percentage((noi.dollars / purchase_price.dollars) * 100)
+        return InvestmentMetricsCalculator.calculate_cap_rate(
+            annual_noi=annual_noi,
+            property_value=purchase_price
+        )
     
     @safe_calculation(0.0)
     def calculate_debt_service_coverage_ratio(self) -> float:
@@ -404,14 +420,16 @@ class BaseAnalysis:
         # Calculate NOI (income - expenses, excluding debt service)
         income = self.calculate_monthly_income()
         expenses = self.calculate_monthly_expenses()
-        noi = income - expenses
+        monthly_noi = income - expenses
+        annual_noi = monthly_noi * 12
         
         loan_payments = self.calculate_loan_payments()
+        annual_debt_service = loan_payments * 12
         
-        if loan_payments.dollars == 0:
-            return float('inf')  # Infinite DSCR if no debt service
-        
-        return noi.dollars / loan_payments.dollars
+        return InvestmentMetricsCalculator.calculate_debt_service_coverage_ratio(
+            annual_noi=annual_noi,
+            annual_debt_service=annual_debt_service
+        )
     
     @safe_calculation(Percentage(0))
     def calculate_expense_ratio(self) -> Percentage:
@@ -424,10 +442,13 @@ class BaseAnalysis:
         expenses = self.calculate_monthly_expenses()
         income = self.calculate_monthly_income()
         
-        if income.dollars == 0:
-            return Percentage(0)
+        annual_expenses = expenses * 12
+        annual_income = income * 12
         
-        return Percentage((expenses.dollars / income.dollars) * 100)
+        return InvestmentMetricsCalculator.calculate_expense_ratio(
+            annual_expenses=annual_expenses,
+            annual_income=annual_income
+        )
     
     @safe_calculation(0.0)
     def calculate_gross_rent_multiplier(self) -> float:
@@ -440,10 +461,10 @@ class BaseAnalysis:
         purchase_price = Money(self.data.get('purchase_price', 0) or 0)
         annual_rent = self.calculate_monthly_income() * 12
         
-        if annual_rent.dollars == 0:
-            return 0.0
-        
-        return purchase_price.dollars / annual_rent.dollars
+        return InvestmentMetricsCalculator.calculate_gross_rent_multiplier(
+            purchase_price=purchase_price,
+            annual_rent=annual_rent
+        )
     
     @safe_calculation(Percentage(0))
     def calculate_breakeven_occupancy(self) -> Percentage:
@@ -455,15 +476,17 @@ class BaseAnalysis:
         """
         expenses = self.calculate_monthly_expenses()
         loan_payments = self.calculate_loan_payments()
-        total_expenses = expenses + loan_payments
-        
         potential_income = self.calculate_monthly_income()
         
-        if potential_income.dollars == 0:
-            return Percentage(100)  # 100% occupancy needed if no income
+        annual_expenses = expenses * 12
+        annual_debt_service = loan_payments * 12
+        annual_potential_income = potential_income * 12
         
-        breakeven = (total_expenses.dollars / potential_income.dollars) * 100
-        return Percentage(min(100, breakeven))  # Cap at 100%
+        return InvestmentMetricsCalculator.calculate_breakeven_occupancy(
+            annual_expenses=annual_expenses,
+            annual_debt_service=annual_debt_service,
+            annual_potential_income=annual_potential_income
+        )
     
     @safe_calculation(Money(0))
     def calculate_holding_costs(self) -> Money:
@@ -524,6 +547,112 @@ class BaseAnalysis:
         # Default implementation - override in specialized classes
         return Money(0)
     
+    @safe_calculation(Percentage(0))
+    def calculate_roi(self) -> Percentage:
+        """
+        Calculate Return on Investment (ROI).
+        
+        This calculation considers both cash flow and equity appreciation
+        for a more comprehensive ROI calculation.
+        
+        Returns:
+            ROI as Percentage object
+        """
+        # Get annual cash flow
+        annual_cash_flow = self.calculate_monthly_cash_flow() * 12
+        
+        # Get total investment
+        total_investment = self.calculate_total_investment()
+        
+        # Get equity projection for 5 years
+        equity_projection = self.calculate_equity_projection(5)
+        
+        if equity_projection:
+            # Calculate total return (cash flow + equity gain)
+            total_return = (annual_cash_flow * 5) + equity_projection.total_equity_gain
+            
+            # Calculate ROI using the investment metrics calculator
+            return InvestmentMetricsCalculator.calculate_roi(
+                initial_investment=total_investment,
+                total_return=total_return,
+                time_period_years=5.0
+            )
+        else:
+            # Fall back to cash-on-cash return if equity projection fails
+            return self.calculate_cash_on_cash_return()
+    
+    @safe_calculation(None)
+    def calculate_equity_projection(self, projection_years: int = 30) -> Optional[EquityProjection]:
+        """
+        Calculate equity projection over time.
+        
+        Args:
+            projection_years: Number of years to project
+            
+        Returns:
+            EquityProjection object or None if calculation fails
+        """
+        # Get purchase price
+        purchase_price = Money(self.data.get('purchase_price', 0) or 0)
+        
+        # Get current value (use purchase price if not specified)
+        current_value = Money(self.data.get('current_value', 0) or purchase_price.dollars)
+        
+        # Get appreciation rate (default to 3%)
+        appreciation_rate = Percentage(self.data.get('appreciation_rate', 3) or 3)
+        
+        # Get loan details
+        loan_details = self.get_loan_details('initial_loan')
+        
+        # Get payments made
+        payments_made = int(self.data.get('payments_made', 0) or 0)
+        
+        # Calculate equity projection
+        return InvestmentMetricsCalculator.project_equity(
+            purchase_price=purchase_price,
+            current_value=current_value,
+            loan_details=loan_details,
+            annual_appreciation_rate=appreciation_rate,
+            projection_years=projection_years,
+            payments_made=payments_made
+        )
+    
+    @safe_calculation([])
+    def calculate_yearly_equity_projections(self, projection_years: int = 30) -> List[YearlyProjection]:
+        """
+        Calculate year-by-year equity projections.
+        
+        Args:
+            projection_years: Number of years to project
+            
+        Returns:
+            List of YearlyProjection objects
+        """
+        # Get purchase price
+        purchase_price = Money(self.data.get('purchase_price', 0) or 0)
+        
+        # Get current value (use purchase price if not specified)
+        current_value = Money(self.data.get('current_value', 0) or purchase_price.dollars)
+        
+        # Get appreciation rate (default to 3%)
+        appreciation_rate = Percentage(self.data.get('appreciation_rate', 3) or 3)
+        
+        # Get loan details
+        loan_details = self.get_loan_details('initial_loan')
+        
+        # Get payments made
+        payments_made = int(self.data.get('payments_made', 0) or 0)
+        
+        # Calculate yearly projections
+        return InvestmentMetricsCalculator.generate_yearly_equity_projections(
+            purchase_price=purchase_price,
+            current_value=current_value,
+            loan_details=loan_details,
+            annual_appreciation_rate=appreciation_rate,
+            projection_years=projection_years,
+            payments_made=payments_made
+        )
+    
     def analyze(self) -> AnalysisResult:
         """
         Perform the analysis and return results.
@@ -541,6 +670,7 @@ class BaseAnalysis:
         annual_cash_flow = monthly_cash_flow * 12
         cash_on_cash_return = self.calculate_cash_on_cash_return()
         cap_rate = self.calculate_cap_rate()
+        roi = self.calculate_roi()
         total_investment = self.calculate_total_investment()
         monthly_income = self.calculate_monthly_income()
         monthly_expenses = self.calculate_monthly_expenses()
@@ -550,13 +680,17 @@ class BaseAnalysis:
         breakeven_occupancy = self.calculate_breakeven_occupancy()
         mao = self.calculate_mao()
         
+        # Calculate equity projections
+        equity_projection = self.calculate_equity_projection()
+        yearly_projections = self.calculate_yearly_equity_projections()
+        
         # Create and return result object
         return AnalysisResult(
             monthly_cash_flow=monthly_cash_flow,
             annual_cash_flow=annual_cash_flow,
             cash_on_cash_return=cash_on_cash_return,
             cap_rate=cap_rate,
-            roi=cash_on_cash_return,  # ROI is same as CoC for now
+            roi=roi,
             total_investment=total_investment,
             monthly_income=monthly_income,
             monthly_expenses=monthly_expenses,
@@ -565,7 +699,9 @@ class BaseAnalysis:
             gross_rent_multiplier=grm,
             price_per_unit=Money(0),  # Will be calculated in MultiFamily
             breakeven_occupancy=breakeven_occupancy,
-            mao=mao
+            mao=mao,
+            equity_projection=equity_projection,
+            yearly_projections=yearly_projections
         )
 
 
@@ -864,10 +1000,10 @@ class MultiFamilyAnalysis(BaseAnalysis):
         purchase_price = Money(self.data.get('purchase_price', 0) or 0)
         total_units = int(self.data.get('total_units', 0) or 0)
         
-        if total_units == 0:
-            return Money(0)
-        
-        return Money(purchase_price.dollars / total_units)
+        return InvestmentMetricsCalculator.calculate_price_per_unit(
+            purchase_price=purchase_price,
+            unit_count=total_units
+        )
     
     def analyze(self) -> AnalysisResult:
         """

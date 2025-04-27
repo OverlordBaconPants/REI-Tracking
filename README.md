@@ -44,6 +44,22 @@ The application features a comprehensive property investment analysis system:
   - MAO (Maximum Allowable Offer) calculation
 - **Factory Pattern**: Simple API for creating the appropriate analysis type based on strategy
 
+## Investment Metrics Calculator
+
+The application includes specialized investment metric calculators:
+
+- **ROI Calculation**: Comprehensive ROI calculation considering both cash flow and equity appreciation
+- **Equity Tracking**: Project equity growth over time with appreciation and loan paydown components
+- **Year-by-Year Projections**: Detailed yearly equity projections with property value and loan balance tracking
+- **Investment-Specific Metrics**:
+  - Cash-on-cash return calculation
+  - Cap rate calculation
+  - Debt service coverage ratio (DSCR)
+  - Expense ratio calculation
+  - Gross rent multiplier (GRM)
+  - Price per unit for multi-family properties
+  - Breakeven occupancy calculation
+
 ## Tech Stack
 - Python
 - Pydantic for data validation

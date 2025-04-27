@@ -91,12 +91,12 @@ For any task to be considered complete, it must meet these criteria:
     - [x] Add support for holding costs calculation
     - [x] Add support for breakeven analysis
     - [x] Add support for Maximum Allowable Offer (MAO) calculation
-- [ ] Create investment metric calculators
-    - [ ] Cash-on-cash return, ROI, cap rate calculations
-    - [ ] Debt service coverage ratio and expense ratio calculators
-    - [ ] Equity tracking with appreciation projections
-    - [ ] Gross Rent Multiplier calculation
-    - [ ] Price per unit calculation for multi-family properties
+- [x] Create investment metric calculators
+    - [x] Cash-on-cash return, ROI, cap rate calculations
+    - [x] Debt service coverage ratio and expense ratio calculators
+    - [x] Equity tracking with appreciation projections
+    - [x] Gross Rent Multiplier calculation
+    - [x] Price per unit calculation for multi-family properties
 
 ## 6. 📈 Analysis System & Property Valuation
 

@@ -25,6 +25,12 @@ from src.utils.calculations.analysis import (
     create_analysis
 )
 
+from src.utils.calculations.investment_metrics import (
+    InvestmentMetricsCalculator,
+    EquityProjection,
+    YearlyProjection
+)
+
 __all__ = [
     'ValidationError',
     'ValidationResult',
@@ -39,4 +45,7 @@ __all__ = [
     'PadSplitAnalysis',
     'AnalysisResult',
     'create_analysis',
+    'InvestmentMetricsCalculator',
+    'EquityProjection',
+    'YearlyProjection',
 ]
