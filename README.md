@@ -12,6 +12,7 @@ This project provides a Flask- and Dash-based Python web application for real es
 📱 Dynamic Dashboards - View customized KPI reports, equity tracking, and portfolio summaries
 🔒 User Authentication - Secure multi-user access with role-based permissions, session management, and security features
 📄 Report Generation - Create professional PDF reports for analyses, transactions, and portfolio performance
+🎨 User Interface - Responsive design with Bootstrap Spacelab theme, modular JavaScript architecture, and accessibility optimizations
 
 ## Core Calculation Components
 
@@ -288,6 +289,46 @@ The application includes several specialized dashboards:
   - Return on investment tracking
   - Property-specific KPI reports
 
+## User Interface & Frontend Architecture
+
+The application features a modern, responsive user interface with a modular JavaScript architecture:
+
+- **Responsive Design**: Bootstrap Spacelab theme with mobile-first approach
+  - Mobile-optimized layouts for all screen sizes
+  - Responsive tables and forms with touch-friendly controls
+  - Consistent styling with navigation and breadcrumbs
+  - Optimized for both desktop and mobile devices
+  
+- **Modular JavaScript Architecture**: Structured, maintainable frontend code
+  - Base module for shared functionality and environment detection
+  - Module manager for dynamic loading of page-specific code
+  - Dependency management between modules
+  - Event-based communication between components
+  
+- **Enhanced UI Components**: Rich, interactive user interface elements
+  - Form system with comprehensive client-side validation
+  - Notification system with categorized messages and accessibility features
+  - Data visualization components with responsive charts
+  - Document viewers and managers for transaction attachments
+  
+- **Accessibility Optimizations**: Inclusive design for all users
+  - ARIA attributes for screen reader compatibility
+  - Keyboard navigation support for all interactive elements
+  - Focus management for modals and dynamic content
+  - High contrast mode support
+  
+- **Mobile Optimizations**: Enhanced experience on mobile devices
+  - Enhanced touch targets for better tap accuracy
+  - Mobile keyboard handling for improved form input
+  - Visual feedback for touch interactions
+  - Performance optimizations for mobile networks
+  
+- **Performance Features**: Fast, responsive user experience
+  - Lazy loading of non-essential components
+  - Resource optimization based on device capabilities
+  - Reduced motion support for users with motion sensitivity
+  - Print-specific styling for reports and documentation
+
 ## Loan Tracking and Management
 
 The application includes a comprehensive loan tracking and management system:
@@ -370,6 +411,8 @@ The application features a sophisticated property valuation system:
 - Python
 - Pydantic for data validation
 - PyTest for testing
+- Bootstrap Spacelab theme for UI
+- JavaScript with modular architecture
 
 ## Setup and Installation
 
@@ -400,6 +443,15 @@ project_name/
 │   ├── models/
 │   ├── routes/
 │   ├── services/
+│   ├── static/
+│   │   ├── css/
+│   │   ├── js/
+│   │   │   ├── modules/
+│   │   │   ├── base.js
+│   │   │   ├── main.js
+│   │   │   └── notifications.js
+│   │   └── images/
+│   ├── templates/
 │   └── utils/
 ├── tests/
 │   ├── __init__.py
@@ -414,17 +466,51 @@ project_name/
 - Python code follows PEP8 standards
 - Type hints are used throughout the codebase
 - Code is formatted with `black`
+- JavaScript follows modular architecture with ES6 modules
 - Naming conventions:
   - `snake_case` for variables and functions
   - `PascalCase` for classes
   - `UPPER_CASE` for constants
 
 ## Testing
-Run tests with pytest:
+
+### Backend Tests
+Run backend tests with pytest:
 
 ```bash
 pytest
 ```
+
+### Frontend Tests
+The project includes a comprehensive frontend testing framework for JavaScript components:
+
+```bash
+# Run all frontend tests
+cd tests/test_frontend
+./run_tests.py
+
+# Run a specific test file
+./run_tests.py --test-file test_minimal.py
+
+# Run tests with verbose output
+./run_tests.py --verbose
+
+# Run tests with browser visible (not headless)
+./run_tests.py --no-headless
+
+# Generate HTML report
+./run_tests.py --html-report
+
+# Generate coverage report
+./run_tests.py --coverage
+```
+
+The frontend testing framework uses:
+- **pytest** as the test runner
+- **Selenium WebDriver** for browser automation
+- **Chrome** (headless by default) as the browser for testing
+
+All required dependencies for frontend testing are included in the main project's `requirements.txt` file. For more details, see the [Frontend Testing README](tests/test_frontend/README.md).
 
 ## Documentation
 - All functions include Google-style docstrings

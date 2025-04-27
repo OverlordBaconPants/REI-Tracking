@@ -26,6 +26,10 @@ reportlab==4.0.4
 pytest==7.4.0
 pytest-cov==4.1.0
 pytest-mock==3.11.1
+pytest-base-url==2.1.0
+pytest-html==3.1.0
+selenium==4.0.0
+webdriver-manager==3.8.0
 
 # Development tools
 black==23.7.0
