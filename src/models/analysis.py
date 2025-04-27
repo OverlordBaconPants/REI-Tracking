@@ -6,7 +6,7 @@ This module provides the Analysis model for property investment analysis.
 
 from typing import List, Dict, Any, Optional, Union, Literal
 from decimal import Decimal
-from pydantic import Field, validator, root_validator
+from pydantic import Field, field_validator, model_validator
 
 from src.models.base_model import BaseModel
 from src.utils.validation_utils import validate_date, validate_decimal, percentage_validator
@@ -27,7 +27,7 @@ class LoanDetails(BaseModel):
     loan_closing_costs: Decimal = Decimal("0")
     is_interest_only: bool = False
     
-    @validator("loan_interest_rate")
+    @field_validator("loan_interest_rate")
     def validate_loan_interest_rate(cls, v: Decimal) -> Decimal:
         """
         Validate loan interest rate.
@@ -45,7 +45,7 @@ class LoanDetails(BaseModel):
             raise ValueError("Loan interest rate must be between 0 and 100")
         return v
     
-    @validator("loan_term")
+    @field_validator("loan_term")
     def validate_loan_term(cls, v: int) -> int:
         """
         Validate loan term.
@@ -78,7 +78,7 @@ class CompsData(BaseModel):
     value_range_high: int
     comparables: List[Dict[str, Any]] = Field(default_factory=list)
     
-    @validator("last_run")
+    @field_validator("last_run")
     def validate_last_run(cls, v: str) -> str:
         """
         Validate last run date.
@@ -96,7 +96,7 @@ class CompsData(BaseModel):
             raise ValueError("Invalid last run date format")
         return v
     
-    @validator("run_count")
+    @field_validator("run_count")
     def validate_run_count(cls, v: int) -> int:
         """
         Validate run count.
@@ -129,15 +129,14 @@ class UnitType(BaseModel):
     square_footage: int
     rent: int
     
-    @validator("count", "bedrooms", "square_footage", "rent")
-    def validate_positive_int(cls, v: int, values: Dict[str, Any], field: str) -> int:
+    @field_validator("count", "bedrooms", "square_footage", "rent")
+    def validate_positive_int(cls, v: int, info: Dict[str, Any]) -> int:
         """
         Validate positive integer fields.
         
         Args:
             v: The value to validate
-            values: The values being validated
-            field: The field being validated
+            info: The validation information
             
         Returns:
             The validated value
@@ -145,11 +144,12 @@ class UnitType(BaseModel):
         Raises:
             ValueError: If the value is invalid
         """
+        field_name = info.field_name
         if v <= 0:
-            raise ValueError(f"{field.title()} must be positive")
+            raise ValueError(f"{field_name.title()} must be positive")
         return v
     
-    @validator("bathrooms")
+    @field_validator("bathrooms")
     def validate_bathrooms(cls, v: float) -> float:
         """
         Validate bathrooms.
@@ -292,65 +292,60 @@ class Analysis(BaseModel):
     comps_data: Optional[CompsData] = None
     
     # Validation for analysis type-specific fields
-    @root_validator
-    def validate_analysis_type_fields(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+    @model_validator(mode='after')
+    def validate_analysis_type_fields(self) -> 'Analysis':
         """
         Validate fields based on analysis type.
         
-        Args:
-            values: The values being validated
-            
         Returns:
-            The validated values
+            The validated model
             
         Raises:
             ValueError: If the values are invalid for the analysis type
         """
-        analysis_type = values.get("analysis_type")
-        
-        if analysis_type == "BRRRR":
+        if self.analysis_type == "BRRRR":
             # BRRRR requires after_repair_value, renovation_costs, and renovation_duration
-            if not values.get("after_repair_value"):
+            if not self.after_repair_value:
                 raise ValueError("After repair value is required for BRRRR analysis")
-            if not values.get("renovation_costs"):
+            if not self.renovation_costs:
                 raise ValueError("Renovation costs are required for BRRRR analysis")
-            if not values.get("renovation_duration"):
+            if not self.renovation_duration:
                 raise ValueError("Renovation duration is required for BRRRR analysis")
         
-        elif analysis_type == "LeaseOption":
+        elif self.analysis_type == "LeaseOption":
             # LeaseOption requires option_consideration_fee, option_term_months, and strike_price
-            if not values.get("option_consideration_fee"):
+            if not self.option_consideration_fee:
                 raise ValueError("Option consideration fee is required for Lease Option analysis")
-            if not values.get("option_term_months"):
+            if not self.option_term_months:
                 raise ValueError("Option term months are required for Lease Option analysis")
-            if not values.get("strike_price"):
+            if not self.strike_price:
                 raise ValueError("Strike price is required for Lease Option analysis")
             
             # Validate strike price is greater than purchase price
-            if values.get("strike_price") and values.get("purchase_price"):
-                if values.get("strike_price") <= values.get("purchase_price"):
+            if self.strike_price and self.purchase_price:
+                if self.strike_price <= self.purchase_price:
                     raise ValueError("Strike price must be greater than purchase price")
         
-        elif analysis_type == "MultiFamily":
+        elif self.analysis_type == "MultiFamily":
             # MultiFamily requires total_units and occupied_units
-            if not values.get("total_units"):
+            if not self.total_units:
                 raise ValueError("Total units are required for Multi-Family analysis")
-            if not values.get("occupied_units"):
+            if not self.occupied_units:
                 raise ValueError("Occupied units are required for Multi-Family analysis")
             
             # Validate occupied_units <= total_units
-            if values.get("occupied_units") and values.get("total_units"):
-                if values.get("occupied_units") > values.get("total_units"):
+            if self.occupied_units and self.total_units:
+                if self.occupied_units > self.total_units:
                     raise ValueError("Occupied units cannot exceed total units")
         
-        elif analysis_type == "PadSplit":
+        elif self.analysis_type == "PadSplit":
             # PadSplit requires furnishing_costs and padsplit_platform_percentage
-            if not values.get("furnishing_costs"):
+            if not self.furnishing_costs:
                 raise ValueError("Furnishing costs are required for PadSplit analysis")
-            if not values.get("padsplit_platform_percentage"):
+            if not self.padsplit_platform_percentage:
                 raise ValueError("PadSplit platform percentage is required for PadSplit analysis")
         
-        return values
+        return self
     
     def get_initial_loan(self) -> Optional[LoanDetails]:
         """
