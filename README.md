@@ -5,7 +5,7 @@ This project provides a Flask- and Dash-based Python web application for real es
 
 🏠 Property Portfolio Management - Track properties, assign partner equity shares, designate property managers, and monitor performance metrics
 💰 Financial Calculation Engine - Calculate investment metrics including CoC return, ROI, cap rates, and DSCR with proper decimal handling
-💵 Transaction Management System - Record, categorize, and report on property-related financial transactions with equity-based splitting, reimbursement tracking, and property-specific permissions
+💵 Transaction Management System - Record, categorize, filter, and report on property-related financial transactions with equity-based splitting, reimbursement tracking, property-specific permissions, and comprehensive filtering capabilities
 📊 Analysis System - Conduct detailed property analyses across multiple strategies (LTR, BRRRR, Lease Option, Multi-Family, PadSplit)
 📈 Property Valuation - Integrate with RentCast API for accurate property comps and market valuations with correlation scoring, range indicators, and market statistics
 🌐 Address Services - Leverage Geoapify for address validation, autocomplete, and geocoding
@@ -94,6 +94,20 @@ The application provides comprehensive financial calculations for real estate in
   - Break-even analysis for closing costs
   - Interest savings calculation over loan term
   - Cash-out amount calculation
+
+## Transaction Filtering System
+
+The application includes a comprehensive transaction filtering system:
+
+- **Property Filtering**: Filter transactions by specific property or multiple properties
+- **Date Range Filtering**: Filter transactions by date range with validation
+- **Category and Type Filtering**: Filter by transaction type (income/expense) and category
+- **Description Search**: Search transactions by description text
+- **Multi-property View**: View and group transactions across multiple properties
+- **Property-specific Summaries**: Calculate financial summaries (income, expenses, net) by property
+- **User-specific Visibility**: Limit transaction visibility based on user's property access permissions
+- **Admin Override**: Administrators have full visibility across all properties
+- **API Endpoints**: RESTful API endpoints for filtered transactions, grouped transactions, and property summaries
 
 ## Property Comps & Valuation
 

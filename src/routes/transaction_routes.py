@@ -5,7 +5,7 @@ This module provides routes for transaction management.
 """
 
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, List, Optional
 from flask import Blueprint, request, jsonify, g
 
 from src.models.transaction import Transaction
@@ -40,19 +40,7 @@ def get_transactions():
         user_id = g.current_user.id
         
         # Get filter parameters from query string
-        filters = {}
-        if request.args.get('property_id'):
-            filters['property_id'] = request.args.get('property_id')
-        if request.args.get('type'):
-            filters['type'] = request.args.get('type')
-        if request.args.get('category'):
-            filters['category'] = request.args.get('category')
-        if request.args.get('start_date'):
-            filters['start_date'] = request.args.get('start_date')
-        if request.args.get('end_date'):
-            filters['end_date'] = request.args.get('end_date')
-        if request.args.get('reimbursement_status'):
-            filters['reimbursement_status'] = request.args.get('reimbursement_status')
+        filters = _parse_transaction_filters(request.args)
         
         # Get transactions
         transactions = transaction_service.get_transactions(user_id, filters)
@@ -72,6 +60,123 @@ def get_transactions():
             'error': f"Error getting transactions: {str(e)}"
         }), 500
 
+
+@transaction_bp.route('/by-property', methods=['GET'])
+@login_required
+def get_transactions_by_property():
+    """
+    Get transactions grouped by property with optional filtering.
+    
+    Returns:
+        JSON response with transactions grouped by property
+    """
+    try:
+        # Get user ID from session
+        user_id = g.current_user.id
+        
+        # Get filter parameters from query string
+        filters = _parse_transaction_filters(request.args)
+        
+        # Get transactions grouped by property
+        grouped_transactions = transaction_service.get_transactions_by_property(user_id, filters)
+        
+        # Convert to dictionaries
+        result = {}
+        for property_id, transactions in grouped_transactions.items():
+            result[property_id] = [t.to_dict() for t in transactions]
+        
+        return jsonify({
+            'success': True,
+            'grouped_transactions': result
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error getting transactions by property: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f"Error getting transactions by property: {str(e)}"
+        }), 500
+
+@transaction_bp.route('/property-summaries', methods=['GET'])
+@login_required
+def get_property_summaries():
+    """
+    Get financial summaries for each property based on filtered transactions.
+    
+    Returns:
+        JSON response with property summaries
+    """
+    try:
+        # Get user ID from session
+        user_id = g.current_user.id
+        
+        # Get filter parameters from query string
+        filters = _parse_transaction_filters(request.args)
+        
+        # Get property summaries
+        summaries = transaction_service.get_property_summaries(user_id, filters)
+        
+        # Convert to dictionaries
+        result = {}
+        for property_id, summary in summaries.items():
+            result[property_id] = {
+                'property': summary['property'].to_dict(),
+                'transaction_count': summary['transaction_count'],
+                'income_total': str(summary['income_total']),
+                'expense_total': str(summary['expense_total']),
+                'net_amount': str(summary['net_amount'])
+            }
+        
+        return jsonify({
+            'success': True,
+            'property_summaries': result
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error getting property summaries: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f"Error getting property summaries: {str(e)}"
+        }), 500
+
+@transaction_bp.route('/with-property-info', methods=['GET'])
+@login_required
+def get_transactions_with_property_info():
+    """
+    Get transactions with their associated property information.
+    
+    Returns:
+        JSON response with transactions and property info
+    """
+    try:
+        # Get user ID from session
+        user_id = g.current_user.id
+        
+        # Get filter parameters from query string
+        filters = _parse_transaction_filters(request.args)
+        
+        # Get transactions with property info
+        transaction_property_pairs = transaction_service.get_transactions_with_property_info(user_id, filters)
+        
+        # Convert to dictionaries
+        result = []
+        for transaction, property_obj in transaction_property_pairs:
+            result.append({
+                'transaction': transaction.to_dict(),
+                'property': property_obj.to_dict()
+            })
+        
+        return jsonify({
+            'success': True,
+            'transactions_with_property': result
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error getting transactions with property info: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f"Error getting transactions with property info: {str(e)}"
+        }), 500
 
 @transaction_bp.route('/<transaction_id>', methods=['GET'])
 @login_required
@@ -256,6 +361,49 @@ def delete_transaction(transaction_id):
             'error': f"Error deleting transaction: {str(e)}"
         }), 500
 
+
+def _parse_transaction_filters(args) -> Dict[str, Any]:
+    """
+    Parse transaction filter parameters from request arguments.
+    
+    Args:
+        args: Request arguments
+        
+    Returns:
+        Dictionary of filter parameters
+    """
+    filters = {}
+    
+    # Property filters
+    if args.get('property_id'):
+        filters['property_id'] = args.get('property_id')
+    
+    # Multiple property IDs (comma-separated)
+    if args.get('property_ids'):
+        property_ids = args.get('property_ids').split(',')
+        filters['property_ids'] = [pid.strip() for pid in property_ids if pid.strip()]
+    
+    # Transaction type and category
+    if args.get('type'):
+        filters['type'] = args.get('type')
+    if args.get('category'):
+        filters['category'] = args.get('category')
+    
+    # Date range
+    if args.get('start_date'):
+        filters['start_date'] = args.get('start_date')
+    if args.get('end_date'):
+        filters['end_date'] = args.get('end_date')
+    
+    # Reimbursement status
+    if args.get('reimbursement_status'):
+        filters['reimbursement_status'] = args.get('reimbursement_status')
+    
+    # Description search
+    if args.get('description'):
+        filters['description'] = args.get('description')
+    
+    return filters
 
 @transaction_bp.route('/reimbursement/<transaction_id>', methods=['PUT'])
 @login_required

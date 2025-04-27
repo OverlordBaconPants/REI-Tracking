@@ -5,12 +5,14 @@ This module provides services for transaction management.
 """
 
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Set, Tuple
 from datetime import datetime
+from collections import defaultdict
 
 from src.models.transaction import Transaction, Reimbursement
 from src.repositories.transaction_repository import TransactionRepository
 from src.services.property_access_service import PropertyAccessService
+from src.models.property import Property
 
 # Set up logger
 logger = logging.getLogger(__name__)
@@ -44,18 +46,26 @@ class TransactionService:
             # Get all transactions
             all_transactions = self.transaction_repo.get_all()
             
-            # Filter by user access
-            accessible_properties = self.property_access_service.get_accessible_properties(user_id)
-            all_transactions = [
-                t for t in all_transactions 
-                if t.property_id in [p.id for p in accessible_properties]
-            ]
+            # Filter by user access (unless user is admin)
+            user = self.property_access_service.user_repository.get_by_id(user_id)
+            if user and not user.is_admin():
+                accessible_properties = self.property_access_service.get_accessible_properties(user_id)
+                all_transactions = [
+                    t for t in all_transactions 
+                    if t.property_id in [p.id for p in accessible_properties]
+                ]
             
             # Apply filters if provided
             if filters:
                 # Filter by property ID
                 if 'property_id' in filters and filters['property_id']:
-                    all_transactions = [t for t in all_transactions if t.property_id == filters['property_id']]
+                    if filters['property_id'] != 'all':  # Skip filtering if 'all' is specified
+                        all_transactions = [t for t in all_transactions if t.property_id == filters['property_id']]
+                
+                # Filter by multiple property IDs
+                elif 'property_ids' in filters and filters['property_ids']:
+                    property_ids = set(filters['property_ids'])
+                    all_transactions = [t for t in all_transactions if t.property_id in property_ids]
                 
                 # Filter by transaction type
                 if 'type' in filters and filters['type']:
@@ -79,6 +89,14 @@ class TransactionService:
                         all_transactions, 
                         filters['reimbursement_status']
                     )
+                    
+                # Filter by description search
+                if 'description' in filters and filters['description']:
+                    search_term = filters['description'].lower()
+                    all_transactions = [
+                        t for t in all_transactions 
+                        if search_term in t.description.lower()
+                    ]
             
             return all_transactions
             
@@ -248,6 +266,125 @@ class TransactionService:
             
         except Exception as e:
             logger.error(f"Error updating reimbursement: {str(e)}")
+            raise
+    
+    def get_transactions_by_property(
+        self, 
+        user_id: str, 
+        filters: Dict[str, Any] = None
+    ) -> Dict[str, List[Transaction]]:
+        """
+        Get transactions grouped by property with optional filtering.
+        
+        Args:
+            user_id: ID of the user
+            filters: Optional filters to apply
+            
+        Returns:
+            Dictionary mapping property IDs to lists of transactions
+        """
+        try:
+            # Get filtered transactions
+            transactions = self.get_transactions(user_id, filters)
+            
+            # Group by property
+            grouped_transactions = defaultdict(list)
+            for transaction in transactions:
+                grouped_transactions[transaction.property_id].append(transaction)
+                
+            return dict(grouped_transactions)
+            
+        except Exception as e:
+            logger.error(f"Error getting transactions by property: {str(e)}")
+            raise
+            
+    def get_transactions_with_property_info(
+        self, 
+        user_id: str, 
+        filters: Dict[str, Any] = None
+    ) -> List[Tuple[Transaction, Property]]:
+        """
+        Get transactions with their associated property information.
+        
+        Args:
+            user_id: ID of the user
+            filters: Optional filters to apply
+            
+        Returns:
+            List of tuples containing (transaction, property)
+        """
+        try:
+            # Get filtered transactions
+            transactions = self.get_transactions(user_id, filters)
+            
+            # Get all properties
+            properties = self.property_access_service.get_accessible_properties(user_id)
+            property_map = {prop.id: prop for prop in properties}
+            
+            # Pair transactions with properties
+            result = []
+            for transaction in transactions:
+                if transaction.property_id in property_map:
+                    result.append((transaction, property_map[transaction.property_id]))
+                else:
+                    logger.warning(f"Property {transaction.property_id} not found for transaction {transaction.id}")
+                    
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error getting transactions with property info: {str(e)}")
+            raise
+            
+    def get_property_summaries(
+        self, 
+        user_id: str, 
+        filters: Dict[str, Any] = None
+    ) -> Dict[str, Dict[str, Any]]:
+        """
+        Get financial summaries for each property based on filtered transactions.
+        
+        Args:
+            user_id: ID of the user
+            filters: Optional filters to apply
+            
+        Returns:
+            Dictionary mapping property IDs to summary dictionaries
+        """
+        try:
+            # Get transactions grouped by property
+            grouped_transactions = self.get_transactions_by_property(user_id, filters)
+            
+            # Get all properties
+            properties = self.property_access_service.get_accessible_properties(user_id)
+            property_map = {prop.id: prop for prop in properties}
+            
+            # Calculate summaries
+            summaries = {}
+            for property_id, transactions in grouped_transactions.items():
+                property_obj = property_map.get(property_id)
+                
+                if not property_obj:
+                    logger.warning(f"Property {property_id} not found for summary calculation")
+                    continue
+                
+                # Calculate income and expense totals
+                income_total = sum(t.amount for t in transactions if t.type == "income")
+                expense_total = sum(t.amount for t in transactions if t.type == "expense")
+                net_amount = income_total - expense_total
+                
+                # Create summary
+                summaries[property_id] = {
+                    "property": property_obj,
+                    "transaction_count": len(transactions),
+                    "income_total": income_total,
+                    "expense_total": expense_total,
+                    "net_amount": net_amount
+                }
+                
+            return summaries
+            
+        except Exception as e:
+            logger.error(f"Error calculating property summaries: {str(e)}")
             raise
     
     def _filter_by_date_range(

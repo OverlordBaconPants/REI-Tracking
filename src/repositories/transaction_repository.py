@@ -5,7 +5,7 @@ This module provides the TransactionRepository class for transaction data
 persistence and retrieval.
 """
 
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Set
 from datetime import datetime
 
 from src.config import current_config
@@ -106,6 +106,51 @@ class TransactionRepository(BaseRepository[Transaction]):
             return result
         except Exception as e:
             logger.error(f"Error getting transactions by category: {str(e)}")
+            raise
+            
+    def get_by_description_search(self, search_term: str) -> List[Transaction]:
+        """
+        Get transactions by description search.
+        
+        Args:
+            search_term: Search term to look for in descriptions
+            
+        Returns:
+            List of transactions with matching descriptions
+        """
+        try:
+            transactions = self.get_all()
+            
+            # Case-insensitive search in description
+            if search_term:
+                search_term = search_term.lower()
+                return [t for t in transactions if search_term in t.description.lower()]
+            
+            return transactions
+        except Exception as e:
+            logger.error(f"Error searching transactions by description: {str(e)}")
+            raise
+            
+    def get_by_properties(self, property_ids: Set[str]) -> List[Transaction]:
+        """
+        Get transactions for multiple properties.
+        
+        Args:
+            property_ids: Set of property IDs to filter by
+            
+        Returns:
+            List of transactions for the specified properties
+        """
+        try:
+            transactions = self.get_all()
+            
+            # Filter by property IDs
+            if property_ids:
+                return [t for t in transactions if t.property_id in property_ids]
+            
+            return transactions
+        except Exception as e:
+            logger.error(f"Error getting transactions by properties: {str(e)}")
             raise
     
     def get_by_collector_payer(self, collector_payer: str) -> List[Transaction]:
