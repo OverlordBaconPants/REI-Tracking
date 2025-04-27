@@ -189,7 +189,7 @@ class TestLoan:
         # The balance should be less than the original amount
         # Note: The exact balance will depend on the implementation details
         # of the LoanDetails.calculate_remaining_balance method
-        assert balance.dollars < 200000
+        assert expected_range_low <= balance.dollars <= expected_range_high
     
     def test_generate_amortization_schedule(self):
         """Test generating an amortization schedule."""
