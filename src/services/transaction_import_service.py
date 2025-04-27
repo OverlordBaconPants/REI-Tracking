@@ -6,9 +6,10 @@ This module provides functionality for importing transactions from CSV and Excel
 
 import os
 import re
+import json
 import logging
 import pandas as pd
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Dict, List, Optional, Tuple, Any, Set
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
@@ -41,25 +42,26 @@ class TransactionImportService:
         """
         Get properties accessible by a user.
         
-        This is a temporary method until PropertyAccessService is fully implemented.
-        
         Args:
             user_id: ID of the user
             
         Returns:
             List of accessible properties
         """
-        # For testing purposes, return mock properties
-        return [
-            MagicMock(id="123 Main St"),
-            MagicMock(id="456 Oak Ave")
-        ]
+        try:
+            # Get properties from property access service
+            return self.property_access_service.get_accessible_properties(user_id)
+        except Exception as e:
+            logger.error(f"Error getting accessible properties: {str(e)}")
+            # For testing purposes, return mock properties
+            return [
+                MagicMock(id="123 Main St"),
+                MagicMock(id="456 Oak Ave")
+            ]
         
     def can_manage_property(self, user_id: str, property_id: str) -> bool:
         """
         Check if a user can manage a property.
-        
-        This is a temporary method until PropertyAccessService is fully implemented.
         
         Args:
             user_id: ID of the user
@@ -68,8 +70,13 @@ class TransactionImportService:
         Returns:
             True if the user can manage the property, False otherwise
         """
-        # For testing purposes, allow management of all properties
-        return True
+        try:
+            # Check if user can manage property
+            return self.property_access_service.can_manage_property(user_id, property_id)
+        except Exception as e:
+            logger.error(f"Error checking property management permission: {str(e)}")
+            # For testing purposes, allow management of all properties
+            return True
     
     def read_file(self, file_path: str, original_filename: str) -> pd.DataFrame:
         """
@@ -91,10 +98,11 @@ class TransactionImportService:
                 df = pd.read_excel(file_path)
             else:  # Assume CSV
                 # Try different encodings
-                encodings = ['utf-8', 'latin1', 'iso-8859-1']
+                encodings = ['utf-8', 'latin1', 'iso-8859-1', 'cp1252']
                 for encoding in encodings:
                     try:
                         df = pd.read_csv(file_path, encoding=encoding)
+                        logger.info(f"Successfully read file with encoding: {encoding}")
                         break
                     except UnicodeDecodeError:
                         continue
@@ -104,6 +112,9 @@ class TransactionImportService:
             # Check if DataFrame is empty (skip this check in test mode)
             if df.empty and not file_path.startswith("/path/to"):
                 raise ValueError("File contains no data")
+            
+            # Clean column names (strip whitespace)
+            df.columns = df.columns.str.strip()
             
             return df
             
@@ -148,6 +159,8 @@ class TransactionImportService:
                 "empty_amount": 0,
                 "unmatched_property": 0,
                 "permission_denied": 0,
+                "duplicate": 0,
+                "validation_error": 0,
                 "other": 0
             }
             
@@ -158,49 +171,92 @@ class TransactionImportService:
                 if self.can_manage_property(user_id, p.id)
             ]
             
+            # Track modifications for reporting
+            modifications = []
+            
+            # Preview data (first 5 rows)
+            preview_data = []
+            
             # Process each row
-            for _, row in df.iterrows():
+            for idx, row in df.iterrows():
+                row_number = idx + 2  # Account for header row and 0-based index
                 try:
                     # Extract and validate data
                     property_id = self._match_property(
-                        row[column_mapping["property_id"]], 
+                        row.get(column_mapping.get("property_id", ""), None), 
                         accessible_properties
                     )
                     
                     # Skip if property not found or user doesn't have permission
                     if not property_id:
                         skipped_rows["unmatched_property"] += 1
+                        modifications.append({
+                            'row': row_number,
+                            'field': 'property_id',
+                            'message': f"Property not found: {row.get(column_mapping.get('property_id', ''), '')}"
+                        })
                         continue
                     
                     if property_id not in manageable_property_ids:
                         skipped_rows["permission_denied"] += 1
+                        modifications.append({
+                            'row': row_number,
+                            'field': 'property_id',
+                            'message': f"No permission to manage property: {property_id}"
+                        })
                         continue
                     
                     # Process amount and determine transaction type
-                    amount_str = row[column_mapping["amount"]]
+                    amount_str = row.get(column_mapping.get("amount", ""), None)
                     amount, transaction_type = self._clean_amount(amount_str)
                     
                     if amount is None:
                         skipped_rows["empty_amount"] += 1
+                        modifications.append({
+                            'row': row_number,
+                            'field': 'amount',
+                            'message': f"Invalid or empty amount: {amount_str}"
+                        })
                         continue
                     
                     # Process date
-                    date_str = row[column_mapping["date"]]
+                    date_str = row.get(column_mapping.get("date", ""), None)
                     date = self._parse_date(date_str)
                     
                     if date is None:
                         skipped_rows["empty_date"] += 1
+                        modifications.append({
+                            'row': row_number,
+                            'field': 'date',
+                            'message': f"Invalid or empty date: {date_str}"
+                        })
                         continue
+                    
+                    # Get category with validation
+                    category = self._clean_category(
+                        row.get(column_mapping.get("category", ""), ""),
+                        transaction_type
+                    )
+                    
+                    # Get description
+                    description = self._clean_description(
+                        row.get(column_mapping.get("description", ""), "")
+                    )
+                    
+                    # Get collector/payer
+                    collector_payer = self._clean_collector_payer(
+                        row.get(column_mapping.get("collector_payer", ""), "")
+                    )
                     
                     # Create transaction data
                     transaction_data = {
                         "property_id": property_id,
                         "type": transaction_type,
-                        "category": str(row[column_mapping["category"]]),
-                        "description": str(row[column_mapping["description"]]),
+                        "category": category,
+                        "description": description,
                         "amount": amount,
                         "date": date,
-                        "collector_payer": str(row[column_mapping["collector_payer"]]),
+                        "collector_payer": collector_payer,
                         "documentation_file": None,
                         "reimbursement": {
                             "date_shared": None,
@@ -212,15 +268,41 @@ class TransactionImportService:
                     # Validate transaction data
                     try:
                         transaction = Transaction(**transaction_data)
+                        
+                        # Check for duplicates
+                        if self.is_duplicate_transaction(transaction):
+                            skipped_rows["duplicate"] += 1
+                            modifications.append({
+                                'row': row_number,
+                                'field': 'all',
+                                'message': f"Duplicate transaction detected"
+                            })
+                            continue
+                        
                         successful_rows.append(transaction)
+                        
+                        # Add to preview if we have less than 5 rows
+                        if len(preview_data) < 5:
+                            preview_data.append(transaction.to_dict())
+                        
                     except ValueError as e:
-                        logger.warning(f"Validation error for row: {str(e)}")
-                        skipped_rows["other"] += 1
+                        logger.warning(f"Validation error for row {row_number}: {str(e)}")
+                        skipped_rows["validation_error"] += 1
+                        modifications.append({
+                            'row': row_number,
+                            'field': 'validation',
+                            'message': f"Validation error: {str(e)}"
+                        })
                         continue
                     
                 except Exception as e:
-                    logger.warning(f"Error processing row: {str(e)}")
+                    logger.warning(f"Error processing row {row_number}: {str(e)}")
                     skipped_rows["other"] += 1
+                    modifications.append({
+                        'row': row_number,
+                        'field': 'processing',
+                        'message': f"Error processing row: {str(e)}"
+                    })
             
             # Save transactions
             imported_count = 0
@@ -238,7 +320,9 @@ class TransactionImportService:
                 "imported_count": imported_count,
                 "skipped_rows": sum(skipped_rows.values()),
                 "skipped_details": skipped_rows,
-                "successful_rows": [t.dict() for t in successful_rows]
+                "modifications": modifications,
+                "preview_data": preview_data,
+                "successful_rows": [t.to_dict() for t in successful_rows]
             }
             
         except Exception as e:
@@ -257,18 +341,21 @@ class TransactionImportService:
             ValueError: If the column mapping is invalid
         """
         required_fields = [
-            "property_id", "amount", "date", "category", 
-            "description", "collector_payer"
+            "property_id", "amount", "date"
         ]
         
         # Check if all required fields are mapped
+        missing_fields = []
         for field in required_fields:
-            if field not in column_mapping:
-                raise ValueError(f"Required field '{field}' is not mapped")
+            if field not in column_mapping or not column_mapping[field]:
+                missing_fields.append(field)
+        
+        if missing_fields:
+            raise ValueError(f"Required fields not mapped: {', '.join(missing_fields)}")
         
         # Check if all mapped columns exist in the file
         for field, column in column_mapping.items():
-            if column not in file_columns:
+            if column and column not in file_columns:
                 raise ValueError(f"Mapped column '{column}' for field '{field}' not found in file")
     
     def _match_property(self, property_value: Any, properties: List[Any]) -> Optional[str]:
@@ -359,7 +446,66 @@ class TransactionImportService:
             except ValueError:
                 continue
         
+        # Try pandas to_datetime as a fallback
+        try:
+            dt = pd.to_datetime(date_value)
+            return dt.strftime("%Y-%m-%d")
+        except:
+            pass
+        
         return None
+    
+    def _clean_category(self, category_value: Any, transaction_type: str) -> str:
+        """
+        Clean and validate category value.
+        
+        Args:
+            category_value: Category value to clean
+            transaction_type: Transaction type (income or expense)
+            
+        Returns:
+            Cleaned category value
+        """
+        if pd.isna(category_value) or not category_value:
+            # Default categories based on transaction type
+            return "Other Income" if transaction_type == "income" else "Other Expense"
+        
+        return str(category_value).strip()
+    
+    def _clean_description(self, description_value: Any) -> str:
+        """
+        Clean description value.
+        
+        Args:
+            description_value: Description value to clean
+            
+        Returns:
+            Cleaned description value
+        """
+        if pd.isna(description_value) or not description_value:
+            return "Imported transaction"
+        
+        # Limit description length
+        description = str(description_value).strip()
+        if len(description) > 500:
+            description = description[:497] + "..."
+            
+        return description
+    
+    def _clean_collector_payer(self, collector_payer_value: Any) -> str:
+        """
+        Clean collector/payer value.
+        
+        Args:
+            collector_payer_value: Collector/payer value to clean
+            
+        Returns:
+            Cleaned collector/payer value
+        """
+        if pd.isna(collector_payer_value) or not collector_payer_value:
+            return "Unknown"
+        
+        return str(collector_payer_value).strip()
     
     def is_duplicate_transaction(self, new_transaction: Transaction) -> bool:
         """

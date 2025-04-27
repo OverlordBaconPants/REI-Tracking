@@ -357,6 +357,8 @@ Common code smells:
 | 2025-04-26 | Implemented transaction operations | To enable comprehensive transaction management with property association, categorization, reimbursement tracking, and property-specific permissions |
 | 2025-04-26 | Implemented transaction filtering system | To provide robust filtering capabilities including property, date range, category, type, and description search, with multi-property views and user-specific visibility |
 | 2025-04-26 | Implemented reimbursement system | To provide equity-based reimbursement tracking with automatic handling for single-owner properties, status tracking, and documentation support |
+| 2025-04-27 | Implemented transaction reporting | To enable comprehensive transaction reporting with PDF generation, financial summaries with visualizations, and documentation bundling in ZIP archives |
+| 2025-04-27 | Implemented bulk transaction import | To provide a robust system for importing transactions from CSV and Excel files with flexible column mapping, data validation, duplicate detection, and detailed import reporting |
 
 ---
 

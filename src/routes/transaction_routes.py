@@ -5,14 +5,18 @@ This module provides routes for transaction management.
 """
 
 import logging
+import tempfile
+import os
 from typing import Dict, Any, List, Optional
 from decimal import Decimal
-from flask import Blueprint, request, jsonify, g
+from flask import Blueprint, request, jsonify, g, send_file, render_template
+import io
 
 from src.models.transaction import Transaction
 from src.repositories.transaction_repository import TransactionRepository
 from src.services.transaction_service import TransactionService
 from src.services.property_access_service import PropertyAccessService
+from src.services.transaction_report_generator import TransactionReportGenerator
 from src.utils.auth_middleware import login_required, property_access_required
 
 # Set up logger
@@ -25,6 +29,7 @@ transaction_bp = Blueprint('transactions', __name__, url_prefix='/api/transactio
 transaction_repo = TransactionRepository()
 property_access_service = PropertyAccessService()
 transaction_service = TransactionService()
+report_generator = TransactionReportGenerator()
 
 
 @transaction_bp.route('/', methods=['GET'])
@@ -563,3 +568,330 @@ def get_reimbursements_owed():
             'success': False,
             'error': f"Error getting reimbursements owed: {str(e)}"
         }), 500
+
+
+@transaction_bp.route('/report', methods=['GET'])
+@login_required
+def generate_transaction_report():
+    """
+    Generate a PDF report of transactions with optional filtering.
+    
+    Returns:
+        PDF file download
+    """
+    try:
+        # Get user ID from session
+        user_id = g.current_user.id
+        
+        # Get filter parameters from query string
+        filters = _parse_transaction_filters(request.args)
+        
+        # Get transactions
+        transactions = transaction_service.get_transactions(user_id, filters)
+        
+        # Convert to dictionaries for the report generator
+        transaction_dicts = [t.to_dict() for t in transactions]
+        
+        # Create metadata for the report
+        metadata = {
+            "title": "Transaction Report",
+            "generated_by": g.current_user.name,
+            "date_range": "All Dates"
+        }
+        
+        # Add date range if specified
+        if 'start_date' in filters and 'end_date' in filters:
+            metadata["date_range"] = f"{filters['start_date']} to {filters['end_date']}"
+        elif 'start_date' in filters:
+            metadata["date_range"] = f"From {filters['start_date']}"
+        elif 'end_date' in filters:
+            metadata["date_range"] = f"Until {filters['end_date']}"
+        
+        # Add property information if specified
+        if 'property_id' in filters:
+            metadata["property_name"] = filters['property_id']
+            metadata["property"] = filters['property_id']
+        else:
+            metadata["property_name"] = "All Properties"
+            metadata["property"] = "All Properties"
+        
+        # Create buffer for PDF
+        buffer = io.BytesIO()
+        
+        # Generate report
+        report_generator.generate(transaction_dicts, buffer, metadata)
+        
+        # Reset buffer position
+        buffer.seek(0)
+        
+        # Create filename
+        property_part = metadata["property_name"].replace(" ", "_").replace(",", "")
+        date_part = metadata["date_range"].replace(" ", "_").replace(",", "")
+        filename = f"Transaction_Report_{property_part}_{date_part}.pdf"
+        
+        # Return PDF file
+        return send_file(
+            buffer,
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=filename
+        )
+        
+    except Exception as e:
+        logger.error(f"Error generating transaction report: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f"Error generating transaction report: {str(e)}"
+        }), 500
+
+
+@transaction_bp.route('/documentation-archive', methods=['GET'])
+@login_required
+def generate_documentation_archive():
+    """
+    Generate a ZIP archive of transaction documentation with optional filtering.
+    
+    Returns:
+        ZIP file download
+    """
+    try:
+        # Get user ID from session
+        user_id = g.current_user.id
+        
+        # Get filter parameters from query string
+        filters = _parse_transaction_filters(request.args)
+        
+        # Get transactions
+        transactions = transaction_service.get_transactions(user_id, filters)
+        
+        # Convert to dictionaries for the report generator
+        transaction_dicts = [t.to_dict() for t in transactions]
+        
+        # Create buffer for ZIP
+        buffer = io.BytesIO()
+        
+        # Generate ZIP archive
+        report_generator.generate_zip_archive(transaction_dicts, buffer)
+        
+        # Reset buffer position
+        buffer.seek(0)
+        
+        # Create filename
+        property_part = "All_Properties"
+        if 'property_id' in filters:
+            property_part = filters['property_id'].replace(" ", "_").replace(",", "")
+        
+        date_part = "All_Dates"
+        if 'start_date' in filters and 'end_date' in filters:
+            date_part = f"{filters['start_date']}_to_{filters['end_date']}".replace(" ", "_")
+        elif 'start_date' in filters:
+            date_part = f"From_{filters['start_date']}".replace(" ", "_")
+        elif 'end_date' in filters:
+            date_part = f"Until_{filters['end_date']}".replace(" ", "_")
+        
+        filename = f"Transaction_Documentation_{property_part}_{date_part}.zip"
+        
+        # Return ZIP file
+        return send_file(
+            buffer,
+            mimetype='application/zip',
+            as_attachment=True,
+            download_name=filename
+        )
+        
+    except Exception as e:
+        logger.error(f"Error generating documentation archive: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f"Error generating documentation archive: {str(e)}"
+        }), 500
+
+
+@transaction_bp.route('/bulk-import', methods=['GET'])
+@login_required
+def bulk_import_page():
+    """
+    Render the bulk import page.
+    
+    Returns:
+        Rendered bulk import template
+    """
+    try:
+        # Get user ID from session
+        user_id = g.current_user.id
+        
+        return render_template('transactions/bulk_import.html')
+        
+    except Exception as e:
+        logger.error(f"Error rendering bulk import page: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f"Error rendering bulk import page: {str(e)}"
+        }), 500
+
+
+@transaction_bp.route('/bulk-import/get-columns', methods=['POST'])
+@login_required
+def get_columns():
+    """
+    Get columns from an uploaded file.
+    
+    Returns:
+        JSON response with columns
+    """
+    try:
+        # Get user ID from session
+        user_id = g.current_user.id
+        
+        # Check if file is in request
+        if 'file' not in request.files:
+            return jsonify({
+                'success': False,
+                'error': 'No file part in request'
+            }), 400
+        
+        file = request.files['file']
+        
+        # Check if file is selected
+        if file.filename == '':
+            return jsonify({
+                'success': False,
+                'error': 'No selected file'
+            }), 400
+        
+        # Check file extension
+        if not _allowed_file(file.filename, ['csv', 'xls', 'xlsx']):
+            return jsonify({
+                'success': False,
+                'error': 'Invalid file type. Allowed types are: csv, xls, xlsx'
+            }), 400
+        
+        # Save file to temporary location
+        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+            file.save(temp_file.name)
+            temp_path = temp_file.name
+        
+        try:
+            # Import service
+            from src.services.transaction_import_service import TransactionImportService
+            import_service = TransactionImportService()
+            
+            # Read file
+            df = import_service.read_file(temp_path, file.filename)
+            
+            # Get columns
+            columns = df.columns.tolist()
+            
+            return jsonify({
+                'success': True,
+                'columns': columns
+            }), 200
+            
+        finally:
+            # Clean up temporary file
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+        
+    except Exception as e:
+        logger.error(f"Error getting columns: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f"Error getting columns: {str(e)}"
+        }), 500
+
+
+@transaction_bp.route('/bulk-import', methods=['POST'])
+@login_required
+def bulk_import():
+    """
+    Process a bulk import file.
+    
+    Returns:
+        JSON response with import results
+    """
+    try:
+        # Get user ID from session
+        user_id = g.current_user.id
+        
+        # Check if file is in request
+        if 'file' not in request.files:
+            return jsonify({
+                'success': False,
+                'error': 'No file part in request'
+            }), 400
+        
+        file = request.files['file']
+        
+        # Check if file is selected
+        if file.filename == '':
+            return jsonify({
+                'success': False,
+                'error': 'No selected file'
+            }), 400
+        
+        # Check file extension
+        if not _allowed_file(file.filename, ['csv', 'xls', 'xlsx']):
+            return jsonify({
+                'success': False,
+                'error': 'Invalid file type. Allowed types are: csv, xls, xlsx'
+            }), 400
+        
+        # Get column mapping
+        try:
+            column_mapping = request.form.get('column_mapping', '{}')
+            column_mapping = json.loads(column_mapping)
+        except Exception as e:
+            logger.error(f"Error parsing column mapping: {str(e)}")
+            return jsonify({
+                'success': False,
+                'error': 'Invalid column mapping format'
+            }), 400
+        
+        # Save file to temporary location
+        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+            file.save(temp_file.name)
+            temp_path = temp_file.name
+        
+        try:
+            # Import service
+            from src.services.transaction_import_service import TransactionImportService
+            import_service = TransactionImportService()
+            
+            # Process import file
+            results = import_service.process_import_file(temp_path, column_mapping, file.filename, user_id)
+            
+            return jsonify({
+                'success': True,
+                'results': results,
+                'redirect': '/api/transactions'
+            }), 200
+            
+        finally:
+            # Clean up temporary file
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+        
+    except Exception as e:
+        logger.error(f"Error processing bulk import: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f"Error processing bulk import: {str(e)}"
+        }), 500
+
+
+def _allowed_file(filename, allowed_extensions=None):
+    """
+    Check if a file has an allowed extension.
+    
+    Args:
+        filename: Name of the file
+        allowed_extensions: List of allowed extensions
+        
+    Returns:
+        True if file has an allowed extension, False otherwise
+    """
+    if allowed_extensions is None:
+        allowed_extensions = ['csv', 'xls', 'xlsx']
+        
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in allowed_extensions

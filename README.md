@@ -121,6 +121,59 @@ The application features a sophisticated reimbursement tracking system:
 - **API Endpoints**: RESTful API endpoints for updating reimbursement status, calculating shares, and retrieving pending/owed reimbursements
 - **User-Specific Views**: View reimbursements pending for the current user and reimbursements owed to others
 
+## Transaction Reporting
+
+The application includes comprehensive transaction reporting capabilities:
+
+- **PDF Report Generation**: Generate professional PDF reports with transaction details
+  - Property-specific and multi-property reports
+  - Customizable date ranges and filtering options
+  - Branded report styling with consistent layouts
+  - Transaction details with documentation references
+  
+- **Financial Summaries**: Comprehensive financial summaries with visualizations
+  - Income, expense, and net amount calculations
+  - Property-specific financial breakdowns
+  - Category-based financial analysis
+  - Partner equity-based calculations
+  
+- **Data Visualizations**: Dynamic charts and graphs for financial data
+  - Income vs. expense pie charts
+  - Category breakdown bar charts
+  - Property comparison visualizations
+  - Time-based transaction analysis
+  
+- **Documentation Bundling**: Create ZIP archives of transaction documentation
+  - Organized folder structure by property and date
+  - README file with transaction summaries
+  - Support for various document types
+  - Secure file handling and naming
+
+## Bulk Transaction Import
+
+The application features a robust bulk transaction import system:
+
+- **File Format Support**: Import transactions from CSV and Excel files
+  - Support for multiple file encodings (UTF-8, Latin1, ISO-8859-1, CP1252)
+  - Automatic file type detection and appropriate parsing
+  - Error handling for malformed files
+
+- **Column Mapping Interface**: Flexible mapping of file columns to transaction fields
+  - Smart auto-mapping based on common column names
+  - Required field validation
+  - Preview of mapping results
+
+- **Data Validation & Cleaning**: Comprehensive validation of imported data
+  - Required field validation
+  - Data type validation and conversion
+  - Automatic data cleaning and normalization
+  - Duplicate transaction detection
+
+- **Import Results Reporting**: Detailed feedback on import results
+  - Import statistics (total rows, successful imports, skipped rows)
+  - Detailed error reporting by row and field
+  - Modification tracking for data transformations
+
 ## Property Comps & Valuation
 
 The application features a sophisticated property valuation system:
