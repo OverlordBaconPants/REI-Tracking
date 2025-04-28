@@ -144,8 +144,9 @@ class CategoryRepository:
             ValueError: If the category type is invalid
         """
         try:
+            from src.utils.common import is_valid_category
             categories = self.get_categories()
-            return categories.is_valid_category(category, category_type)
+            return is_valid_category(categories, category, category_type)
         except Exception as e:
             logger.error(f"Error checking if category is valid: {str(e)}")
             raise

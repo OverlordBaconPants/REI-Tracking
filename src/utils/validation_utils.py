@@ -200,54 +200,7 @@ class FunctionValidator(Validator[T]):
 
 
 # Common validation functions
-
-def validate_email(email: str) -> bool:
-    """
-    Validate an email address.
-    
-    Args:
-        email: The email address to validate
-        
-    Returns:
-        True if the email is valid, False otherwise
-    """
-    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-    return bool(re.match(pattern, email))
-
-
-def validate_phone(phone: str) -> bool:
-    """
-    Validate a phone number.
-    
-    Args:
-        phone: The phone number to validate
-        
-    Returns:
-        True if the phone number is valid, False otherwise
-    """
-    # Remove non-numeric characters
-    digits = re.sub(r'\D', '', phone)
-    
-    # Check length (10-15 digits)
-    return 10 <= len(digits) <= 15
-
-
-def validate_date(date_str: str, format_str: str = '%Y-%m-%d') -> bool:
-    """
-    Validate a date string.
-    
-    Args:
-        date_str: The date string to validate
-        format_str: The expected date format
-        
-    Returns:
-        True if the date is valid, False otherwise
-    """
-    try:
-        datetime.strptime(date_str, format_str)
-        return True
-    except ValueError:
-        return False
+from src.utils.common import validate_email, validate_phone, validate_date
 
 
 def validate_decimal(value: Union[str, float, int, Decimal], min_value: Optional[float] = None, 

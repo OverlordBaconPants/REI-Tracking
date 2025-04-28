@@ -550,6 +550,9 @@ class Analysis(BaseModel):
         Returns:
             The cash-on-cash return as a percentage
         """
+        from src.utils.financial_helpers import calculate_cash_on_cash_return
+        from src.utils.money import Money
+        
         # Annual cash flow
         annual_cash_flow = self.calculate_monthly_cash_flow() * Decimal("12")
         
@@ -593,8 +596,9 @@ class Analysis(BaseModel):
         if total_investment == 0:
             return Decimal("0")
         
-        # Calculate cash-on-cash return
-        return (annual_cash_flow / total_investment) * Decimal("100")
+        # Use the centralized utility function
+        result = calculate_cash_on_cash_return(Money(annual_cash_flow), Money(total_investment))
+        return Decimal(str(result.value))
     
     def calculate_cap_rate(self) -> Decimal:
         """
@@ -603,6 +607,9 @@ class Analysis(BaseModel):
         Returns:
             The capitalization rate as a percentage
         """
+        from src.utils.financial_helpers import calculate_cap_rate
+        from src.utils.money import Money
+        
         # Annual net operating income
         annual_noi = self.calculate_monthly_cash_flow() * Decimal("12")
         
@@ -643,8 +650,9 @@ class Analysis(BaseModel):
         if self.purchase_price == 0:
             return Decimal("0")
         
-        # Calculate cap rate
-        return (annual_noi / Decimal(str(self.purchase_price))) * Decimal("100")
+        # Use the centralized utility function
+        result = calculate_cap_rate(Money(annual_noi), Money(self.purchase_price))
+        return Decimal(str(result.value))
     
     def calculate_price_per_unit(self) -> Optional[Decimal]:
         """

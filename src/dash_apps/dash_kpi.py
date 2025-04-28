@@ -24,6 +24,13 @@ import logging
 from src.services.property_financial_service import get_properties_for_user, PropertyFinancialService
 from src.utils.money import Money
 from src.utils.logging_utils import get_logger
+from src.utils.common import safe_float, format_address
+from src.utils.dash_helpers import (
+    create_responsive_chart, 
+    create_metric_card, 
+    update_chart_layouts_for_mobile, 
+    create_empty_response
+)
 
 # Set up module-level logger
 logger = get_logger(__name__)
@@ -32,145 +39,6 @@ logger = get_logger(__name__)
 MOBILE_BREAKPOINT = 768
 MOBILE_HEIGHT = '100vh'
 DESKTOP_HEIGHT = 'calc(100vh - 150px)'
-
-def safe_float(value: Union[str, int, float, None], default: float = 0.0) -> float:
-    """
-    Safely convert a value to float, handling various input types and formats.
-    
-    Args:
-        value: The value to convert (can be string, int, float, or None)
-        default: Default value to return if conversion fails
-        
-    Returns:
-        float: Converted value or default
-    """
-    try:
-        if value is None:
-            return default
-        if isinstance(value, Money):
-            return float(value.amount)
-        if isinstance(value, (int, float)):
-            return float(value)
-        if isinstance(value, str):
-            # Remove currency symbols, commas, and spaces
-            cleaned = value.replace('$', '').replace(',', '').replace('%', '').replace(' ', '').strip()
-            return float(cleaned) if cleaned else default
-        return default
-    except (ValueError, TypeError) as e:
-        logger.warning(f"Error converting value to float: {value}, using default {default}. Error: {str(e)}")
-        return default
-
-def format_address(address: str, format_type: str = 'display') -> str:
-    """
-    Format an address for consistent display.
-    
-    Args:
-        address: Full address string
-        format_type: Type of formatting ('display', 'base', 'full')
-        
-    Returns:
-        Formatted address string
-    """
-    if not address:
-        return "Unknown"
-        
-    parts = address.split(',')
-    
-    if format_type == 'base':
-        # Return just the first part (street address)
-        return parts[0].strip()
-    elif format_type == 'display':
-        # Return first two parts (street address, city)
-        if len(parts) >= 2:
-            return f"{parts[0].strip()}, {parts[1].strip()}"
-        return parts[0].strip()
-    else:
-        # Return full address
-        return address
-
-def create_responsive_chart(figure, id_prefix):
-    """Create a responsive chart container with mobile-friendly settings."""
-    return html.Div([
-        dcc.Graph(
-            id=f'{id_prefix}-chart',
-            figure=figure,
-            config={
-                'displayModeBar': False,  # Hide mode bar on mobile
-                'responsive': True,
-                'scrollZoom': False,  # Disable scroll zoom on mobile
-                'staticPlot': False,  # Enable touch interaction
-                'doubleClick': 'reset'  # Reset on double tap
-            },
-            style={
-                'height': '100%',
-                'minHeight': '300px'  # Ensure minimum height on mobile
-            }
-        )
-    ], className='chart-container mb-4')
-
-def create_metric_card(title: str, id: str, color_class: str) -> dbc.Card:
-    """Create a mobile-responsive metric card."""
-    return dbc.Card([
-        dbc.CardBody([
-            html.H5(title, className="card-title text-center mb-2 text-sm-start"),
-            html.H3(id=id, className=f"text-center {color_class} text-sm-start")
-        ])
-    ], className="mb-3 shadow-sm")
-
-def update_chart_layouts_for_mobile(fig, is_mobile=True):
-    """Update chart layouts for mobile devices."""
-    mobile_layout = {
-        'margin': dict(l=10, r=10, t=30, b=30),
-        'height': 300 if is_mobile else 400,
-        'legend': dict(
-            orientation='h' if is_mobile else 'v',
-            y=-0.5 if is_mobile else 0.5,
-            x=0.5 if is_mobile else 1.0,
-            xanchor='center' if is_mobile else 'left',
-            yanchor='top' if is_mobile else 'middle'
-        ),
-        'font': dict(
-            size=12 if is_mobile else 14  # Adjust font size for readability
-        ),
-        'hoverlabel': dict(
-            font_size=14  # Larger touch targets for hover labels
-        )
-    }
-    fig.update_layout(**mobile_layout)
-    return fig
-
-def create_empty_response(error_message: str) -> tuple:
-    """
-    Create a response for when no data can be displayed.
-    
-    Args:
-        error_message: Error message to display
-        
-    Returns:
-        tuple: Empty values for all dashboard components plus error message
-    """
-    empty_fig = go.Figure()
-    empty_fig.add_annotation(
-        text="No data to display",
-        xref="paper",
-        yref="paper",
-        x=0.5,
-        y=0.5,
-        showarrow=False
-    )
-    
-    # Create empty responsive chart
-    empty_chart = create_responsive_chart(empty_fig, 'empty')
-    
-    return (
-        html.Div("No property selected", className="text-center text-muted p-3"),  # property info
-        html.Div("No KPI data available", className="text-center text-muted p-3"),  # kpi metrics
-        empty_chart,  # income expense chart
-        empty_chart,  # noi cash flow chart
-        empty_chart,  # metrics chart
-        error_message,  # error message
-        {'display': 'block', 'color': 'red'}  # error style
-    )
 
 def create_kpi_dash(flask_app) -> dash.Dash:
     """

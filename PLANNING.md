@@ -379,6 +379,7 @@ Common code smells:
 | 2025-04-27 | Built loan term toggle functionality | To allow users to easily switch between years and months when entering loan terms, improving usability and flexibility |
 | 2025-04-27 | Enhanced print-specific styling and layouts | To provide optimized printing capabilities for reports, calculators, and dashboards with proper page breaks, headers, and formatting |
 | 2025-04-27 | Implemented occupancy rate calculator | To enable multi-family property owners to analyze occupancy rates, calculate revenue impact, compare to market averages, and determine breakeven occupancy |
+| 2025-04-28 | Refactored utility functions into centralized modules | To eliminate code duplication, improve maintainability, and ensure consistent behavior by centralizing common functions in dedicated utility modules (common.py, dash_helpers.py, financial_helpers.py) |
 
 ---
 

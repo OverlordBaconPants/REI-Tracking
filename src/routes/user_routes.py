@@ -16,13 +16,15 @@ from src.services.validation_service import ModelValidator
 from src.services.auth_service import AuthService
 from src.utils.logging_utils import get_logger, audit_logger
 from src.utils.validation_utils import ValidationResult
+from src.utils.common import validate_email
 
 # Import ValidationService for tests
 class ValidationService:
     @staticmethod
     def validate_email(email):
         """Validate email format."""
-        if not email or '@' not in email:
+        result = validate_email(email)
+        if not result:
             return ValidationResult(is_valid=False, errors={'email': ['Invalid email format']})
         return ValidationResult(is_valid=True)
     

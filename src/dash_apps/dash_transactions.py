@@ -28,6 +28,8 @@ from src.services.transaction_service import TransactionService
 from src.services.property_access_service import PropertyAccessService
 from src.services.transaction_report_generator import TransactionReportGenerator
 from src.utils.logging_utils import get_logger
+from src.utils.common import format_address, validate_date_range, is_wholly_owned_by_user
+from src.utils.dash_helpers import create_mobile_button
 
 # Set up module-level logger
 logger = get_logger(__name__)
@@ -82,126 +84,6 @@ STYLE_CONFIG = {
         }
     }
 }
-
-def validate_date_range(start_date: Optional[str], end_date: Optional[str]) -> tuple[bool, str]:
-    """
-    Validates the date range for transactions.
-    
-    Args:
-        start_date: Start date in YYYY-MM-DD format
-        end_date: End date in YYYY-MM-DD format
-        
-    Returns:
-        Tuple of (is_valid, error_message)
-    """
-    try:
-        if not start_date and not end_date:
-            return True, ""
-
-        if start_date:
-            start = datetime.strptime(start_date, '%Y-%m-%d')
-            min_date = datetime.strptime(MIN_DATE, '%Y-%m-%d')
-            if start < min_date:
-                return False, f"Start date cannot be before {MIN_DATE}"
-
-        if end_date:
-            end = datetime.strptime(end_date, '%Y-%m-%d')
-            max_date = datetime.now() + timedelta(days=MAX_FUTURE_DAYS)
-            if end > max_date:
-                return False, f"End date cannot be more than {MAX_FUTURE_DAYS} days in the future"
-
-        if start_date and end_date and start > end:
-            return False, "Start date cannot be after end date"
-
-        return True, ""
-    except ValueError as e:
-        return False, f"Invalid date format: {str(e)}"
-
-def is_wholly_owned_by_user(property_data: dict, user_name: str) -> bool:
-    """
-    Checks if a property is wholly owned by the user.
-    
-    Args:
-        property_data: Dictionary containing property information
-        user_name: Name of the user to check
-        
-    Returns:
-        True if the property is wholly owned by the user, False otherwise
-    """
-    logger.debug(f"Checking ownership for property: {property_data.get('address')} and user: {user_name}")
-    
-    partners = property_data.get('partners', [])
-    if len(partners) == 1:
-        partner = partners[0]
-        is_user = partner.get('name', '').lower() == user_name.lower()
-        equity = float(partner.get('equity_share', 0))
-        return is_user and abs(equity - 100.0) < 0.01
-    
-    user_equity = sum(
-        float(partner.get('equity_share', 0))
-        for partner in partners
-        if partner.get('name', '').lower() == user_name.lower()
-    )
-    
-    return abs(user_equity - 100.0) < 0.01
-
-def format_address(address: str, format_type: str = 'display') -> str:
-    """
-    Format an address for consistent display.
-    
-    Args:
-        address: Full address string
-        format_type: Type of formatting ('display', 'base', 'full')
-        
-    Returns:
-        Formatted address string
-    """
-    if not address:
-        return "Unknown"
-        
-    parts = address.split(',')
-    
-    if format_type == 'base':
-        # Return just the first part (street address)
-        return parts[0].strip()
-    elif format_type == 'display':
-        # Return first two parts (street address, city)
-        if len(parts) >= 2:
-            return f"{parts[0].strip()}, {parts[1].strip()}"
-        return parts[0].strip()
-    else:
-        # Return full address
-        return address
-
-def create_mobile_button(link: str, text: str, color: str) -> str:
-    """
-    Create a mobile-friendly button with proper spacing and icon.
-    
-    Args:
-        link: URL or filename for the button
-        text: Button text
-        color: Button color class
-        
-    Returns:
-        HTML string for the button
-    """
-    if not link:
-        return ''
-        
-    # Extract filename if it's a full URL
-    match = re.search(r'/artifact/([^"]+)', link)
-    if match:
-        filename = match.group(1)
-    else:
-        # If no match, assume the link is just the filename
-        filename = link
-        
-    # Construct the proper artifact URL
-    artifact_url = f'/transactions/artifact/{filename}'
-            
-    return f'''<button class="btn btn-sm btn-{color} m-1" 
-            onclick="window.open('{artifact_url}', '_blank')">
-            {text}</button>'''
 
 def create_transactions_dash(flask_app):
     """

@@ -397,10 +397,10 @@ class InvestmentMetricsCalculator:
             ... )
             >>> print(f"GRM: {grm:.2f}")  # "GRM: 10.00"
         """
-        if annual_rent.dollars == 0:
-            return 0.0
+        from src.utils.financial_helpers import calculate_gross_rent_multiplier as calc_grm
         
-        return purchase_price.dollars / annual_rent.dollars
+        # Use the centralized utility function
+        return calc_grm(purchase_price, annual_rent)
     
     @staticmethod
     @safe_calculation(Money(0))
@@ -426,10 +426,10 @@ class InvestmentMetricsCalculator:
             ... )
             >>> print(price_per_unit)  # "$250,000.00"
         """
-        if unit_count <= 0:
-            return Money(0)
+        from src.utils.financial_helpers import calculate_price_per_unit as calc_price_per_unit
         
-        return Money(purchase_price.dollars / unit_count)
+        # Use the centralized utility function
+        return calc_price_per_unit(purchase_price, unit_count)
     
     @staticmethod
     @safe_calculation(Percentage(0))
@@ -455,10 +455,10 @@ class InvestmentMetricsCalculator:
             ... )
             >>> print(coc)  # "12.000%"
         """
-        if total_investment.dollars == 0:
-            return Percentage('∞')  # Infinite return if no investment
+        from src.utils.financial_helpers import calculate_cash_on_cash_return as calc_coc
         
-        return Percentage((annual_cash_flow.dollars / total_investment.dollars) * 100)
+        # Use the centralized utility function
+        return calc_coc(annual_cash_flow, total_investment)
     
     @staticmethod
     @safe_calculation(Percentage(0))
@@ -484,10 +484,10 @@ class InvestmentMetricsCalculator:
             ... )
             >>> print(cap_rate)  # "8.000%"
         """
-        if property_value.dollars == 0:
-            return Percentage(0)
+        from src.utils.financial_helpers import calculate_cap_rate as calc_cap_rate
         
-        return Percentage((annual_noi.dollars / property_value.dollars) * 100)
+        # Use the centralized utility function
+        return calc_cap_rate(annual_noi, property_value)
     
     @staticmethod
     @safe_calculation(0.0)
@@ -513,10 +513,10 @@ class InvestmentMetricsCalculator:
             ... )
             >>> print(f"DSCR: {dscr:.2f}")  # "DSCR: 1.33"
         """
-        if annual_debt_service.dollars == 0:
-            return float('inf')  # Infinite DSCR if no debt service
+        from src.utils.financial_helpers import calculate_debt_service_coverage_ratio as calc_dscr
         
-        return annual_noi.dollars / annual_debt_service.dollars
+        # Use the centralized utility function
+        return calc_dscr(annual_noi, annual_debt_service)
     
     @staticmethod
     @safe_calculation(Percentage(0))
@@ -542,10 +542,10 @@ class InvestmentMetricsCalculator:
             ... )
             >>> print(expense_ratio)  # "40.000%"
         """
-        if annual_income.dollars == 0:
-            return Percentage(0)
+        from src.utils.financial_helpers import calculate_expense_ratio as calc_expense_ratio
         
-        return Percentage((annual_expenses.dollars / annual_income.dollars) * 100)
+        # Use the centralized utility function
+        return calc_expense_ratio(annual_expenses, annual_income)
     
     @staticmethod
     @safe_calculation(Percentage(0))
@@ -573,13 +573,7 @@ class InvestmentMetricsCalculator:
             ... )
             >>> print(breakeven)  # "83.333%"
         """
-        if annual_potential_income.dollars == 0:
-            return Percentage(100)  # 100% occupancy needed if no income
+        from src.utils.financial_helpers import calculate_breakeven_occupancy as calc_breakeven
         
-        total_expenses = annual_expenses.dollars + annual_debt_service.dollars
-        breakeven = (total_expenses / annual_potential_income.dollars) * 100
-        
-        # Cap at 100%
-        if breakeven > 100:
-            return Percentage(100)
-        return Percentage(breakeven)
+        # Use the centralized utility function
+        return calc_breakeven(annual_expenses, annual_debt_service, annual_potential_income)

@@ -375,12 +375,17 @@ class Property(BaseModel):
         Returns:
             The capitalization rate as a percentage
         """
+        from src.utils.financial_helpers import calculate_cap_rate
+        from src.utils.money import Money
+        
         annual_noi = (self.monthly_income.total() - self.monthly_expenses.total()) * 12
         
         if self.purchase_price == 0:
             return Decimal("0")
         
-        return (annual_noi / self.purchase_price) * 100
+        # Use the centralized utility function
+        result = calculate_cap_rate(Money(annual_noi), Money(self.purchase_price))
+        return Decimal(str(result.value))
     
     def calculate_cash_on_cash_return(self) -> Decimal:
         """
@@ -389,6 +394,9 @@ class Property(BaseModel):
         Returns:
             The cash-on-cash return as a percentage
         """
+        from src.utils.financial_helpers import calculate_cash_on_cash_return
+        from src.utils.money import Money
+        
         annual_cash_flow = self.calculate_cash_flow() * 12
         total_investment = (
             self.down_payment +
@@ -401,7 +409,9 @@ class Property(BaseModel):
         if total_investment == 0:
             return Decimal("0")
         
-        return (annual_cash_flow / total_investment) * 100
+        # Use the centralized utility function
+        result = calculate_cash_on_cash_return(Money(annual_cash_flow), Money(total_investment))
+        return Decimal(str(result.value))
     
     def get_property_manager(self) -> Optional[Partner]:
         """

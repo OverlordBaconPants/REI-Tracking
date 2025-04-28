@@ -22,6 +22,15 @@ import traceback
 from src.services.property_financial_service import get_properties_for_user
 from src.utils.money import Money
 from src.utils.logging_utils import get_logger
+from src.utils.common import safe_float
+from src.utils.dash_helpers import (
+    create_responsive_chart, 
+    create_metric_card, 
+    update_chart_layouts_for_mobile, 
+    create_empty_response,
+    generate_color_scale
+)
+from src.utils.financial_helpers import calculate_cash_on_cash_return
 
 # Set up module-level logger
 logger = get_logger(__name__)
@@ -30,33 +39,6 @@ logger = get_logger(__name__)
 MOBILE_BREAKPOINT = 768
 MOBILE_HEIGHT = '100vh'
 DESKTOP_HEIGHT = 'calc(100vh - 150px)'
-
-def safe_float(value: Union[str, int, float, None], default: float = 0.0) -> float:
-    """
-    Safely convert a value to float, handling various input types and formats.
-    
-    Args:
-        value: The value to convert (can be string, int, float, or None)
-        default: Default value to return if conversion fails
-        
-    Returns:
-        float: Converted value or default
-    """
-    try:
-        if value is None:
-            return default
-        if isinstance(value, Money):
-            return float(value.amount)
-        if isinstance(value, (int, float)):
-            return float(value)
-        if isinstance(value, str):
-            # Remove currency symbols, commas, and spaces
-            cleaned = value.replace('$', '').replace(',', '').replace(' ', '').strip()
-            return float(cleaned) if cleaned else default
-        return default
-    except (ValueError, TypeError) as e:
-        logger.warning(f"Error converting value to float: {value}, using default {default}. Error: {str(e)}")
-        return default
 
 def validate_property_data(property_data: Dict, username: str) -> Tuple[bool, str]:
     """
@@ -137,86 +119,6 @@ def calculate_user_equity_share(property_data: Dict, username: str) -> float:
         
     except Exception as e:
         logger.error(f"Error calculating equity share: {str(e)}")
-        logger.error(traceback.format_exc())
-        return 0.0
-
-def calculate_cash_on_cash_return(property_data: Dict, username: str) -> float:
-    """
-    Calculate Cash on Cash return for a property.
-    
-    Args:
-        property_data: Dictionary containing property information
-        username: Current user's username
-        
-    Returns:
-        Cash on Cash return as a percentage
-    """
-    try:
-        # Calculate total cash invested
-        total_investment = sum([
-            safe_float(property_data.get('down_payment', 0)),
-            safe_float(property_data.get('closing_costs', 0)),
-            safe_float(property_data.get('renovation_costs', 0)),
-            safe_float(property_data.get('marketing_costs', 0)),
-            safe_float(property_data.get('holding_costs', 0))
-        ])
-        
-        if total_investment <= 0:
-            return 0.0
-            
-        # Get equity share
-        equity_share = calculate_user_equity_share(property_data, username)
-        if equity_share == 0:
-            return 0.0
-            
-        # Calculate monthly cash flow
-        monthly_income_data = property_data.get('monthly_income', {})
-        monthly_income = sum([
-            safe_float(monthly_income_data.get('rental_income')),
-            safe_float(monthly_income_data.get('parking_income')),
-            safe_float(monthly_income_data.get('laundry_income')),
-            safe_float(monthly_income_data.get('other_income'))
-        ])
-        
-        # Calculate operating expenses
-        monthly_expenses = property_data.get('monthly_expenses', {})
-        utilities = monthly_expenses.get('utilities', {})
-        total_utilities = sum(safe_float(val) for val in utilities.values())
-        
-        operating_expenses = sum([
-            safe_float(monthly_expenses.get('property_tax')),
-            safe_float(monthly_expenses.get('insurance')),
-            safe_float(monthly_expenses.get('repairs')),
-            safe_float(monthly_expenses.get('capex')),
-            safe_float(monthly_expenses.get('property_management')),
-            safe_float(monthly_expenses.get('hoa_fees')),
-            safe_float(monthly_expenses.get('other_expenses')),
-            total_utilities
-        ])
-        
-        # Calculate loan payment
-        loan_amount = safe_float(property_data.get('primary_loan_amount'))
-        interest_rate = safe_float(property_data.get('primary_loan_rate')) / 100
-        loan_term_months = safe_float(property_data.get('primary_loan_term'))
-        
-        if interest_rate > 0 and loan_term_months > 0:
-            monthly_rate = interest_rate / 12
-            loan_payment = loan_amount * (monthly_rate * (1 + monthly_rate) ** loan_term_months) / \
-                         ((1 + monthly_rate) ** loan_term_months - 1)
-        else:
-            loan_payment = loan_amount / loan_term_months if loan_term_months > 0 else 0
-        
-        # Calculate net monthly cash flow
-        net_monthly_cashflow = monthly_income - operating_expenses - loan_payment
-        
-        # Calculate annual cash flow and CoC return
-        annual_cashflow = net_monthly_cashflow * 12
-        coc_return = (annual_cashflow * equity_share / total_investment) * 100
-        
-        return round(coc_return, 2)
-        
-    except Exception as e:
-        logger.error(f"Error calculating Cash on Cash return: {str(e)}")
         logger.error(traceback.format_exc())
         return 0.0
     
@@ -531,88 +433,6 @@ def calculate_monthly_cashflow(property_data: Dict, username: str) -> Optional[D
         logger.error(traceback.format_exc())
         return None
     
-def generate_color_scale(n: int) -> List[str]:
-    """
-    Generate a color scale from navy to light cyan with n steps.
-    
-    Args:
-        n: Number of colors needed
-        
-    Returns:
-        List of hex color codes
-    """
-    if n <= 0:
-        return []
-    if n == 1:
-        return ['#000080']  # Navy blue
-
-    # Convert hex to RGB
-    start_color = (0, 0, 128)      # RGB for #000080 (navy)
-    end_color = (224, 255, 255)    # RGB for #E0FFFF (light cyan)
-    
-    colors = []
-    for i in range(n):
-        # Calculate the color at this step
-        r = int(start_color[0] + (end_color[0] - start_color[0]) * (i / (n - 1)))
-        g = int(start_color[1] + (end_color[1] - start_color[1]) * (i / (n - 1)))
-        b = int(start_color[2] + (end_color[2] - start_color[2]) * (i / (n - 1)))
-        
-        # Convert RGB back to hex
-        hex_color = f'#{r:02x}{g:02x}{b:02x}'
-        colors.append(hex_color)
-    
-    return colors
-
-def create_responsive_chart(figure, id_prefix):
-    """Create a responsive chart container with mobile-friendly settings."""
-    return html.Div([
-        dcc.Graph(
-            id=f'{id_prefix}-chart',
-            figure=figure,
-            config={
-                'displayModeBar': False,  # Hide mode bar on mobile
-                'responsive': True,
-                'scrollZoom': False,  # Disable scroll zoom on mobile
-                'staticPlot': False,  # Enable touch interaction
-                'doubleClick': 'reset'  # Reset on double tap
-            },
-            style={
-                'height': '100%',
-                'minHeight': '300px'  # Ensure minimum height on mobile
-            }
-        )
-    ], className='chart-container mb-4')
-
-def create_metric_card(title: str, id: str, color_class: str) -> dbc.Card:
-    """Create a mobile-responsive metric card."""
-    return dbc.Card([
-        dbc.CardBody([
-            html.H5(title, className="card-title text-center mb-2 text-sm-start"),
-            html.H3(id=id, className=f"text-center {color_class} text-sm-start")
-        ])
-    ], className="mb-3 shadow-sm")
-
-def update_chart_layouts_for_mobile(fig, is_mobile=True):
-    """Update chart layouts for mobile devices."""
-    mobile_layout = {
-        'margin': dict(l=10, r=10, t=30, b=30),
-        'height': 300 if is_mobile else 400,
-        'legend': dict(
-            orientation='h' if is_mobile else 'v',
-            y=-0.5 if is_mobile else 0.5,
-            x=0.5 if is_mobile else 1.0,
-            xanchor='center' if is_mobile else 'left',
-            yanchor='top' if is_mobile else 'middle'
-        ),
-        'font': dict(
-            size=12 if is_mobile else 14  # Adjust font size for readability
-        ),
-        'hoverlabel': dict(
-            font_size=14  # Larger touch targets for hover labels
-        )
-    }
-    fig.update_layout(**mobile_layout)
-    return fig
 
 def create_responsive_table(property_metrics, cashflow_metrics):
     """Create a mobile-responsive property details table."""
@@ -707,45 +527,6 @@ def create_expenses_chart(expense_data):
         title="Monthly Expenses Breakdown"
     )
 
-def create_empty_response(error_message: str) -> tuple:
-    """
-    Create a response for when no data can be displayed.
-    
-    Args:
-        error_message: Error message to display
-        
-    Returns:
-        tuple: Empty values for all dashboard components plus error message
-    """
-    empty_fig = go.Figure()
-    empty_fig.add_annotation(
-        text="No data to display",
-        xref="paper",
-        yref="paper",
-        x=0.5,
-        y=0.5,
-        showarrow=False
-    )
-    
-    # Create empty responsive chart
-    empty_chart = create_responsive_chart(empty_fig, 'empty')
-    
-    return (
-        "",  # context
-        "$0.00",  # portfolio value
-        "$0.00",  # total equity
-        "$0.00",  # equity gained
-        "$0.00",  # monthly income
-        "$0.00",  # monthly expenses
-        html.Span("$0.00"),  # net cashflow
-        empty_chart,  # equity chart
-        empty_chart,  # cashflow chart
-        empty_chart,  # income chart
-        empty_chart,  # expenses chart
-        html.Div("No data to display", className="text-center p-3"),  # table
-        error_message,  # error message
-        {'display': 'block', 'color': 'red'}  # error style
-    )
 
 def create_portfolio_dash(flask_app) -> dash.Dash:
     """

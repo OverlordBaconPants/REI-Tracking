@@ -147,9 +147,5 @@ class Categories(BaseModel):
         Raises:
             ValueError: If the category type is invalid
         """
-        if category_type == "income":
-            return self.is_valid_income_category(category)
-        elif category_type == "expense":
-            return self.is_valid_expense_category(category)
-        else:
-            raise ValueError(f"Invalid category type: {category_type}")
+        from src.utils.common import is_valid_category
+        return is_valid_category(self, category, category_type)
