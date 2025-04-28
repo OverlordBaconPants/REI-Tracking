@@ -167,7 +167,7 @@ class LoanRepository(BaseRepository):
         return self.update_loan(loan_id, {
             'status': LoanStatus.PAID_OFF.value,
             'last_updated': payoff_date.isoformat(),
-            'current_balance': Money(0).to_dict()
+            'current_balance': str(Money(0))
         })
     
     def update_loan_balance(self, loan_id: str, as_of_date: Optional[date] = None) -> Optional[Loan]:

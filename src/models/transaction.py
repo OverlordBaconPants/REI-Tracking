@@ -6,7 +6,7 @@ This module provides the Transaction model for financial transaction management.
 
 from typing import List, Dict, Any, Optional
 from decimal import Decimal
-from pydantic import Field, validator
+from pydantic import Field, field_validator, ConfigDict
 
 from src.models.base_model import BaseModel
 from src.models.property import Partner
@@ -20,13 +20,19 @@ class Reimbursement(BaseModel):
     This class represents the reimbursement status and details for a transaction.
     """
     
+    model_config = ConfigDict(
+        extra="ignore",
+        validate_assignment=True
+    )
+    
     date_shared: Optional[str] = None
     share_description: Optional[str] = None
     reimbursement_status: str = "pending"  # "pending", "in_progress", "completed"
     documentation: Optional[str] = None
     partner_shares: Dict[str, Decimal] = Field(default_factory=dict)
     
-    @validator("date_shared")
+    @field_validator("date_shared")
+    @classmethod
     def validate_date_shared(cls, v: Optional[str]) -> Optional[str]:
         """
         Validate date shared.
@@ -46,7 +52,8 @@ class Reimbursement(BaseModel):
             return None
         return v
     
-    @validator("reimbursement_status")
+    @field_validator("reimbursement_status")
+    @classmethod
     def validate_reimbursement_status(cls, v: str) -> str:
         """
         Validate reimbursement status.
@@ -74,6 +81,11 @@ class Transaction(BaseModel):
     property association, categorization, and reimbursement status.
     """
     
+    model_config = ConfigDict(
+        extra="ignore",
+        validate_assignment=True
+    )
+    
     # Transaction details
     property_id: str
     type: str  # "income" or "expense"
@@ -89,7 +101,8 @@ class Transaction(BaseModel):
     # Reimbursement
     reimbursement: Optional[Reimbursement] = None
     
-    @validator("type")
+    @field_validator("type")
+    @classmethod
     def validate_type(cls, v: str) -> str:
         """
         Validate transaction type.
@@ -108,7 +121,8 @@ class Transaction(BaseModel):
             raise ValueError(f"Transaction type must be one of: {', '.join(valid_types)}")
         return v
     
-    @validator("amount")
+    @field_validator("amount")
+    @classmethod
     def validate_amount(cls, v: Decimal) -> Decimal:
         """
         Validate transaction amount.
@@ -126,7 +140,8 @@ class Transaction(BaseModel):
             raise ValueError("Transaction amount must be positive")
         return v
     
-    @validator("date")
+    @field_validator("date")
+    @classmethod
     def validate_date(cls, v: str) -> str:
         """
         Validate transaction date.
@@ -276,30 +291,17 @@ class Transaction(BaseModel):
         Returns:
             Dictionary representation of the transaction
         """
-        result = {
-            "id": self.id,
-            "created_at": self.created_at,
-            "updated_at": self.updated_at,
-            "property_id": self.property_id,
-            "type": self.type,
-            "category": self.category,
-            "description": self.description,
-            "amount": str(self.amount),  # Convert Decimal to string for JSON serialization
-            "date": self.date,
-            "collector_payer": self.collector_payer,
-            "documentation_file": self.documentation_file
-        }
+        # Use model_dump to get the base dictionary
+        result = self.model_dump(exclude_none=True)
+        
+        # Convert Decimal to string for JSON serialization
+        result["amount"] = str(self.amount)
         
         # Add reimbursement if it exists
         if self.reimbursement:
-            reimbursement_dict = {
-                "date_shared": self.reimbursement.date_shared,
-                "share_description": self.reimbursement.share_description,
-                "reimbursement_status": self.reimbursement.reimbursement_status,
-                "documentation": self.reimbursement.documentation
-            }
+            reimbursement_dict = self.reimbursement.model_dump(exclude_none=True)
             
-            # Add partner shares if they exist
+            # Convert partner shares if they exist
             if self.reimbursement.partner_shares:
                 reimbursement_dict["partner_shares"] = {
                     partner: str(amount)

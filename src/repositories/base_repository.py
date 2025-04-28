@@ -39,9 +39,11 @@ class BaseRepository(Generic[T]):
         self.model_class = model_class
         self.json_file = AtomicJsonFile[List[Dict[str, Any]]](file_path)
         
-        # Ensure the file exists
+        # Ensure the file exists and contains valid JSON
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        if not os.path.exists(file_path):
+        
+        # Initialize the file with an empty array if it doesn't exist or is empty
+        if not os.path.exists(file_path) or os.path.getsize(file_path) == 0:
             self.json_file.write([])
     
     def get_all(self) -> List[T]:
@@ -97,7 +99,11 @@ class BaseRepository(Generic[T]):
                     raise ValueError(f"Item with ID {item.id} already exists")
             
             # Add the new item
-            data.append(item.dict())
+            # Use to_dict() if available, otherwise fall back to dict()
+            if hasattr(item, 'to_dict') and callable(getattr(item, 'to_dict')):
+                data.append(item.to_dict())
+            else:
+                data.append(item.dict())
             self.json_file.write(data)
             
             return item
@@ -124,7 +130,11 @@ class BaseRepository(Generic[T]):
             # Find the item to update
             for i, existing_item in enumerate(data):
                 if existing_item.get("id") == item.id:
-                    data[i] = item.dict()
+                    # Use to_dict() if available, otherwise fall back to dict()
+                    if hasattr(item, 'to_dict') and callable(getattr(item, 'to_dict')):
+                        data[i] = item.to_dict()
+                    else:
+                        data[i] = item.dict()
                     self.json_file.write(data)
                     return item
             

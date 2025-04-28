@@ -39,6 +39,7 @@ class AuthActions:
         
         # Mock the login
         with self._client.session_transaction() as sess:
+            sess.clear()  # Clear any existing session data
             sess["user_id"] = self._user.id
             sess["user_email"] = self._user.email
             sess["user_role"] = self._user.role
@@ -74,6 +75,7 @@ class AuthActions:
         
         # Mock the login
         with self._client.session_transaction() as sess:
+            sess.clear()  # Clear any existing session data
             sess["user_id"] = self._user.id
             sess["user_email"] = self._user.email
             sess["user_role"] = self._user.role
@@ -109,6 +111,7 @@ class AuthActions:
         
         # Mock the login
         with self._client.session_transaction() as sess:
+            sess.clear()  # Clear any existing session data
             sess["user_id"] = self._user.id
             sess["user_email"] = self._user.email
             sess["user_role"] = self._user.role

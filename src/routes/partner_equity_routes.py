@@ -6,7 +6,7 @@ adding, editing, and removing partners, as well as tracking contributions and
 distributions.
 """
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, session, g
 from typing import Dict, Any, List, Optional
 from decimal import Decimal
 
@@ -96,6 +96,13 @@ def add_partner(property_id: str):
                     'message': f'Missing required field: {field}'
                 }), 400
         
+        # Get user ID from session
+        user_id = session.get('user_id')
+        if user_id is None and hasattr(g, 'current_user') and g.current_user:
+            user_id = g.current_user.id
+        else:
+            user_id = request.user_id  # Fallback to request.user_id for backward compatibility
+            
         # Add partner
         success = partner_equity_service.add_partner(
             property_id=property_id,
@@ -103,7 +110,7 @@ def add_partner(property_id: str):
             equity_share=Decimal(str(partner_data['equity_share'])),
             is_property_manager=partner_data.get('is_property_manager', False),
             visibility_settings=partner_data.get('visibility_settings'),
-            current_user_id=request.user_id
+            current_user_id=user_id
         )
         
         if not success:
@@ -152,11 +159,18 @@ def update_partner(property_id: str, partner_name: str):
         
         # Update equity share if provided
         if 'equity_share' in partner_data:
+            # Get user ID from session
+            user_id = session.get('user_id')
+            if user_id is None and hasattr(g, 'current_user') and g.current_user:
+                user_id = g.current_user.id
+            else:
+                user_id = request.user_id  # Fallback to request.user_id for backward compatibility
+                
             success = partner_equity_service.update_partner_equity(
                 property_id=property_id,
                 partner_name=partner_name,
                 equity_share=Decimal(str(partner_data['equity_share'])),
-                current_user_id=request.user_id
+                current_user_id=user_id
             )
             
             if not success:
@@ -167,11 +181,18 @@ def update_partner(property_id: str, partner_name: str):
         
         # Update visibility settings if provided
         if 'visibility_settings' in partner_data:
+            # Get user ID from session
+            user_id = session.get('user_id')
+            if user_id is None and hasattr(g, 'current_user') and g.current_user:
+                user_id = g.current_user.id
+            else:
+                user_id = request.user_id  # Fallback to request.user_id for backward compatibility
+                
             success = partner_equity_service.update_partner_visibility_settings(
                 property_id=property_id,
                 partner_name=partner_name,
                 visibility_settings=partner_data['visibility_settings'],
-                current_user_id=request.user_id
+                current_user_id=user_id
             )
             
             if not success:
@@ -210,11 +231,18 @@ def remove_partner(property_id: str, partner_name: str):
         JSON response with result
     """
     try:
+        # Get user ID from session
+        user_id = session.get('user_id')
+        if user_id is None and hasattr(g, 'current_user') and g.current_user:
+            user_id = g.current_user.id
+        else:
+            user_id = request.user_id  # Fallback to request.user_id for backward compatibility
+            
         # Remove partner
         success = partner_equity_service.remove_partner(
             property_id=property_id,
             partner_name=partner_name,
-            current_user_id=request.user_id
+            current_user_id=user_id
         )
         
         if not success:
@@ -309,6 +337,13 @@ def add_contribution(property_id: str):
                     'message': f'Missing required field: {field}'
                 }), 400
         
+        # Get user ID from session
+        user_id = session.get('user_id')
+        if user_id is None and hasattr(g, 'current_user') and g.current_user:
+            user_id = g.current_user.id
+        else:
+            user_id = request.user_id  # Fallback to request.user_id for backward compatibility
+            
         # Add contribution
         contribution_id = partner_equity_service.add_contribution(
             property_id=property_id,
@@ -317,7 +352,7 @@ def add_contribution(property_id: str):
             contribution_type=contribution_data['contribution_type'],
             date=contribution_data['date'],
             notes=contribution_data.get('notes'),
-            current_user_id=request.user_id
+            current_user_id=user_id
         )
         
         if not contribution_id:
@@ -439,12 +474,19 @@ def update_partner_visibility(property_id: str, partner_name: str):
                 'message': 'No visibility settings provided'
             }), 400
         
+        # Get user ID from session
+        user_id = session.get('user_id')
+        if user_id is None and hasattr(g, 'current_user') and g.current_user:
+            user_id = g.current_user.id
+        else:
+            user_id = request.user_id  # Fallback to request.user_id for backward compatibility
+            
         # Update visibility settings
         success = partner_equity_service.update_partner_visibility_settings(
             property_id=property_id,
             partner_name=partner_name,
             visibility_settings=visibility_data,
-            current_user_id=request.user_id
+            current_user_id=user_id
         )
         
         if not success:

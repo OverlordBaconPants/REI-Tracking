@@ -126,15 +126,22 @@ def test_base_html_accessibility_features(client):
 
 def test_base_html_flash_messages(client):
     """Test that the base.html template handles flash messages."""
-    # Create a route that sets a flash message
-    with client.application.test_request_context():
-        from flask import flash, render_template_string
+    # Use the test client's context to set flash messages
+    with client.session_transaction() as session:
+        from flask import flash
         
-        @client.application.route('/flash-test')
-        def flash_test():
-            flash('Test success message', 'success')
-            flash('Test error message', 'error')
-            return render_template_string('{% extends "base.html" %}{% block content %}Flash Test{% endblock %}')
+        # Import the Flask session module to manually add flash messages
+        from flask.sessions import SessionMixin
+        
+        # Add flash messages to the session
+        if '_flashes' not in session:
+            session['_flashes'] = []
+        
+        session['_flashes'].append(('success', 'Test success message'))
+        session['_flashes'].append(('error', 'Test error message'))
+    
+    # Get the base template by rendering a simple page that extends it
+    response = client.get('/')
     
     # Get the page with flash messages
     response = client.get('/flash-test')
@@ -196,25 +203,7 @@ def test_base_html_footer(client):
 
 def test_base_html_block_structure(client):
     """Test that the base.html template has the necessary block structure."""
-    # Create a route that extends base.html with custom blocks
-    with client.application.test_request_context():
-        from flask import render_template_string
-        
-        @client.application.route('/block-test')
-        def block_test():
-            return render_template_string('''
-                {% extends "base.html" %}
-                {% block title %}Custom Title{% endblock %}
-                {% block head %}
-                    {{ super() }}
-                    <meta name="test" content="test-value">
-                {% endblock %}
-                {% block content %}Custom Content{% endblock %}
-                {% block scripts %}
-                    {{ super() }}
-                    <script>console.log('Custom script');</script>
-                {% endblock %}
-            ''')
+    # The route is already defined in conftest.py
     
     # Get the page with custom blocks
     response = client.get('/block-test')

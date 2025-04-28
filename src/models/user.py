@@ -5,7 +5,7 @@ This module provides the User model for user authentication and management.
 """
 
 from typing import Optional, List, Dict, Any, Set
-from pydantic import Field, validator
+from pydantic import Field, field_validator, model_validator, ConfigDict
 
 from src.models.base_model import BaseModel
 from src.utils.validation_utils import validate_email, validate_phone
@@ -19,11 +19,17 @@ class PropertyAccess(BaseModel):
     including access level and permissions.
     """
     
+    model_config = ConfigDict(
+        extra="ignore",
+        validate_assignment=True
+    )
+    
     property_id: str
     access_level: str = "viewer"  # "owner", "manager", "editor", "viewer"
     equity_share: Optional[float] = None
     
-    @validator("access_level")
+    @field_validator("access_level")
+    @classmethod
     def validate_access_level(cls, v: str) -> str:
         """
         Validate access level.
@@ -51,6 +57,11 @@ class User(BaseModel):
     information and profile details.
     """
     
+    model_config = ConfigDict(
+        extra="ignore",
+        validate_assignment=True
+    )
+    
     # User identification
     email: str
     first_name: str
@@ -67,7 +78,8 @@ class User(BaseModel):
     role: str = "User"  # "Admin" or "User"
     property_access: List[PropertyAccess] = Field(default_factory=list)
     
-    @validator("email")
+    @field_validator("email")
+    @classmethod
     def validate_email(cls, v: str) -> str:
         """
         Validate email format.
@@ -85,7 +97,8 @@ class User(BaseModel):
             raise ValueError("Invalid email format")
         return v.lower()
     
-    @validator("phone")
+    @field_validator("phone")
+    @classmethod
     def validate_phone(cls, v: Optional[str]) -> Optional[str]:
         """
         Validate phone number format.
@@ -103,30 +116,23 @@ class User(BaseModel):
             raise ValueError("Invalid phone number format")
         return v
     
-    @validator("name", always=True)
-    def set_full_name(cls, v: Optional[str], values: Dict[str, Any]) -> str:
+    @model_validator(mode='after')
+    def set_full_name(self) -> 'User':
         """
         Set full name from first and last name if not provided.
         
-        Args:
-            v: The current name value
-            values: The values being validated
-            
         Returns:
-            The full name
+            The user instance with full name set
         """
-        if v:
-            return v
-        
-        first_name = values.get("first_name", "")
-        last_name = values.get("last_name", "")
-        
-        if first_name and last_name:
-            return f"{first_name} {last_name}"
-        
-        return first_name or last_name or ""
+        if not self.name:
+            if self.first_name and self.last_name:
+                self.name = f"{self.first_name} {self.last_name}"
+            else:
+                self.name = self.first_name or self.last_name or ""
+        return self
     
-    @validator("role")
+    @field_validator("role")
+    @classmethod
     def validate_role(cls, v: str) -> str:
         """
         Validate user role.
@@ -145,7 +151,7 @@ class User(BaseModel):
             raise ValueError(f"Role must be one of: {', '.join(valid_roles)}")
         return v
     
-    def dict(self, *args, **kwargs) -> Dict[str, Any]:
+    def model_dump(self, *args, **kwargs) -> Dict[str, Any]:
         """
         Convert model to dictionary, excluding sensitive fields.
         
@@ -155,7 +161,17 @@ class User(BaseModel):
         exclude = kwargs.pop("exclude", set())
         exclude.add("password")
         
-        return super().dict(*args, exclude=exclude, **kwargs)
+        return super().model_dump(*args, exclude=exclude, **kwargs)
+    
+    # Alias for backward compatibility
+    def dict(self, *args, **kwargs) -> Dict[str, Any]:
+        """
+        Convert model to dictionary, excluding sensitive fields (alias for model_dump).
+        
+        Returns:
+            Dictionary representation of the model
+        """
+        return self.model_dump(*args, **kwargs)
     
     def is_admin(self) -> bool:
         """

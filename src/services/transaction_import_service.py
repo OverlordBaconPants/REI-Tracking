@@ -341,7 +341,7 @@ class TransactionImportService:
             ValueError: If the column mapping is invalid
         """
         required_fields = [
-            "property_id", "amount", "date"
+            "property_id", "amount", "date", "collector_payer"
         ]
         
         # Check if all required fields are mapped

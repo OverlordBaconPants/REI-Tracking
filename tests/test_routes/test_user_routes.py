@@ -17,23 +17,34 @@ from src.services.auth_service import AuthService
 @pytest.fixture
 def app():
     """Create a Flask application for testing."""
-    app = Flask(__name__)
-    app.config['TESTING'] = True
-    app.config['SECRET_KEY'] = 'test-key'
-    app.config['SERVER_NAME'] = 'localhost'  # Required for URL generation
+    from src.main import app as flask_app
     
-    # Register blueprint with proper URL prefix
-    app.register_blueprint(user_routes)
+    # Configure the app for testing
+    flask_app.config['TESTING'] = True
+    flask_app.config['SECRET_KEY'] = 'test-key'
+    flask_app.config['SERVER_NAME'] = 'localhost'
+    
+    # Set environment variables for testing
+    import os
+    os.environ['FLASK_ENV'] = 'development'
+    os.environ['BYPASS_AUTH'] = 'true'
     
     # Create application context
-    with app.app_context():
-        yield app
+    with flask_app.app_context():
+        yield flask_app
 
 
 @pytest.fixture
 def client(app):
     """Create a test client for the Flask application."""
-    return app.test_client()
+    with app.test_client() as client:
+        # Set up test mode in session
+        with client.session_transaction() as sess:
+            sess['_test_mode'] = True
+            sess['user_id'] = 'test-user-id'
+            sess['user_email'] = 'test@example.com'
+            sess['user_role'] = 'User'
+        yield client
 
 
 @pytest.fixture

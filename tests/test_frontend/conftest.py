@@ -7,7 +7,7 @@ This module contains fixtures and configuration for testing frontend JavaScript 
 import pytest
 import os
 import time
-from flask import Flask, url_for
+from flask import Flask, url_for, render_template_string
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.webdriver import WebDriver
@@ -22,15 +22,73 @@ from src.main import application
 @pytest.fixture(scope="session")
 def app():
     """Configure the Flask app for the tests."""
-    # Configure the existing application for testing
-    application.config.update({
+    # Create a new Flask application for testing to avoid context issues
+    test_app = Flask(__name__)
+    test_app.config.update({
         "TESTING": True,
         "SERVER_NAME": "localhost.localdomain",
+        "SECRET_KEY": "test-key"
     })
     
+    # Configure the app to use the templates from the test directory first, then fall back to the main application
+    test_app.template_folder = os.path.join(os.path.dirname(__file__), 'templates')
+    test_app.static_folder = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'src', 'static')
+    
+    # Add a jinja loader that looks in both the test templates and the main application templates
+    from jinja2 import ChoiceLoader, FileSystemLoader
+    test_app.jinja_loader = ChoiceLoader([
+        FileSystemLoader(test_app.template_folder),
+        FileSystemLoader(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'src', 'templates'))
+    ])
+    
+    # Add a simple route for testing
+    @test_app.route('/')
+    def index():
+        return render_template_string('''
+            {% extends "base.html" %}
+            {% block title %}Test Page{% endblock %}
+            {% block content %}
+                <h1>Test Page</h1>
+                <p>This is a test page for frontend testing.</p>
+            {% endblock %}
+        ''')
+    
+    # Add a route for flash messages testing
+    @test_app.route('/flash-test')
+    def flash_test():
+        # Add flash messages directly in the route
+        from flask import flash
+        flash('Test success message', 'success')
+        flash('Test error message', 'error')
+        
+        return render_template_string('''
+            {% extends "base.html" %}
+            {% block title %}Flash Test{% endblock %}
+            {% block content %}
+                <h1>Flash Test</h1>
+            {% endblock %}
+        ''')
+    
+    # Add a route for block structure testing
+    @test_app.route('/block-test')
+    def block_test():
+        return render_template_string('''
+            {% extends "base.html" %}
+            {% block title %}Custom Title{% endblock %}
+            {% block styles %}
+                <meta name="test" content="test-value">
+            {% endblock %}
+            {% block content %}
+                <h1>Custom Content</h1>
+            {% endblock %}
+            {% block extra_js %}
+                <script>console.log('Custom script');</script>
+            {% endblock %}
+        ''')
+    
     # Create an application context
-    with application.app_context():
-        yield application
+    with test_app.app_context():
+        yield test_app
 
 
 @pytest.fixture(scope="session")
@@ -82,63 +140,16 @@ def selenium(chrome_options):
 
 
 @pytest.fixture(scope="function")
-def test_page(tmpdir):
-    """Create a test HTML page with the required JavaScript files."""
-    # Create a simple HTML page that includes our JavaScript files
-    html_content = """
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>JavaScript Test Page</title>
-        <link href="https://cdn.jsdelivr.net/npm/bootswatch@5.1.3/dist/spacelab/bootstrap.min.css" rel="stylesheet">
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
-        <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet">
-    </head>
-    <body>
-        <div id="test-container">
-            <!-- Test content will be added here -->
-            <div id="notification-test"></div>
-            <div id="form-test">
-                <form id="test-form" data-validate="true">
-                    <div class="form-group">
-                        <label for="test-input">Test Input</label>
-                        <input type="text" class="form-control" id="test-input" name="test-input" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="test-email">Email</label>
-                        <input type="email" class="form-control" id="test-email" name="test-email" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Submit</button>
-                </form>
-            </div>
-            <div id="data-test">
-                <div id="chart-container" data-chart="bar" data-chart-data='{"labels":["A","B","C"],"datasets":[{"label":"Test","data":[1,2,3]}]}'>
-                </div>
-                <div id="table-container" data-table data-table-data='{"headers":[{"key":"name","label":"Name"},{"key":"value","label":"Value"}],"rows":[{"name":"Test","value":123}]}'>
-                </div>
-            </div>
-        </div>
-
-        <!-- JavaScript Dependencies -->
-        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        
-        <!-- Test scripts will be injected here -->
-        <script id="test-scripts"></script>
-    </body>
-    </html>
-    """
+def test_page(app):
+    """Get the path to the test HTML page with the required JavaScript files."""
+    # Use the template from the test_frontend/templates directory
+    template_path = os.path.join(os.path.dirname(__file__), 'templates', 'test_page.html')
     
-    # Write the HTML to a temporary file
-    test_page = tmpdir.join("test_page.html")
-    test_page.write(html_content)
+    # Ensure the template exists
+    if not os.path.exists(template_path):
+        raise FileNotFoundError(f"Test page template not found at {template_path}")
     
-    return str(test_page)
+    return template_path
 
 
 @pytest.fixture(scope="function")
@@ -153,103 +164,48 @@ def inject_scripts(selenium, test_page, app):
             EC.presence_of_element_located((By.ID, "test-container"))
         )
         
-        # Mock required libraries BEFORE loading any scripts
-        selenium.execute_script("""
-            // Mock jQuery if not available
-            if (typeof jQuery === 'undefined') {
-                window.jQuery = window.$ = function(selector) {
-                    return {
-                        on: function() { return this; },
-                        off: function() { return this; },
-                        addClass: function() { return this; },
-                        removeClass: function() { return this; },
-                        attr: function() { return this; },
-                        data: function() { return {}; },
-                        each: function(callback) { callback.call(this); return this; },
-                        val: function() { return ''; },
-                        text: function() { return ''; },
-                        html: function() { return ''; },
-                        append: function() { return this; },
-                        prepend: function() { return this; },
-                        find: function() { return this; },
-                        parent: function() { return this; },
-                        parents: function() { return this; },
-                        closest: function() { return this; },
-                        is: function() { return false; },
-                        trigger: function() { return this; }
-                    };
-                };
-            }
-            
-            // Mock lodash if not available
-            if (typeof _ === 'undefined') {
-                window._ = {
-                    debounce: function(func, wait) {
-                        return function() {
-                            return func.apply(this, arguments);
-                        };
-                    },
-                    throttle: function(func, wait) {
-                        return function() {
-                            return func.apply(this, arguments);
-                        };
-                    },
-                    templateSettings: {
-                        interpolate: null
-                    }
-                };
-            }
-            
-            // Mock toastr
-            window.toastr = {
-                options: {},
-                success: function(message, title, options) { return { options: options || {} }; },
-                error: function(message, title, options) { return { options: options || {} }; },
-                warning: function(message, title, options) { return { options: options || {} }; },
-                info: function(message, title, options) { return { options: options || {} }; }
-            };
-            
-            // Mock bootstrap
-            window.bootstrap = {
-                Tooltip: function(element, options) {
-                    this.dispose = function() {};
-                    return this;
-                },
-                Collapse: function() {
-                    this.hide = function() {};
-                    return this;
-                },
-                Popover: function() {
-                    return this;
-                }
-            };
-            bootstrap.Tooltip.getInstance = function() { return { dispose: function() {} }; };
-            bootstrap.Collapse.getInstance = function() { return { hide: function() {} }; };
-            
-            // Create REITracker namespace
-            window.REITracker = {
-                base: {},
-                notifications: {},
-                modules: {}
-            };
-        """)
-        
         # Inject each script
         for script in scripts:
             # Read the script content
-            script_path = os.path.join(app.root_path, "static", "js", script)
-            with open(script_path, "r") as f:
-                script_content = f.read()
+            # First, try to find the script in the test directory
+            test_script_path = os.path.join(os.path.dirname(__file__), 'static', 'js', script)
             
-            # Inject the script
-            selenium.execute_script(f"""
-                var script = document.createElement('script');
-                script.textContent = `{script_content}`;
-                document.head.appendChild(script);
-            """)
+            # If not found in test directory, fall back to the main application's static folder
+            if os.path.exists(test_script_path):
+                script_path = test_script_path
+            else:
+                # Check if the path already includes 'js/' prefix
+                if not script.startswith('js/'):
+                    script_path = os.path.join(app.static_folder, 'js', script)
+                else:
+                    script_path = os.path.join(app.static_folder, script)
             
-            # Give the script time to execute
-            time.sleep(0.5)
+            try:
+                with open(script_path, "r") as f:
+                    script_content = f.read()
+                
+                # Print the script content for debugging
+                print(f"Script content for {script}:")
+                print(script_content[:200] + "..." if len(script_content) > 200 else script_content)
+                
+                # Inject the script directly
+                selenium.execute_script(script_content)
+                print(f"Directly executed script: {script}")
+                
+                # Check if baseModule is defined
+                result = selenium.execute_script("return typeof window.baseModule !== 'undefined'")
+                print(f"baseModule defined after direct execution: {result}")
+                
+                if result:
+                    # Get the properties of baseModule
+                    properties = selenium.execute_script("return Object.keys(window.baseModule)")
+                    print(f"baseModule properties after direct execution: {properties}")
+                
+                # Give the script time to execute
+                time.sleep(0.5)
+            except Exception as e:
+                print(f"Error loading script {script}: {e}")
+                raise
         
         return selenium
     

@@ -43,14 +43,36 @@ class TestPartnerEquityRoutes:
         with app.test_client() as client:
             with client.session_transaction() as sess:
                 sess['user_id'] = 'test-user-id'
-                sess['user_name'] = 'Test User'
+                sess['user_email'] = 'test@example.com'
                 sess['user_role'] = 'Admin'
+                sess['_test_mode'] = True
+                sess['login_time'] = "2025-04-27T11:00:00"
+                sess['remember'] = False
+                sess['expires_at'] = "2025-04-27T12:00:00"
             
             # Add user_id and user_name to request
             @app.before_request
             def before_request():
                 request.user_id = 'test-user-id'
                 request.user_name = 'Test User'
+                
+                # Set up g.current_user for the request
+                from src.models.user import User, PropertyAccess
+                from flask import g
+                
+                # Create a mock user with admin role
+                # The is_admin() method will return True because role is 'Admin'
+                g.current_user = User(
+                    id='test-user-id',
+                    email='test@example.com',
+                    first_name='Test',
+                    last_name='User',
+                    password='hashed_password',
+                    role='Admin',
+                    property_access=[
+                        PropertyAccess(property_id="test-property-id", access_level="owner", equity_share=100.0)
+                    ]
+                )
             
             yield client
     
@@ -149,20 +171,55 @@ class TestPartnerEquityRoutes:
             # Configure mock
             mock_service.property_repository.get_by_id.return_value = mock_property
             
-            # Make request
-            response = client.get('/api/partner-equity/partners/test-property-id')
-            
-            # Check response
-            assert response.status_code == 200
-            data = json.loads(response.data)
-            assert data['success'] is True
-            assert len(data['partners']) == 2
-            assert data['partners'][0]['name'] == "Partner 1"
-            assert data['partners'][0]['equity_share'] == 60
-            assert data['partners'][0]['is_property_manager'] is True
-            assert data['partners'][1]['name'] == "Partner 2"
-            assert data['partners'][1]['equity_share'] == 40
-            assert data['partners'][1]['is_property_manager'] is False
+            # Mock the property.dict() method to return a proper JSON-serializable object
+            with patch.object(mock_property, 'partners', [
+                MagicMock(
+                    name="Partner 1",
+                    equity_share=Decimal("60"),
+                    is_property_manager=True,
+                    dict=MagicMock(return_value={
+                        "name": "Partner 1",
+                        "equity_share": 60,
+                        "is_property_manager": True,
+                        "visibility_settings": {
+                            "financial_details": True,
+                            "transaction_history": True,
+                            "partner_contributions": True,
+                            "property_documents": True
+                        }
+                    })
+                ),
+                MagicMock(
+                    name="Partner 2",
+                    equity_share=Decimal("40"),
+                    is_property_manager=False,
+                    dict=MagicMock(return_value={
+                        "name": "Partner 2",
+                        "equity_share": 40,
+                        "is_property_manager": False,
+                        "visibility_settings": {
+                            "financial_details": False,
+                            "transaction_history": True,
+                            "partner_contributions": True,
+                            "property_documents": False
+                        }
+                    })
+                )
+            ]):
+                # Make request
+                response = client.get('/api/partner-equity/partners/test-property-id')
+                
+                # Check response
+                assert response.status_code == 200
+                data = json.loads(response.data)
+                assert data['success'] is True
+                assert len(data['partners']) == 2
+                assert data['partners'][0]['name'] == "Partner 1"
+                assert data['partners'][0]['equity_share'] == 60
+                assert data['partners'][0]['is_property_manager'] is True
+                assert data['partners'][1]['name'] == "Partner 2"
+                assert data['partners'][1]['equity_share'] == 40
+                assert data['partners'][1]['is_property_manager'] is False
     
     def test_get_partners_property_not_found(self, client):
         """Test getting partners for a property that doesn't exist."""

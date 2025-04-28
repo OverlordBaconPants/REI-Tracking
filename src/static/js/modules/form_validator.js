@@ -910,4 +910,13 @@ const formValidatorModule = {
     }
 };
 
-export default formValidatorModule;
+// Register the module with REITracker namespace
+if (typeof window.REITracker !== 'undefined') {
+    window.REITracker.modules = window.REITracker.modules || {};
+    window.REITracker.modules.formValidator = formValidatorModule;
+}
+
+// For ES6 module support
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = formValidatorModule;
+}

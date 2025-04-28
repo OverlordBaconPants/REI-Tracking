@@ -19,19 +19,13 @@ def app():
     app = Flask(__name__)
     app.config['TESTING'] = True
     app.config['SECRET_KEY'] = 'test-key'
-    app.config['SERVER_NAME'] = 'localhost'  # Add this to ensure proper URL generation
     
-    # Register blueprint with proper URL prefix
+    # Register blueprint
     app.register_blueprint(user_routes)
     
-    # This is important - push an application context
-    ctx = app.app_context()
-    ctx.push()
-    
-    yield app
-    
-    # Clean up context after test
-    ctx.pop()
+    # Push application context
+    with app.app_context():
+        yield app
 
 
 @pytest.fixture
@@ -40,27 +34,16 @@ def client(app):
     return app.test_client()
 
 
-@pytest.fixture
-def mock_user():
-    """Create a mock user."""
-    return User(
-        id="test-user-id",
-        email="test@example.com",
-        first_name="Test",
-        last_name="User",
-        password="hashed-password",
-        role="User"
-    )
-
-
 class TestUserRoutes:
     """Test cases for user routes."""
     
-    def test_register_success(self, client):
+    def test_register_success(self, app, client):
         """Test successful user registration."""
         # Arrange
         with patch('src.routes.user_routes.user_repository') as mock_repo, \
-             patch('src.routes.user_routes.ValidationService') as mock_validation:
+             patch('src.routes.user_routes.ValidationService') as mock_validation, \
+             patch('src.routes.user_routes.pbkdf2_sha256') as mock_hash:
+            
             # Mock validation
             mock_validation.validate_email.return_value = MagicMock(is_valid=True)
             mock_validation.validate_model.return_value = MagicMock(
@@ -76,6 +59,9 @@ class TestUserRoutes:
             
             # Mock repository
             mock_repo.email_exists.return_value = False
+            
+            # Mock password hashing
+            mock_hash.hash.return_value = "hashed-password"
             
             # Act
             response = client.post(
@@ -96,5 +82,3 @@ class TestUserRoutes:
             assert 'user' in data
             assert data['user']['email'] == 'new@example.com'
             mock_repo.create.assert_called_once()
-    
-

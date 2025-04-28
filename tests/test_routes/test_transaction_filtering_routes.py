@@ -67,8 +67,19 @@ def mock_transactions() -> List[Transaction]:
 @pytest.fixture
 def mock_properties() -> List[Property]:
     """Create a list of mock properties for testing."""
+    # Create a subclass of Property with a to_dict method for testing
+    class MockProperty(Property):
+        def to_dict(self):
+            return {
+                "id": self.id,
+                "address": self.address,
+                "purchase_date": self.purchase_date,
+                "purchase_price": str(self.purchase_price),
+                "partners": [{"name": p.name, "equity_share": str(p.equity_share)} for p in self.partners]
+            }
+    
     properties = [
-        Property(
+        MockProperty(
             id="property1",
             address="123 Main St, City, State",
             purchase_date="2024-01-15",
@@ -77,7 +88,7 @@ def mock_properties() -> List[Property]:
                 Partner(name="User One", equity_share=Decimal("100"))
             ]
         ),
-        Property(
+        MockProperty(
             id="property2",
             address="456 Oak Ave, City, State",
             purchase_date="2024-02-20",
@@ -96,8 +107,11 @@ def mock_current_user():
     """Create a mock current user for testing."""
     return User(
         id="user1",
+        first_name="User",
+        last_name="One",
         name="User One",
         email="user1@example.com",
+        password="hashed_password",
         role="User",
         property_access=[
             PropertyAccess(property_id="property1", access_level="owner", equity_share=100),
@@ -109,13 +123,21 @@ def mock_current_user():
 @pytest.fixture
 def app(mock_current_user):
     """Create a Flask app for testing."""
-    from flask import Flask, g
+    from flask import Flask, g, session
     
     app = Flask(__name__)
+    app.config['SECRET_KEY'] = 'test_secret_key'  # Required for sessions
     app.register_blueprint(transaction_bp)
     
     @app.before_request
     def before_request():
+        # Set up session for test mode
+        session['_test_mode'] = True
+        session['user_id'] = mock_current_user.id
+        session['user_email'] = mock_current_user.email
+        session['user_role'] = mock_current_user.role
+        
+        # Set current user in g
         g.current_user = mock_current_user
     
     return app

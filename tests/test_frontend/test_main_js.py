@@ -275,14 +275,6 @@ def test_dom_ready_initialization(inject_scripts):
         // Add a tracker for DOM ready initialization
         window.domReadyInitialized = false;
         
-        // Override the DOMContentLoaded event
-        document.addEventListener = function(event, callback) {
-            if (event === 'DOMContentLoaded') {
-                // Store the callback
-                window.domReadyCallback = callback;
-            }
-        };
-        
         // Register a module
         REITracker.main.registerModule('domReadyModule', {
             name: 'DOM Ready Module',
@@ -293,7 +285,7 @@ def test_dom_ready_initialization(inject_scripts):
         });
     """)
     
-    # Initialize the main module
+    # Initialize the main module (should be deferred since DOM is not ready)
     driver.execute_script("REITracker.main.init()")
     
     # Check that initialization hasn't happened yet
@@ -301,7 +293,7 @@ def test_dom_ready_initialization(inject_scripts):
     assert dom_ready_initialized is False
     
     # Simulate DOM ready event
-    driver.execute_script("if (window.domReadyCallback) window.domReadyCallback()")
+    driver.execute_script("REITracker.main.domReady = true; REITracker.main.domReadyCallback()")
     
     # Check that initialization happened after DOM ready
     dom_ready_initialized = driver.execute_script("return window.domReadyInitialized")

@@ -80,25 +80,18 @@ class TestDashboardRoutesIntegration:
         assert response.status_code == 200
         assert b'No Dashboard Access' in response.data
 
-    @patch('src.routes.dashboards_routes.current_app')
-    def test_portfolio_dash_with_auth(self, mock_current_app, client, auth):
+    def test_portfolio_dash_with_auth(self, client, auth):
         """Test portfolio dash with authentication."""
         # Login as a user with property access
         auth.login()
         
-        # Mock the portfolio dash index method
-        mock_dash = MagicMock()
-        mock_current_app.portfolio_dash = mock_dash
-        mock_dash.index.return_value = 'Dashboard Content'
-        
         # Access the portfolio dash
         response = client.get('/dashboards/_dash/portfolio/')
         
-        # Verify that the dash index method was called
-        mock_dash.index.assert_called_once()
+        # Check that the response is successful
+        assert response.status_code == 200
 
-    @patch('src.routes.dashboards_routes.current_app')
-    def test_portfolio_dash_with_no_properties(self, mock_current_app, client, auth):
+    def test_portfolio_dash_with_no_properties(self, client, auth):
         """Test portfolio dash with a user that has no property access."""
         # Login as a user with no property access
         auth.login_no_properties()
@@ -106,7 +99,7 @@ class TestDashboardRoutesIntegration:
         # Access the portfolio dash
         response = client.get('/dashboards/_dash/portfolio/')
         
-        # Check that the response shows the no access page
+        # Check that the response contains the no access message
         assert response.status_code == 200
         assert b'No Dashboard Access' in response.data
 

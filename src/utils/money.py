@@ -23,6 +23,10 @@ class Money:
         $1,099.99
     """
     
+    # Add JSON encoder support
+    def __json__(self):
+        return str(self)
+    
     def __init__(self, amount):
         if isinstance(amount, Money):
             self.amount = amount.amount
@@ -53,6 +57,18 @@ class Money:
 
     def __repr__(self) -> str:
         return f"Money({self.amount})"
+        
+    def __json__(self):
+        """Return a JSON serializable representation of the money value."""
+        return str(self)
+        
+    def to_json(self):
+        """Return a JSON serializable representation of the money value."""
+        return str(self)
+        
+    def to_dict(self):
+        """Return a dictionary representation of the money value."""
+        return {"amount": float(self.amount), "formatted": str(self)}
     
     def __add__(self, other):
         if isinstance(other, Money):
@@ -162,6 +178,10 @@ class Percentage:
         >>> print(tax_rate.as_decimal())  # Decimal('0.0725')
     """
     
+    # Add JSON encoder support
+    def __json__(self):
+        return str(self)
+    
     def __init__(self, value):
         if isinstance(value, Percentage):
             self.value = value.value
@@ -193,6 +213,18 @@ class Percentage:
 
     def __repr__(self) -> str:
         return f"Percentage({self.value})"
+        
+    def __json__(self):
+        """Return a JSON serializable representation of the percentage value."""
+        return str(self)
+        
+    def to_json(self):
+        """Return a JSON serializable representation of the percentage value."""
+        return str(self)
+        
+    def to_dict(self):
+        """Return a dictionary representation of the percentage value."""
+        return {"value": float(self.value), "formatted": str(self)}
 
     def __eq__(self, other):
         """Equal comparison handling infinite values."""
@@ -306,6 +338,14 @@ class MonthlyPayment:
             self.principal = Money(self.principal)
         if not isinstance(self.interest, Money):
             self.interest = Money(self.interest)
+    
+    def __json__(self):
+        """Return a JSON serializable representation of the monthly payment."""
+        return {
+            "total": str(self.total),
+            "principal": str(self.principal),
+            "interest": str(self.interest)
+        }
     
     def __str__(self) -> str:
         """Format payment details as a string."""

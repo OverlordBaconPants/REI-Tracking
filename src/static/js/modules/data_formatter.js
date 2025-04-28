@@ -776,4 +776,13 @@ const dataFormatterModule = {
     }
 };
 
-export default dataFormatterModule;
+// Register the module with REITracker namespace
+if (typeof window.REITracker !== 'undefined') {
+    window.REITracker.modules = window.REITracker.modules || {};
+    window.REITracker.modules.dataFormatter = dataFormatterModule;
+}
+
+// For ES6 module support
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = dataFormatterModule;
+}

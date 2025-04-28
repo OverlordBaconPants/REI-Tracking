@@ -9,6 +9,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 import json
 from decimal import Decimal
+import pytest
 
 from src.main import app
 from src.models.property import Property, MonthlyIncome, MonthlyExpenses, Utilities
@@ -20,8 +21,33 @@ class TestPropertyFinancialRoutes(unittest.TestCase):
     
     def setUp(self):
         """Set up test fixtures."""
+        # Create a test client with app context
         self.app = app.test_client()
         self.app.testing = True
+        self.app_context = app.app_context()
+        self.app_context.push()
+        
+        # Set up a session for the test client
+        with self.app.session_transaction() as sess:
+            sess['user_id'] = 'user123'
+            sess['user_email'] = 'test@example.com'
+            sess['user_role'] = 'Admin'
+            sess['_test_mode'] = True
+            sess['login_time'] = "2025-04-27T11:00:00"
+            sess['remember'] = False
+            sess['expires_at'] = "2025-04-27T12:00:00"
+        
+        # Mock the auth middleware
+        self.auth_patcher = patch('src.routes.property_financial_routes.login_required')
+        self.property_access_patcher = patch('src.routes.property_financial_routes.property_access_required')
+        
+        # Start the patchers
+        self.mock_login = self.auth_patcher.start()
+        self.mock_property_access = self.property_access_patcher.start()
+        
+        # Configure mocks to pass through the decorated function
+        self.mock_login.return_value = lambda f: f
+        self.mock_property_access.return_value = lambda f: f
         
         # Create test user
         self.test_user = User(
@@ -62,7 +88,7 @@ class TestPropertyFinancialRoutes(unittest.TestCase):
                 expense_notes="Annual property tax; Annual insurance; January water bill"
             )
         )
-        
+    
         # Create test financial summary
         self.test_summary = {
             "property_id": "prop123",
@@ -122,13 +148,30 @@ class TestPropertyFinancialRoutes(unittest.TestCase):
             }
         ]
     
+    def tearDown(self):
+        """Tear down test fixtures."""
+        # Stop the patchers
+        self.auth_patcher.stop()
+        self.property_access_patcher.stop()
+        
+        # Pop the app context
+        self.app_context.pop()
+    
     @patch('src.routes.property_financial_routes.property_financial_service')
     @patch('flask.g')
     def test_update_property_financials(self, mock_g, mock_service):
         """Test updating property financials."""
         # Set up mocks
         mock_g.current_user = self.test_user
-        mock_service.update_property_financials.return_value = self.test_property
+        # Create a mock property with a to_dict method
+        mock_property = MagicMock()
+        mock_property.to_dict.return_value = {
+            "id": "prop123",
+            "address": "123 Test St",
+            "purchase_price": "200000",
+            "purchase_date": "2023-01-01"
+        }
+        mock_service.update_property_financials.return_value = mock_property
         
         # Make request
         response = self.app.post('/api/property-financials/update/prop123')
@@ -263,20 +306,17 @@ class TestPropertyFinancialRoutes(unittest.TestCase):
         mock_service.update_all_property_financials.assert_called_once()
     
     @patch('src.routes.property_financial_routes.property_financial_service')
-    @patch('flask.g')
-    def test_update_all_property_financials_not_admin(self, mock_g, mock_service):
+    def test_update_all_property_financials_not_admin(self, mock_service):
         """Test updating all property financials when not admin."""
-        # Set up mocks
-        user = User(
-            id="user123",
-            email="test@example.com",
-            first_name="Test",
-            last_name="User",
-            password="password",
-            role="User"
-        )
-        user.is_admin = MagicMock(return_value=False)
-        mock_g.current_user = user
+        # Set up a session with a non-admin role
+        with self.app.session_transaction() as sess:
+            sess['user_id'] = 'user123'
+            sess['user_email'] = 'test@example.com'
+            sess['user_role'] = 'User'  # Non-admin role
+            sess['_test_mode'] = True
+            sess['login_time'] = "2025-04-27T11:00:00"
+            sess['remember'] = False
+            sess['expires_at'] = "2025-04-27T12:00:00"
         
         # Make request
         response = self.app.post('/api/property-financials/update-all')

@@ -9,7 +9,7 @@ import logging
 import io
 import traceback
 from datetime import datetime
-from flask import Blueprint, request, jsonify, g, send_file
+from flask import Blueprint, request, jsonify, g, send_file, session
 
 from src.services.property_financial_service import PropertyFinancialService
 from src.services.kpi_comparison_report_generator import KPIComparisonReportGenerator
@@ -28,7 +28,7 @@ kpi_report_generator = KPIComparisonReportGenerator()
 
 @property_financial_bp.route('/update/<property_id>', methods=['POST'])
 @login_required
-@property_access_required
+@property_access_required()
 def update_property_financials(property_id):
     """
     Update property financial data based on transactions.
@@ -41,7 +41,9 @@ def update_property_financials(property_id):
     """
     try:
         # Get user ID from session
-        user_id = g.current_user.id
+        user_id = session.get('user_id')
+        if user_id is None and hasattr(g, 'current_user') and g.current_user:
+            user_id = g.current_user.id
         
         # Update property financials
         updated_property = property_financial_service.update_property_financials(property_id)
@@ -84,7 +86,7 @@ def get_property_financial_summary(property_id):
     """
     try:
         # Get user ID from session
-        user_id = g.current_user.id
+        user_id = session.get('user_id', g.current_user.id)
         
         # Get property financial summary
         summary = property_financial_service.get_property_financial_summary(property_id, user_id)
@@ -120,7 +122,7 @@ def get_all_property_financials():
     """
     try:
         # Get user ID from session
-        user_id = g.current_user.id
+        user_id = session.get('user_id', g.current_user.id)
         
         # Get all property financials
         summaries = property_financial_service.get_all_property_financials(user_id)
@@ -149,10 +151,11 @@ def update_all_property_financials():
     """
     try:
         # Get user ID from session
-        user_id = g.current_user.id
+        user_id = session.get('user_id', g.current_user.id)
         
         # Check if user is admin
-        if not g.current_user.is_admin():
+        user_role = session.get('user_role', '')
+        if user_role != 'Admin':
             return jsonify({
                 'success': False,
                 'error': 'Only administrators can update all property financials'
@@ -189,7 +192,7 @@ def get_maintenance_and_capex_records(property_id):
     """
     try:
         # Get user ID from session
-        user_id = g.current_user.id
+        user_id = session.get('user_id', g.current_user.id)
         
         # Get maintenance and capex records
         records = property_financial_service.get_maintenance_and_capex_records(property_id, user_id)
@@ -228,7 +231,7 @@ def calculate_property_equity(property_id):
     """
     try:
         # Get user ID from session
-        user_id = g.current_user.id
+        user_id = session.get('user_id', g.current_user.id)
         
         # Calculate property equity
         equity_details = property_financial_service.calculate_property_equity(property_id, user_id)
@@ -267,7 +270,7 @@ def calculate_cash_flow_metrics(property_id):
     """
     try:
         # Get user ID from session
-        user_id = g.current_user.id
+        user_id = session.get('user_id', g.current_user.id)
         
         # Get query parameters
         start_date = request.args.get('start_date')
@@ -315,7 +318,7 @@ def compare_actual_to_projected(property_id):
     """
     try:
         # Get user ID from session
-        user_id = g.current_user.id
+        user_id = session.get('user_id', g.current_user.id)
         
         # Get query parameters
         analysis_id = request.args.get('analysis_id')
@@ -361,7 +364,7 @@ def generate_kpi_comparison_report(property_id):
     """
     try:
         # Get user ID from session
-        user_id = g.current_user.id
+        user_id = session.get('user_id', g.current_user.id)
         
         # Get query parameters
         analysis_id = request.args.get('analysis_id')

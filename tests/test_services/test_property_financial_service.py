@@ -431,6 +431,7 @@ class TestPropertyFinancialService(unittest.TestCase):
                 property_id="prop123",
                 type="income",
                 category="Rental Income",
+                description="January rent",
                 amount=Decimal("1500"),
                 date="2023-01-05",
                 collector_payer="Owner"
@@ -440,6 +441,7 @@ class TestPropertyFinancialService(unittest.TestCase):
                 property_id="prop123",
                 type="expense",
                 category="Property Tax",
+                description="Property tax payment",
                 amount=Decimal("200"),
                 date="2023-01-15",
                 collector_payer="Owner"
@@ -449,6 +451,7 @@ class TestPropertyFinancialService(unittest.TestCase):
                 property_id="prop123",
                 type="expense",
                 category="Insurance",
+                description="Insurance payment",
                 amount=Decimal("100"),
                 date="2023-01-20",
                 collector_payer="Owner"
@@ -458,6 +461,7 @@ class TestPropertyFinancialService(unittest.TestCase):
                 property_id="prop123",
                 type="expense",
                 category="Mortgage",
+                description="Mortgage payment",
                 amount=Decimal("800"),
                 date="2023-01-25",
                 collector_payer="Owner"
@@ -512,8 +516,8 @@ class TestPropertyFinancialService(unittest.TestCase):
         })
         
         try:
-            # Call the method
-            result = self.service.calculate_cash_flow_metrics("prop123", "user123")
+            # Call the method with date parameters to trigger the filter
+            result = self.service.calculate_cash_flow_metrics("prop123", "user123", start_date="2023-01-01", end_date="2023-01-31")
             
             # Verify the result
             self.assertIn('net_operating_income', result)
@@ -547,6 +551,7 @@ class TestPropertyFinancialService(unittest.TestCase):
                 property_id="prop123",
                 type="income",
                 category="Rental Income",
+                description="January rent",
                 amount=Decimal("1500"),
                 date="2023-01-05",
                 collector_payer="Owner"
@@ -556,6 +561,7 @@ class TestPropertyFinancialService(unittest.TestCase):
                 property_id="prop123",
                 type="income",
                 category="Rental Income",
+                description="February rent",
                 amount=Decimal("1500"),
                 date="2023-02-05",
                 collector_payer="Owner"
@@ -565,6 +571,7 @@ class TestPropertyFinancialService(unittest.TestCase):
                 property_id="prop123",
                 type="income",
                 category="Rental Income",
+                description="March rent",
                 amount=Decimal("1500"),
                 date="2023-03-05",
                 collector_payer="Owner"
@@ -602,6 +609,7 @@ class TestPropertyFinancialService(unittest.TestCase):
                 property_id="prop123",
                 type="income",
                 category="Rental Income",
+                description="January rent",
                 amount=Decimal("1500"),
                 date="2023-01-05",
                 collector_payer="Owner"
@@ -611,6 +619,7 @@ class TestPropertyFinancialService(unittest.TestCase):
                 property_id="prop123",
                 type="expense",
                 category="Property Tax",
+                description="January property tax",
                 amount=Decimal("200"),
                 date="2023-01-15",
                 collector_payer="Owner"
@@ -620,6 +629,7 @@ class TestPropertyFinancialService(unittest.TestCase):
                 property_id="prop123",
                 type="expense",
                 category="Mortgage",
+                description="January mortgage payment",
                 amount=Decimal("800"),
                 date="2023-01-25",
                 collector_payer="Owner"
@@ -630,6 +640,7 @@ class TestPropertyFinancialService(unittest.TestCase):
                 property_id="prop123",
                 type="income",
                 category="Rental Income",
+                description="February rent",
                 amount=Decimal("1500"),
                 date="2023-02-05",
                 collector_payer="Owner"
@@ -639,6 +650,7 @@ class TestPropertyFinancialService(unittest.TestCase):
                 property_id="prop123",
                 type="expense",
                 category="Property Tax",
+                description="February property tax",
                 amount=Decimal("200"),
                 date="2023-02-15",
                 collector_payer="Owner"
@@ -648,6 +660,7 @@ class TestPropertyFinancialService(unittest.TestCase):
                 property_id="prop123",
                 type="expense",
                 category="Mortgage",
+                description="February mortgage payment",
                 amount=Decimal("800"),
                 date="2023-02-25",
                 collector_payer="Owner"

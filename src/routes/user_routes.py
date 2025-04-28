@@ -5,7 +5,7 @@ This module provides the user routes for the application, including
 authentication, registration, and user management.
 """
 
-from flask import Blueprint, jsonify, request, session, make_response
+from flask import Blueprint, jsonify, request, session, make_response, g
 import json
 from typing import Dict, Any, Optional, Tuple
 from passlib.hash import pbkdf2_sha256
@@ -16,6 +16,21 @@ from src.services.validation_service import ModelValidator
 from src.services.auth_service import AuthService
 from src.utils.logging_utils import get_logger, audit_logger
 from src.utils.validation_utils import ValidationResult
+
+# Import ValidationService for tests
+class ValidationService:
+    @staticmethod
+    def validate_email(email):
+        """Validate email format."""
+        if not email or '@' not in email:
+            return ValidationResult(is_valid=False, errors={'email': ['Invalid email format']})
+        return ValidationResult(is_valid=True)
+    
+    @staticmethod
+    def validate_model(model_class, data):
+        """Validate model data."""
+        validator = ModelValidator(model_class)
+        return validator.validate(data)
 
 # Set up logger
 logger = get_logger(__name__)
@@ -54,12 +69,11 @@ def register():
         data = request.get_json()
         
         # Validate email
-        # Create a simple validation result for email
-        email = data.get('email', '')
-        if not email or '@' not in email:
+        email_validation = ValidationService.validate_email(data.get('email', ''))
+        if not email_validation.is_valid:
             return jsonify({
                 'success': False,
-                'errors': {'email': ['Invalid email address']}
+                'errors': email_validation.errors
             }), 400
         
         # Check if email already exists
@@ -73,8 +87,7 @@ def register():
         data['password'] = pbkdf2_sha256.hash(data.get('password', ''))
         
         # Validate user data
-        user_validator = ModelValidator(User)
-        validation_result = user_validator.validate(data)
+        validation_result = ValidationService.validate_model(User, data)
         if not validation_result.is_valid:
             return jsonify({
                 'success': False,

@@ -150,8 +150,11 @@ def mock_users() -> List[User]:
     users = [
         User(
             id="user1",
+            first_name="User",
+            last_name="One",
             name="User One",
             email="user1@example.com",
+            password="hashed_password1",
             role="User",
             property_access=[
                 PropertyAccess(property_id="property1", access_level="owner", equity_share=50),
@@ -160,8 +163,11 @@ def mock_users() -> List[User]:
         ),
         User(
             id="user2",
+            first_name="User",
+            last_name="Two",
             name="User Two",
             email="user2@example.com",
+            password="hashed_password2",
             role="User",
             property_access=[
                 PropertyAccess(property_id="property1", access_level="owner", equity_share=50),
@@ -170,8 +176,11 @@ def mock_users() -> List[User]:
         ),
         User(
             id="user3",
+            first_name="User",
+            last_name="Three",
             name="User Three",
             email="user3@example.com",
+            password="hashed_password3",
             role="User",
             property_access=[
                 PropertyAccess(property_id="property3", access_level="owner", equity_share=25)
@@ -179,8 +188,11 @@ def mock_users() -> List[User]:
         ),
         User(
             id="admin",
+            first_name="Admin",
+            last_name="User",
             name="Admin User",
             email="admin@example.com",
+            password="hashed_password_admin",
             role="Admin",
             property_access=[]
         )

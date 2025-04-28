@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JavaScript Test Page</title>
+    
+    <!-- Mock libraries before any scripts are loaded -->
+    <script>
+        // Create REITracker namespace
+        window.REITracker = {
+            base: {},
+            notifications: {},
+            modules: {}
+        };
+        
+        // Mock jQuery
+        window.jQuery = window.$ = function(selector) {
+            const elements = document.querySelectorAll(selector);
+            
+            return {
+                length: elements.length,
+                each: function(callback) {
+                    Array.from(elements).forEach((el, i) => callback.call(el, i, el));
+                    return this;
+                },
+                on: function() { return this; },
+                off: function() { return this; },
+                addClass: function() { return this; },
+                removeClass: function() { return this; },
+                attr: function() { return this; },
+                data: function(key) { 
+                    if (elements.length && elements[0].dataset) {
+                        return elements[0].dataset[key]; 
+                    }
+                    return null;
+                },
+                val: function() { return ''; },
+                text: function() { return ''; },
+                html: function() { return ''; },
+                append: function() { return this; },
+                prepend: function() { return this; },
+                find: function() { return this; },
+                parent: function() { return this; },
+                parents: function() { return this; },
+                closest: function() { return this; },
+                is: function() { return false; },
+                trigger: function() { return this; }
+            };
+        };
+        
+        // Mock lodash
+        window._ = {
+            debounce: function(func, wait) {
+                return function() {
+                    return func.apply(this, arguments);
+                };
+            },
+            throttle: function(func, wait) {
+                return function() {
+                    return func.apply(this, arguments);
+                };
+            },
+            templateSettings: {
+                interpolate: null
+            }
+        };
+        
+        // Mock toastr
+        window.toastr = {
+            options: {},
+            success: function(message, title, options) { return { options: options || {} }; },
+            error: function(message, title, options) { return { options: options || {} }; },
+            warning: function(message, title, options) { return { options: options || {} }; },
+            info: function(message, title, options) { return { options: options || {} }; }
+        };
+        
+        // Mock toastr instances
+        window.toastrBottom = window.toastr;
+        window.toastrTop = window.toastr;
+        
+        // Mock bootstrap
+        window.bootstrap = {
+            Tooltip: function(element, options) {
+                this.dispose = function() {};
+                return this;
+            },
+            Collapse: function() {
+                this.hide = function() {};
+                return this;
+            },
+            Popover: function() {
+                return this;
+            },
+            Modal: function() {
+                this.show = function() {};
+                this.hide = function() {};
+                return this;
+            }
+        };
+        bootstrap.Tooltip.getInstance = function() { return { dispose: function() {} }; };
+        bootstrap.Collapse.getInstance = function() { return { hide: function() {} }; };
+        
+        // Mock showNotification
+        window.showNotification = function(message, type, position, options) {
+            console.log('Mock notification:', message, type, position);
+            return true;
+        };
+        
+        window.showSuccess = function(message, position, options) {
+            return window.showNotification(message, 'success', position, options);
+        };
+        
+        window.showError = function(message, position, options) {
+            return window.showNotification(message, 'error', position, options);
+        };
+        
+        window.showWarning = function(message, position, options) {
+            return window.showNotification(message, 'warning', position, options);
+        };
+        
+        window.showInfo = function(message, position, options) {
+            return window.showNotification(message, 'info', position, options);
+        };
+        
+        // Mock Chart
+        window.Chart = function(ctx, config) {
+            return {
+                update: function() {},
+                destroy: function() {}
+            };
+        };
+        
+        // Mock fetch
+        window.fetch = function() {
+            return Promise.resolve({
+                ok: true,
+                json: function() {
+                    return Promise.resolve({
+                        success: true,
+                        message: 'Mock response'
+                    });
+                },
+                text: function() {
+                    return Promise.resolve('Mock text response');
+                }
+            });
+        };
+        
+        // Mock import
+        window.import = function(path) {
+            return Promise.resolve({
+                default: {
+                    init: function() {
+                        console.log('Mock module init');
+                        return Promise.resolve();
+                    }
+                }
+            });
+        };
+        
+        // Define constants for notifications
+        window.NOTIFICATION_POSITIONS = {
+            TOP: 'top',
+            BOTTOM: 'bottom',
+            BOTH: 'both'
+        };
+        
+        window.NOTIFICATION_TYPES = {
+            SUCCESS: 'success',
+            ERROR: 'error',
+            WARNING: 'warning',
+            INFO: 'info'
+        };
+    </script>
+</head>
+<body>
+    <div id="test-container">
+        <!-- Test content will be added here -->
+        <div id="notification-test"></div>
+        <div id="form-test">
+            <form id="test-form" data-validate="true">
+                <div class="form-group">
+                    <label for="test-input">Test Input</label>
+                    <input type="text" class="form-control" id="test-input" name="test-input" required>
+                </div>
+                <div class="form-group">
+                    <label for="test-email">Email</label>
+                    <input type="email" class="form-control" id="test-email" name="test-email" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Submit</button>
+            </form>
+        </div>
+        <div id="data-test">
+            <div id="chart-container" data-chart="bar" data-chart-data='{"labels":["A","B","C"],"datasets":[{"label":"Test","data":[1,2,3]}]}'>
+            </div>
+            <div id="table-container" data-table data-table-data='{"headers":[{"key":"name","label":"Name"},{"key":"value","label":"Value"}],"rows":[{"name":"Test","value":123}]}'>
+            </div>
+        </div>
+        <div id="flask-messages" data-messages='[["success", "Test success message"], ["error", "Test error message"]]'></div>
+    </div>
+
+    <!-- Test scripts will be injected here -->
+    <script id="test-scripts"></script>
+</body>
+</html>

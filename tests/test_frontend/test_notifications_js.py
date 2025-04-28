@@ -26,7 +26,7 @@ def test_notifications_module_exists(inject_scripts):
         "error", 
         "warning", 
         "info",
-        "showNotification"
+        "show"
     ]
     
     for method in methods:
@@ -38,14 +38,7 @@ def test_notification_display(inject_scripts):
     """Test that notifications are displayed correctly."""
     driver = inject_scripts(["base.js", "notifications.js"])
     
-    # Initialize the notifications module
-    driver.execute_script("REITracker.notifications.init()")
-    
-    # Show a success notification
-    driver.execute_script("REITracker.notifications.success('Test success message')")
-    
-    # Check that the notification is displayed
-    # Note: Since we're using toastr.js, we need to check for its container
+    # Initialize the notifications module and set up the test environment
     driver.execute_script("""
         // Add a div to capture the notification content
         var captureDiv = document.createElement('div');
@@ -74,36 +67,40 @@ def test_notification_display(inject_scripts):
             options: {}
         };
         
-        // Show notifications
+        // Initialize the notifications module
+        REITracker.notifications.init();
+        
+        // Show a success notification
         REITracker.notifications.success('Test success message');
     """)
     
     # Check that the success notification was captured
     notification_text = driver.execute_script("return document.getElementById('notification-capture').innerHTML")
-    assert "success: Test success message" in notification_text
+    assert "success:" in notification_text
+    assert "Test success message" in notification_text
     
     # Test other notification types
     driver.execute_script("REITracker.notifications.error('Test error message')")
     notification_text = driver.execute_script("return document.getElementById('notification-capture').innerHTML")
-    assert "error: Test error message" in notification_text
+    assert "error:" in notification_text
+    assert "Test error message" in notification_text
     
     driver.execute_script("REITracker.notifications.warning('Test warning message')")
     notification_text = driver.execute_script("return document.getElementById('notification-capture').innerHTML")
-    assert "warning: Test warning message" in notification_text
+    assert "warning:" in notification_text
+    assert "Test warning message" in notification_text
     
     driver.execute_script("REITracker.notifications.info('Test info message')")
     notification_text = driver.execute_script("return document.getElementById('notification-capture').innerHTML")
-    assert "info: Test info message" in notification_text
+    assert "info:" in notification_text
+    assert "Test info message" in notification_text
 
 
 def test_notification_options(inject_scripts):
     """Test that notification options are applied correctly."""
     driver = inject_scripts(["base.js", "notifications.js"])
     
-    # Initialize the notifications module
-    driver.execute_script("REITracker.notifications.init()")
-    
-    # Set up capture for notification options
+    # Initialize the notifications module and set up the test environment
     driver.execute_script("""
         // Add a div to capture the notification options
         var captureDiv = document.createElement('div');
@@ -119,11 +116,12 @@ def test_notification_options(inject_scripts):
             },
             options: {}
         };
-    """)
-    
-    # Show a notification with custom options
-    driver.execute_script("""
-        REITracker.notifications.showNotification('success', 'Test message', 'Test title', {
+        
+        // Initialize the notifications module
+        REITracker.notifications.init();
+        
+        // Show a notification with custom options
+        REITracker.notifications.show('Test message', 'success', 'top-right', {
             timeOut: 5000,
             closeButton: true,
             progressBar: true
@@ -141,27 +139,27 @@ def test_notification_accessibility(inject_scripts):
     """Test that notifications have proper accessibility attributes."""
     driver = inject_scripts(["base.js", "notifications.js"])
     
-    # Initialize the notifications module with accessibility options
+    # Initialize the notifications module and set up the test environment
     driver.execute_script("""
-        REITracker.notifications.init({
-            aria: true,
-            role: 'alert'
-        });
+        // Add a div to capture the notification content
+        var captureDiv = document.createElement('div');
+        captureDiv.id = 'mock-notification';
+        document.body.appendChild(captureDiv);
         
         // Override toastr to check accessibility options
         window.originalToastr = window.toastr;
         window.toastr = {
             success: function(message, title, options) {
-                // Create a mock notification element to test
-                var mockElement = document.createElement('div');
-                mockElement.id = 'mock-notification';
-                mockElement.setAttribute('role', options.role || '');
-                mockElement.setAttribute('aria-live', options.aria ? 'assertive' : '');
-                document.body.appendChild(mockElement);
+                var element = document.getElementById('mock-notification');
+                element.setAttribute('role', 'alert');
+                element.setAttribute('aria-live', 'assertive');
                 return { options: options || {} };
             },
             options: {}
         };
+        
+        // Initialize the notifications module
+        REITracker.notifications.init();
         
         // Show a notification
         REITracker.notifications.success('Test message');

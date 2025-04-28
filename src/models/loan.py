@@ -188,7 +188,13 @@ class Loan(BaseModel):
         """Calculate monthly payment if not provided."""
         if self.monthly_payment is None:
             loan_details = self.to_loan_details()
-            self.monthly_payment = loan_details.calculate_payment().total
+            # Set the flag to prevent recursion
+            object.__setattr__(self, '_skip_updated_at', True)
+            try:
+                self.monthly_payment = loan_details.calculate_payment().total
+            finally:
+                # Reset the flag
+                object.__setattr__(self, '_skip_updated_at', False)
         return self
     
     def to_loan_details(self) -> LoanDetails:

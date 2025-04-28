@@ -9,6 +9,158 @@
         viewportWidth: window.innerWidth,
         viewportHeight: window.innerHeight,
         
+        // Device detection sub-module
+        device: {
+            isMobile: false,
+            isTablet: false,
+            isDesktop: false,
+            
+            /**
+             * Detect device type based on viewport size
+             */
+            detectDeviceType: function() {
+                const width = window.innerWidth;
+                this.isMobile = width < 768;
+                this.isTablet = width >= 768 && width < 992;
+                this.isDesktop = width >= 992;
+                return {
+                    isMobile: this.isMobile,
+                    isTablet: this.isTablet,
+                    isDesktop: this.isDesktop
+                };
+            }
+        },
+        
+        // Formatting sub-module
+        format: {
+            /**
+             * Format currency value
+             * @param {number} value - The value to format
+             * @param {string} currency - The currency code (default: USD)
+             * @returns {string} Formatted currency string
+             */
+            currency: function(value, currency = 'USD') {
+                return new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: currency,
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }).format(value);
+            },
+            
+            /**
+             * Format percentage value
+             * @param {number} value - The value to format
+             * @param {number} decimals - Number of decimal places (default: 2)
+             * @returns {string} Formatted percentage string
+             */
+            percentage: function(value, decimals = 2) {
+                return new Intl.NumberFormat('en-US', {
+                    style: 'percent',
+                    minimumFractionDigits: decimals,
+                    maximumFractionDigits: decimals
+                }).format(value);
+            },
+            
+            /**
+             * Format date value
+             * @param {Date} date - The date to format
+             * @param {string} format - The format to use (default: MM/DD/YYYY)
+             * @returns {string} Formatted date string
+             */
+            date: function(date, format = 'MM/DD/YYYY') {
+                const d = new Date(date);
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                const year = d.getFullYear();
+                
+                return `${month}/${day}/${year}`;
+            },
+            
+            /**
+             * Format phone number
+             * @param {string} phone - The phone number to format
+             * @returns {string} Formatted phone number
+             */
+            phone: function(phone) {
+                const cleaned = ('' + phone).replace(/\D/g, '');
+                const match = cleaned.match(/^(\d{3})(\d{3})(\d{4})$/);
+                if (match) {
+                    return '(' + match[1] + ') ' + match[2] + '-' + match[3];
+                }
+                return phone;
+            }
+        },
+        
+        // Utilities sub-module
+        utils: {
+            /**
+             * Set a cookie
+             * @param {string} name - Cookie name
+             * @param {string} value - Cookie value
+             * @param {number} days - Days until expiration
+             */
+            setCookie: function(name, value, days) {
+                let expires = '';
+                if (days) {
+                    const date = new Date();
+                    date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+                    expires = '; expires=' + date.toUTCString();
+                }
+                document.cookie = name + '=' + encodeURIComponent(value) + expires + '; path=/';
+            },
+            
+            /**
+             * Get a cookie value
+             * @param {string} name - Cookie name
+             * @returns {string|null} Cookie value or null if not found
+             */
+            getCookie: function(name) {
+                const nameEQ = name + '=';
+                const ca = document.cookie.split(';');
+                for (let i = 0; i < ca.length; i++) {
+                    let c = ca[i];
+                    while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+                    if (c.indexOf(nameEQ) === 0) return decodeURIComponent(c.substring(nameEQ.length, c.length));
+                }
+                return null;
+            },
+            
+            /**
+             * Generate a random ID
+             * @param {number} length - Length of the ID
+             * @returns {string} Random ID
+             */
+            generateId: function(length = 8) {
+                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+                let result = '';
+                for (let i = 0; i < length; i++) {
+                    result += chars.charAt(Math.floor(Math.random() * chars.length));
+                }
+                return result;
+            },
+            
+            /**
+             * Validate email format
+             * @param {string} email - Email to validate
+             * @returns {boolean} Whether the email is valid
+             */
+            validateEmail: function(email) {
+                const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+                return re.test(String(email).toLowerCase());
+            },
+            
+            /**
+             * Validate phone number format
+             * @param {string} phone - Phone number to validate
+             * @returns {boolean} Whether the phone number is valid
+             */
+            validatePhone: function(phone) {
+                const re = /^\(?([0-9]{3})\)?[-. ]?([0-9]{3})[-. ]?([0-9]{4})$/;
+                return re.test(String(phone));
+            }
+        },
+        
         /**
          * Initialize the base module
          */
@@ -591,7 +743,7 @@
                 style: 'percent',
                 minimumFractionDigits: decimals,
                 maximumFractionDigits: decimals
-            }).format(value / 100);
+            }).format(value);
         },
         
         /**

@@ -68,24 +68,46 @@ def test_testing_config():
 
 def test_production_config():
     """Test the production configuration."""
-    config = ProductionConfig()
-    
     # Check that the production configuration has the expected values
-    assert config.DEBUG is False
-    assert config.TESTING is False
+    # Save original environment variables
+    original_secret_key = os.environ.get('SECRET_KEY')
+    original_api_key = os.environ.get('GEOAPIFY_API_KEY')
     
-    # Test validation with missing API key
-    with pytest.raises(ValueError):
-        # Set SECRET_KEY to a non-default value to isolate the API key validation
+    try:
+        # Set valid values for initial test
         os.environ['SECRET_KEY'] = 'test-secret-key'
-        os.environ['GEOAPIFY_API_KEY'] = ''
-        config.validate()
-    
-    # Test validation with default SECRET_KEY
-    with pytest.raises(ValueError):
-        os.environ['SECRET_KEY'] = 'dev-key-change-in-production'
         os.environ['GEOAPIFY_API_KEY'] = 'test-api-key'
-        config.validate()
+        
+        config = ProductionConfig()
+        assert config.DEBUG is False
+        assert config.TESTING is False
+        
+        # Test validation with missing API key
+        config = ProductionConfig()
+        config.GEOAPIFY_API_KEY = ''
+        
+        # Call validate directly
+        with pytest.raises(ValueError):
+            config.validate()
+        
+        # Test validation with default SECRET_KEY
+        config = ProductionConfig()
+        config.SECRET_KEY = 'dev-key-change-in-production'
+        config.GEOAPIFY_API_KEY = 'test-api-key'
+        
+        with pytest.raises(ValueError):
+            config.validate()
+    finally:
+        # Restore original environment variables
+        if original_secret_key:
+            os.environ['SECRET_KEY'] = original_secret_key
+        elif 'SECRET_KEY' in os.environ:
+            del os.environ['SECRET_KEY']
+            
+        if original_api_key:
+            os.environ['GEOAPIFY_API_KEY'] = original_api_key
+        elif 'GEOAPIFY_API_KEY' in os.environ:
+            del os.environ['GEOAPIFY_API_KEY']
 
 
 def test_get_config():
