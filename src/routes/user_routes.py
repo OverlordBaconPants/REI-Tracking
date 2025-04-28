@@ -119,14 +119,88 @@ def register():
         }), 500
 
 
-@blueprint.route('/login', methods=['POST'])
+@blueprint.route('/login', methods=['GET', 'POST'])
 def login():
     """
     Log in a user.
     
     Returns:
-        The login result
+        The login result or login page
     """
+    # For GET requests, render the login page
+    if request.method == 'GET':
+        from flask import render_template
+        try:
+            return render_template('users/login.html')
+        except Exception as e:
+            logger.error(f"Error rendering login template: {str(e)}")
+            # If template is not found, return a simple HTML login form
+            return """
+            <html>
+            <head>
+                <title>Login</title>
+                <link rel="stylesheet" href="/static/css/styles.css">
+            </head>
+            <body>
+                <div class="container">
+                    <h1>Login</h1>
+                    <form id="login-form" method="post" action="/api/users/login">
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input type="email" id="email" name="email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="password">Password</label>
+                            <input type="password" id="password" name="password" required>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="remember" name="remember">
+                                Remember me
+                            </label>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Login</button>
+                    </form>
+                    <p>Don't have an account? <a href="/api/users/register">Register</a></p>
+                </div>
+                <script>
+                    document.getElementById('login-form').addEventListener('submit', function(e) {
+                        e.preventDefault();
+                        
+                        const email = document.getElementById('email').value;
+                        const password = document.getElementById('password').value;
+                        const remember = document.getElementById('remember').checked;
+                        
+                        fetch('/api/users/login', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                email: email,
+                                password: password,
+                                remember: remember
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                window.location.href = '/dashboards/';
+                            } else {
+                                alert('Login failed: ' + (data.errors?.email?.[0] || 'Unknown error'));
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            alert('An error occurred during login');
+                        });
+                    });
+                </script>
+            </body>
+            </html>
+            """
+    
+    # For POST requests, handle login
     try:
         data = request.get_json()
         email = data.get('email', '')

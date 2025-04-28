@@ -103,10 +103,8 @@ def init_auth_middleware(app: Any) -> None:
                 }), 401
             else:
                 # For non-API routes, redirect to login page
-                return jsonify({
-                    'success': False,
-                    'errors': {'_error': ['Authentication required']}
-                }), 401
+                from flask import redirect, url_for
+                return redirect(url_for('users.login'))
         
         # Store current user in g for easy access
         g.current_user = auth_service.get_current_user()
@@ -145,6 +143,10 @@ def _is_public_route(path: str) -> bool:
         '/favicon.ico',
     ]
     
+    # Special case for the login route
+    if path == '/api/users/login' or path == '/login':
+        return True
+    
     return any(path.startswith(route) for route in public_routes)
 
 
@@ -173,11 +175,8 @@ def login_required(f: Callable) -> Callable:
                 }), 401
             else:
                 # For non-API routes, redirect to login page
-                # This would be implemented if we had HTML routes
-                return jsonify({
-                    'success': False,
-                    'errors': {'_error': ['Authentication required']}
-                }), 401
+                from flask import redirect, url_for
+                return redirect(url_for('users.login'))
         
         return f(*args, **kwargs)
     
@@ -215,10 +214,8 @@ def admin_required(f: Callable) -> Callable:
                 }), 401
             else:
                 # For non-API routes, redirect to login page
-                return jsonify({
-                    'success': False,
-                    'errors': {'_error': ['Authentication required']}
-                }), 401
+                from flask import redirect, url_for
+                return redirect(url_for('users.login'))
         
         if 'user_role' not in session or session['user_role'] != 'Admin':
             return jsonify({

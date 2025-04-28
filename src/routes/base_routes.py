@@ -5,7 +5,7 @@ This module provides the base routes for the application, including
 health check and static file routes.
 """
 
-from flask import Blueprint, jsonify, request, send_from_directory
+from flask import Blueprint, jsonify, request, send_from_directory, redirect, url_for
 import os
 
 from src.config import current_config
@@ -16,6 +16,18 @@ logger = get_logger(__name__)
 
 # Create blueprint
 blueprint = Blueprint('base', __name__)
+
+@blueprint.route('/')
+def index():
+    """Root route that redirects to the dashboards or login page."""
+    logger.info("User accessed root route, redirecting to dashboards")
+    return redirect(url_for('dashboards.dashboards'))
+
+@blueprint.route('/login')
+def login():
+    """Login route that redirects to the user login page."""
+    logger.info("User accessed login route, redirecting to user login")
+    return redirect(url_for('users.login'))
 
 
 @blueprint.route('/health', methods=['GET'])
