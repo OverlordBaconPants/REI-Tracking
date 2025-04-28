@@ -1,18 +1,68 @@
-# 🏠  Real Estate Analysis and Portfolio Tracking 📊 
+# 🏠 Real Estate Analysis and Portfolio Tracking 📊 
 
 ## Project Overview
 This project provides a Flask- and Dash-based Python web application for real estate investors and partners to manage their investment portfolios. The application enables comprehensive real estate investment tracking, analysis, and management with the following key features:
 
-🏠 Property Portfolio Management - Track properties, assign partner equity shares, designate property managers, and monitor performance metrics
-💰 Financial Calculation Engine - Calculate investment metrics including CoC return, ROI, cap rates, and DSCR with proper decimal handling
-💵 Transaction Management System - Record, categorize, filter, and report on property-related financial transactions with equity-based splitting, reimbursement tracking, property-specific permissions, and comprehensive filtering capabilities
-📊 Analysis System - Conduct detailed property analyses across multiple strategies (LTR, BRRRR, Lease Option, Multi-Family, PadSplit)
-📈 Property Valuation - Integrate with RentCast API for accurate property comps and market valuations with correlation scoring, range indicators, and market statistics
-🌐 Address Services - Leverage Geoapify for address validation, autocomplete, and geocoding
-📱 Dynamic Dashboards - View customized KPI reports, equity tracking, and portfolio summaries
-🔒 User Authentication - Secure multi-user access with role-based permissions, session management, and security features
-📄 Report Generation - Create professional PDF reports for analyses, transactions, and portfolio performance
-🎨 User Interface - Responsive design with Bootstrap Spacelab theme, modular JavaScript architecture, and accessibility optimizations
+🏠 Property Portfolio Management - Track properties, assign partner equity shares, designate property managers, and monitor performance metrics  
+💰 Financial Calculation Engine - Calculate investment metrics including CoC return, ROI, cap rates, and DSCR with proper decimal handling  
+💵 Transaction Management System - Record, categorize, filter, and report on property-related financial transactions with equity-based splitting, reimbursement tracking, property-specific permissions, and comprehensive filtering capabilities  
+📊 Analysis System - Conduct detailed property analyses across multiple strategies (LTR, BRRRR, Lease Option, Multi-Family, PadSplit)  
+📈 Property Valuation - Integrate with RentCast API for accurate property comps and market valuations with correlation scoring, range indicators, and market statistics  
+🌐 Address Services - Leverage Geoapify for address validation, autocomplete, and geocoding  
+📱 Dynamic Dashboards - View customized KPI reports, equity tracking, and portfolio summaries  
+🔒 User Authentication - Secure multi-user access with role-based permissions, session management, and security features  
+📄 Report Generation - Create professional PDF reports for analyses, transactions, and portfolio performance  
+🎨 User Interface - Responsive design with Bootstrap Spacelab theme, modular JavaScript architecture, and accessibility optimizations  
+
+## Setup and Installation
+
+### Prerequisites
+
+- Python 3.9 or higher
+- pip (Python package manager)
+- Git
+
+### Setup
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/REI-Tracker.git
+   cd REI-Tracker
+   ```
+
+2. Create a virtual environment:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. Create a `.env` file based on `.env.example`:
+   ```bash
+   cp .env.example .env
+   ```
+
+5. Edit the `.env` file with your configuration settings.
+
+### Running the Application
+
+To run the application in development mode:
+
+```bash
+python -m src.main
+```
+
+Or use the startup script:
+
+```bash
+./startup.sh
+```
+
+The application will be available at http://localhost:5000.
 
 ## Core Calculation Components
 
@@ -431,81 +481,251 @@ The application features a sophisticated property valuation system:
 - **Session-based Rate Limiting**: Prevent API abuse with configurable rate limits
 - **Data Persistence**: Store comps data for historical analysis and comparison
 
-## Tech Stack
-- Python
-- Pydantic for data validation
-- PyTest for testing
-- Bootstrap Spacelab theme for UI
-- JavaScript with modular architecture
+## API Documentation
 
-## Setup and Installation
+REI-Tracker provides a comprehensive REST API for interacting with the application programmatically.
 
-```bash
-# Clone the repository
-git clone <repository-url>
+### Base Routes
 
-# Install dependencies
-pip install -r requirements.txt
+#### Health Check
 
-# Create environment variables file from template
-cp .env.example .env
+```
+GET /health
+```
+
+Returns the health status of the API.
+
+**Response**:
+```json
+{
+  "status": "ok",
+  "version": "1.0.0"
+}
+```
+
+#### API Version
+
+```
+GET /api/version
+```
+
+Returns the API version information.
+
+**Response**:
+```json
+{
+  "version": "1.0.0",
+  "name": "REI-Tracker API"
+}
+```
+
+### User Routes
+
+#### Register
+
+```
+POST /api/users/register
+```
+
+Registers a new user.
+
+**Request Body**:
+```json
+{
+  "email": "user@example.com",
+  "password": "password123",
+  "first_name": "John",
+  "last_name": "Doe",
+  "role": "user"
+}
+```
+
+#### Login
+
+```
+POST /api/users/login
+```
+
+Logs in a user.
+
+**Request Body**:
+```json
+{
+  "email": "user@example.com",
+  "password": "password123"
+}
+```
+
+#### Get Current User
+
+```
+GET /api/users/me
+```
+
+Gets the current user.
+
+#### Update User
+
+```
+PUT /api/users/<user_id>
+```
+
+Updates a user.
+
+**Parameters**:
+- `user_id`: The ID of the user to update
+
+### Property Routes
+
+- `GET /api/properties` - List all properties
+- `GET /api/properties/{id}` - Get property details
+- `POST /api/properties` - Create a new property
+- `PUT /api/properties/{id}` - Update a property
+- `DELETE /api/properties/{id}` - Delete a property
+
+### Transaction Routes
+
+- `GET /api/transactions` - List all transactions
+- `GET /api/transactions/{id}` - Get transaction details
+- `POST /api/transactions` - Create a new transaction
+- `PUT /api/transactions/{id}` - Update a transaction
+- `DELETE /api/transactions/{id}` - Delete a transaction
+- `POST /api/transactions/import` - Bulk import transactions
+
+### Analysis Routes
+
+- `GET /api/analysis/property/{id}` - Get property analysis
+- `GET /api/analysis/portfolio` - Get portfolio analysis
+
+### Error Responses
+
+#### 400 Bad Request
+
+```json
+{
+  "success": false,
+  "errors": {
+    "field_name": ["Error message"]
+  }
+}
+```
+
+#### 401 Unauthorized
+
+```json
+{
+  "success": false,
+  "errors": {
+    "_error": ["Not logged in"]
+  }
+}
 ```
 
 ## Project Structure
 
+The project follows a modular structure with clear separation of concerns:
+
 ```
-project_name/
-├── README.md
-├── PLANNING.md
-├── TASK.md
-├── requirements.txt
-├── .env.example
-├── src/
+REI-Tracker/
+├── README.md                 # Project overview and setup instructions
+├── PLANNING.md               # Project planning and workflow guidelines
+├── TASKS.md                  # Task list and progress tracking
+├── requirements.txt          # Python dependencies
+├── .env.example              # Example environment variables
+├── pytest.ini                # Pytest configuration
+├── wsgi.py                   # WSGI entry point for production servers
+├── src/                      # Source code
+│   ├── __init__.py           # Package initialization
+│   ├── main.py               # Main application module
+│   ├── models/               # Data models
+│   │   ├── __init__.py
+│   │   ├── base_model.py     # Base model class
+│   │   ├── user.py           # User model
+│   │   ├── property.py       # Property model
+│   │   ├── transaction.py    # Transaction model
+│   │   ├── analysis.py       # Analysis model
+│   │   └── category.py       # Category model
+│   ├── repositories/         # Data repositories
+│   │   ├── __init__.py
+│   │   ├── base_repository.py # Base repository class
+│   │   ├── user_repository.py # User repository
+│   │   └── ...
+│   ├── services/             # Business logic services
+│   │   ├── __init__.py
+│   │   ├── file_service.py   # File operations service
+│   │   ├── validation_service.py # Data validation service
+│   │   └── ...
+│   ├── routes/               # API routes
+│   │   ├── __init__.py
+│   │   ├── base_routes.py    # Base routes
+│   │   ├── user_routes.py    # User routes
+│   │   └── ...
+│   ├── static/               # Static assets
+│   │   ├── css/              # CSS files
+│   │   ├── js/               # JavaScript files
+│   │   └── images/           # Image files
+│   ├── templates/            # HTML templates
+│   └── utils/                # Utility functions
+│       ├── __init__.py
+│       ├── logging_utils.py  # Logging utilities
+│       └── ...
+├── tests/                    # Tests
 │   ├── __init__.py
-│   ├── main.py
-│   ├── config.py
-│   ├── models/
-│   ├── routes/
-│   ├── services/
-│   ├── static/
-│   │   ├── css/
-│   │   ├── js/
-│   │   │   ├── modules/
-│   │   │   ├── base.js
-│   │   │   ├── main.js
-│   │   │   └── notifications.js
-│   │   └── images/
-│   ├── templates/
-│   └── utils/
-├── tests/
-│   ├── __init__.py
-│   ├── test_models/
-│   ├── test_routes/
-│   ├── test_services/
-│   └── test_utils/
-└── docs/
+│   ├── conftest.py           # Pytest fixtures
+│   ├── test_models/          # Model tests
+│   ├── test_repositories/    # Repository tests
+│   ├── test_services/        # Service tests
+│   ├── test_routes/          # Route tests
+│   └── test_utils/           # Utility tests
+├── data/                     # Data files
+│   ├── categories.json       # Category data
+│   └── ...
+└── docs/                     # Documentation
+    ├── project_structure.md  # Project structure documentation
+    ├── api_documentation.md  # API documentation
+    └── development_guide.md  # Development guide
 ```
 
-## Style & Conventions
-- Python code follows PEP8 standards
-- Type hints are used throughout the codebase
-- Code is formatted with `black`
-- JavaScript follows modular architecture with ES6 modules
-- Naming conventions:
-  - `snake_case` for variables and functions
-  - `PascalCase` for classes
-  - `UPPER_CASE` for constants
+## Development Guide
 
-## Testing
+### Coding Standards
 
-### Backend Tests
+#### Python Style Guide
+
+- Follow [PEP 8](https://www.python.org/dev/peps/pep-0008/) for Python code style.
+- Use 4 spaces for indentation.
+- Maximum line length is 100 characters.
+- Use docstrings for all modules, classes, and functions.
+
+#### Naming Conventions
+
+- Use `snake_case` for variables, functions, and methods.
+- Use `PascalCase` for classes.
+- Use `UPPER_CASE` for constants.
+- Use descriptive names that reflect the purpose of the variable, function, or class.
+
+#### Documentation
+
+- Document all modules, classes, and functions with docstrings.
+- Use [Google-style docstrings](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings).
+- Keep documentation up-to-date with code changes.
+
+### Testing
+
+#### Backend Tests
 Run backend tests with pytest:
 
 ```bash
 pytest
 ```
 
-### Frontend Tests
+To run tests with coverage:
+
+```bash
+pytest --cov=src
+```
+
+#### Frontend Tests
 The project includes a comprehensive frontend testing framework for JavaScript components:
 
 ```bash
@@ -536,6 +756,45 @@ The frontend testing framework uses:
 
 All required dependencies for frontend testing are included in the main project's `requirements.txt` file. For more details, see the [Frontend Testing README](tests/test_frontend/README.md).
 
-## Documentation
-- All functions include Google-style docstrings
-- Complex logic includes inline comments with `# Reason:` prefix
+### Git Workflow
+
+#### Branching Strategy
+
+- `main`: Production-ready code
+- `develop`: Development branch
+- Feature branches: `feature/feature-name`
+- Bug fix branches: `bugfix/bug-name`
+- Release branches: `release/version`
+
+#### Commit Messages
+
+- Use clear and descriptive commit messages.
+- Start with a verb in the imperative mood (e.g., "Add", "Fix", "Update").
+- Keep the first line under 50 characters.
+- Provide more details in the commit body if necessary.
+
+### Deployment
+
+#### Production Setup
+
+1. Set up a production server with Python 3.9 or higher.
+2. Clone the repository and install dependencies.
+3. Create a `.env` file with production settings.
+4. Set up a WSGI server (e.g., Gunicorn) to run the application.
+5. Set up a reverse proxy (e.g., Nginx) to handle requests.
+
+#### Environment Variables
+
+- `FLASK_ENV`: Set to `production` for production environment.
+- `SECRET_KEY`: A secure random string for session encryption.
+- `GEOAPIFY_API_KEY`: API key for Geoapify services.
+- `RENTCAST_API_KEY`: API key for Rentcast services.
+
+## Tech Stack
+- Python 3.9+
+- Flask web framework
+- Plotly Dash for interactive dashboards
+- Pydantic for data validation
+- PyTest for testing
+- Bootstrap Spacelab theme for UI
+- JavaScript with modular architecture
