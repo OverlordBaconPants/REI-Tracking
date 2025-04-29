@@ -62,7 +62,11 @@ For any task to be considered complete, it must meet these criteria:
     - [x] Categories data structure for income and expense categorization
     - [x] Users data structure with authentication and profile information
     - [x] Transactions data structure with financial records and property association
+    - [x] Partner Contributions data structure for tracking partner financial movements
+    - [x] Loans data structure for comprehensive loan tracking and management
 - [x] Create JSON persistence layer with atomic operations, validation, and error handling
+- [x] Update DATA_STRUCTURES.md with comprehensive documentation for all data structures
+- [x] Configure .gitignore to prevent sensitive data files (users.json, transactions.json) from being committed
 
 ## 4. 🌐 API Integration & Services
 

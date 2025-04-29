@@ -8,6 +8,8 @@ This document provides comprehensive information about all data structures used 
 3. [Categories Data Structure](#categories-data-structure)
 4. [Users Data Structure](#users-data-structure)
 5. [Transactions Data Structure](#transactions-data-structure)
+6. [Partner Contributions Data Structure](#partner-contributions-data-structure)
+7. [Loans Data Structure](#loans-data-structure)
 
 ---
 
@@ -373,3 +375,107 @@ The transactions data structure records all financial transactions related to pr
 - The `documentation_file` references a file stored in the `/data/uploads/` directory
 - Transaction IDs are assigned sequentially as strings
 - The `property_id` uses the full address as an identifier
+
+---
+
+## Partner Contributions Data Structure
+
+The partner contributions data structure tracks financial contributions and distributions between partners for properties.
+
+### Partner Contribution Object Structure
+
+| Field | Type | Description |
+|-------|------|-------------|
+| property_id | string | Property identifier (typically the full address) |
+| partner_name | string | Name of the partner making the contribution or receiving the distribution |
+| amount | number | Amount of the contribution or distribution |
+| contribution_type | string | Type of transaction ("contribution" or "distribution") |
+| date | string | Date of the contribution or distribution (YYYY-MM-DD format) |
+| notes | string | Optional notes about the contribution or distribution |
+
+### Example Partner Contribution Object
+```json
+{
+  "property_id": "454 Guilford Avenue, Hagerstown, MD 21740, United States of America, Hagerstown, Maryland, 21740",
+  "partner_name": "BJ Marshall",
+  "amount": 5000.00,
+  "contribution_type": "contribution",
+  "date": "2024-05-15",
+  "notes": "Initial capital contribution for renovation"
+}
+```
+
+### Notes
+- Contributions represent money invested into a property by a partner
+- Distributions represent money taken out of a property by a partner
+- The contribution history helps track the changing equity positions of partners over time
+- This data structure complements the partner information in the properties.json file
+
+---
+
+## Loans Data Structure
+
+The loans data structure provides comprehensive tracking of loans associated with properties, including detailed information about loan terms, status, and payment details.
+
+### Loan Object Structure
+
+| Field | Type | Description |
+|-------|------|-------------|
+| id | string | Unique identifier for the loan (UUID) |
+| property_id | string | Property identifier the loan is associated with |
+| loan_type | string | Type of loan (initial, refinance, additional, heloc, seller_financing, private) |
+| amount | string | Loan amount with decimal precision |
+| interest_rate | string | Annual interest rate as a percentage |
+| term_months | number | Loan term in months |
+| start_date | string | Date when the loan started (YYYY-MM-DD format) |
+| is_interest_only | boolean | Whether the loan is interest-only |
+| balloon_payment | object | Optional balloon payment details |
+| lender | string | Name of the lender |
+| loan_number | string | Loan identification number from the lender |
+| status | string | Current status of the loan (active, paid_off, refinanced, defaulted) |
+| refinanced_from_id | string | ID of the loan this refinanced (if applicable) |
+| notes | string | Additional notes about the loan |
+| name | string | Optional name for the loan |
+| monthly_payment | string | Monthly payment amount |
+| current_balance | string | Current loan balance |
+| last_updated | string | Date when the loan was last updated (YYYY-MM-DD format) |
+| created_at | string | ISO 8601 datetime when the loan was created |
+| updated_at | string | ISO 8601 datetime when the loan was last updated |
+
+### Balloon Payment Object
+| Field | Type | Description |
+|-------|------|-------------|
+| due_date | string | Date when the balloon payment is due (YYYY-MM-DD format) |
+| amount | string | Amount of the balloon payment |
+| term_months | number | Number of months until the balloon payment is due |
+
+### Example Loan Object
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "property_id": "454 Guilford Avenue, Hagerstown, MD 21740, United States of America, Hagerstown, Maryland, 21740",
+  "loan_type": "initial",
+  "amount": "112800.00",
+  "interest_rate": "5.73%",
+  "term_months": 360,
+  "start_date": "2022-08-03",
+  "is_interest_only": false,
+  "lender": "PennyMac",
+  "loan_number": "12345678",
+  "status": "active",
+  "notes": "Primary mortgage for property purchase",
+  "name": "Primary Mortgage",
+  "monthly_payment": "658.23",
+  "current_balance": "109876.54",
+  "last_updated": "2024-04-01",
+  "created_at": "2022-08-03T12:00:00.000Z",
+  "updated_at": "2024-04-01T15:30:00.000Z"
+}
+```
+
+### Notes
+- The loan data structure supports multiple loans per property
+- Loan amounts and interest rates are stored with precise decimal handling
+- The structure supports tracking loan status changes over time
+- Refinanced loans maintain a reference to the original loan
+- The system can generate amortization schedules and calculate remaining balances

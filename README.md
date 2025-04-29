@@ -630,6 +630,7 @@ REI-Tracker/
 ├── README.md                 # Project overview and setup instructions
 ├── PLANNING.md               # Project planning and workflow guidelines
 ├── TASKS.md                  # Task list and progress tracking
+├── DATA_STRUCTURES.md        # Comprehensive documentation of all data structures
 ├── requirements.txt          # Python dependencies
 ├── .env.example              # Example environment variables
 ├── pytest.ini                # Pytest configuration
@@ -644,6 +645,8 @@ REI-Tracker/
 │   │   ├── property.py       # Property model
 │   │   ├── transaction.py    # Transaction model
 │   │   ├── analysis.py       # Analysis model
+│   │   ├── loan.py           # Loan model
+│   │   ├── partner_contribution.py # Partner contribution model
 │   │   └── category.py       # Category model
 │   ├── repositories/         # Data repositories
 │   │   ├── __init__.py
@@ -679,6 +682,11 @@ REI-Tracker/
 │   └── test_utils/           # Utility tests
 ├── data/                     # Data files
 │   ├── categories.json       # Category data
+│   ├── properties.json       # Property data
+│   ├── transactions.json     # Transaction data (gitignored)
+│   ├── users.json            # User data (gitignored)
+│   ├── loans.json            # Loan data
+│   ├── partner_contributions.json # Partner contribution data
 │   └── ...
 └── docs/                     # Documentation
     ├── project_structure.md  # Project structure documentation
