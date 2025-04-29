@@ -34,6 +34,10 @@ FAILED_TESTS.md
 /data/analyses/*
 !/data/analyses/.gitkeep
 
+# Explicitly prevent these sensitive data files from being committed
+/data/user.json
+/data/transactions.json
+
 # Test Results
 test-results/
 

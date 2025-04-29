@@ -1,0 +1,39 @@
+{
+    "income": [
+        "Rent",
+        "Late Fees",
+        "Pet Rent",
+        "Parking/Storage Fees",
+        "Utility Reimbursement",
+        "Security Deposit",
+        "Insurance Refund",
+        "Escrow Refund",
+        "Loan Repayment",
+        "Application Fees",
+        "Common Area Revenue",
+        "Other Income"
+    ],
+    "expense": [
+        "Mortgage",
+        "Property Tax",
+        "Insurance",
+        "Utilities",
+        "Property Management Fees",
+        "Repairs",
+        "Maintenance",
+        "Capital Expenditures",
+        "Association Dues",
+        "Asset Acquisition",
+        "Marketing/Advertising",
+        "Legal/Professional Fees",
+        "Cleaning",
+        "Landscaping",
+        "Pest Control",
+        "Security",
+        "Furnishing",
+        "Supplies",
+        "Permit/License Fees",
+        "Bank/Financial Fees",
+        "Other Expense"
+    ]
+}
