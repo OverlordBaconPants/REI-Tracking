@@ -316,9 +316,5 @@ class MonthlyPayment:
             f"Interest: {self.interest}"
         )
 
-# Import the centralized Validator class
-from utils.validators import Validator
-
-# Use the centralized Validator for money and percentage validation
-validate_money = Validator.validate_money
-validate_percentage = Validator.validate_percentage
+# Validation functions will be imported by validators.py
+# This avoids circular imports

@@ -3,9 +3,39 @@ from decimal import Decimal
 import uuid
 from datetime import datetime
 import logging
-from utils.money import Money, Percentage, ensure_money, ensure_percentage
+# Import only the classes from money.py, not the functions
+from utils.money import Money, Percentage
 
 logger = logging.getLogger(__name__)
+
+# Define these functions here to avoid circular imports
+def ensure_money(value: Union[Money, Decimal, float, str, int]) -> Money:
+    """
+    Ensure value is a Money object.
+    
+    Args:
+        value: Value to convert to Money
+        
+    Returns:
+        Money object
+    """
+    if isinstance(value, Money):
+        return value
+    return Money(value)
+    
+def ensure_percentage(value: Union[Percentage, Decimal, float, str, int]) -> Percentage:
+    """
+    Ensure value is a Percentage object.
+    
+    Args:
+        value: Value to convert to Percentage
+        
+    Returns:
+        Percentage object
+    """
+    if isinstance(value, Percentage):
+        return value
+    return Percentage(value)
 
 class Validator:
     """Centralized validator for all data types."""

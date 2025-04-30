@@ -420,3 +420,10 @@ For any task to be considered complete, it must meet these criteria:
 - [x] Build loan term toggle functionality
 - [x] Create print-specific styling and layouts
 - [x] Implement occupancy rate calculator for multi-family properties
+
+## 15. 🐛 Bug Fixes & Improvements
+
+- [x] Fix circular import between money.py and validators.py
+    - [x] Restructure imports to break circular dependency
+    - [x] Move utility functions to validators.py
+    - [x] Remove Validator import from money.py
