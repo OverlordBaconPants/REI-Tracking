@@ -13,6 +13,7 @@ from services.report_generator import generate_report
 from utils.json_handler import read_json, write_json
 from services.analysis_calculations import create_analysis
 from utils.comps_handler import fetch_property_comps, update_analysis_comps, RentcastAPIError
+from utils.converters import to_int, to_float, to_bool
 
 
 logger = logging.getLogger(__name__)
@@ -227,10 +228,10 @@ class AnalysisService:
                     
                 # Convert value based on type
                 if field_type == 'integer':
-                    normalized[field] = self._convert_to_int(value)
+                    normalized[field] = to_int(value)
                     
                 elif field_type == 'float':
-                    normalized[field] = self._convert_to_float(value)
+                    normalized[field] = to_float(value)
                     
                 elif field_type == 'string':
                     normalized[field] = str(value) if value is not None else ''
@@ -240,7 +241,7 @@ class AnalysisService:
                         normalized[field] = bool(value)
                     else:
                         # Handle other boolean fields
-                        normalized[field] = self._convert_to_bool(value)
+                        normalized[field] = to_bool(value)
                 
                 # Handle special formats
                 if field_def.get('format') == 'uuid' and not value:
@@ -268,11 +269,6 @@ class AnalysisService:
             logger.error(traceback.format_exc())
             raise ValueError(f"Data normalization failed: {str(e)}")
 
-    def _convert_to_bool(self, value: Any) -> bool:
-        """Convert value to boolean, handling various formats."""
-        if isinstance(value, str):
-            return value.lower() in ('true', '1', 'yes', 'on')
-        return bool(value)
 
     def _optimize_metrics_for_mobile(self, metrics: Dict) -> Dict:
         """
@@ -484,9 +480,9 @@ class AnalysisService:
         
         try:
             if field_type == 'integer':
-                self._convert_to_int(value)
+                to_int(value, default=None)
             elif field_type == 'float':
-                self._convert_to_float(value)
+                to_float(value, default=None)
             elif field_type == 'string':
                 if not isinstance(value, str):
                     value = str(value)
@@ -507,51 +503,6 @@ class AnalysisService:
         except (ValueError, TypeError) as e:
             raise ValueError(f"Invalid {field_type} value for field {field}: {str(e)}")
 
-    def _convert_to_int(self, value: Any) -> Optional[int]:
-        """
-        Convert value to integer, handling empty values for optional fields.
-        
-        Args:
-            value: Value to convert
-            
-        Returns:
-            Converted integer value or None
-            
-        Raises:
-            ValueError: If conversion fails
-        """
-        if value is None or value == '':
-            return None  # Return None for empty optional fields
-        try:
-            if isinstance(value, str):
-                clean_value = value.replace('$', '').replace(',', '').strip()
-                return int(float(clean_value))
-            return int(float(value))
-        except (ValueError, TypeError):
-            raise ValueError(f"Cannot convert {value} to integer")
-
-    def _convert_to_float(self, value: Any) -> Optional[float]:
-        """
-        Convert value to float, handling empty values for optional fields.
-        
-        Args:
-            value: Value to convert
-            
-        Returns:
-            Converted float value or None
-            
-        Raises:
-            ValueError: If conversion fails
-        """
-        if value is None or value == '':
-            return None  # Return None for empty optional fields
-        try:
-            if isinstance(value, str):
-                clean_value = value.replace('$', '').replace('%', '').replace(',', '').strip()
-                return float(clean_value)
-            return float(value)
-        except (ValueError, TypeError):
-            raise ValueError(f"Cannot convert {value} to float")
 
     def create_analysis(self, analysis_data: Dict, user_id: str) -> Dict:
         """

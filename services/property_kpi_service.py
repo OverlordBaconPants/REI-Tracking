@@ -3,6 +3,8 @@ from datetime import datetime, date
 import logging
 from decimal import Decimal
 from functools import lru_cache
+from utils.error_handling import safe_calculation
+from utils.validators import Validator
 
 logger = logging.getLogger(__name__)
 
@@ -164,11 +166,37 @@ class PropertyKPIService:
         
         # Calculate Cap Rate (using annualized NOI)
         annual_noi = avg_monthly_noi * Decimal('12')
-        cap_rate = (annual_noi / purchase_price * Decimal('100')) if purchase_price else None
+        
+        # Use the centralized financial calculator
+        from utils.financial_calculator import FinancialCalculator
+        from utils.money import Money, Percentage
+        
+        if purchase_price:
+            cap_rate_percentage = FinancialCalculator.calculate_cap_rate(
+                annual_noi=Money(annual_noi),
+                property_value=Money(purchase_price)
+            )
+            cap_rate = Decimal(str(cap_rate_percentage.value))
+        else:
+            cap_rate = None
         
         # Calculate Cash on Cash Return
         annual_cash_flow = avg_monthly_cash_flow * Decimal('12')
-        cash_on_cash = (annual_cash_flow / total_investment * Decimal('100')) if total_investment else None
+        
+        # Use the centralized financial calculator
+        if total_investment:
+            result = FinancialCalculator.calculate_cash_on_cash_return(
+                annual_cash_flow=Money(annual_cash_flow),
+                total_investment=Money(total_investment)
+            )
+            
+            # Handle the case where result is "Infinite"
+            if isinstance(result, str) and result == "Infinite":
+                cash_on_cash = Decimal('Infinity')
+            else:
+                cash_on_cash = Decimal(str(result.value))
+        else:
+            cash_on_cash = None
         
         property_id = property_details.get('address', '')
         
@@ -202,7 +230,17 @@ class PropertyKPIService:
     
     def _calculate_dscr(self, noi: Decimal, mortgage_payment: Decimal) -> Optional[Decimal]:
         """Calculate debt service coverage ratio."""
-        return noi / mortgage_payment if mortgage_payment > 0 else None
+        from utils.financial_calculator import FinancialCalculator
+        from utils.money import Money
+        
+        if mortgage_payment <= 0:
+            return None
+            
+        # Use the centralized financial calculator
+        return Decimal(str(FinancialCalculator.calculate_dscr(
+            noi=Money(noi),
+            debt_service=Money(mortgage_payment)
+        )))
 
     def _calculate_monthly_metrics(self, transactions: List[Dict]) -> Dict[str, Decimal]:
         """Calculate average monthly metrics from transactions."""

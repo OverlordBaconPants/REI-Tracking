@@ -1,15 +1,14 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Union, Callable, TypeVar, Any, Generic
+from typing import Dict, List, Optional, Union, Any, Generic
 from decimal import Decimal
-from utils.money import Money, Percentage, MonthlyPayment
+from utils.money import Money, Percentage, MonthlyPayment, ensure_money, ensure_percentage
 from datetime import datetime
 from math import ceil
 import logging
-import uuid
-import traceback
 import json
-from functools import wraps
+from utils.error_handling import safe_calculation
+from utils.validators import Validator
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -37,23 +36,6 @@ PERCENTAGE_RANGES = {
     'repairs_percentage': (0, 15),
 }
 
-# Generic type for default values in safe_calculation decorator
-T = TypeVar('T')
-
-def safe_calculation(default_value: T = None) -> Callable:
-    """Decorator for safely executing calculations with proper error handling."""
-    def decorator(func: Callable) -> Callable:
-        @wraps(func)
-        def wrapper(*args, **kwargs) -> Union[Any, T]:
-            try:
-                return func(*args, **kwargs)
-            except Exception as e:
-                logger.error(f"Error in {func.__name__}: {str(e)}")
-                logger.error(traceback.format_exc())
-                return default_value
-        return wrapper
-    return decorator
-
 def format_percentage_or_infinite(value: Union[Percentage, str]) -> str:
     """
     Format a percentage value or the string 'Infinite' for consistent display.
@@ -74,51 +56,6 @@ def format_percentage_or_infinite(value: Union[Percentage, str]) -> str:
     # Handle unexpected types
     return str(value)
 
-class Validator:
-    """Utility class for validation logic."""
-    
-    @staticmethod
-    def validate_positive_number(value: Union[int, float, Money], field_name: str) -> None:
-        """Validate that a value is positive."""
-        if isinstance(value, Money):
-            if value.dollars <= 0:
-                raise ValueError(f"{field_name} must be greater than 0")
-        elif value <= 0:
-            raise ValueError(f"{field_name} must be greater than 0")
-    
-    @staticmethod
-    def validate_percentage(value: Union[float, Percentage], field_name: str, 
-                           min_val: float = 0, max_val: float = 100) -> None:
-        """Validate that a percentage is within a given range."""
-        if isinstance(value, Percentage):
-            value = value.value
-        
-        if value < min_val or value > max_val:
-            raise ValueError(f"{field_name} must be between {min_val}% and {max_val}%")
-    
-    @staticmethod
-    def validate_uuid(uuid_str: str, field_name: str = "ID") -> None:
-        """Validate that a string is a valid UUID."""
-        try:
-            uuid.UUID(str(uuid_str))
-        except (ValueError, AttributeError, TypeError):
-            raise ValueError(f"{field_name} must be a valid UUID")
-    
-    @staticmethod
-    def validate_date_format(date_str: str, field_name: str) -> None:
-        """Validate that a string is in ISO date format."""
-        try:
-            datetime.fromisoformat(date_str.replace('Z', '+00:00'))
-        except (ValueError, AttributeError, TypeError):
-            raise ValueError(f"{field_name} must be in ISO date format")
-    
-    @staticmethod
-    def validate_required_fields(data: Dict, required_fields: Dict[str, str]) -> None:
-        """Validate that required fields are present and valid."""
-        for field, display_name in required_fields.items():
-            if field not in data or data[field] is None:
-                raise ValueError(f"Missing required field: {display_name}")
-
 @dataclass
 class LoanDetails:
     """Data class to encapsulate loan parameters."""
@@ -134,6 +71,8 @@ class LoanDetails:
         if self.term <= 0 or self.term > MAX_LOAN_TERM:
             raise ValueError(f"Loan term must be between 1 and {MAX_LOAN_TERM} months")
 
+from utils.financial_calculator import FinancialCalculator
+
 class LoanCalculator:
     """Utility class for loan-related calculations."""
     
@@ -144,31 +83,16 @@ class LoanCalculator:
         if loan.amount.dollars <= 0 or loan.term <= 0:
             return Money(0)
         
-        # Convert to decimal for precise calculation
-        loan_amount = Decimal(str(loan.amount.dollars))
-        annual_rate = Decimal(str(loan.interest_rate.as_decimal()))
-        monthly_rate = annual_rate / Decimal('12')
-        term_months = Decimal(str(loan.term))
+        # Use the centralized financial calculator
+        payment = FinancialCalculator.calculate_loan_payment(
+            loan_amount=loan.amount,
+            annual_rate=loan.interest_rate,
+            term=loan.term,
+            is_interest_only=loan.is_interest_only
+        )
         
-        # Handle zero interest rate
-        if annual_rate == 0:
-            # For 0% loans, always divide principal by term (whether interest-only or not)
-            payment = float(loan_amount / term_months)
-            logger.debug(f"Calculated principal-only payment: ${payment:.2f} for 0% loan amount: ${loan.amount.dollars:.2f}")
-            return Money(payment)
-                
-        # Handle normal interest-bearing loans
-        if loan.is_interest_only:
-            # For interest-only, calculate the monthly interest
-            payment = float(loan_amount * monthly_rate)
-            logger.debug(f"Calculated interest-only payment: ${payment:.2f} for loan amount: ${loan.amount.dollars:.2f}")
-            return Money(payment)
-                
-        # For regular amortizing loans
-        factor = (1 + monthly_rate) ** term_months
-        payment = float(loan_amount * (monthly_rate * factor / (factor - 1)))
-        logger.debug(f"Calculated amortized payment: ${payment:.2f} for loan amount: ${loan.amount.dollars:.2f}")
-        return Money(payment)
+        logger.debug(f"Calculated payment: {payment.total} for loan amount: {loan.amount}")
+        return payment.total
 
 @dataclass
 class AnalysisReport:
@@ -494,12 +418,16 @@ class Analysis(ABC):
         return self.calculate_monthly_cash_flow() * 12
 
     @property
-    def cash_on_cash_return(self) -> Percentage:
+    def cash_on_cash_return(self) -> Union[Percentage, str]:
         """Calculate Cash on Cash return."""
         cash_invested = self.calculate_total_cash_invested()
-        annual_cf = float(self.annual_cash_flow.dollars)
+        annual_cf = self.annual_cash_flow
         
-        return Percentage((annual_cf / float(cash_invested.dollars)) * 100) if cash_invested.dollars > 0 else Percentage(0)
+        # Use the centralized financial calculator
+        return FinancialCalculator.calculate_cash_on_cash_return(
+            annual_cash_flow=annual_cf,
+            total_investment=cash_invested
+        )
 
     @property
     def roi(self) -> Percentage:
@@ -963,15 +891,22 @@ class LTRAnalysis(Analysis):
         # Calculate loan payments for debt service
         total_loan_payment = self._calculate_loan_payments()
         
-        # Calculate DSCR
-        dscr = float(monthly_noi.dollars) / float(total_loan_payment.dollars) if total_loan_payment.dollars > 0 else 0.0
+        # Calculate DSCR using the centralized financial calculator
+        dscr = FinancialCalculator.calculate_dscr(
+            noi=monthly_noi,
+            debt_service=total_loan_payment
+        )
         
         # Calculate operating expense ratio
         expense_ratio = (float(operating_expenses.dollars) / float(monthly_income.dollars)) * 100 if monthly_income.dollars > 0 else 0.0
         
-        # Calculate cap rate
+        # Calculate cap rate using the centralized financial calculator
         purchase_price = self._get_money('purchase_price')
-        cap_rate = (float(monthly_noi.dollars) * 12 / float(purchase_price.dollars)) * 100 if purchase_price.dollars > 0 else 0.0
+        annual_noi = monthly_noi * 12
+        cap_rate = FinancialCalculator.calculate_cap_rate(
+            annual_noi=annual_noi,
+            property_value=purchase_price
+        )
         
         # Add standard KPI metrics
         metrics.update({
@@ -979,7 +914,7 @@ class LTRAnalysis(Analysis):
             'monthly_noi': str(monthly_noi),
             'annual_noi': str(monthly_noi * 12),
             'dscr': str(dscr),
-            'cap_rate': str(Percentage(cap_rate)),
+            'cap_rate': str(cap_rate),
             'operating_expense_ratio': str(Percentage(expense_ratio)),
             'expense_ratio': str(Percentage(expense_ratio))
         })
@@ -1271,11 +1206,15 @@ class BRRRRAnalysis(Analysis):
             self._get_money('refinance_loan_closing_costs')
         ], Money(0))
         
-        # Typical BRRRR wants 75% ARV - costs
-        target_loan = arv * Percentage(75)
-        mao = target_loan - (renovation_costs + holding_costs + closing_costs)
-        
-        return Money(max(0, float(mao.dollars)))
+        # Use the centralized financial calculator
+        return FinancialCalculator.calculate_mao(
+            arv=arv,
+            renovation_costs=renovation_costs,
+            holding_costs=holding_costs,
+            closing_costs=closing_costs,
+            ltv_percentage=75,  # Typical BRRRR wants 75% ARV
+            max_cash_left=Money(0)  # No cash left in the deal for BRRRR
+        )
 
     @property
     def cash_on_cash_return(self) -> Union[Percentage, str]:

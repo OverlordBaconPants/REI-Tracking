@@ -1,9 +1,13 @@
 from decimal import Decimal, ROUND_HALF_UP
 from dataclasses import dataclass
-from typing import Union, Optional
+from typing import Union, Optional, TypeVar, Any
 import logging
+from utils.converters import to_decimal, to_float
 
 logger = logging.getLogger(__name__)
+
+# Generic type for Money and Percentage classes
+T = TypeVar('T', bound=Any)
 
 class Money:
     """
@@ -17,10 +21,9 @@ class Money:
             if amount.lower() == 'infinite' or amount.lower() == '∞':
                 self.amount = float('inf')
             else:
-                cleaned = amount.replace('$', '').replace(',', '').strip()
-                self.amount = Decimal(cleaned if cleaned else '0')
+                self.amount = to_decimal(amount, default=Decimal('0'))
         else:
-            self.amount = Decimal(str(amount or 0))
+            self.amount = to_decimal(amount, default=Decimal('0'))
 
     @property
     def dollars(self) -> float:
@@ -149,10 +152,11 @@ class Percentage:
             if value.lower() == 'infinite' or value.lower() == '∞':
                 self.value = float('inf')
             else:
+                # Remove % sign before conversion
                 cleaned = value.replace('%', '').strip()
-                self.value = float(cleaned if cleaned else '0')
+                self.value = to_float(cleaned, default=0.0)
         else:
-            self.value = float(value or 0)
+            self.value = to_float(value, default=0.0)
 
     @property
     def is_infinite(self) -> bool:
@@ -253,6 +257,34 @@ class Percentage:
             raise ValueError("Division by zero")
         return Percentage(self.value / float(other))
 
+def ensure_money(value: Union[Money, Decimal, float, str, int]) -> Money:
+    """
+    Ensure value is a Money object.
+    
+    Args:
+        value: Value to convert to Money
+        
+    Returns:
+        Money object
+    """
+    if isinstance(value, Money):
+        return value
+    return Money(value)
+    
+def ensure_percentage(value: Union[Percentage, Decimal, float, str, int]) -> Percentage:
+    """
+    Ensure value is a Percentage object.
+    
+    Args:
+        value: Value to convert to Percentage
+        
+    Returns:
+        Percentage object
+    """
+    if isinstance(value, Percentage):
+        return value
+    return Percentage(value)
+
 @dataclass
 class MonthlyPayment:
     """
@@ -272,12 +304,9 @@ class MonthlyPayment:
     
     def __post_init__(self):
         # Ensure all values are Money objects
-        if not isinstance(self.total, Money):
-            self.total = Money(self.total)
-        if not isinstance(self.principal, Money):
-            self.principal = Money(self.principal)
-        if not isinstance(self.interest, Money):
-            self.interest = Money(self.interest)
+        self.total = ensure_money(self.total)
+        self.principal = ensure_money(self.principal)
+        self.interest = ensure_money(self.interest)
     
     def __str__(self) -> str:
         """Format payment details as a string."""
@@ -287,48 +316,9 @@ class MonthlyPayment:
             f"Interest: {self.interest}"
         )
 
-def validate_money(value: Union[str, float, int, Money, Decimal],
-                  min_value: float = 0,
-                  max_value: float = 1e9) -> Optional[str]:
-    """
-    Validate monetary value and return error message if invalid.
-    
-    Args:
-        value: Value to validate
-        min_value: Minimum allowed value
-        max_value: Maximum allowed value
-        
-    Returns:
-        None if valid, error message string if invalid
-    """
-    try:
-        amount = Money(value)
-        if amount.dollars < min_value or amount.dollars > max_value:
-            return f"Amount must be between {Money(min_value)} and {Money(max_value)}"
-        return None
-    except (ValueError, TypeError) as e:
-        logger.error(f"Money validation error: {str(e)}")
-        return "Invalid monetary value"
+# Import the centralized Validator class
+from utils.validators import Validator
 
-def validate_percentage(value: Union[str, float, int, Percentage, Decimal],
-                       min_value: float = 0,
-                       max_value: float = 100) -> Optional[str]:
-    """
-    Validate percentage value and return error message if invalid.
-    
-    Args:
-        value: Value to validate
-        min_value: Minimum allowed percentage
-        max_value: Maximum allowed percentage
-        
-    Returns:
-        None if valid, error message string if invalid
-    """
-    try:
-        percentage = Percentage(value)
-        if percentage.value < min_value or percentage.value > max_value:
-            return f"Percentage must be between {min_value}% and {max_value}%"
-        return None
-    except (ValueError, TypeError) as e:
-        logger.error(f"Percentage validation error: {str(e)}")
-        return "Invalid percentage value"
+# Use the centralized Validator for money and percentage validation
+validate_money = Validator.validate_money
+validate_percentage = Validator.validate_percentage

@@ -227,14 +227,20 @@ def get_fallback_kpi_data():
     }
 
 # Actual calculation methods
+from utils.financial_calculator import FinancialCalculator
+from utils.money import Money, Percentage
+
 def calculate_noi(analysis):
     """Calculate Net Operating Income."""
-    # Implementation would depend on your specific data structure
-    # This is a placeholder
     try:
         income = get_total_income(analysis)
         expenses = get_total_expenses(analysis)
-        return income - expenses
+        
+        # Use the centralized financial calculator
+        return FinancialCalculator.calculate_noi(
+            income=Money(income),
+            expenses=Money(expenses)
+        ).dollars
     except Exception as e:
         logger.error(f"Error calculating NOI: {str(e)}")
         return 0
@@ -253,8 +259,12 @@ def calculate_cap_rate(analysis):
         property_value = analysis.get('property', {}).get('value', 0)
         if not property_value or property_value == 0:
             return 0
-            
-        return annual_noi / property_value
+        
+        # Use the centralized financial calculator
+        return FinancialCalculator.calculate_cap_rate(
+            annual_noi=Money(annual_noi),
+            property_value=Money(property_value)
+        ).as_decimal()
     except Exception as e:
         logger.error(f"Error calculating cap rate: {str(e)}")
         return 0
@@ -279,8 +289,18 @@ def calculate_cash_on_cash(analysis):
         total_investment = analysis.get('investment', {}).get('total_cash_invested', 0)
         if not total_investment or total_investment == 0:
             return 0
+        
+        # Use the centralized financial calculator
+        result = FinancialCalculator.calculate_cash_on_cash_return(
+            annual_cash_flow=Money(annual_cash_flow),
+            total_investment=Money(total_investment)
+        )
+        
+        # Handle the case where result is "Infinite"
+        if isinstance(result, str) and result == "Infinite":
+            return float('inf')
             
-        return annual_cash_flow / total_investment
+        return result.as_decimal()
     except Exception as e:
         logger.error(f"Error calculating cash on cash: {str(e)}")
         return 0
@@ -296,8 +316,12 @@ def calculate_dscr(analysis):
         monthly_debt_service = get_monthly_debt_service(analysis)
         if not monthly_debt_service or monthly_debt_service == 0:
             return 0
-            
-        return noi / monthly_debt_service
+        
+        # Use the centralized financial calculator
+        return FinancialCalculator.calculate_dscr(
+            noi=Money(noi),
+            debt_service=Money(monthly_debt_service)
+        )
     except Exception as e:
         logger.error(f"Error calculating DSCR: {str(e)}")
         return 0
@@ -310,8 +334,12 @@ def calculate_expense_ratio(analysis):
         
         if not income or income == 0:
             return 0
-            
-        return expenses / income
+        
+        # Use the centralized financial calculator
+        return FinancialCalculator.calculate_expense_ratio(
+            expenses=Money(expenses),
+            income=Money(income)
+        ).as_decimal()
     except Exception as e:
         logger.error(f"Error calculating expense ratio: {str(e)}")
         return 0
