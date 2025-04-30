@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block body_class %}dashboards-page{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card mt-3">
+                <div class="card-header bg-navy">
+                    <h4 class="mb-0">Amortization Schedule</h4>
+                </div>
+                <div class="card-body p-0">
+                    <!-- Amortization Dashboard -->
+                    <div id="dash-container" class="dashboard-wrapper">
+                        <iframe src="{{ url_for('dashboards.amortization_dash', path='') }}"
+                                style="width: 100%; height: calc(100vh - 150px); min-height: 500px; border: none;"
+                                id="amortization-frame">
+                        </iframe>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

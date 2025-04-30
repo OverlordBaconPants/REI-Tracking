@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Remove Transactions{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card mt-3">
+                <div class="card-header bg-navy">
+                    <h4 class="mb-0">Remove Transactions</h4>
+                </div>
+                <div class="card-body p-3">
+                    <div class="alert alert-warning">
+                        <div class="d-flex">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            <div>
+                                <strong>Warning:</strong> This action cannot be undone. Please be certain before removing any transactions.
+                            </div>
+                        </div>
+                    </div>
+
+                    <form method="POST" action="{{ url_for('admin.remove_transactions') }}">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <label for="transaction_id" class="form-label">Select Transaction to Remove</label>
+                                    <select class="form-select" 
+                                            id="transaction_id" 
+                                            name="transaction_id" 
+                                            required>
+                                        <option value="">Choose a transaction...</option>
+                                        <!-- Add Jinja2 loop to populate options from database -->
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-danger">
+                                        <i class="bi bi-trash me-2"></i>Remove Transaction
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}Remove Properties{% endblock %}
+{% block body_class %}remove-properties-page{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-8 col-lg-6">
+            <div class="card mt-3 shadow-sm">
+                <div class="card-header bg-navy">
+                    <h4 class="card-title mb-0 text-white">
+                        <i class="bi bi-trash me-2"></i>Remove Properties
+                    </h4>
+                </div>
+                <div class="card-body p-3">
+                    {% if error_message %}
+                        <div class="alert alert-danger d-flex align-items-center" role="alert">
+                            <i class="bi bi-exclamation-circle-fill me-2"></i>
+                            <div>{{ error_message }}</div>
+                        </div>
+                    {% else %}
+                        {% if properties %}
+                            <div class="remove-properties-container">
+                                <form method="POST" id="remove-property-form" class="needs-validation" novalidate>
+                                    <!-- Property Selection -->
+                                    <div class="form-group mb-4">
+                                        <label for="property_select" class="form-label">
+                                            <i class="bi bi-building me-2"></i>Select Property to Remove:
+                                        </label>
+                                        <select name="property_select" 
+                                                id="property_select" 
+                                                class="form-select form-select-lg"
+                                                required>
+                                            <option value="">Choose property...</option>
+                                            {% for property in properties %}
+                                            <option value="{{ property.address }}" data-property="{{ property|tojson }}">
+                                                {{ property.address }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                        <div class="invalid-feedback">
+                                            Please select a property.
+                                        </div>
+                                    </div>
+
+                                    <!-- Warning Alert -->
+                                    <div class="alert alert-warning mb-4">
+                                        <div class="d-flex align-items-center mb-2">
+                                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                            <strong>Warning: Permanent Action</strong>
+                                        </div>
+                                        <ul class="mb-0 ps-3">
+                                            <li>This will permanently delete the property and all associated data</li>
+                                            <li>All transaction history will be removed</li>
+                                            <li>All property documents will be deleted</li>
+                                            <li>This action cannot be undone</li>
+                                        </ul>
+                                    </div>
+
+                                    <!-- Confirmation Input -->
+                                    <div class="form-group mb-4">
+                                        <label for="confirm_input" class="form-label">
+                                            <i class="bi bi-shield-lock me-2"></i>Security Confirmation
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="text" 
+                                                   class="form-control form-control-lg" 
+                                                   id="confirm_input" 
+                                                   name="confirm_input" 
+                                                   required 
+                                                   placeholder="Type the confirmation phrase"
+                                                   disabled
+                                                   autocomplete="off">
+                                            <div class="invalid-feedback">
+                                                Please type the confirmation phrase exactly.
+                                            </div>
+                                        </div>
+                                        <div class="form-text">
+                                            Type exactly: "I am sure I want to do this."
+                                        </div>
+                                    </div>
+
+                                    <!-- Submit Button -->
+                                    <div class="d-grid gap-2">
+                                        <button type="submit" class="btn btn-danger btn-lg">
+                                            <i class="bi bi-trash me-2"></i>Remove Property
+                                        </button>
+                                        <a href="{{ url_for('main.index') }}" class="btn btn-secondary btn-lg">
+                                            <i class="bi bi-x-circle me-2"></i>Cancel
+                                        </a>
+                                    </div>
+                                </form>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-info d-flex align-items-center" role="alert">
+                                <i class="bi bi-info-circle-fill me-2"></i>
+                                <div>No properties available to remove.</div>
+                            </div>
+                            <div class="d-grid">
+                                <a href="{{ url_for('main.index') }}" class="btn btn-secondary btn-lg">
+                                    <i class="bi bi-house me-2"></i>Return to Dashboard
+                                </a>
+                            </div>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Spinner Modal -->
+<div class="modal fade" id="loadingModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center p-4">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <h5 class="mb-0">Removing Property...</h5>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    window.currentUser = {
+        id: "{{ current_user.id }}",
+        name: "{{ current_user.name }}",
+        email: "{{ current_user.email }}",
+        role: "{{ current_user.role }}"
+    };
+    console.log('Current user:', window.currentUser);  // Add this for debugging
+</script>
+
+<script type="module">
+    import removePropertiesModule from '/static/js/modules/remove_properties.js';
+
+    document.addEventListener('DOMContentLoaded', function() {
+        if (window.mainInit) {
+            window.mainInit();
+        }
+    });
+</script>
+{% endblock %}

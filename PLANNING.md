@@ -352,8 +352,22 @@ Common code smells:
 - **Do not store calculated or derived values in JSON objects** if such values can be calculated at run-time
   - This maintains a single source of truth for calculations
   - Prevents data inconsistency issues
+  - All calculations performed at run-time should be consistent with calculations performed elsewhere. For example, all calculations to determine cash-on-cash return should follow the same logic and yield the same results.
   - Reduces storage requirements
   - Improves maintainability by centralizing calculation logic
+  - **Implement calculation functions in a centralized utility library**
+    - Create named, testable functions (e.g., `calculateCashOnCashReturn`) in dedicated modules
+    - Reference these functions whenever the calculation is needed in the UI
+    - This ensures consistency and makes future formula changes easier to implement
+  - **Use computed properties in view models/components**
+    - Create getter methods that derive values from base properties dynamically
+    - This maintains reactivity while preventing stale calculated data
+  - **Document calculation formulas in comments and documentation**
+    - Each formula should include a clear explanation of its purpose and methodology
+    - Include business context when applicable (e.g., "Industry standard formula for property ROI")
+  - **For API responses, transform server data at the boundary**
+    - Strip any derived values received from APIs before storing
+    - Recalculate these values using client-side logic when needed
 
 ### Debugging Methodology
 When debugging an issue:

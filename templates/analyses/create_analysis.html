@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block body_class %}analysis-page{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card mt-3">
+                <div class="card-header bg-navy">
+                    <h4 class="mb-0">{% if editing_analysis %}Edit{% else %}Create{% endif %} Analysis</h4>
+                </div>
+                <div class="card-body p-3">
+                    <form id="analysisForm" method="POST">
+                        <!-- Analysis Type and Name Section -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-navy">
+                                <h5 class="mb-0">Analysis Information</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-12 col-md-6">
+                                        <div class="form-group">
+                                            <label for="analysis_type" class="form-label">Analysis Type</label>
+                                            <select class="form-select" id="analysis_type" name="analysis_type" required>
+                                                <option value="BRRRR">BRRRR</option>
+                                                <option value="LTR">LTR</option>
+                                                <option value="PadSplit BRRRR">PadSplit BRRRR</option>
+                                                <option value="PadSplit LTR">PadSplit LTR</option>
+                                                <option value="Lease Option">Lease Option</option>
+                                                <option value="Multi-Family">Multi-Family</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <div class="form-group">
+                                            <label for="analysis_name" class="form-label">Analysis Name</label>
+                                            <input type="text" 
+                                                   class="form-control" 
+                                                   id="analysis_name" 
+                                                   name="analysis_name" 
+                                                   required
+                                                   placeholder="Enter analysis name">
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="form-group">
+                                            <label for="address" class="form-label">Property Address</label>
+                                            <input type="text" 
+                                                   class="form-control" 
+                                                   id="address" 
+                                                   name="address" 
+                                                   required
+                                                   placeholder="Enter property address">
+                                            <ul id="addressSuggestions" 
+                                                class="list-unstyled position-absolute bg-white border rounded-bottom shadow-sm w-100" 
+                                                style="z-index: 1000; display: none;"></ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Mobile-Friendly Tab Navigation -->
+                        <div class="nav nav-pills nav-fill mb-4" role="tablist">
+                            <button class="nav-link active" 
+                                    id="financial-tab" 
+                                    data-bs-toggle="tab" 
+                                    data-bs-target="#financial" 
+                                    type="button"
+                                    role="tab">
+                                <i class="bi bi-calculator me-2"></i>
+                                <span>Financial</span>
+                            </button>
+                            <button class="nav-link" 
+                                    id="reports-tab" 
+                                    data-bs-toggle="tab" 
+                                    data-bs-target="#reports" 
+                                    type="button"
+                                    role="tab">
+                                <i class="bi bi-file-text me-2"></i>
+                                <span>Reports</span>
+                            </button>
+                        </div>
+
+                        <!-- Tab Content -->
+                        <div class="tab-content" id="analysisTabContent">
+                            <!-- Financial Tab -->
+                            <div class="tab-pane fade show active" id="financial" role="tabpanel">
+                                <!-- Dynamic content will be loaded here by JavaScript -->
+                            </div>
+
+                            <!-- Reports Tab -->
+                            <div class="tab-pane fade" id="reports" role="tabpanel">
+                                <!-- Report content will be dynamically populated -->
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="mt-4">
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-start">
+                                {% if editing_analysis %}
+                                    <button type="submit" id="submitAnalysisBtn" class="btn btn-success">
+                                        <i class="bi bi-save me-2"></i>Update Analysis
+                                    </button>
+                                    <a href="{{ url_for('analyses.view_edit_analysis') }}" class="btn btn-secondary">
+                                        <i class="bi bi-arrow-left me-2"></i>Back to Analyses
+                                    </a>
+                                {% else %}
+                                    <button type="submit" id="submitAnalysisBtn" class="btn btn-success">
+                                        <i class="bi bi-save me-2"></i>Create Analysis
+                                    </button>
+                                    <a href="{{ url_for('analyses.view_edit_analysis') }}" class="btn btn-secondary">
+                                        <i class="bi bi-x-circle me-2"></i>Cancel
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{% if analysis %}
+<script type="application/json" id="analysis-data">
+    {{ analysis|tojson|safe }}
+</script>
+{% endif %}
+{% endblock %}

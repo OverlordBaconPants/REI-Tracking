@@ -1,133 +1,212 @@
-"""
-Tests for the config module.
-
-This module provides tests for the config module, including
-environment-specific configuration and validation.
-"""
-
+import unittest
+from unittest.mock import patch
 import os
-import pytest
-from pathlib import Path
+import tempfile
+from config import Config
 
-from src.config import Config, DevelopmentConfig, TestingConfig, ProductionConfig, get_config
+class TestConfig(unittest.TestCase):
+    """Test suite for application configuration."""
 
+    def setUp(self):
+        """Set up test environment."""
+        self.base_dir = os.path.abspath(os.path.dirname(Config.__file__))
+        self.original_env = dict(os.environ)
 
-def test_base_config():
-    """Test the base configuration."""
-    config = Config()
-    
-    # Check that the base configuration has the expected attributes
-    assert hasattr(config, 'SECRET_KEY')
-    assert hasattr(config, 'DEBUG')
-    assert hasattr(config, 'TESTING')
-    assert hasattr(config, 'MAX_CONTENT_LENGTH')
-    assert hasattr(config, 'UPLOAD_EXTENSIONS')
-    assert hasattr(config, 'GEOAPIFY_API_KEY')
-    assert hasattr(config, 'RENTCAST_API_KEY')
-    assert hasattr(config, 'USERS_FILE')
-    assert hasattr(config, 'PROPERTIES_FILE')
-    assert hasattr(config, 'TRANSACTIONS_FILE')
-    assert hasattr(config, 'CATEGORIES_FILE')
-    assert hasattr(config, 'LOG_LEVEL')
-    assert hasattr(config, 'LOG_FORMAT')
-    assert hasattr(config, 'LOG_FILE')
-    
-    # Check that the base configuration has the expected values
-    assert config.DEBUG is False
-    assert config.TESTING is False
-    assert config.MAX_CONTENT_LENGTH == 5 * 1024 * 1024  # 5MB
-    assert config.UPLOAD_EXTENSIONS == ['.jpg', '.jpeg', '.png', '.pdf']
-    assert config.LOG_LEVEL == 'INFO'
-    assert config.LOG_FORMAT == '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    def tearDown(self):
+        """Clean up test environment."""
+        os.environ.clear()
+        os.environ.update(self.original_env)
 
-
-def test_development_config():
-    """Test the development configuration."""
-    config = DevelopmentConfig()
-    
-    # Check that the development configuration has the expected values
-    assert config.DEBUG is True
-    assert config.TESTING is False
-    assert config.LOG_LEVEL == 'DEBUG'
-
-
-def test_testing_config():
-    """Test the testing configuration."""
-    config = TestingConfig()
-    
-    # Check that the testing configuration has the expected values
-    assert config.DEBUG is True
-    assert config.TESTING is True
-    
-    # Check that the testing configuration uses test data files
-    assert config.USERS_FILE.name == 'test_users.json'
-    assert config.PROPERTIES_FILE.name == 'test_properties.json'
-    assert config.TRANSACTIONS_FILE.name == 'test_transactions.json'
-    assert config.CATEGORIES_FILE.name == 'test_categories.json'
-
-
-def test_production_config():
-    """Test the production configuration."""
-    # Check that the production configuration has the expected values
-    # Save original environment variables
-    original_secret_key = os.environ.get('SECRET_KEY')
-    original_api_key = os.environ.get('GEOAPIFY_API_KEY')
-    
-    try:
-        # Set valid values for initial test
-        os.environ['SECRET_KEY'] = 'test-secret-key'
-        os.environ['GEOAPIFY_API_KEY'] = 'test-api-key'
+    def test_secret_key(self):
+        """Test SECRET_KEY configuration."""
+        # Test with environment variable
+        with patch.dict('os.environ', {'SECRET_KEY': 'test-secret-key'}):
+            self.assertEqual(Config.SECRET_KEY, 'test-secret-key')
         
-        config = ProductionConfig()
-        assert config.DEBUG is False
-        assert config.TESTING is False
+        # Test default value
+        with patch.dict('os.environ', clear=True):
+            self.assertEqual(Config.SECRET_KEY, 'you-will-never-guess')
+
+    def test_directory_paths(self):
+        """Test directory path configurations."""
+        # Test BASE_DIR
+        self.assertTrue(os.path.exists(Config.BASE_DIR))
+        self.assertTrue(os.path.isabs(Config.BASE_DIR))
         
-        # Test validation with missing API key
-        config = ProductionConfig()
-        config.GEOAPIFY_API_KEY = ''
+        # Test DATA_DIR
+        self.assertEqual(Config.DATA_DIR, os.path.join(Config.BASE_DIR, 'data'))
         
-        # Call validate directly
-        with pytest.raises(ValueError):
-            config.validate()
+        # Test UPLOAD_FOLDER
+        self.assertEqual(Config.UPLOAD_FOLDER, os.path.join(Config.BASE_DIR, 'uploads'))
+
+    def test_file_extensions(self):
+        """Test allowed file extensions."""
+        # Test ALLOWED_EXTENSIONS
+        self.assertIsInstance(Config.ALLOWED_EXTENSIONS, set)
+        self.assertEqual(
+            Config.ALLOWED_EXTENSIONS,
+            {'png', 'svg', 'pdf', 'jpg', 'csv', 'xls', 'xlsx'}
+        )
         
-        # Test validation with default SECRET_KEY
-        config = ProductionConfig()
-        config.SECRET_KEY = 'dev-key-change-in-production'
-        config.GEOAPIFY_API_KEY = 'test-api-key'
+        # Test ALLOWED_DOCUMENTATION_EXTENSIONS
+        self.assertIsInstance(Config.ALLOWED_DOCUMENTATION_EXTENSIONS, set)
+        self.assertEqual(
+            Config.ALLOWED_DOCUMENTATION_EXTENSIONS,
+            {'png', 'svg', 'pdf', 'jpg'}
+        )
         
-        with pytest.raises(ValueError):
-            config.validate()
-    finally:
-        # Restore original environment variables
-        if original_secret_key:
-            os.environ['SECRET_KEY'] = original_secret_key
-        elif 'SECRET_KEY' in os.environ:
-            del os.environ['SECRET_KEY']
+        # Test ALLOWED_IMPORT_EXTENSIONS
+        self.assertIsInstance(Config.ALLOWED_IMPORT_EXTENSIONS, set)
+        self.assertEqual(
+            Config.ALLOWED_IMPORT_EXTENSIONS,
+            {'csv', 'xls', 'xlsx'}
+        )
+        
+        # Verify extension sets are distinct
+        self.assertNotEqual(
+            Config.ALLOWED_DOCUMENTATION_EXTENSIONS,
+            Config.ALLOWED_IMPORT_EXTENSIONS
+        )
+
+    def test_file_paths(self):
+        """Test JSON file path configurations."""
+        # Test USERS_FILE
+        self.assertTrue(os.path.join('data', 'users.json') in Config.USERS_FILE)
+        
+        # Test PROPERTIES_FILE
+        self.assertTrue(os.path.join('data', 'properties.json') in Config.PROPERTIES_FILE)
+        
+        # Test TRANSACTIONS_FILE
+        self.assertTrue(os.path.join('data', 'transactions.json') in Config.TRANSACTIONS_FILE)
+        
+        # Test CATEGORIES_FILE
+        self.assertTrue(os.path.join('data', 'categories.json') in Config.CATEGORIES_FILE)
+        
+        # Test REIMBURSEMENTS_FILE
+        self.assertTrue(os.path.join('data', 'reimbursements.json') in Config.REIMBURSEMENTS_FILE)
+
+    def test_max_content_length(self):
+        """Test maximum content length configuration."""
+        # Test MAX_CONTENT_LENGTH is 5MB
+        self.assertEqual(Config.MAX_CONTENT_LENGTH, 5 * 1024 * 1024)
+        
+        # Verify it's a positive integer
+        self.assertIsInstance(Config.MAX_CONTENT_LENGTH, int)
+        self.assertGreater(Config.MAX_CONTENT_LENGTH, 0)
+
+    def test_api_key(self):
+        """Test API key configuration."""
+        self.assertIsInstance(Config.GEOAPIFY_API_KEY, str)
+        self.assertTrue(len(Config.GEOAPIFY_API_KEY) > 0)
+
+class TestConfigValidation(unittest.TestCase):
+    """Test suite for configuration validation."""
+
+    def test_directory_existence(self):
+        """Test directory existence and permissions."""
+        directories = [
+            Config.BASE_DIR,
+            Config.DATA_DIR,
+            Config.UPLOAD_FOLDER
+        ]
+        
+        for directory in directories:
+            with self.subTest(directory=directory):
+                # Test directory exists or can be created
+                if not os.path.exists(directory):
+                    os.makedirs(directory)
+                self.assertTrue(os.path.exists(directory))
+                
+                # Test directory is writable
+                test_file = os.path.join(directory, 'test_write')
+                try:
+                    with open(test_file, 'w') as f:
+                        f.write('test')
+                    self.assertTrue(os.path.exists(test_file))
+                finally:
+                    if os.path.exists(test_file):
+                        os.remove(test_file)
+
+    def test_file_permissions(self):
+        """Test file permissions for JSON files."""
+        json_files = [
+            Config.USERS_FILE,
+            Config.PROPERTIES_FILE,
+            Config.TRANSACTIONS_FILE,
+            Config.CATEGORIES_FILE,
+            Config.REIMBURSEMENTS_FILE
+        ]
+        
+        for file_path in json_files:
+            with self.subTest(file_path=file_path):
+                # Ensure directory exists
+                directory = os.path.dirname(file_path)
+                if not os.path.exists(directory):
+                    os.makedirs(directory)
+                
+                # Test file can be created and written to
+                try:
+                    with open(file_path, 'w') as f:
+                        f.write('{}')
+                    self.assertTrue(os.path.exists(file_path))
+                    
+                    # Test file can be read
+                    with open(file_path, 'r') as f:
+                        content = f.read()
+                    self.assertEqual(content, '{}')
+                finally:
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+
+class TestConfigEdgeCases(unittest.TestCase):
+    """Test suite for configuration edge cases."""
+
+    def test_path_normalization(self):
+        """Test path normalization."""
+        # Test with different path separators
+        self.assertEqual(
+            os.path.normpath(Config.DATA_DIR),
+            os.path.normpath(os.path.join(Config.BASE_DIR, 'data'))
+        )
+
+    def test_empty_environment_variables(self):
+        """Test behavior with empty environment variables."""
+        with patch.dict('os.environ', {'SECRET_KEY': ''}):
+            self.assertEqual(Config.SECRET_KEY, 'you-will-never-guess')
+
+    def test_special_characters_in_paths(self):
+        """Test handling of special characters in paths."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            special_path = os.path.join(temp_dir, 'special!@#$%^&*()')
+            os.makedirs(special_path)
             
-        if original_api_key:
-            os.environ['GEOAPIFY_API_KEY'] = original_api_key
-        elif 'GEOAPIFY_API_KEY' in os.environ:
-            del os.environ['GEOAPIFY_API_KEY']
+            # Test absolute path resolution
+            resolved_path = os.path.abspath(special_path)
+            self.assertTrue(os.path.exists(resolved_path))
 
+    def test_file_extension_case_sensitivity(self):
+        """Test file extension case handling."""
+        extensions = Config.ALLOWED_EXTENSIONS
+        test_cases = [
+            'test.PNG',
+            'test.pdf',
+            'test.JPG',
+            'test.CSV'
+        ]
+        
+        for filename in test_cases:
+            with self.subTest(filename=filename):
+                self.assertTrue(
+                    any(filename.lower().endswith(ext) for ext in extensions)
+                )
 
-def test_get_config():
-    """Test the get_config function."""
-    # Test with development environment
-    os.environ['FLASK_ENV'] = 'development'
-    config = get_config()
-    assert config == DevelopmentConfig
-    
-    # Test with testing environment
-    os.environ['FLASK_ENV'] = 'testing'
-    config = get_config()
-    assert config == TestingConfig
-    
-    # Test with production environment
-    os.environ['FLASK_ENV'] = 'production'
-    config = get_config()
-    assert config == ProductionConfig
-    
-    # Test with unknown environment
-    os.environ['FLASK_ENV'] = 'unknown'
-    config = get_config()
-    assert config == DevelopmentConfig
+    def test_max_content_length_boundaries(self):
+        """Test MAX_CONTENT_LENGTH boundaries."""
+        max_length = Config.MAX_CONTENT_LENGTH
+        
+        # Test maximum file size is reasonable
+        self.assertLess(max_length, 1024 * 1024 * 100)  # Less than 100MB
+        self.assertGreater(max_length, 1024 * 1024)     # Greater than 1MB
+
+if __name__ == '__main__':
+    unittest.main()

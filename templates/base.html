@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <!-- Favicon -->
+        <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo-blue.png') }}">
+        <link rel="shortcut icon" type="image/png" href="{{ url_for('static', filename='images/logo-blue.png') }}">
+        <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/logo-blue.png') }}">
+
+        <title>{% block title %}{% endblock %}</title>
+        
+        <!-- Bootstrap CSS -->
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+        
+        <!-- Toastr CSS -->
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet">
+        
+        <!-- Custom CSS -->
+        <link href="{{ url_for('static', filename='css/styles.css') }}" rel="stylesheet">
+        
+        {% block styles %}{% endblock %}
+    </head>
+    <body class="{% block body_class %}{% endblock %}">
+        <!-- Mobile Navigation Bar -->
+        <nav class="navbar navbar-light d-md-none fixed-top">
+            <div class="container-fluid">
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <a class="navbar-brand" href="{{ url_for('main.main') }}">
+                    <img src="{{ url_for('static', filename='images/logo.png') }}" 
+                         alt="Your Logo" 
+                         class="mobile-logo">
+                </a>
+            </div>
+        </nav>
+
+        <div class="wrapper">
+            <!-- Sidebar -->
+            <div class="col-md-2 d-md-block sidebar collapse" id="sidebarMenu">
+                <div class="row">
+                    <div class="col-12 mb-3 mt-2 d-none d-md-block">
+                        <div class="logo-container">
+                            <img src="{{ url_for('static', filename='images/logo.png') }}" 
+                                 alt="Your Logo" 
+                                 class="img-fluid" 
+                                 style="max-height: 150px">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion" id="accordionSidebar">
+                    {% if current_user.is_authenticated %}
+                    
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="main">
+                            <a href="{{ url_for('main.main') }}" class="accordion-button">
+                                <i class="bi bi-house"></i> Main
+                            </a>
+                        </h2>
+                     </div>
+                     
+                     <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingProperties">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                    data-bs-target="#collapseProperties" aria-expanded="false" 
+                                    aria-controls="collapseProperties">
+                                <i class="bi bi-building"></i> Properties
+                            </button>
+                        </h2>
+                        <div id="collapseProperties" class="accordion-collapse collapse" 
+                             aria-labelledby="headingProperties" data-bs-parent="#accordionSidebar">
+                            <div class="accordion-body">
+                                <ul class="nav flex-column">
+                                    <li><a href="{{ url_for('properties.add_properties') }}" class="nav-link">
+                                        <i class="bi bi-plus-square"></i> Add Properties
+                                    </a></li>
+                                    <li><a href="{{ url_for('properties.remove_properties') }}" class="nav-link">
+                                        <i class="bi bi-trash"></i> Remove Properties
+                                    </a></li>
+                                    <li><a href="{{ url_for('properties.edit_properties') }}" class="nav-link">
+                                        <i class="bi bi-pencil"></i> Edit Properties
+                                    </a></li>
+                                </ul>
+                            </div>
+                        </div>
+                     </div>
+                     
+                     <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingTransactions">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                    data-bs-target="#collapseTransactions" aria-expanded="false" 
+                                    aria-controls="collapseTransactions">
+                                <i class="bi bi-cash"></i> Transactions
+                            </button>
+                        </h2>
+                        <div id="collapseTransactions" class="accordion-collapse collapse" 
+                             aria-labelledby="headingTransactions" data-bs-parent="#accordionSidebar">
+                            <div class="accordion-body">
+                                <ul class="nav flex-column">
+                                    <li><a href="{{ url_for('transactions.add_transactions') }}" class="nav-link">
+                                        <i class="bi bi-plus-circle"></i> Add Transactions
+                                    </a></li>
+                                    <li><a href="{{ url_for('transactions.bulk_import') }}" class="nav-link">
+                                        <i class="bi bi-file-earmark-arrow-up"></i> Bulk Import Transactions
+                                    </a></li>
+                                    <li><a href="{{ url_for('transactions.view_transactions') }}" class="nav-link">
+                                        <i class="bi bi-table"></i> View Transactions
+                                    </a></li>
+                                </ul>
+                            </div>
+                        </div>
+                     </div>
+                     
+                     <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingAnalyses">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                    data-bs-target="#collapseAnalyses" aria-expanded="false" 
+                                    aria-controls="collapseAnalyses">
+                                <i class="bi bi-graph-up"></i> Analyses
+                            </button>
+                        </h2>
+                        <div id="collapseAnalyses" class="accordion-collapse collapse" 
+                             aria-labelledby="headingAnalyses" data-bs-parent="#accordionSidebar">
+                            <div class="accordion-body">
+                                <ul class="nav flex-column">
+                                    <li><a href="{{ url_for('analyses.create_analysis') }}" class="nav-link">
+                                        <i class="bi bi-plus-circle"></i> Create Analysis
+                                    </a></li>
+                                    <li><a href="{{ url_for('analyses.view_edit_analysis') }}" class="nav-link">
+                                        <i class="bi bi-pencil-square"></i> View/Edit Analysis
+                                    </a></li>
+                                    <li><a href="{{ url_for('analyses.mao_calculator') }}" class="nav-link">
+                                        <i class="bi bi-calculator"></i> MAO Calculator
+                                    </a></li>
+                                </ul>
+                            </div>
+                        </div>
+                     </div>
+                     
+                     <div class="accordion-item">
+                        <h2 id="headingDashboards" class="accordion-header">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" 
+                                    data-bs-target="#collapseDashboards" aria-expanded="true" 
+                                    aria-controls="collapseDashboards">
+                                <i class="bi bi-speedometer2"></i> Dashboards
+                            </button>
+                        </h2>
+                        <div id="collapseDashboards" class="accordion-collapse collapse" 
+                             aria-labelledby="headingDashboards" data-bs-parent="#accordionSidebar">
+                            <div class="accordion-body">
+                                <ul class="nav flex-column">
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="{{ url_for('dashboards.portfolio_view') }}">
+                                            <i class="bi bi-pie-chart"></i> Portfolio Overview
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="{{ url_for('dashboards.amortization_view') }}">
+                                            <i class="bi bi-graph-down"></i> Amortization Schedule
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                     </div>
+                     
+                     <div class="accordion-item">
+                        <h2 class="accordion-header" id="logout">
+                            <a href="{{ url_for('auth.logout') }}" class="accordion-button">
+                                <i class="bi bi-box-arrow-right"></i> Logout
+                            </a>
+                        </h2>
+                     </div>
+                     
+                     {% else %}
+                     <div class="accordion-item">
+                        <h2 class="accordion-header" id="login">
+                            <a href="{{ url_for('auth.login') }}" class="accordion-button">
+                                <i class="bi bi-box-arrow-in-right"></i> Login
+                            </a>
+                        </h2>
+                     </div>
+                     
+                     <div class="accordion-item">
+                        <h2 class="accordion-header" id="sign-up">
+                            <a href="{{ url_for('auth.signup') }}" class="accordion-button">
+                                <i class="bi bi-person-plus"></i> Sign Up
+                            </a>
+                        </h2>
+                     </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <main class="col-12 col-md-10">
+                <div class="container-fluid">
+                    {% block content %}{% endblock %}
+                </div>
+            </main>
+        </div>
+
+        <!-- Flash messages container -->
+        <div id="flask-messages" 
+            style="display: none;" 
+            data-messages='{{ get_flashed_messages(with_categories=true) | tojson if get_flashed_messages(with_categories=true) else "[]" }}'>
+        </div>
+
+        <!-- JavaScript Dependencies -->
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+        
+        <!-- Your custom JavaScript (order is important) -->
+        <script src="{{ url_for('static', filename='js/base.js') }}"></script>
+        <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
+        <script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
+        {% block extra_js %}{% endblock %}
+    </body>
+</html>
