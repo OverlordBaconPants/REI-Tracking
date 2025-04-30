@@ -80,14 +80,15 @@ def _filter_properties_by_user(properties: List[Dict], user_name: str) -> List[D
 
 
 def _format_property_addresses(properties: List[Dict]) -> List[Dict]:
-    """Format addresses for all properties."""
+    """Format addresses for all properties and sort them alphabetically."""
     for prop in properties:
         if prop.get('address'):
             display_address, full_address = format_address(prop['address'], 'full')
             prop['display_address'] = display_address
             prop['full_address'] = full_address
     
-    return properties
+    # Sort properties by address in ascending alphanumeric order
+    return sorted(properties, key=lambda p: p.get('address', '').lower())
 
 
 def add_transaction(transaction_data: Dict) -> str:

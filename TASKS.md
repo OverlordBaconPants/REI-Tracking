@@ -427,3 +427,5 @@ For any task to be considered complete, it must meet these criteria:
     - [x] Restructure imports to break circular dependency
     - [x] Move utility functions to validators.py
     - [x] Remove Validator import from money.py
+- [x] Sort properties in dropdown menus in ascending alphanumeric order
+    - [x] Update _format_property_addresses function in transaction_service.py to sort properties

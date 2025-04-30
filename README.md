@@ -151,6 +151,8 @@ The application provides comprehensive financial calculations for real estate in
 The application includes a comprehensive transaction filtering system:
 
 - **Property Filtering**: Filter transactions by specific property or multiple properties
+  - Properties displayed in ascending alphanumeric order for consistent navigation
+  - Standardized address formatting for clear property identification
 - **Date Range Filtering**: Filter transactions by date range with validation
 - **Category and Type Filtering**: Filter by transaction type (income/expense) and category
 - **Description Search**: Search transactions by description text
@@ -631,67 +633,202 @@ REI-Tracker/
 ├── PLANNING.md               # Project planning and workflow guidelines
 ├── TASKS.md                  # Task list and progress tracking
 ├── DATA_STRUCTURES.md        # Comprehensive documentation of all data structures
+├── AUTOMATED_TESTING_IMPLEMENTATION.md # Automated testing implementation plan
 ├── requirements.txt          # Python dependencies
 ├── .env.example              # Example environment variables
 ├── pytest.ini                # Pytest configuration
 ├── wsgi.py                   # WSGI entry point for production servers
-├── src/                      # Source code
-│   ├── __init__.py           # Package initialization
-│   ├── main.py               # Main application module
-│   ├── models/               # Data models
-│   │   ├── __init__.py
-│   │   ├── base_model.py     # Base model class
-│   │   ├── user.py           # User model
-│   │   ├── property.py       # Property model
-│   │   ├── transaction.py    # Transaction model
-│   │   ├── analysis.py       # Analysis model
-│   │   ├── loan.py           # Loan model
-│   │   ├── partner_contribution.py # Partner contribution model
-│   │   └── category.py       # Category model
-│   ├── repositories/         # Data repositories
-│   │   ├── __init__.py
-│   │   ├── base_repository.py # Base repository class
-│   │   ├── user_repository.py # User repository
-│   │   └── ...
-│   ├── services/             # Business logic services
-│   │   ├── __init__.py
-│   │   ├── file_service.py   # File operations service
-│   │   ├── validation_service.py # Data validation service
-│   │   └── ...
-│   ├── routes/               # API routes
-│   │   ├── __init__.py
-│   │   ├── base_routes.py    # Base routes
-│   │   ├── user_routes.py    # User routes
-│   │   └── ...
-│   ├── static/               # Static assets
-│   │   ├── css/              # CSS files
-│   │   ├── js/               # JavaScript files
-│   │   └── images/           # Image files
-│   ├── templates/            # HTML templates
-│   └── utils/                # Utility functions
-│       ├── __init__.py
-│       ├── logging_utils.py  # Logging utilities
-│       └── ...
-├── tests/                    # Tests
+├── app.py                    # Main application module
+├── __init__.py               # Package initialization
+├── startup.sh                # Startup script for development
+├── models/                   # Data models
 │   ├── __init__.py
-│   ├── conftest.py           # Pytest fixtures
-│   ├── test_models/          # Model tests
-│   ├── test_repositories/    # Repository tests
-│   ├── test_services/        # Service tests
-│   ├── test_routes/          # Route tests
-│   └── test_utils/           # Utility tests
+│   └── models.py             # Database models
+├── routes/                   # API routes
+│   ├── analyses.py           # Analysis routes
+│   ├── api.py                # API routes
+│   ├── app.py                # App routes
+│   ├── auth.py               # Authentication routes
+│   ├── dashboards.py         # Dashboard routes
+│   ├── main.py               # Main routes
+│   ├── monitor.py            # Monitoring routes
+│   ├── properties.py         # Property routes
+│   └── transactions.py       # Transaction routes
+├── services/                 # Business logic services
+│   ├── analysis_calculations.py # Analysis calculations
+│   ├── analysis_schema.py    # Analysis schema validation
+│   ├── analysis_service.py   # Analysis service
+│   ├── property_kpi_service.py # Property KPI service
+│   ├── report_generator.py   # Report generation service
+│   ├── transaction_import_service.py # Transaction import service
+│   ├── transaction_report_generator.py # Transaction report generator
+│   ├── transaction_service.py # Transaction service
+│   └── user_service.py       # User service
+├── static/                   # Static assets
+│   ├── css/                  # CSS files
+│   │   └── styles.css        # Main stylesheet
+│   ├── images/               # Image files
+│   │   ├── logo.png          # Logo image
+│   │   └── logo-blue.png     # Blue logo variant
+│   └── js/                   # JavaScript files
+│       ├── base.js           # Base JavaScript functionality
+│       ├── config.js         # Configuration
+│       ├── main.js           # Main JavaScript functionality
+│       ├── notifications.js  # Notification system
+│       ├── analysis/         # Analysis-specific JavaScript
+│       │   ├── brrrr.js      # BRRRR analysis
+│       │   ├── calculator.js # Analysis calculator
+│       │   ├── comps_handler.js # Comps handler
+│       │   ├── core.js       # Core analysis functionality
+│       │   ├── form_handler.js # Form handling
+│       │   ├── lease_option.js # Lease option analysis
+│       │   ├── ltr.js        # Long-term rental analysis
+│       │   ├── multi_family.js # Multi-family analysis
+│       │   ├── multi-family.js # Alternative multi-family analysis
+│       │   ├── property_details.js # Property details
+│       │   ├── registry.js   # Analysis registry
+│       │   ├── renderer.js   # Analysis renderer
+│       │   ├── ui_helpers.js # UI helpers
+│       │   └── validators.js # Validators
+│       └── modules/          # JavaScript modules
+│           ├── add_properties.js # Add properties
+│           ├── add_transactions.js # Add transactions
+│           ├── analysis.js   # Analysis module
+│           ├── auth.js       # Authentication module
+│           ├── bulk_import.js # Bulk import
+│           ├── comps_handler.js # Comps handler
+│           ├── dashboards.js # Dashboards
+│           ├── edit_properties.js # Edit properties
+│           ├── edit_transactions.js # Edit transactions
+│           ├── kpi_comparison.js # KPI comparison
+│           ├── kpi_dashboard.js # KPI dashboard
+│           ├── landing.js    # Landing page
+│           ├── loan_term_toggle.js # Loan term toggle
+│           ├── main.js       # Main module
+│           ├── mao_calculator.js # MAO calculator
+│           ├── password_validation.js # Password validation
+│           ├── remove_properties.js # Remove properties
+│           ├── view_edit_analysis.js # View/edit analysis
+│           ├── view_transactions.js # View transactions
+│           └── welcome.js    # Welcome page
+├── templates/                # HTML templates
+│   ├── 403.html             # 403 error page
+│   ├── 404.html             # 404 error page
+│   ├── 500.html             # 500 error page
+│   ├── base.html            # Base template
+│   ├── bulk_import.html     # Bulk import page
+│   ├── forgot_password.html # Forgot password page
+│   ├── index.html           # Index page
+│   ├── landing.html         # Landing page
+│   ├── login.html           # Login page
+│   ├── new_user_welcome.html # New user welcome page
+│   ├── signup.html          # Signup page
+│   ├── analyses/            # Analysis templates
+│   │   ├── _analysis_cards.html # Analysis cards partial
+│   │   ├── _loan_section.html # Loan section partial
+│   │   ├── create_analysis.html # Create analysis page
+│   │   ├── kpi_comparison.html # KPI comparison page
+│   │   ├── mao_calculator.html # MAO calculator page
+│   │   └── view_edit_analysis.html # View/edit analysis page
+│   ├── dashboards/          # Dashboard templates
+│   │   ├── dash_amortization.html # Amortization dashboard
+│   │   └── dash_transactions.html # Transactions dashboard
+│   ├── main/                # Main templates
+│   │   ├── amortization.html # Amortization page
+│   │   ├── dashboards.html  # Dashboards page
+│   │   ├── main.html        # Main page
+│   │   ├── portfolio.html   # Portfolio page
+│   │   ├── properties.html  # Properties page
+│   │   └── transactions.html # Transactions page
+│   ├── properties/          # Property templates
+│   │   ├── add_properties.html # Add properties page
+│   │   ├── edit_properties.html # Edit properties page
+│   │   ├── remove_properties.html # Remove properties page
+│   │   └── logs/            # Property logs
+│   │       └── app.log.1    # Application log
+│   └── transactions/        # Transaction templates
+│       ├── add_transactions.html # Add transactions page
+│       ├── bulk_import.html # Bulk import page
+│       ├── edit_transactions.html # Edit transactions page
+│       ├── remove_transactions.html # Remove transactions page
+│       └── view_transactions.html # View transactions page
+├── utils/                    # Utility functions
+│   ├── api_mappers.py       # API mappers
+│   ├── calculators.py       # Calculators
+│   ├── comps_handler.py     # Comps handler
+│   ├── converters.py        # Converters
+│   ├── error_handling.py    # Error handling
+│   ├── financial_calculator.py # Financial calculator
+│   ├── flash.py             # Flash messages
+│   ├── json_handler.py      # JSON handler
+│   ├── mao_calculator.py    # MAO calculator
+│   ├── money.py             # Money utilities
+│   ├── response_handler.py  # Response handler
+│   ├── standardized_metrics.py # Standardized metrics
+│   ├── utils.py             # General utilities
+│   └── validators.py        # Validators
+├── dash_apps/                # Dash applications
+│   ├── __init__.py
+│   ├── dash_amortization.py # Amortization dashboard
+│   ├── dash_portfolio.py    # Portfolio dashboard
+│   └── dash_transactions.py # Transactions dashboard
 ├── data/                     # Data files
-│   ├── categories.json       # Category data
-│   ├── properties.json       # Property data
-│   ├── transactions.json     # Transaction data (gitignored)
-│   ├── users.json            # User data (gitignored)
-│   ├── loans.json            # Loan data
-│   ├── partner_contributions.json # Partner contribution data
-│   └── ...
-└── docs/                     # Documentation
-    ├── project_structure.md  # Project structure documentation
-    ├── api_documentation.md  # API documentation
-    └── development_guide.md  # Development guide
+│   └── categories.json      # Category data
+├── flask_session/           # Flask session files
+│   ├── 2029240f6d1128be89ddc32729463129
+│   ├── 8c3f3bf6892ab30c7fca76c70af9cd80
+│   └── e3fc915900934af5eb1f2680a17026b1
+├── logs/                     # Log files
+│   └── .gitkeep             # Git keep file
+└── tests/                    # Tests
+    ├── test_frontend/       # Frontend tests
+    │   ├── conftest.py      # Pytest fixtures
+    │   ├── run_tests.py     # Test runner script
+    │   ├── base/            # Test framework foundation
+    │   │   ├── __init__.py
+    │   │   ├── base_test.py # Base test class
+    │   │   ├── browser.py   # Browser setup
+    │   │   ├── config.py    # Test configuration
+    │   │   └── logger.py    # Test logging
+    │   ├── page_objects/    # Page Object Models
+    │   │   ├── __init__.py
+    │   │   ├── base_page.py # Base page object
+    │   │   ├── login_page.py # Login page object
+    │   │   ├── property/    # Property page objects
+    │   │   ├── transaction/ # Transaction page objects
+    │   │   ├── analysis/    # Analysis page objects
+    │   │   ├── dashboard/   # Dashboard page objects
+    │   │   └── components/  # Component page objects
+    │   ├── test_data/       # Test data
+    │   │   ├── __init__.py
+    │   │   ├── users.py     # User test data
+    │   │   ├── properties.py # Property test data
+    │   │   ├── transactions.py # Transaction test data
+    │   │   ├── analyses.py  # Analysis test data
+    │   │   └── test_files/  # Test files
+    │   ├── utilities/       # Test utilities
+    │   │   ├── __init__.py
+    │   │   ├── data_generator.py # Data generator
+    │   │   ├── screenshot.py # Screenshot utilities
+    │   │   ├── wait_helper.py # Wait helpers
+    │   │   └── assertion_helper.py # Assertion helpers
+    │   ├── workflows/       # Test workflows
+    │   │   ├── __init__.py
+    │   │   ├── auth_workflows.py # Authentication workflows
+    │   │   ├── property_workflows.py # Property workflows
+    │   │   ├── transaction_workflows.py # Transaction workflows
+    │   │   └── analysis_workflows.py # Analysis workflows
+    │   └── tests/           # Test cases
+    │       ├── test_auth/   # Authentication tests
+    │       ├── test_property/ # Property tests
+    │       ├── test_transaction/ # Transaction tests
+    │       ├── test_analysis/ # Analysis tests
+    │       ├── test_dashboard/ # Dashboard tests
+    │       └── test_integrated/ # Integrated tests
+    ├── test_models/         # Model tests
+    ├── test_services/       # Service tests
+    ├── test_routes/         # Route tests
+    └── test_utils/          # Utility tests
 ```
 
 ## Development Guide

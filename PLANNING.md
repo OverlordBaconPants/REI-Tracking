@@ -454,6 +454,7 @@ Add strategic logging statements throughout the codebase:
 | 2025-04-29 | Documented property_access field in User model | To align implementation with documented data structures, adding the property_access field to DATA_STRUCTURES.md with comprehensive documentation of access levels and equity shares, and creating unit tests to validate functionality |
 | 2025-04-29 | Enhanced landing page for unauthenticated users | To provide a more informative and engaging experience for new users, created a comprehensive landing page that showcases the application's features and capabilities, with proper authentication flow to redirect unauthenticated users to this page |
 | 2025-04-30 | Fixed circular import between money.py and validators.py | To resolve an import error that was preventing the application from starting, restructured the imports by moving utility functions to validators.py and removing the circular dependency |
+| 2025-04-30 | Implemented alphanumeric sorting for property dropdowns | To improve user experience by displaying properties in a consistent, predictable order in all dropdown menus throughout the application, modified the _format_property_addresses function to sort properties by address in ascending alphanumeric order |
 
 ---
 
