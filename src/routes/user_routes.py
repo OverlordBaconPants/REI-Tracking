@@ -9,6 +9,7 @@ from flask import Blueprint, jsonify, request, session, make_response, g
 import json
 from typing import Dict, Any, Optional, Tuple
 from passlib.hash import pbkdf2_sha256
+from werkzeug.security import generate_password_hash
 
 from src.models.user import User
 from src.repositories.user_repository import UserRepository
@@ -85,8 +86,8 @@ def register():
                 'errors': {'email': ['Email already exists']}
             }), 400
         
-        # Hash password
-        data['password'] = pbkdf2_sha256.hash(data.get('password', ''))
+        # Hash password using Werkzeug's generate_password_hash for compatibility with legacy code
+        data['password'] = generate_password_hash(data.get('password', ''), method='pbkdf2:sha256')
         
         # Validate user data
         validation_result = ValidationService.validate_model(User, data)
@@ -398,9 +399,9 @@ def update_user(user_id: str):
                 'errors': {'role': ['Only admins can change roles']}
             }), 403
         
-        # Hash password if provided
+        # Hash password if provided using Werkzeug's generate_password_hash for compatibility with legacy code
         if 'password' in data and data['password']:
-            data['password'] = pbkdf2_sha256.hash(data['password'])
+            data['password'] = generate_password_hash(data['password'], method='pbkdf2:sha256')
         else:
             # Keep existing password
             data['password'] = user.password

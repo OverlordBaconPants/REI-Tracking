@@ -11,6 +11,7 @@ from typing import Dict, Optional, Tuple, Any
 from flask import session, request
 import json
 from passlib.hash import pbkdf2_sha256
+from werkzeug.security import check_password_hash
 
 from src.models.user import User
 from src.repositories.user_repository import UserRepository
@@ -71,10 +72,19 @@ class AuthService:
             return False, None, "Invalid email or password"
         
         # Verify the password
-        if not pbkdf2_sha256.verify(password, user.password):
-            self._record_failed_attempt(email)
-            logger.warning(f"Failed login attempt for user: {email}")
-            return False, None, "Invalid email or password"
+        # Check if the password is in Werkzeug format (starts with pbkdf2:sha256:)
+        if user.password.startswith('pbkdf2:sha256:'):
+            # Use Werkzeug's check_password_hash for Werkzeug-formatted hashes
+            if not check_password_hash(user.password, password):
+                self._record_failed_attempt(email)
+                logger.warning(f"Failed login attempt for user: {email}")
+                return False, None, "Invalid email or password"
+        else:
+            # Use passlib's verify for passlib-formatted hashes
+            if not pbkdf2_sha256.verify(password, user.password):
+                self._record_failed_attempt(email)
+                logger.warning(f"Failed login attempt for user: {email}")
+                return False, None, "Invalid email or password"
         
         # Reset login attempts on successful login
         self._reset_login_attempts(email)
