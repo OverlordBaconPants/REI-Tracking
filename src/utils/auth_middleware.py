@@ -102,9 +102,9 @@ def init_auth_middleware(app: Any) -> None:
                     'errors': {'_error': [error]}
                 }), 401
             else:
-                # For non-API routes, redirect to login page
+                # For non-API routes, redirect to landing page
                 from flask import redirect, url_for
-                return redirect(url_for('users.login'))
+                return redirect(url_for('base.landing'))
         
         # Store current user in g for easy access
         g.current_user = auth_service.get_current_user()
@@ -141,6 +141,7 @@ def _is_public_route(path: str) -> bool:
         '/api/users/register',
         '/static/',
         '/favicon.ico',
+        '/landing',
     ]
     
     # Special case for the login route
@@ -174,9 +175,9 @@ def login_required(f: Callable) -> Callable:
                     'errors': {'_error': ['Authentication required']}
                 }), 401
             else:
-                # For non-API routes, redirect to login page
+                # For non-API routes, redirect to landing page
                 from flask import redirect, url_for
-                return redirect(url_for('users.login'))
+                return redirect(url_for('base.landing'))
         
         return f(*args, **kwargs)
     
@@ -213,9 +214,9 @@ def admin_required(f: Callable) -> Callable:
                     'errors': {'_error': ['Authentication required']}
                 }), 401
             else:
-                # For non-API routes, redirect to login page
+                # For non-API routes, redirect to landing page
                 from flask import redirect, url_for
-                return redirect(url_for('users.login'))
+                return redirect(url_for('base.landing'))
         
         if 'user_role' not in session or session['user_role'] != 'Admin':
             return jsonify({

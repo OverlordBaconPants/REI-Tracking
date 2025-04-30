@@ -2,10 +2,10 @@
 Base routes module for the REI-Tracker application.
 
 This module provides the base routes for the application, including
-health check and static file routes.
+health check, static file routes, and the public landing page.
 """
 
-from flask import Blueprint, jsonify, request, send_from_directory, redirect, url_for
+from flask import Blueprint, jsonify, request, send_from_directory, redirect, url_for, render_template
 import os
 
 from src.config import current_config
@@ -19,15 +19,28 @@ blueprint = Blueprint('base', __name__)
 
 @blueprint.route('/')
 def index():
-    """Root route that redirects to the dashboards or login page."""
-    logger.info("User accessed root route, redirecting to dashboards")
-    return redirect(url_for('dashboards.dashboards'))
+    """Root route that redirects to the dashboards or landing page based on authentication."""
+    from flask import session
+    
+    # Check if user is authenticated
+    if 'user_id' in session:
+        logger.info("Authenticated user accessed root route, redirecting to dashboards")
+        return redirect(url_for('dashboards.dashboards'))
+    else:
+        logger.info("Unauthenticated user accessed root route, redirecting to landing page")
+        return redirect(url_for('base.landing'))
 
 @blueprint.route('/login')
 def login():
     """Login route that redirects to the user login page."""
     logger.info("User accessed login route, redirecting to user login")
     return redirect(url_for('users.login'))
+
+@blueprint.route('/landing')
+def landing():
+    """Public landing page for unauthenticated users."""
+    logger.info("User accessed landing page")
+    return render_template('public/landing.html')
 
 
 @blueprint.route('/health', methods=['GET'])

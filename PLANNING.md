@@ -438,6 +438,7 @@ Add strategic logging statements throughout the codebase:
 | 2025-04-29 | Established rule against storing calculated values | To improve data integrity, reduce storage needs, and maintain a single source of truth for calculations by computing derived values at runtime rather than storing them |
 | 2025-04-29 | Standardized Transaction model ID field and simplified Reimbursement structure | To align implementation with documented data structures, ensuring ID field is explicitly defined in Transaction class and simplifying the Reimbursement structure while maintaining validation logic |
 | 2025-04-29 | Documented property_access field in User model | To align implementation with documented data structures, adding the property_access field to DATA_STRUCTURES.md with comprehensive documentation of access levels and equity shares, and creating unit tests to validate functionality |
+| 2025-04-29 | Enhanced landing page for unauthenticated users | To provide a more informative and engaging experience for new users, created a comprehensive landing page that showcases the application's features and capabilities, with proper authentication flow to redirect unauthenticated users to this page |
 
 ---
 
