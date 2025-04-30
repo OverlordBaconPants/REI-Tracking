@@ -26,7 +26,8 @@ The analysis data structure represents various types of property investment anal
 - `analysis_name`: string
 
 ### Property Details
-- `address`: string
+- `property_id`: string (full property address used as identifier)
+- `property_type`: string (Single Family, Condo, Townhouse, Manufactured, Multi-Family)
 - `square_footage`: integer
 - `lot_size`: integer
 - `year_built`: integer
@@ -68,6 +69,7 @@ The analysis data structure represents various types of property investment anal
 - `initial_loan_name`: string
 - `initial_loan_amount`: integer
 - `initial_loan_interest_rate`: float
+- `initial_interest_only`: boolean (indicates if initial loan is interest-only)
 - `initial_loan_term`: integer
 - `initial_loan_down_payment`: integer
 - `initial_loan_closing_costs`: integer
@@ -76,6 +78,7 @@ The analysis data structure represents various types of property investment anal
 - `refinance_loan_name`: string
 - `refinance_loan_amount`: integer
 - `refinance_loan_interest_rate`: float
+- `refinance_ltv_percentage`: float (percentage value for refinance loan-to-value)
 - `refinance_loan_term`: integer
 - `refinance_loan_down_payment`: integer
 - `refinance_loan_closing_costs`: integer
@@ -84,21 +87,75 @@ The analysis data structure represents various types of property investment anal
 - `loan1_loan_name`: string
 - `loan1_loan_amount`: integer
 - `loan1_loan_interest_rate`: float
+- `loan1_interest_only`: boolean (indicates if loan1 is interest-only)
 - `loan1_loan_term`: integer
 - `loan1_loan_down_payment`: integer
 - `loan1_loan_closing_costs`: integer
 - `loan2_loan_name`: string
 - `loan2_loan_amount`: integer
 - `loan2_loan_interest_rate`: float
+- `loan2_interest_only`: boolean (indicates if loan2 is interest-only)
 - `loan2_loan_term`: integer
 - `loan2_loan_down_payment`: integer
 - `loan2_loan_closing_costs`: integer
 - `loan3_loan_name`: string
 - `loan3_loan_amount`: integer
 - `loan3_loan_interest_rate`: float
+- `loan3_interest_only`: boolean (indicates if loan3 is interest-only)
 - `loan3_loan_term`: integer
 - `loan3_loan_down_payment`: integer
 - `loan3_loan_closing_costs`: integer
+
+### Balloon Payment Fields
+- `has_balloon_payment`: boolean (indicates if a balloon payment is configured)
+- `balloon_due_date`: string (ISO format date for balloon payment)
+- `balloon_refinance_ltv_percentage`: float
+- `balloon_refinance_loan_amount`: integer
+- `balloon_refinance_loan_interest_rate`: float
+- `balloon_refinance_loan_term`: integer
+- `balloon_refinance_loan_down_payment`: integer
+- `balloon_refinance_loan_closing_costs`: integer
+
+### Lease Option Fields
+- `option_consideration_fee`: integer (non-refundable upfront fee for lease option)
+- `option_term_months`: integer (duration of option period in months)
+- `strike_price`: integer (agreed upon future purchase price)
+- `monthly_rent_credit_percentage`: float (percentage of monthly rent applied as credit)
+- `rent_credit_cap`: integer (maximum total rent credit allowed)
+
+### Multi-Family Specific Fields
+- `total_units`: integer (total number of units in the property)
+- `occupied_units`: integer (number of currently occupied units)
+- `floors`: integer (number of floors in the building)
+- `other_income`: integer (additional income beyond unit rent)
+- `total_potential_income`: integer (maximum possible income if fully occupied)
+- `common_area_maintenance`: integer (monthly cost for common areas)
+- `elevator_maintenance`: integer (monthly cost for elevator maintenance)
+- `staff_payroll`: integer (monthly cost for property staff)
+- `trash_removal`: integer (monthly cost for trash services)
+- `common_utilities`: integer (monthly cost for common area utilities)
+- `unit_types`: string (JSON string representing array of unit types)
+  ```json
+  [
+    {
+      "type": "1BR/1BA",
+      "count": 4,
+      "occupied": 3,
+      "square_footage": 750,
+      "rent": 1200
+    },
+    {
+      "type": "2BR/2BA",
+      "count": 2,
+      "occupied": 2,
+      "square_footage": 1100,
+      "rent": 1800
+    }
+  ]
+  ```
+
+### Notes Field
+- `notes`: string (user notes about the analysis, max 1000 characters)
 
 ### Comps Integration Data
 - `comps_data`: object (null if comps haven't been run)
@@ -125,6 +182,23 @@ The analysis data structure represents various types of property investment anal
     - `daysOnMarket`: integer
     - `distance`: float
     - `correlation`: float
+  - `rental_comps`: object (null if rental comps haven't been run)
+    - `last_run`: ISO 8601 datetime string
+    - `estimated_rent`: integer
+    - `rent_range_low`: integer
+    - `rent_range_high`: integer
+    - `comparable_rentals`: array of rental property objects
+    - `confidence_score`: float
+  - `mao`: object (null if MAO hasn't been calculated)
+    - `value`: integer (maximum allowable offer)
+    - `arv`: integer (after repair value used in calculation)
+    - `ltv_percentage`: float (loan-to-value percentage used)
+    - `renovation_costs`: integer
+    - `closing_costs`: integer
+    - `monthly_holding_costs`: float
+    - `total_holding_costs`: float
+    - `holding_months`: integer
+    - `max_cash_left`: integer
 
 ### Example Comps Data
 ```json
@@ -179,7 +253,7 @@ This schema defines the structure for real estate property data, including purch
 
 | Field | Type | Description |
 |-------|------|-------------|
-| address | string | Full property address including street, city, state, zip, and country |
+| property_id | string | Full property address including street, city, state, zip, and country |
 | purchase_price | number | Total purchase price in USD |
 | purchase_date | string | Date of purchase (YYYY-MM-DD format) |
 | down_payment | number | Down payment amount in USD |
@@ -310,6 +384,7 @@ The users data structure stores user information, credentials, and roles.
 | password | string | Hashed password using PBKDF2 with SHA-256 |
 | role | string | User's role (Admin or User) |
 | property_access | array | List of properties the user has access to with access levels and equity shares |
+| mao_preferences | object | User's preferences for MAO calculations |
 
 ### Property Access Object Structure
 
@@ -318,6 +393,15 @@ The users data structure stores user information, credentials, and roles.
 | property_id | string | Property identifier (typically the full address) |
 | access_level | string | Access level ("owner", "manager", "editor", "viewer") |
 | equity_share | number | User's equity share percentage in the property (optional) |
+
+### MAO Preferences Object Structure
+
+| Field | Type | Description |
+|-------|------|-------------|
+| max_cash_left | number | Maximum cash to leave in a deal (default: 10000) |
+| default_ltv_percentage | number | Default loan-to-value percentage (default: 75.0) |
+| default_holding_costs_buffer | number | Percentage buffer for holding costs (default: 10.0) |
+| default_renovation_contingency | number | Percentage contingency for renovation (default: 15.0) |
 
 ### Example User Object
 ```json
@@ -340,7 +424,13 @@ The users data structure stores user information, credentials, and roles.
       "access_level": "manager",
       "equity_share": 0.0
     }
-  ]
+  ],
+  "mao_preferences": {
+    "max_cash_left": 10000,
+    "default_ltv_percentage": 75.0,
+    "default_holding_costs_buffer": 10.0,
+    "default_renovation_contingency": 15.0
+  }
 }
 ```
 

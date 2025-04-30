@@ -4,6 +4,7 @@ from datetime import datetime
 import logging
 from flask import session, current_app
 from utils.mao_calculator import calculate_mao
+from utils.api_mappers import ApiMapperFactory
 
 logger = logging.getLogger(__name__)
 
@@ -216,25 +217,27 @@ def fetch_property_comps(
             data['comparables'] = []
             logger.warning("No comparables found in API response")
         
-        # Add timestamp for when comps were run
-        data['last_run'] = datetime.utcnow().isoformat()
+        # Map the API response to our standardized format
+        rentcast_mapper = ApiMapperFactory.get_mapper("rentcast")
+        standardized_data = rentcast_mapper.map_property_comps(data)
         
-        logger.debug(f"About to calculate MAO with analysis data: {bool(analysis_data)} and price: {'price' in data}")
+        # Add timestamp for when comps were run (already added by mapper)
+        logger.debug(f"About to calculate MAO with analysis data: {bool(analysis_data)} and estimated_value: {'estimated_value' in standardized_data}")
 
         # Calculate MAO if analysis data is provided and we have an estimated value
-        if analysis_data and 'price' in data:
+        if analysis_data and 'estimated_value' in standardized_data:
             try:
-                arv = data['price']
+                arv = standardized_data['estimated_value']
                 mao_data = calculate_mao(arv, analysis_data)
-                data['mao'] = mao_data
+                standardized_data['mao'] = mao_data
                 logger.debug(f"Calculated MAO: ${mao_data['value']:.2f} for ARV: ${arv:.2f}")
             except Exception as e:
                 logger.error(f"Error calculating MAO: {str(e)}")
                 # Don't fail the entire operation if MAO calculation fails
         
         # After MAO calculation:
-        if 'mao' in data:
-            logger.debug(f"MAO calculation successful: {data['mao']['value']}")
+        if 'mao' in standardized_data:
+            logger.debug(f"MAO calculation successful: {standardized_data['mao']['value']}")
         else:
             logger.debug("MAO calculation not included in response")
 
@@ -244,9 +247,9 @@ def fetch_property_comps(
         logger.debug(f"Updated run count to {run_count}")
         
         # Verify all required data is present in the final result
-        logger.debug(f"Final comps data has keys: {list(data.keys())}")
+        logger.debug(f"Final comps data has keys: {list(standardized_data.keys())}")
         
-        return data
+        return standardized_data
         
     except requests.exceptions.RequestException as e:
         logger.error(f"RentCast API request failed: {str(e)}")
@@ -341,20 +344,11 @@ def fetch_rental_comps(
             data['comparables'] = filtered_comps
             logger.debug(f"Filtered {len(data.get('comparables', []))} rental properties")
         
-        # Add timestamp for when comps were run
-        data['last_run'] = datetime.utcnow().isoformat()
+        # Map the API response to our standardized format
+        rentcast_mapper = ApiMapperFactory.get_mapper("rentcast")
+        standardized_data = rentcast_mapper.map_rental_comps(data)
         
-        # Reformat the data for consistency with our existing structure
-        rental_comps = {
-            'last_run': data['last_run'],
-            'estimated_rent': data.get('rent', 0),
-            'rent_range_low': data.get('rentRangeLow', 0),
-            'rent_range_high': data.get('rentRangeHigh', 0),
-            'comparable_rentals': data.get('comparables', []),
-            'confidence_score': data.get('confidenceScore', 0)
-        }
-        
-        return rental_comps
+        return standardized_data
         
     except requests.exceptions.RequestException as e:
         logger.error(f"RentCast Rental API request failed: {str(e)}")
@@ -380,7 +374,7 @@ def calculate_mao_from_analysis(arv: float, analysis_data: Dict) -> Dict:
         # Handle different analysis types
         if 'BRRRR' in analysis_data.get('analysis_type', ''):
             # Use refinance LTV for BRRRR
-            refinance_ltv = float(analysis_data.get('refinance_loan_interest_rate', 75.0))
+            refinance_ltv = float(analysis_data.get('refinance_ltv_percentage', 75.0))
             expected_ltv = refinance_ltv
         elif analysis_data.get('has_balloon_payment'):
             # Use balloon refinance LTV if balloon payment is enabled
@@ -460,21 +454,21 @@ def update_analysis_comps(analysis: Dict, comps_data: Dict, rental_comps: Dict =
         comps_data = {}
         return analysis  # Early return to avoid error
     
-    # Check if comps_data has all required keys
-    required_keys = ['price', 'priceRangeLow', 'priceRangeHigh', 'comparables', 'last_run']
+    # Check if comps_data has all required keys (using standardized field names)
+    required_keys = ['estimated_value', 'value_range_low', 'value_range_high', 'comparables', 'last_run']
     missing_keys = [key for key in required_keys if key not in comps_data]
     if missing_keys:
         logger.error(f"comps_data is missing required keys: {missing_keys}")
         return analysis  # Early return to avoid error
     
-    # Update property comps data
+    # Update property comps data (already using standardized field names)
     try:
         analysis['comps_data'].update({
             'last_run': comps_data['last_run'],
             'run_count': run_count,
-            'estimated_value': comps_data['price'],
-            'value_range_low': comps_data['priceRangeLow'],
-            'value_range_high': comps_data['priceRangeHigh'],
+            'estimated_value': comps_data['estimated_value'],
+            'value_range_low': comps_data['value_range_low'],
+            'value_range_high': comps_data['value_range_high'],
             'comparables': comps_data['comparables']
         })
         logger.debug("Successfully updated comps_data")
@@ -484,9 +478,9 @@ def update_analysis_comps(analysis: Dict, comps_data: Dict, rental_comps: Dict =
         analysis['comps_data'] = {
             'last_run': comps_data.get('last_run'),
             'run_count': run_count,
-            'estimated_value': comps_data.get('price'),
-            'value_range_low': comps_data.get('priceRangeLow'),
-            'value_range_high': comps_data.get('priceRangeHigh'),
+            'estimated_value': comps_data.get('estimated_value'),
+            'value_range_low': comps_data.get('value_range_low'),
+            'value_range_high': comps_data.get('value_range_high'),
             'comparables': comps_data.get('comparables', [])
         }
     
@@ -497,9 +491,9 @@ def update_analysis_comps(analysis: Dict, comps_data: Dict, rental_comps: Dict =
     # Add rental comps data if available
     if rental_comps:
         # Calculate cap rate if we have both estimated value and rent
-        if comps_data.get('price', 0) > 0 and rental_comps.get('estimated_rent', 0) > 0:
+        if comps_data.get('estimated_value', 0) > 0 and rental_comps.get('estimated_rent', 0) > 0:
             annual_rent = rental_comps['estimated_rent'] * 12
-            property_value = comps_data['price']
+            property_value = comps_data['estimated_value']
             cap_rate = (annual_rent / property_value) * 100
             rental_comps['cap_rate'] = round(cap_rate, 2)  # Store as percentage
         
