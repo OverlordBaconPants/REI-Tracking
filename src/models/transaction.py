@@ -4,6 +4,7 @@ Transaction model module for the REI-Tracker application.
 This module provides the Transaction model for financial transaction management.
 """
 
+import uuid
 from typing import List, Dict, Any, Optional
 from decimal import Decimal
 from pydantic import Field, field_validator, ConfigDict
@@ -18,6 +19,8 @@ class Reimbursement(BaseModel):
     Reimbursement model for transaction reimbursements.
     
     This class represents the reimbursement status and details for a transaction.
+    It includes fields for tracking the reimbursement status and date shared.
+    Partner shares for split expenses are calculated at runtime rather than stored.
     """
     
     model_config = ConfigDict(
@@ -28,8 +31,6 @@ class Reimbursement(BaseModel):
     date_shared: Optional[str] = None
     share_description: Optional[str] = None
     reimbursement_status: str = "pending"  # "pending", "in_progress", "completed"
-    documentation: Optional[str] = None
-    partner_shares: Dict[str, Decimal] = Field(default_factory=dict)
     
     @field_validator("date_shared")
     @classmethod
@@ -85,6 +86,9 @@ class Transaction(BaseModel):
         extra="ignore",
         validate_assignment=True
     )
+    
+    # Explicitly define ID field instead of relying on inheritance
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     
     # Transaction details
     property_id: str
@@ -300,14 +304,6 @@ class Transaction(BaseModel):
         # Add reimbursement if it exists
         if self.reimbursement:
             reimbursement_dict = self.reimbursement.model_dump(exclude_none=True)
-            
-            # Convert partner shares if they exist
-            if self.reimbursement.partner_shares:
-                reimbursement_dict["partner_shares"] = {
-                    partner: str(amount)
-                    for partner, amount in self.reimbursement.partner_shares.items()
-                }
-                
             result["reimbursement"] = reimbursement_dict
         
         return result

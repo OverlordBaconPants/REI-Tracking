@@ -12,7 +12,7 @@ from decimal import Decimal
 import pytest
 
 from src.main import app
-from src.models.property import Property, MonthlyIncome, MonthlyExpenses, Utilities
+from src.models.property import Property
 from src.models.user import User
 
 
@@ -65,28 +65,29 @@ class TestPropertyFinancialRoutes(unittest.TestCase):
             address="123 Test St",
             purchase_price=Decimal("200000"),
             purchase_date="2023-01-01",
-            monthly_income=MonthlyIncome(
-                rental_income=Decimal("1500"),
-                parking_income=Decimal("100"),
-                laundry_income=Decimal("0"),
-                other_income=Decimal("0"),
-                income_notes="January rent; January parking"
-            ),
-            monthly_expenses=MonthlyExpenses(
-                property_tax=Decimal("2400"),
-                insurance=Decimal("1200"),
-                repairs=Decimal("0"),
-                capex=Decimal("0"),
-                property_management=Decimal("0"),
-                hoa_fees=Decimal("0"),
-                utilities=Utilities(
-                    water=Decimal("50"),
-                    electricity=Decimal("0"),
-                    gas=Decimal("0"),
-                    trash=Decimal("0")
-                ),
-                expense_notes="Annual property tax; Annual insurance; January water bill"
-            )
+            monthly_income={
+                "rental_income": Decimal("1500"),
+                "parking_income": Decimal("100"),
+                "laundry_income": Decimal("0"),
+                "other_income": Decimal("0"),
+                "income_notes": "January rent; January parking"
+            },
+            monthly_expenses={
+                "property_taxes": Decimal("2400"),
+                "insurance": Decimal("1200"),
+                "repairs": Decimal("0"),
+                "capex": Decimal("0"),
+                "property_management": Decimal("0"),
+                "hoa_fees": Decimal("0"),
+                "utilities": {
+                    "water": Decimal("50"),
+                    "electricity": Decimal("0"),
+                    "gas": Decimal("0"),
+                    "trash": Decimal("0")
+                },
+                "other_expenses": Decimal("0"),
+                "expense_notes": "Annual property tax; Annual insurance; January water bill"
+            }
         )
     
         # Create test financial summary
@@ -106,7 +107,7 @@ class TestPropertyFinancialRoutes(unittest.TestCase):
                 "other_income": "0"
             },
             "expense_breakdown": {
-                "property_tax": "2400",
+                "property_taxes": "2400",
                 "insurance": "1200",
                 "repairs": "0",
                 "capex": "0",

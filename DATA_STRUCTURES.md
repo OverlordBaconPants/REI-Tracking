@@ -309,6 +309,15 @@ The users data structure stores user information, credentials, and roles.
 | phone | string | User's phone number with country code |
 | password | string | Hashed password using PBKDF2 with SHA-256 |
 | role | string | User's role (Admin or User) |
+| property_access | array | List of properties the user has access to with access levels and equity shares |
+
+### Property Access Object Structure
+
+| Field | Type | Description |
+|-------|------|-------------|
+| property_id | string | Property identifier (typically the full address) |
+| access_level | string | Access level ("owner", "manager", "editor", "viewer") |
+| equity_share | number | User's equity share percentage in the property (optional) |
 
 ### Example User Object
 ```json
@@ -319,9 +328,27 @@ The users data structure stores user information, credentials, and roles.
   "email": "bjmar867@gmail.com",
   "phone": "+14435465716",
   "password": "pbkdf2:sha256:600000$RW1h6Oalhp4zutww$bfea68cc108126cb1673d76bd8b86c3551d3d8533e1b66412218ce6b1b79d2af",
-  "role": "Admin"
+  "role": "Admin",
+  "property_access": [
+    {
+      "property_id": "1911 Grinnalds Avenue, Baltimore, MD 21223, United States of America, Baltimore, Maryland, 21223",
+      "access_level": "owner",
+      "equity_share": 100.0
+    },
+    {
+      "property_id": "454 Guilford Avenue, Hagerstown, MD 21740, United States of America, Hagerstown, Maryland, 21740",
+      "access_level": "manager",
+      "equity_share": 0.0
+    }
+  ]
 }
 ```
+
+### Access Level Hierarchy
+- **owner**: Full access to property, including financial management and partner equity
+- **manager**: Can manage property transactions and maintenance, but cannot modify partner equity
+- **editor**: Can edit property details and add transactions, but cannot manage reimbursements
+- **viewer**: Read-only access to property information
 
 ---
 

@@ -197,6 +197,41 @@ class TestReimbursementService(unittest.TestCase):
         self.property_repo.get_by_id.assert_called_once_with(self.property_id)
         self.transaction_repo.update.assert_called_once()
     
+    def test_get_reimbursement_shares(self):
+        """Test getting reimbursement shares on-demand."""
+        # Call the method without user_id
+        shares = self.reimbursement_service.get_reimbursement_shares(self.transaction_id)
+        
+        # Verify the result
+        self.assertEqual(len(shares), 1)
+        self.assertIn("Jane Smith", shares)
+        self.assertEqual(shares["Jane Smith"], Decimal("40"))
+        
+        # Verify repository calls
+        self.transaction_repo.get_by_id.assert_called_once_with(self.transaction_id)
+        self.property_repo.get_by_id.assert_called_once_with(self.property_id)
+        
+        # Reset mocks
+        self.transaction_repo.get_by_id.reset_mock()
+        self.property_repo.get_by_id.reset_mock()
+        
+        # Call the method with user_id
+        shares = self.reimbursement_service.get_reimbursement_shares(
+            self.transaction_id, self.user_id
+        )
+        
+        # Verify the result
+        self.assertEqual(len(shares), 1)
+        self.assertIn("Jane Smith", shares)
+        self.assertEqual(shares["Jane Smith"], Decimal("40"))
+        
+        # Verify repository calls
+        self.transaction_repo.get_by_id.assert_called_once_with(self.transaction_id)
+        self.property_repo.get_by_id.assert_called_once_with(self.property_id)
+        self.property_access_service.can_access_property.assert_called_once_with(
+            self.user_id, self.property_id
+        )
+    
     def test_process_new_transaction_shared_property(self):
         """Test processing a new transaction for a shared property."""
         # Set up mock
@@ -208,12 +243,15 @@ class TestReimbursementService(unittest.TestCase):
         # Verify the result
         self.assertEqual(result, self.transaction)
         self.assertIsNotNone(result.reimbursement)
-        self.assertEqual(len(result.reimbursement.partner_shares), 1)
-        self.assertIn("Jane Smith", result.reimbursement.partner_shares)
-        self.assertEqual(result.reimbursement.partner_shares["Jane Smith"], Decimal("40"))
+        
+        # Verify that we can calculate shares on-demand
+        shares = self.reimbursement_service.get_reimbursement_shares(self.transaction_id)
+        self.assertEqual(len(shares), 1)
+        self.assertIn("Jane Smith", shares)
+        self.assertEqual(shares["Jane Smith"], Decimal("40"))
         
         # Verify repository calls
-        self.property_repo.get_by_id.assert_called_once_with(self.property_id)
+        self.property_repo.get_by_id.assert_called_with(self.property_id)
         self.transaction_repo.update.assert_called_once()
     
     def test_process_new_transaction_income(self):

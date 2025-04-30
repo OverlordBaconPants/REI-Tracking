@@ -11,17 +11,17 @@ class TestLoanSimple:
         """Test loan details calculations."""
         # Create a loan details object
         loan_details = LoanDetails(
-            amount=Money(200000),
-            interest_rate=Percentage(4.5),
-            term=360,
+            amount="$200,000.00",
+            interest_rate="4.500%",
+            term_months=360,
             is_interest_only=False,
             name="Test Loan"
         )
         
         # Check properties
-        assert loan_details.amount.dollars == 200000
-        assert loan_details.interest_rate.value == 4.5
-        assert loan_details.term == 360
+        assert loan_details.amount == "$200,000.00"
+        assert loan_details.interest_rate == "4.500%"
+        assert loan_details.term_months == 360
         assert loan_details.is_interest_only == False
         assert loan_details.name == "Test Loan"
         
@@ -38,9 +38,9 @@ class TestLoanSimple:
         """Test interest-only loan calculations."""
         # Create an interest-only loan details object
         loan_details = LoanDetails(
-            amount=Money(200000),
-            interest_rate=Percentage(4.5),
-            term=360,
+            amount="$200,000.00",
+            interest_rate="4.500%",
+            term_months=360,
             is_interest_only=True,
             name="Interest Only Loan"
         )
@@ -60,9 +60,9 @@ class TestLoanSimple:
         """Test zero-interest loan calculations."""
         # Create a zero-interest loan details object
         loan_details = LoanDetails(
-            amount=Money(200000),
-            interest_rate=Percentage(0),
-            term=360,
+            amount="$200,000.00",
+            interest_rate="0.000%",
+            term_months=360,
             is_interest_only=False,
             name="Zero Interest Loan"
         )
@@ -82,9 +82,9 @@ class TestLoanSimple:
         """Test remaining balance calculation."""
         # Create a loan details object
         loan_details = LoanDetails(
-            amount=Money(200000),
-            interest_rate=Percentage(4.5),
-            term=360,
+            amount="$200,000.00",
+            interest_rate="4.500%",
+            term_months=360,
             is_interest_only=False,
             name="Test Loan"
         )
@@ -105,9 +105,9 @@ class TestLoanSimple:
         """Test generating an amortization schedule."""
         # Create a loan details object
         loan_details = LoanDetails(
-            amount=Money(200000),
-            interest_rate=Percentage(4.5),
-            term=360,
+            amount="$200,000.00",
+            interest_rate="4.500%",
+            term_months=360,
             is_interest_only=False,
             name="Test Loan"
         )

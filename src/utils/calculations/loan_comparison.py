@@ -1,8 +1,11 @@
 from typing import List, Dict, Any, Optional, Tuple
 from datetime import date
+import logging
 from src.utils.money import Money, Percentage
 from src.utils.calculations.loan_details import LoanDetails
 from src.models.loan import Loan, BalloonPayment
+
+logger = logging.getLogger(__name__)
 
 class LoanComparison:
     """
@@ -58,14 +61,15 @@ class LoanComparison:
                 
                 # Calculate key metrics
                 monthly_payment = loan_details.calculate_payment().total
+                amount_value = loan.get_amount_as_money().dollars
                 total_payments = monthly_payment.dollars * loan.term_months
-                total_interest = total_payments - loan.amount.dollars
+                total_interest = total_payments - amount_value
                 
                 # Calculate interest to principal ratio
-                interest_to_principal_ratio = total_interest / loan.amount.dollars
+                interest_to_principal_ratio = total_interest / amount_value
                 
                 # Calculate monthly payment as percentage of loan amount
-                payment_to_amount_ratio = (monthly_payment.dollars * 12) / loan.amount.dollars
+                payment_to_amount_ratio = (monthly_payment.dollars * 12) / amount_value
                 
                 # Add to comparison
                 loans.append(loan)
@@ -352,8 +356,10 @@ class LoanComparison:
             break_even_months = closing_costs.dollars / monthly_savings
             
         # Calculate total interest for both loans
-        current_total_interest = (current_payment.dollars * current.term_months) - current.amount.dollars
-        new_total_interest = (new_payment.dollars * new.term_months) - new.amount.dollars
+        current_amount_value = current.get_amount_as_money().dollars
+        new_amount_value = new.get_amount_as_money().dollars
+        current_total_interest = (current_payment.dollars * current.term_months) - current_amount_value
+        new_total_interest = (new_payment.dollars * new.term_months) - new_amount_value
         
         # Calculate interest savings
         interest_savings = current_total_interest - new_total_interest

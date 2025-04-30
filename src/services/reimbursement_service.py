@@ -46,17 +46,20 @@ class ReimbursementService:
         self.property_repo = property_repository or PropertyRepository()
         self.property_access_service = property_access_service or PropertyAccessService()
     
-    def calculate_reimbursement_shares(
+    def get_reimbursement_shares(
         self,
         transaction_id: str,
-        user_id: str
+        user_id: Optional[str] = None
     ) -> Dict[str, Decimal]:
         """
-        Calculate reimbursement shares for a transaction.
+        Get reimbursement shares for a transaction.
+        
+        This method calculates the shares on-demand rather than retrieving stored values.
         
         Args:
             transaction_id: ID of the transaction
-            user_id: ID of the user requesting the calculation
+            user_id: Optional ID of the user requesting the calculation
+                     If provided, access control will be enforced
             
         Returns:
             Dictionary mapping partner names to reimbursement amounts
@@ -69,8 +72,8 @@ class ReimbursementService:
         if not transaction:
             raise ValueError(f"Transaction {transaction_id} not found")
         
-        # Check if user has access to the property
-        if not self.property_access_service.can_access_property(user_id, transaction.property_id):
+        # Check if user has access to the property (if user_id is provided)
+        if user_id and not self.property_access_service.can_access_property(user_id, transaction.property_id):
             raise ValueError("Access denied to this transaction")
         
         # Get property
@@ -80,6 +83,29 @@ class ReimbursementService:
         
         # Calculate reimbursement shares
         return transaction.calculate_reimbursement_shares(property_obj.partners)
+    
+    def calculate_reimbursement_shares(
+        self,
+        transaction_id: str,
+        user_id: str
+    ) -> Dict[str, Decimal]:
+        """
+        Calculate reimbursement shares for a transaction.
+        
+        This is a legacy method maintained for backward compatibility.
+        It delegates to get_reimbursement_shares.
+        
+        Args:
+            transaction_id: ID of the transaction
+            user_id: ID of the user requesting the calculation
+            
+        Returns:
+            Dictionary mapping partner names to reimbursement amounts
+            
+        Raises:
+            ValueError: If the transaction is not found or user doesn't have access
+        """
+        return self.get_reimbursement_shares(transaction_id, user_id)
     
     def update_reimbursement(
         self,
@@ -126,12 +152,7 @@ class ReimbursementService:
         if "documentation" in reimbursement_data:
             transaction.reimbursement.documentation = reimbursement_data["documentation"]
         
-        # Update partner shares if provided
-        if "partner_shares" in reimbursement_data:
-            partner_shares = {}
-            for partner, amount in reimbursement_data["partner_shares"].items():
-                partner_shares[partner] = Decimal(str(amount))
-            transaction.reimbursement.partner_shares = partner_shares
+        # Partner shares are no longer stored, so we don't need to handle them here
         
         # Save updated transaction
         return self.transaction_repo.update(transaction)
@@ -185,8 +206,7 @@ class ReimbursementService:
                 if transaction.reimbursement is None:
                     transaction.reimbursement = Reimbursement()
                 
-                # Store shares
-                transaction.reimbursement.partner_shares = shares
+                # Shares are calculated on-demand, so we don't store them
                 
                 # Save updated transaction
                 return self.transaction_repo.update(transaction)

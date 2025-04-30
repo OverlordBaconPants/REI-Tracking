@@ -33,7 +33,32 @@ class LoanStatus(str, Enum):
     REFINANCED = "refinanced"
     DEFAULTED = "defaulted"
 
-# Custom type validators for Money and Percentage
+# Custom type validators
+def validate_money_str(v: Any) -> str:
+    """Convert various types to string representation of money."""
+    if isinstance(v, Money):
+        return str(v)
+    if isinstance(v, str):
+        # If it's already a string, ensure it's properly formatted
+        try:
+            return str(Money(v))
+        except:
+            return v
+    return str(Money(v))
+
+def validate_percentage_str(v: Any) -> str:
+    """Convert various types to string representation of percentage."""
+    if isinstance(v, Percentage):
+        return str(v)
+    if isinstance(v, str):
+        # If it's already a string, ensure it's properly formatted
+        try:
+            return str(Percentage(v))
+        except:
+            return v
+    return str(Percentage(v))
+
+# For backward compatibility - these will be used internally
 def validate_money(v: Any) -> Money:
     """Convert various types to Money objects."""
     if isinstance(v, Money):
@@ -47,6 +72,8 @@ def validate_percentage(v: Any) -> Percentage:
     return Percentage(v)
 
 # Type aliases with validators
+MoneyStrField = Annotated[str, BeforeValidator(validate_money_str)]
+PercentageStrField = Annotated[str, BeforeValidator(validate_percentage_str)]
 MoneyField = Annotated[Money, BeforeValidator(validate_money)]
 PercentageField = Annotated[Percentage, BeforeValidator(validate_percentage)]
 
@@ -81,8 +108,14 @@ class BalloonPayment(BaseModel):
     )
     
     due_date: Optional[DateField] = None
-    amount: Optional[MoneyField] = None
+    amount: Optional[MoneyStrField] = None
     term_months: Optional[int] = None
+    
+    def get_amount_as_money(self) -> Optional[Money]:
+        """Get the amount as a Money object for calculations."""
+        if self.amount is None:
+            return None
+        return Money(self.amount)
 
 class LoanData(BaseModel):
     """
@@ -100,8 +133,8 @@ class LoanData(BaseModel):
     # Required fields
     property_id: str
     loan_type: LoanType
-    amount: MoneyField
-    interest_rate: PercentageField
+    amount: MoneyStrField
+    interest_rate: PercentageStrField
     term_months: int
     start_date: DateField
     
@@ -116,8 +149,8 @@ class LoanData(BaseModel):
     name: Optional[str] = None
     
     # Additional fields for tracking
-    monthly_payment: Optional[MoneyField] = None
-    current_balance: Optional[MoneyField] = None
+    monthly_payment: Optional[MoneyStrField] = None
+    current_balance: Optional[MoneyStrField] = None
     last_updated: Optional[DateField] = None
     
     # Metadata
@@ -136,8 +169,8 @@ class Loan(BaseModel):
     Args:
         property_id: ID of the property this loan is associated with
         loan_type: Type of loan (initial, refinance, additional, etc.)
-        amount: The loan amount
-        interest_rate: The annual interest rate as a percentage
+        amount: The loan amount as a string
+        interest_rate: The annual interest rate as a percentage string
         term_months: The loan term in months
         start_date: The date when the loan started
         is_interest_only: Whether the loan is interest-only
@@ -158,8 +191,8 @@ class Loan(BaseModel):
     # Required fields
     property_id: str
     loan_type: LoanType
-    amount: MoneyField
-    interest_rate: PercentageField
+    amount: MoneyStrField
+    interest_rate: PercentageStrField
     term_months: int
     start_date: DateField
     
@@ -174,14 +207,34 @@ class Loan(BaseModel):
     name: Optional[str] = None
     
     # Additional fields for tracking
-    monthly_payment: Optional[MoneyField] = None
-    current_balance: Optional[MoneyField] = None
+    monthly_payment: Optional[MoneyStrField] = None
+    current_balance: Optional[MoneyStrField] = None
     last_updated: Optional[DateField] = None
     
     # Metadata
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
     updated_at: str = Field(default_factory=lambda: datetime.now().isoformat())
+    
+    def get_amount_as_money(self) -> Money:
+        """Get the amount as a Money object for calculations."""
+        return Money(self.amount)
+    
+    def get_interest_rate_as_percentage(self) -> Percentage:
+        """Get the interest rate as a Percentage object for calculations."""
+        return Percentage(self.interest_rate)
+    
+    def get_monthly_payment_as_money(self) -> Optional[Money]:
+        """Get the monthly payment as a Money object for calculations."""
+        if self.monthly_payment is None:
+            return None
+        return Money(self.monthly_payment)
+    
+    def get_current_balance_as_money(self) -> Optional[Money]:
+        """Get the current balance as a Money object for calculations."""
+        if self.current_balance is None:
+            return None
+        return Money(self.current_balance)
     
     @model_validator(mode='after')
     def calculate_monthly_payment(self) -> 'Loan':
@@ -191,7 +244,8 @@ class Loan(BaseModel):
             # Set the flag to prevent recursion
             object.__setattr__(self, '_skip_updated_at', True)
             try:
-                self.monthly_payment = loan_details.calculate_payment().total
+                payment = loan_details.calculate_payment().total
+                self.monthly_payment = str(payment)
             finally:
                 # Reset the flag
                 object.__setattr__(self, '_skip_updated_at', False)
@@ -207,7 +261,7 @@ class Loan(BaseModel):
         return LoanDetails(
             amount=self.amount,
             interest_rate=self.interest_rate,
-            term=self.term_months,
+            term_months=self.term_months,
             is_interest_only=self.is_interest_only,
             name=self.name or f"{self.loan_type.value.capitalize()} Loan"
         )
@@ -227,7 +281,7 @@ class Loan(BaseModel):
             
         # If the loan hasn't started yet, return the full amount
         if as_of_date < self.start_date:
-            return self.amount
+            return self.get_amount_as_money()
             
         # If the loan is paid off or refinanced, return zero
         if self.status in (LoanStatus.PAID_OFF, LoanStatus.REFINANCED):
@@ -291,16 +345,8 @@ class Loan(BaseModel):
         result['loan_type'] = self.loan_type.value
         result['status'] = self.status.value
         
-        # Convert Money objects to strings
-        result['amount'] = str(self.amount)
-        result['interest_rate'] = str(self.interest_rate)
+        # Amount and interest_rate are already strings
         
-        if self.monthly_payment:
-            result['monthly_payment'] = str(self.monthly_payment)
-            
-        if self.current_balance:
-            result['current_balance'] = str(self.current_balance)
-            
         # Convert dates to ISO format strings
         result['start_date'] = self.start_date.isoformat()
         # created_at and updated_at are already ISO format strings
@@ -314,7 +360,7 @@ class Loan(BaseModel):
         if self.balloon_payment:
             result['balloon_payment'] = {
                 'term_months': self.balloon_payment.term_months,
-                'amount': str(self.balloon_payment.amount) if self.balloon_payment.amount else None,
+                'amount': self.balloon_payment.amount,
                 'due_date': self.balloon_payment.due_date.isoformat() if self.balloon_payment.due_date else None
             }
             

@@ -15,7 +15,7 @@ from collections import defaultdict
 from flask_login import current_user
 
 from src.models.transaction import Transaction
-from src.models.property import Property, MonthlyIncome, MonthlyExpenses, Utilities
+from src.models.property import Property
 from src.models.analysis import Analysis
 from src.models.loan import Loan, LoanType, LoanStatus
 from src.repositories.transaction_repository import TransactionRepository
@@ -76,31 +76,28 @@ class PropertyFinancialService:
     equity tracking, cash flow calculations, and comparison of actual performance to analysis projections.
     """
     
-    # Income categories mapping
-    INCOME_CATEGORIES = {
+    # Direct mapping of transaction categories to property fields
+    INCOME_CATEGORY_MAPPING = {
         "Rental Income": "rental_income",
-        "Parking Income": "parking_income",
+        "Parking Income": "parking_income",  # Match test transaction category
+        "Parking/Storage Fees": "parking_income",
         "Laundry Income": "laundry_income",
         "Other Income": "other_income"
     }
     
-    # Expense categories mapping
-    EXPENSE_CATEGORIES = {
-        "Property Tax": "property_tax",
+    # Direct mapping of expense categories to property fields
+    EXPENSE_CATEGORY_MAPPING = {
+        "Property Taxes": "property_taxes",
         "Insurance": "insurance",
         "Repairs": "repairs",
         "Capital Expenditures": "capex",
-        "Property Management": "property_management",
-        "HOA Fees": "hoa_fees",
-        "Other Expenses": "other_expenses"
-    }
-    
-    # Utility categories mapping
-    UTILITY_CATEGORIES = {
-        "Water": "water",
-        "Electricity": "electricity",
-        "Gas": "gas",
-        "Trash": "trash"
+        "Property Management Fees": "property_management",
+        "Association Dues": "hoa_fees",
+        "Other Expense": "other_expenses",
+        "Water": "utilities.water",
+        "Electricity": "utilities.electricity",
+        "Gas": "utilities.gas",
+        "Trash": "utilities.trash"
     }
     
     # Categories that should NOT be included in operating expenses
@@ -250,7 +247,13 @@ class PropertyFinancialService:
         """
         # Initialize monthly income if not present
         if not property_obj.monthly_income:
-            property_obj.monthly_income = MonthlyIncome()
+            property_obj.monthly_income = {
+                "rental_income": Decimal("0"),
+                "parking_income": Decimal("0"),
+                "laundry_income": Decimal("0"),
+                "other_income": Decimal("0"),
+                "income_notes": ""
+            }
         
         # Filter income transactions
         income_transactions = [t for t in transactions if t.type == "income"]
@@ -263,8 +266,8 @@ class PropertyFinancialService:
             category = transaction.category
             
             # Map category to property field
-            if category in self.INCOME_CATEGORIES:
-                field = self.INCOME_CATEGORIES[category]
+            if category in self.INCOME_CATEGORY_MAPPING:
+                field = self.INCOME_CATEGORY_MAPPING[category]
                 income_by_category[field] += transaction.amount
             
             # Collect notes
@@ -273,12 +276,11 @@ class PropertyFinancialService:
         
         # Update property income fields
         for field, amount in income_by_category.items():
-            if hasattr(property_obj.monthly_income, field):
-                setattr(property_obj.monthly_income, field, amount)
+            property_obj.monthly_income[field] = amount
         
         # Update income notes
         if income_notes:
-            property_obj.monthly_income.income_notes = "; ".join(income_notes[-5:])  # Keep last 5 notes
+            property_obj.monthly_income["income_notes"] = "; ".join(income_notes[-5:])  # Keep last 5 notes
     
     def _update_property_expenses(self, property_obj: Property, transactions: List[Transaction]) -> None:
         """
@@ -290,30 +292,52 @@ class PropertyFinancialService:
         """
         # Initialize monthly expenses if not present
         if not property_obj.monthly_expenses:
-            property_obj.monthly_expenses = MonthlyExpenses()
+            property_obj.monthly_expenses = {
+                "property_taxes": Decimal("0"),
+                "insurance": Decimal("0"),
+                "repairs": Decimal("0"),
+                "capex": Decimal("0"),
+                "property_management": Decimal("0"),
+                "hoa_fees": Decimal("0"),
+                "utilities": {
+                    "water": Decimal("0"),
+                    "electricity": Decimal("0"),
+                    "gas": Decimal("0"),
+                    "trash": Decimal("0")
+                },
+                "other_expenses": Decimal("0"),
+                "expense_notes": ""
+            }
         
-        # Initialize utilities if not present
-        if not property_obj.monthly_expenses.utilities:
-            property_obj.monthly_expenses.utilities = Utilities()
+        # Ensure utilities exists
+        if "utilities" not in property_obj.monthly_expenses:
+            property_obj.monthly_expenses["utilities"] = {
+                "water": Decimal("0"),
+                "electricity": Decimal("0"),
+                "gas": Decimal("0"),
+                "trash": Decimal("0")
+            }
         
         # Filter expense transactions
         expense_transactions = [t for t in transactions if t.type == "expense"]
         
         # Group by category
         expense_by_category = defaultdict(Decimal)
-        utility_by_category = defaultdict(Decimal)
         expense_notes = []
         
         for transaction in expense_transactions:
             category = transaction.category
             
             # Map category to property field
-            if category in self.EXPENSE_CATEGORIES:
-                field = self.EXPENSE_CATEGORIES[category]
-                expense_by_category[field] += transaction.amount
-            elif category in self.UTILITY_CATEGORIES:
-                field = self.UTILITY_CATEGORIES[category]
-                utility_by_category[field] += transaction.amount
+            if category in self.EXPENSE_CATEGORY_MAPPING:
+                field = self.EXPENSE_CATEGORY_MAPPING[category]
+                
+                # Handle nested utility fields
+                if field.startswith("utilities."):
+                    utility_field = field.split(".")[1]
+                    property_obj.monthly_expenses["utilities"][utility_field] += transaction.amount
+                else:
+                    expense_by_category[field] += transaction.amount
             
             # Collect notes
             if transaction.description and len(transaction.description) > 0:
@@ -321,17 +345,11 @@ class PropertyFinancialService:
         
         # Update property expense fields
         for field, amount in expense_by_category.items():
-            if hasattr(property_obj.monthly_expenses, field):
-                setattr(property_obj.monthly_expenses, field, amount)
-        
-        # Update utility fields
-        for field, amount in utility_by_category.items():
-            if hasattr(property_obj.monthly_expenses.utilities, field):
-                setattr(property_obj.monthly_expenses.utilities, field, amount)
+            property_obj.monthly_expenses[field] = amount
         
         # Update expense notes
         if expense_notes:
-            property_obj.monthly_expenses.expense_notes = "; ".join(expense_notes[-5:])  # Keep last 5 notes
+            property_obj.monthly_expenses["expense_notes"] = "; ".join(expense_notes[-5:])  # Keep last 5 notes
     
     def get_property_financial_summary(self, property_id: str, user_id: str) -> Dict[str, Any]:
         """
@@ -381,56 +399,56 @@ class PropertyFinancialService:
             Dictionary with financial summary
         """
         # Calculate income totals
-        income_total = property_obj.monthly_income.total() if property_obj.monthly_income else Decimal("0")
+        income_total = property_obj.calculate_total_income() if property_obj.monthly_income else Decimal("0")
         
         # Calculate expense totals
-        expense_total = property_obj.monthly_expenses.total() if property_obj.monthly_expenses else Decimal("0")
+        expense_total = property_obj.calculate_total_expenses() if property_obj.monthly_expenses else Decimal("0")
         
         # Calculate net cash flow
         net_cash_flow = income_total - expense_total
         
         # Calculate utility totals
         utility_total = Decimal("0")
-        if property_obj.monthly_expenses and property_obj.monthly_expenses.utilities:
-            utilities = property_obj.monthly_expenses.utilities
-            utility_total = utilities.water + utilities.electricity + utilities.gas + utilities.trash
+        if property_obj.monthly_expenses and "utilities" in property_obj.monthly_expenses:
+            utilities = property_obj.monthly_expenses["utilities"]
+            utility_total = utilities["water"] + utilities["electricity"] + utilities["gas"] + utilities["trash"]
         
         # Calculate maintenance and capex totals
-        maintenance_total = property_obj.monthly_expenses.repairs if property_obj.monthly_expenses else Decimal("0")
-        capex_total = property_obj.monthly_expenses.capex if property_obj.monthly_expenses else Decimal("0")
+        maintenance_total = property_obj.monthly_expenses["repairs"] if property_obj.monthly_expenses else Decimal("0")
+        capex_total = property_obj.monthly_expenses["capex"] if property_obj.monthly_expenses else Decimal("0")
         
         # Calculate income breakdown
         income_breakdown = {}
         if property_obj.monthly_income:
             income_breakdown = {
-                "rental_income": str(property_obj.monthly_income.rental_income),
-                "parking_income": str(property_obj.monthly_income.parking_income),
-                "laundry_income": str(property_obj.monthly_income.laundry_income),
-                "other_income": str(property_obj.monthly_income.other_income)
+                "rental_income": str(property_obj.monthly_income["rental_income"]),
+                "parking_income": str(property_obj.monthly_income["parking_income"]),
+                "laundry_income": str(property_obj.monthly_income["laundry_income"]),
+                "other_income": str(property_obj.monthly_income["other_income"])
             }
         
         # Calculate expense breakdown
         expense_breakdown = {}
         if property_obj.monthly_expenses:
             expense_breakdown = {
-                "property_tax": str(property_obj.monthly_expenses.property_tax),
-                "insurance": str(property_obj.monthly_expenses.insurance),
-                "repairs": str(property_obj.monthly_expenses.repairs),
-                "capex": str(property_obj.monthly_expenses.capex),
-                "property_management": str(property_obj.monthly_expenses.property_management),
-                "hoa_fees": str(property_obj.monthly_expenses.hoa_fees),
-                "other_expenses": str(property_obj.monthly_expenses.other_expenses)
+                "property_taxes": str(property_obj.monthly_expenses["property_taxes"]),
+                "insurance": str(property_obj.monthly_expenses["insurance"]),
+                "repairs": str(property_obj.monthly_expenses["repairs"]),
+                "capex": str(property_obj.monthly_expenses["capex"]),
+                "property_management": str(property_obj.monthly_expenses["property_management"]),
+                "hoa_fees": str(property_obj.monthly_expenses["hoa_fees"]),
+                "other_expenses": str(property_obj.monthly_expenses["other_expenses"])
             }
         
         # Calculate utility breakdown
         utility_breakdown = {}
-        if property_obj.monthly_expenses and property_obj.monthly_expenses.utilities:
-            utilities = property_obj.monthly_expenses.utilities
+        if property_obj.monthly_expenses and "utilities" in property_obj.monthly_expenses:
+            utilities = property_obj.monthly_expenses["utilities"]
             utility_breakdown = {
-                "water": str(utilities.water),
-                "electricity": str(utilities.electricity),
-                "gas": str(utilities.gas),
-                "trash": str(utilities.trash)
+                "water": str(utilities["water"]),
+                "electricity": str(utilities["electricity"]),
+                "gas": str(utilities["gas"]),
+                "trash": str(utilities["trash"])
             }
         
         # Create summary
@@ -446,8 +464,8 @@ class PropertyFinancialService:
             "income_breakdown": income_breakdown,
             "expense_breakdown": expense_breakdown,
             "utility_breakdown": utility_breakdown,
-            "income_notes": property_obj.monthly_income.income_notes if property_obj.monthly_income else None,
-            "expense_notes": property_obj.monthly_expenses.expense_notes if property_obj.monthly_expenses else None
+            "income_notes": property_obj.monthly_income["income_notes"] if property_obj.monthly_income else None,
+            "expense_notes": property_obj.monthly_expenses["expense_notes"] if property_obj.monthly_expenses else None
         }
         
         return summary

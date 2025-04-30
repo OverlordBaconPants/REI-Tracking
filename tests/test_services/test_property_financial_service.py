@@ -10,7 +10,7 @@ from unittest.mock import patch, MagicMock
 from decimal import Decimal
 from datetime import datetime, date, timedelta
 
-from src.models.property import Property, MonthlyIncome, MonthlyExpenses, Utilities, Loan, Partner
+from src.models.property import Property, Loan, Partner
 from src.models.transaction import Transaction
 from src.models.analysis import Analysis
 from src.services.property_financial_service import PropertyFinancialService
@@ -28,32 +28,35 @@ class TestPropertyFinancialService(unittest.TestCase):
         self.service.property_repo = MagicMock()
         self.service.property_access_service = MagicMock()
         
-        # Create test property
+        # Create test property with flat structure
         self.test_property = Property(
             id="prop123",
             address="123 Test St",
             purchase_price=Decimal("200000"),
             purchase_date="2023-01-01",
-            monthly_income=MonthlyIncome(
-                rental_income=Decimal("0"),
-                parking_income=Decimal("0"),
-                laundry_income=Decimal("0"),
-                other_income=Decimal("0")
-            ),
-            monthly_expenses=MonthlyExpenses(
-                property_tax=Decimal("0"),
-                insurance=Decimal("0"),
-                repairs=Decimal("0"),
-                capex=Decimal("0"),
-                property_management=Decimal("0"),
-                hoa_fees=Decimal("0"),
-                utilities=Utilities(
-                    water=Decimal("0"),
-                    electricity=Decimal("0"),
-                    gas=Decimal("0"),
-                    trash=Decimal("0")
-                )
-            )
+            monthly_income={
+                "rental_income": Decimal("0"),
+                "parking_income": Decimal("0"),
+                "laundry_income": Decimal("0"),
+                "other_income": Decimal("0"),
+                "income_notes": ""
+            },
+            monthly_expenses={
+                "property_taxes": Decimal("0"),
+                "insurance": Decimal("0"),
+                "repairs": Decimal("0"),
+                "capex": Decimal("0"),
+                "property_management": Decimal("0"),
+                "hoa_fees": Decimal("0"),
+                "utilities": {
+                    "water": Decimal("0"),
+                    "electricity": Decimal("0"),
+                    "gas": Decimal("0"),
+                    "trash": Decimal("0")
+                },
+                "other_expenses": Decimal("0"),
+                "expense_notes": ""
+            }
         )
         
         # Create test transactions
@@ -82,7 +85,7 @@ class TestPropertyFinancialService(unittest.TestCase):
                 id="trans3",
                 property_id="prop123",
                 type="expense",
-                category="Property Tax",
+                category="Property Taxes",
                 description="Annual property tax",
                 amount=Decimal("2400"),
                 date="2023-01-15",
@@ -138,12 +141,12 @@ class TestPropertyFinancialService(unittest.TestCase):
         self.service._update_property_income(property_obj, self.test_transactions)
         
         # Verify the income was updated correctly
-        self.assertEqual(property_obj.monthly_income.rental_income, Decimal("1500"))
-        self.assertEqual(property_obj.monthly_income.parking_income, Decimal("100"))
-        self.assertEqual(property_obj.monthly_income.laundry_income, Decimal("0"))
-        self.assertEqual(property_obj.monthly_income.other_income, Decimal("0"))
-        self.assertIn("January rent", property_obj.monthly_income.income_notes)
-        self.assertIn("January parking", property_obj.monthly_income.income_notes)
+        self.assertEqual(property_obj.monthly_income["rental_income"], Decimal("1500"))
+        self.assertEqual(property_obj.monthly_income["parking_income"], Decimal("100"))
+        self.assertEqual(property_obj.monthly_income["laundry_income"], Decimal("0"))
+        self.assertEqual(property_obj.monthly_income["other_income"], Decimal("0"))
+        self.assertIn("January rent", property_obj.monthly_income["income_notes"])
+        self.assertIn("January parking", property_obj.monthly_income["income_notes"])
     
     def test_update_property_expenses(self):
         """Test updating property expenses."""
@@ -154,23 +157,23 @@ class TestPropertyFinancialService(unittest.TestCase):
         self.service._update_property_expenses(property_obj, self.test_transactions)
         
         # Verify the expenses were updated correctly
-        self.assertEqual(property_obj.monthly_expenses.property_tax, Decimal("2400"))
-        self.assertEqual(property_obj.monthly_expenses.insurance, Decimal("1200"))
-        self.assertEqual(property_obj.monthly_expenses.repairs, Decimal("0"))
-        self.assertEqual(property_obj.monthly_expenses.capex, Decimal("0"))
-        self.assertEqual(property_obj.monthly_expenses.property_management, Decimal("0"))
-        self.assertEqual(property_obj.monthly_expenses.hoa_fees, Decimal("0"))
+        self.assertEqual(property_obj.monthly_expenses["property_taxes"], Decimal("2400"))
+        self.assertEqual(property_obj.monthly_expenses["insurance"], Decimal("1200"))
+        self.assertEqual(property_obj.monthly_expenses["repairs"], Decimal("0"))
+        self.assertEqual(property_obj.monthly_expenses["capex"], Decimal("0"))
+        self.assertEqual(property_obj.monthly_expenses["property_management"], Decimal("0"))
+        self.assertEqual(property_obj.monthly_expenses["hoa_fees"], Decimal("0"))
         
         # Verify utilities were updated correctly
-        self.assertEqual(property_obj.monthly_expenses.utilities.water, Decimal("50"))
-        self.assertEqual(property_obj.monthly_expenses.utilities.electricity, Decimal("0"))
-        self.assertEqual(property_obj.monthly_expenses.utilities.gas, Decimal("0"))
-        self.assertEqual(property_obj.monthly_expenses.utilities.trash, Decimal("0"))
+        self.assertEqual(property_obj.monthly_expenses["utilities"]["water"], Decimal("50"))
+        self.assertEqual(property_obj.monthly_expenses["utilities"]["electricity"], Decimal("0"))
+        self.assertEqual(property_obj.monthly_expenses["utilities"]["gas"], Decimal("0"))
+        self.assertEqual(property_obj.monthly_expenses["utilities"]["trash"], Decimal("0"))
         
         # Verify notes were updated
-        self.assertIn("Annual property tax", property_obj.monthly_expenses.expense_notes)
-        self.assertIn("Annual insurance", property_obj.monthly_expenses.expense_notes)
-        self.assertIn("January water bill", property_obj.monthly_expenses.expense_notes)
+        self.assertIn("Annual property tax", property_obj.monthly_expenses["expense_notes"])
+        self.assertIn("Annual insurance", property_obj.monthly_expenses["expense_notes"])
+        self.assertIn("January water bill", property_obj.monthly_expenses["expense_notes"])
     
     def test_get_property_financial_summary(self):
         """Test getting property financial summary."""
@@ -440,7 +443,7 @@ class TestPropertyFinancialService(unittest.TestCase):
                 id="trans2",
                 property_id="prop123",
                 type="expense",
-                category="Property Tax",
+                category="Property Taxes",
                 description="Property tax payment",
                 amount=Decimal("200"),
                 date="2023-01-15",
@@ -618,7 +621,7 @@ class TestPropertyFinancialService(unittest.TestCase):
                 id="trans2",
                 property_id="prop123",
                 type="expense",
-                category="Property Tax",
+                category="Property Taxes",
                 description="January property tax",
                 amount=Decimal("200"),
                 date="2023-01-15",
@@ -649,7 +652,7 @@ class TestPropertyFinancialService(unittest.TestCase):
                 id="trans5",
                 property_id="prop123",
                 type="expense",
-                category="Property Tax",
+                category="Property Taxes",
                 description="February property tax",
                 amount=Decimal("200"),
                 date="2023-02-15",

@@ -12,8 +12,8 @@ class TestLoan:
         loan = Loan(
             property_id="prop123",
             loan_type=LoanType.INITIAL,
-            amount=Money(200000),
-            interest_rate=Percentage(4.5),
+            amount="$200,000.00",
+            interest_rate="4.500%",
             term_months=360,
             start_date=date.today(),
             is_interest_only=False,
@@ -24,8 +24,8 @@ class TestLoan:
         # Check basic properties
         assert loan.property_id == "prop123"
         assert loan.loan_type == LoanType.INITIAL
-        assert loan.amount.dollars == 200000
-        assert loan.interest_rate.value == 4.5
+        assert loan.get_amount_as_money().dollars == 200000
+        assert loan.get_interest_rate_as_percentage().value == 4.5
         assert loan.term_months == 360
         assert loan.start_date == date.today()
         assert loan.is_interest_only == False
@@ -35,7 +35,7 @@ class TestLoan:
         
         # Check that monthly payment was calculated
         assert loan.monthly_payment is not None
-        assert loan.monthly_payment.dollars > 0
+        assert loan.get_monthly_payment_as_money().dollars > 0
     
     def test_loan_creation_with_string_values(self):
         """Test creating a loan with string values that need conversion."""
@@ -53,8 +53,8 @@ class TestLoan:
         
         # Check that values were properly converted
         assert loan.loan_type == LoanType.INITIAL
-        assert loan.amount.dollars == 150000
-        assert loan.interest_rate.value == 3.75
+        assert loan.get_amount_as_money().dollars == 150000
+        assert loan.get_interest_rate_as_percentage().value == 3.75
         assert loan.term_months == 180
         assert isinstance(loan.start_date, date)
         assert loan.is_interest_only == False
@@ -65,7 +65,7 @@ class TestLoan:
         # Create a balloon payment
         balloon = BalloonPayment(
             term_months=60,
-            amount=Money(180000),
+            amount="$180,000.00",
             due_date=date.today() + timedelta(days=60*30)
         )
         
@@ -73,8 +73,8 @@ class TestLoan:
         loan = Loan(
             property_id="prop123",
             loan_type=LoanType.INITIAL,
-            amount=Money(200000),
-            interest_rate=Percentage(4.5),
+            amount="$200,000.00",
+            interest_rate="4.500%",
             term_months=360,
             start_date=date.today(),
             balloon_payment=balloon
@@ -83,7 +83,7 @@ class TestLoan:
         # Check balloon payment properties
         assert loan.balloon_payment is not None
         assert loan.balloon_payment.term_months == 60
-        assert loan.balloon_payment.amount.dollars == 180000
+        assert loan.balloon_payment.get_amount_as_money().dollars == 180000
         assert isinstance(loan.balloon_payment.due_date, date)
     
     def test_loan_with_balloon_payment_dict(self):
@@ -92,8 +92,8 @@ class TestLoan:
         loan = Loan(
             property_id="prop123",
             loan_type=LoanType.INITIAL,
-            amount=Money(200000),
-            interest_rate=Percentage(4.5),
+            amount="$200,000.00",
+            interest_rate="4.500%",
             term_months=360,
             start_date=date.today(),
             balloon_payment={
@@ -106,7 +106,7 @@ class TestLoan:
         # Check balloon payment properties
         assert loan.balloon_payment is not None
         assert loan.balloon_payment.term_months == 60
-        assert loan.balloon_payment.amount.dollars == 180000
+        assert loan.balloon_payment.get_amount_as_money().dollars == 180000
         assert isinstance(loan.balloon_payment.due_date, date)
     
     def test_interest_only_loan(self):
@@ -115,8 +115,8 @@ class TestLoan:
         loan = Loan(
             property_id="prop123",
             loan_type=LoanType.INITIAL,
-            amount=Money(200000),
-            interest_rate=Percentage(4.5),
+            amount="$200,000.00",
+            interest_rate="4.500%",
             term_months=360,
             start_date=date.today(),
             is_interest_only=True
@@ -127,7 +127,7 @@ class TestLoan:
         
         # Check that monthly payment is interest-only
         monthly_interest = 200000 * (4.5 / 100 / 12)
-        assert abs(loan.monthly_payment.dollars - monthly_interest) < 0.01
+        assert abs(loan.get_monthly_payment_as_money().dollars - monthly_interest) < 0.01
     
     def test_zero_interest_loan(self):
         """Test creating a zero-interest loan."""
@@ -135,15 +135,15 @@ class TestLoan:
         loan = Loan(
             property_id="prop123",
             loan_type=LoanType.INITIAL,
-            amount=Money(200000),
-            interest_rate=Percentage(0),
+            amount="$200,000.00",
+            interest_rate="0.000%",
             term_months=360,
             start_date=date.today()
         )
         
         # Check that monthly payment is just principal
         expected_payment = 200000 / 360
-        assert abs(loan.monthly_payment.dollars - expected_payment) < 0.01
+        assert abs(loan.get_monthly_payment_as_money().dollars - expected_payment) < 0.01
     
     def test_to_loan_details(self):
         """Test converting a loan to a LoanDetails object."""
@@ -151,8 +151,8 @@ class TestLoan:
         loan = Loan(
             property_id="prop123",
             loan_type=LoanType.INITIAL,
-            amount=Money(200000),
-            interest_rate=Percentage(4.5),
+            amount="$200,000.00",
+            interest_rate="4.500%",
             term_months=360,
             start_date=date.today(),
             name="Test Loan"
@@ -162,9 +162,9 @@ class TestLoan:
         loan_details = loan.to_loan_details()
         
         # Check properties
-        assert loan_details.amount.dollars == 200000
-        assert loan_details.interest_rate.value == 4.5
-        assert loan_details.term == 360
+        assert Money(loan_details.amount).dollars == 200000
+        assert Percentage(loan_details.interest_rate).value == 4.5
+        assert loan_details.term_months == 360
         assert loan_details.is_interest_only == False
         assert loan_details.name == "Test Loan"
     
@@ -174,8 +174,8 @@ class TestLoan:
         loan = Loan(
             property_id="prop123",
             loan_type=LoanType.INITIAL,
-            amount=Money(200000),
-            interest_rate=Percentage(4.5),
+            amount="$200,000.00",
+            interest_rate="4.500%",
             term_months=360,
             start_date=date.today() - timedelta(days=365*2)  # 2 years ago
         )
@@ -203,8 +203,8 @@ class TestLoan:
         loan = Loan(
             property_id="prop123",
             loan_type=LoanType.INITIAL,
-            amount=Money(200000),
-            interest_rate=Percentage(4.5),
+            amount="$200,000.00",
+            interest_rate="4.500%",
             term_months=360,
             start_date=date.today()
         )
@@ -231,13 +231,13 @@ class TestLoan:
             id="loan123",
             property_id="prop123",
             loan_type=LoanType.INITIAL,
-            amount=Money(200000),
-            interest_rate=Percentage(4.5),
+            amount="$200,000.00",
+            interest_rate="4.500%",
             term_months=360,
             start_date=date.today(),
             balloon_payment=BalloonPayment(
                 term_months=60,
-                amount=Money(180000),
+                amount="$180,000.00",
                 due_date=date.today() + timedelta(days=60*30)
             )
         )
@@ -283,12 +283,12 @@ class TestLoan:
         assert loan.id == "loan123"
         assert loan.property_id == "prop123"
         assert loan.loan_type == LoanType.REFINANCE
-        assert loan.amount.dollars == 200000
-        assert loan.interest_rate.value == 4.5
+        assert loan.get_amount_as_money().dollars == 200000
+        assert loan.get_interest_rate_as_percentage().value == 4.5
         assert loan.term_months == 360
         assert loan.balloon_payment is not None
         assert loan.balloon_payment.term_months == 60
-        assert loan.balloon_payment.amount.dollars == 180000
+        assert loan.balloon_payment.get_amount_as_money().dollars == 180000
     
     def test_data_model_conversion(self):
         """Test converting between Loan and LoanData models."""
@@ -297,8 +297,8 @@ class TestLoan:
             id="loan123",
             property_id="prop123",
             loan_type=LoanType.INITIAL,
-            amount=Money(200000),
-            interest_rate=Percentage(4.5),
+            amount="$200,000.00",
+            interest_rate="4.500%",
             term_months=360,
             start_date=date.today(),
             is_interest_only=False,
@@ -312,8 +312,8 @@ class TestLoan:
         assert data_model.id == "loan123"
         assert data_model.property_id == "prop123"
         assert data_model.loan_type == LoanType.INITIAL
-        assert data_model.amount.dollars == 200000
-        assert data_model.interest_rate.value == 4.5
+        assert Money(data_model.amount).dollars == 200000
+        assert Percentage(data_model.interest_rate).value == 4.5
         assert data_model.term_months == 360
         assert data_model.lender == "Test Bank"
         
@@ -324,7 +324,7 @@ class TestLoan:
         assert new_loan.id == "loan123"
         assert new_loan.property_id == "prop123"
         assert new_loan.loan_type == LoanType.INITIAL
-        assert new_loan.amount.dollars == 200000
-        assert new_loan.interest_rate.value == 4.5
+        assert new_loan.get_amount_as_money().dollars == 200000
+        assert new_loan.get_interest_rate_as_percentage().value == 4.5
         assert new_loan.term_months == 360
         assert new_loan.lender == "Test Bank"

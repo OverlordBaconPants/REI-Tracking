@@ -7,7 +7,7 @@ user, property, transaction, analysis, and category models.
 
 from src.models.base_model import BaseModel
 from src.models.user import User
-from src.models.property import Property, Partner, MonthlyIncome, MonthlyExpenses, Loan, Utilities
+from src.models.property import Property, Partner, Loan
 from src.models.transaction import Transaction, Reimbursement
 from src.models.analysis import Analysis, LoanDetails, CompsData
 from src.models.category import Categories
@@ -17,10 +17,7 @@ __all__ = [
     'User',
     'Property',
     'Partner',
-    'MonthlyIncome',
-    'MonthlyExpenses',
     'Loan',
-    'Utilities',
     'Transaction',
     'Reimbursement',
     'Analysis',

@@ -2,6 +2,7 @@
 Analysis model module for the REI-Tracker application.
 
 This module provides the Analysis model for property investment analysis.
+The model structure follows the data structure defined in DATA_STRUCTURES.md.
 """
 
 from typing import List, Dict, Any, Optional, Union, Literal
@@ -220,30 +221,30 @@ class Analysis(BaseModel):
     landscaping: Optional[int] = None
     padsplit_platform_percentage: Optional[float] = None
     
-    # Loan details
+    # Loan details - as per DATA_STRUCTURES.md
+    # Initial Loan
     initial_loan_name: Optional[str] = None
     initial_loan_amount: Optional[int] = None
     initial_loan_interest_rate: Optional[float] = None
     initial_loan_term: Optional[int] = None
     initial_loan_down_payment: Optional[int] = None
     initial_loan_closing_costs: Optional[int] = None
-    initial_loan_is_interest_only: Optional[bool] = False
     
+    # Refinance Loan
     refinance_loan_name: Optional[str] = None
     refinance_loan_amount: Optional[int] = None
     refinance_loan_interest_rate: Optional[float] = None
     refinance_loan_term: Optional[int] = None
     refinance_loan_down_payment: Optional[int] = None
     refinance_loan_closing_costs: Optional[int] = None
-    refinance_loan_is_interest_only: Optional[bool] = False
     
+    # Additional Loans (1-3)
     loan1_loan_name: Optional[str] = None
     loan1_loan_amount: Optional[int] = None
     loan1_loan_interest_rate: Optional[float] = None
     loan1_loan_term: Optional[int] = None
     loan1_loan_down_payment: Optional[int] = None
     loan1_loan_closing_costs: Optional[int] = None
-    loan1_loan_is_interest_only: Optional[bool] = False
     
     loan2_loan_name: Optional[str] = None
     loan2_loan_amount: Optional[int] = None
@@ -251,7 +252,6 @@ class Analysis(BaseModel):
     loan2_loan_term: Optional[int] = None
     loan2_loan_down_payment: Optional[int] = None
     loan2_loan_closing_costs: Optional[int] = None
-    loan2_loan_is_interest_only: Optional[bool] = False
     
     loan3_loan_name: Optional[str] = None
     loan3_loan_amount: Optional[int] = None
@@ -259,6 +259,12 @@ class Analysis(BaseModel):
     loan3_loan_term: Optional[int] = None
     loan3_loan_down_payment: Optional[int] = None
     loan3_loan_closing_costs: Optional[int] = None
+    
+    # Additional fields for loan interest-only status
+    initial_loan_is_interest_only: Optional[bool] = False
+    refinance_loan_is_interest_only: Optional[bool] = False
+    loan1_loan_is_interest_only: Optional[bool] = False
+    loan2_loan_is_interest_only: Optional[bool] = False
     loan3_loan_is_interest_only: Optional[bool] = False
     
     # Balloon payment details
@@ -404,7 +410,7 @@ class Analysis(BaseModel):
             loan_term=self.balloon_refinance_loan_term or 360,
             loan_down_payment=Decimal(str(self.balloon_refinance_loan_down_payment or 0)),
             loan_closing_costs=Decimal(str(self.balloon_refinance_loan_closing_costs or 0)),
-            is_interest_only=False
+            is_interest_only=False  # Balloon loans are not interest-only by default
         )
     
     def calculate_monthly_payment(self, loan: LoanDetails) -> Decimal:

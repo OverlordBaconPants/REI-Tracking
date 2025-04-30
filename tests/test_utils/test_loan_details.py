@@ -8,71 +8,69 @@ class TestLoanDetails:
         """Test initialization of LoanDetails objects."""
         # Standard initialization
         loan = LoanDetails(
-            amount=Money(200000),
-            interest_rate=Percentage(4.5),
-            term=360,
+            amount="$200,000.00",
+            interest_rate="4.500%",
+            term_months=360,
             is_interest_only=False,
             name="Primary Mortgage"
         )
         
-        assert loan.amount.dollars == 200000
-        assert loan.interest_rate.value == 4.5
-        assert loan.term == 360
+        assert loan.amount == "$200,000.00"
+        assert loan.interest_rate == "4.500%"
+        assert loan.term_months == 360
         assert loan.is_interest_only == False
         assert loan.name == "Primary Mortgage"
         
         # Initialize with raw values
         loan = LoanDetails(
-            amount=150000,
-            interest_rate=3.75,
-            term=180
+            amount="$150,000.00",
+            interest_rate="3.750%",
+            term_months=180
         )
         
-        assert isinstance(loan.amount, Money)
-        assert loan.amount.dollars == 150000
-        assert isinstance(loan.interest_rate, Percentage)
-        assert loan.interest_rate.value == 3.75
-        assert loan.term == 180
+        assert loan.amount == "$150,000.00"
+        assert loan.interest_rate == "3.750%"
+        assert loan.term_months == 180
         assert loan.is_interest_only == False
         assert loan.name is None
     
     def test_validation(self):
         """Test validation of loan parameters."""
         # Valid loan
-        LoanDetails(amount=100000, interest_rate=4.0, term=360)
+        LoanDetails(amount="$100,000.00", interest_rate="4.000%", term_months=360)
         
         # Invalid amount
         with pytest.raises(ValueError, match="Loan amount must be greater than 0"):
-            LoanDetails(amount=0, interest_rate=4.0, term=360)
+            LoanDetails(amount="$0.00", interest_rate="4.000%", term_months=360)
             
         with pytest.raises(ValueError, match="Loan amount must be greater than 0"):
-            LoanDetails(amount=-10000, interest_rate=4.0, term=360)
+            LoanDetails(amount="-$10,000.00", interest_rate="4.000%", term_months=360)
             
         # Invalid interest rate
         with pytest.raises(ValueError, match="Interest rate must be between 0% and 30.0%"):
-            LoanDetails(amount=100000, interest_rate=-1.0, term=360)
+            LoanDetails(amount="$100,000.00", interest_rate="-1.000%", term_months=360)
             
         with pytest.raises(ValueError, match="Interest rate must be between 0% and 30.0%"):
-            LoanDetails(amount=100000, interest_rate=35.0, term=360)
+            LoanDetails(amount="$100,000.00", interest_rate="35.000%", term_months=360)
             
         # Invalid term
         with pytest.raises(ValueError, match="Loan term must be between 1 and 360 months"):
-            LoanDetails(amount=100000, interest_rate=4.0, term=0)
+            LoanDetails(amount="$100,000.00", interest_rate="4.000%", term_months=0)
             
         with pytest.raises(ValueError, match="Loan term must be between 1 and 360 months"):
-            LoanDetails(amount=100000, interest_rate=4.0, term=400)
+            LoanDetails(amount="$100,000.00", interest_rate="4.000%", term_months=400)
             
         # Invalid is_interest_only
         with pytest.raises(ValueError, match="is_interest_only must be a boolean value"):
-            LoanDetails(amount=100000, interest_rate=4.0, term=360, is_interest_only="yes")
+            LoanDetails(amount="$100,000.00", interest_rate="4.000%", term_months=360, is_interest_only="yes")
     
     def test_calculate_payment_standard_loan(self):
         """Test payment calculation for standard amortizing loans."""
         # 30-year fixed at 4.5%
         loan = LoanDetails(
-            amount=200000,
-            interest_rate=4.5,
-            term=360
+            amount="$200,000.00",
+            interest_rate="4.500%",
+            term_months=360
         )
         
         payment = loan.calculate_payment()
@@ -84,9 +82,9 @@ class TestLoanDetails:
         
         # 15-year fixed at 3.75%
         loan = LoanDetails(
-            amount=150000,
-            interest_rate=3.75,
-            term=180
+            amount="$150,000.00",
+            interest_rate="3.750%",
+            term_months=180
         )
         
         payment = loan.calculate_payment()
@@ -95,9 +93,9 @@ class TestLoanDetails:
     def test_calculate_payment_interest_only(self):
         """Test payment calculation for interest-only loans."""
         loan = LoanDetails(
-            amount=300000,
-            interest_rate=5.0,
-            term=120,
+            amount="$300,000.00",
+            interest_rate="5.000%",
+            term_months=120,
             is_interest_only=True
         )
         
@@ -113,9 +111,9 @@ class TestLoanDetails:
     def test_calculate_payment_zero_interest(self):
         """Test payment calculation for zero-interest loans."""
         loan = LoanDetails(
-            amount=10000,
-            interest_rate=0,
-            term=24
+            amount="$10,000.00",
+            interest_rate="0.000%",
+            term_months=24
         )
         
         payment = loan.calculate_payment()
@@ -130,9 +128,9 @@ class TestLoanDetails:
     def test_calculate_remaining_balance(self):
         """Test calculation of remaining balance after payments."""
         loan = LoanDetails(
-            amount=200000,
-            interest_rate=4.5,
-            term=360
+            amount="$200,000.00",
+            interest_rate="4.500%",
+            term_months=360
         )
         
         # Test initial balance
@@ -152,9 +150,9 @@ class TestLoanDetails:
     def test_calculate_remaining_balance_interest_only(self):
         """Test remaining balance calculation for interest-only loans."""
         loan = LoanDetails(
-            amount=300000,
-            interest_rate=5.0,
-            term=120,
+            amount="$300,000.00",
+            interest_rate="5.000%",
+            term_months=120,
             is_interest_only=True
         )
         
@@ -167,9 +165,9 @@ class TestLoanDetails:
     def test_calculate_remaining_balance_zero_interest(self):
         """Test remaining balance calculation for zero-interest loans."""
         loan = LoanDetails(
-            amount=10000,
-            interest_rate=0,
-            term=24
+            amount="$10,000.00",
+            interest_rate="0.000%",
+            term_months=24
         )
         
         # For zero-interest, balance decreases linearly
@@ -180,9 +178,9 @@ class TestLoanDetails:
     def test_generate_amortization_schedule(self):
         """Test generation of amortization schedule."""
         loan = LoanDetails(
-            amount=100000,
-            interest_rate=6.0,
-            term=12
+            amount="$100,000.00",
+            interest_rate="6.000%",
+            term_months=12
         )
         
         schedule = loan.generate_amortization_schedule()
@@ -213,9 +211,9 @@ class TestLoanDetails:
     def test_generate_amortization_schedule_interest_only(self):
         """Test amortization schedule for interest-only loans."""
         loan = LoanDetails(
-            amount=100000,
-            interest_rate=6.0,
-            term=12,
+            amount="$100,000.00",
+            interest_rate="6.000%",
+            term_months=12,
             is_interest_only=True
         )
         
@@ -248,9 +246,9 @@ class TestLoanDetails:
     def test_generate_amortization_schedule_zero_interest(self):
         """Test amortization schedule for zero-interest loans."""
         loan = LoanDetails(
-            amount=12000,
-            interest_rate=0,
-            term=12
+            amount="$12,000.00",
+            interest_rate="0.000%",
+            term_months=12
         )
         
         schedule = loan.generate_amortization_schedule()

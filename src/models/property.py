@@ -76,144 +76,6 @@ class Partner(BaseModel):
         return v
 
 
-class Utilities(BaseModel):
-    """
-    Utilities model for property expenses.
-    
-    This class represents the utility expenses for a property.
-    """
-    
-    water: Decimal = Decimal("0")
-    electricity: Decimal = Decimal("0")
-    gas: Decimal = Decimal("0")
-    trash: Decimal = Decimal("0")
-    
-    @validator("water", "electricity", "gas", "trash")
-    def validate_decimal_fields(cls, v: Decimal) -> Decimal:
-        """
-        Validate decimal fields.
-        
-        Args:
-            v: The value to validate
-            
-        Returns:
-            The validated value
-            
-        Raises:
-            ValueError: If the value is invalid
-        """
-        if not validate_decimal(v, 0):
-            raise ValueError("Value must be a positive decimal")
-        return v
-
-
-class MonthlyIncome(BaseModel):
-    """
-    Monthly income model for property income.
-    
-    This class represents the monthly income for a property.
-    """
-    
-    rental_income: Decimal = Decimal("0")
-    parking_income: Decimal = Decimal("0")
-    laundry_income: Decimal = Decimal("0")
-    other_income: Decimal = Decimal("0")
-    income_notes: Optional[str] = None
-    
-    @validator("rental_income", "parking_income", "laundry_income", "other_income")
-    def validate_decimal_fields(cls, v: Decimal) -> Decimal:
-        """
-        Validate decimal fields.
-        
-        Args:
-            v: The value to validate
-            
-        Returns:
-            The validated value
-            
-        Raises:
-            ValueError: If the value is invalid
-        """
-        if not validate_decimal(v, 0):
-            raise ValueError("Value must be a positive decimal")
-        return v
-    
-    def total(self) -> Decimal:
-        """
-        Calculate the total monthly income.
-        
-        Returns:
-            The total monthly income
-        """
-        return (
-            self.rental_income +
-            self.parking_income +
-            self.laundry_income +
-            self.other_income
-        )
-
-
-class MonthlyExpenses(BaseModel):
-    """
-    Monthly expenses model for property expenses.
-    
-    This class represents the monthly expenses for a property.
-    """
-    
-    property_tax: Decimal = Decimal("0")
-    insurance: Decimal = Decimal("0")
-    repairs: Decimal = Decimal("0")
-    capex: Decimal = Decimal("0")
-    property_management: Decimal = Decimal("0")
-    hoa_fees: Decimal = Decimal("0")
-    utilities: Utilities = Field(default_factory=Utilities)
-    other_expenses: Decimal = Decimal("0")
-    expense_notes: Optional[str] = None
-    
-    @validator("property_tax", "insurance", "repairs", "capex", "property_management", "hoa_fees", "other_expenses")
-    def validate_decimal_fields(cls, v: Decimal) -> Decimal:
-        """
-        Validate decimal fields.
-        
-        Args:
-            v: The value to validate
-            
-        Returns:
-            The validated value
-            
-        Raises:
-            ValueError: If the value is invalid
-        """
-        if not validate_decimal(v, 0):
-            raise ValueError("Value must be a positive decimal")
-        return v
-    
-    def total(self) -> Decimal:
-        """
-        Calculate the total monthly expenses.
-        
-        Returns:
-            The total monthly expenses
-        """
-        utilities_total = (
-            self.utilities.water +
-            self.utilities.electricity +
-            self.utilities.gas +
-            self.utilities.trash
-        )
-        
-        return (
-            self.property_tax +
-            self.insurance +
-            self.repairs +
-            self.capex +
-            self.property_management +
-            self.hoa_fees +
-            utilities_total +
-            self.other_expenses
-        )
-
-
 class Loan(BaseModel):
     """
     Loan model for property financing.
@@ -308,9 +170,31 @@ class Property(BaseModel):
     primary_loan: Optional[Loan] = None
     secondary_loan: Optional[Loan] = None
     
-    # Income and expenses
-    monthly_income: MonthlyIncome = Field(default_factory=MonthlyIncome)
-    monthly_expenses: MonthlyExpenses = Field(default_factory=MonthlyExpenses)
+    # Income and expenses - flat structure as per documentation
+    monthly_income: Dict[str, Any] = Field(default_factory=lambda: {
+        "rental_income": Decimal("0"),
+        "parking_income": Decimal("0"),
+        "laundry_income": Decimal("0"),
+        "other_income": Decimal("0"),
+        "income_notes": ""
+    })
+    
+    monthly_expenses: Dict[str, Any] = Field(default_factory=lambda: {
+        "property_taxes": Decimal("0"),
+        "insurance": Decimal("0"),
+        "repairs": Decimal("0"),
+        "capex": Decimal("0"),
+        "property_management": Decimal("0"),
+        "hoa_fees": Decimal("0"),
+        "utilities": {
+            "water": Decimal("0"),
+            "electricity": Decimal("0"),
+            "gas": Decimal("0"),
+            "trash": Decimal("0")
+        },
+        "other_expenses": Decimal("0"),
+        "expense_notes": ""
+    })
     
     # Partnership
     partners: List[Partner] = Field(default_factory=list)
@@ -359,6 +243,102 @@ class Property(BaseModel):
         
         return v
     
+    @validator("monthly_income")
+    def validate_monthly_income(cls, v: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Validate monthly income.
+        
+        Args:
+            v: The monthly income to validate
+            
+        Returns:
+            The validated monthly income
+            
+        Raises:
+            ValueError: If the monthly income is invalid
+        """
+        required_fields = ["rental_income", "parking_income", "laundry_income", "other_income"]
+        
+        # Ensure all required fields exist
+        for field in required_fields:
+            if field not in v:
+                v[field] = Decimal("0")
+            elif not isinstance(v[field], Decimal):
+                try:
+                    v[field] = Decimal(str(v[field]))
+                except:
+                    v[field] = Decimal("0")
+            
+            # Validate decimal fields
+            if not validate_decimal(v[field], 0):
+                raise ValueError(f"{field} must be a positive decimal")
+        
+        # Ensure income_notes exists
+        if "income_notes" not in v:
+            v["income_notes"] = ""
+        
+        return v
+    
+    @validator("monthly_expenses")
+    def validate_monthly_expenses(cls, v: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Validate monthly expenses.
+        
+        Args:
+            v: The monthly expenses to validate
+            
+        Returns:
+            The validated monthly expenses
+            
+        Raises:
+            ValueError: If the monthly expenses are invalid
+        """
+        required_fields = ["property_taxes", "insurance", "repairs", "capex",
+                          "property_management", "hoa_fees", "other_expenses"]
+        
+        # Ensure all required fields exist
+        for field in required_fields:
+            if field not in v:
+                v[field] = Decimal("0")
+            elif not isinstance(v[field], Decimal):
+                try:
+                    v[field] = Decimal(str(v[field]))
+                except:
+                    v[field] = Decimal("0")
+            
+            # Validate decimal fields
+            if not validate_decimal(v[field], 0):
+                raise ValueError(f"{field} must be a positive decimal")
+        
+        # Ensure utilities exists and is properly structured
+        if "utilities" not in v:
+            v["utilities"] = {
+                "water": Decimal("0"),
+                "electricity": Decimal("0"),
+                "gas": Decimal("0"),
+                "trash": Decimal("0")
+            }
+        else:
+            utility_fields = ["water", "electricity", "gas", "trash"]
+            for field in utility_fields:
+                if field not in v["utilities"]:
+                    v["utilities"][field] = Decimal("0")
+                elif not isinstance(v["utilities"][field], Decimal):
+                    try:
+                        v["utilities"][field] = Decimal(str(v["utilities"][field]))
+                    except:
+                        v["utilities"][field] = Decimal("0")
+                
+                # Validate decimal fields
+                if not validate_decimal(v["utilities"][field], 0):
+                    raise ValueError(f"utilities.{field} must be a positive decimal")
+        
+        # Ensure expense_notes exists
+        if "expense_notes" not in v:
+            v["expense_notes"] = ""
+        
+        return v
+    
     def calculate_cash_flow(self) -> Decimal:
         """
         Calculate the monthly cash flow.
@@ -366,7 +346,46 @@ class Property(BaseModel):
         Returns:
             The monthly cash flow
         """
-        return self.monthly_income.total() - self.monthly_expenses.total()
+        return self.calculate_total_income() - self.calculate_total_expenses()
+    
+    def calculate_total_income(self) -> Decimal:
+        """
+        Calculate the total monthly income.
+        
+        Returns:
+            The total monthly income
+        """
+        return (
+            self.monthly_income["rental_income"] +
+            self.monthly_income["parking_income"] +
+            self.monthly_income["laundry_income"] +
+            self.monthly_income["other_income"]
+        )
+    
+    def calculate_total_expenses(self) -> Decimal:
+        """
+        Calculate the total monthly expenses.
+        
+        Returns:
+            The total monthly expenses
+        """
+        utilities_total = (
+            self.monthly_expenses["utilities"]["water"] +
+            self.monthly_expenses["utilities"]["electricity"] +
+            self.monthly_expenses["utilities"]["gas"] +
+            self.monthly_expenses["utilities"]["trash"]
+        )
+        
+        return (
+            self.monthly_expenses["property_taxes"] +
+            self.monthly_expenses["insurance"] +
+            self.monthly_expenses["repairs"] +
+            self.monthly_expenses["capex"] +
+            self.monthly_expenses["property_management"] +
+            self.monthly_expenses["hoa_fees"] +
+            utilities_total +
+            self.monthly_expenses["other_expenses"]
+        )
     
     def calculate_cap_rate(self) -> Decimal:
         """
@@ -378,7 +397,7 @@ class Property(BaseModel):
         from src.utils.financial_helpers import calculate_cap_rate
         from src.utils.money import Money
         
-        annual_noi = (self.monthly_income.total() - self.monthly_expenses.total()) * 12
+        annual_noi = (self.calculate_total_income() - self.calculate_total_expenses()) * 12
         
         if self.purchase_price == 0:
             return Decimal("0")

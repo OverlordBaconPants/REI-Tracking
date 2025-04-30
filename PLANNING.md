@@ -14,7 +14,8 @@ This guide provides a structured process for working with Claude to build produc
 8. [Working With Claude](#8--working-with-claude-effectively)
 9. [File System & Version Control](#9--file-system--version-control-workflow)
 10. [Technical Debt Management](#10--technical-debt-management)
-11. [Decision Log](#11--decision-log)
+11. [Development Practices](#11--development-practices)
+12. [Decision Log](#12--decision-log)
 
 ## 1. 🔑 Golden Rules for Collaboration
 
@@ -340,7 +341,57 @@ Common code smells:
 3. Use patterns consistently in new development
 4. Implement changes incrementally
 
-## 11. 📝 Decision Log
+## 11. 🛠️ Development Practices
+
+### Code Reuse & Simplicity
+- **Always look for existing code to iterate on** instead of creating new code
+- **Adhere to variable names as set forth in DATA_STRUCTURES.md**
+  - Consult before extending DATA_STRUCTURES.md with clear justification
+- **Prefer simple solutions** over complex ones
+- **Avoid duplication of code** by checking for similar functionality elsewhere in the codebase
+- **Do not store calculated or derived values in JSON objects** if such values can be calculated at run-time
+  - This maintains a single source of truth for calculations
+  - Prevents data inconsistency issues
+  - Reduces storage requirements
+  - Improves maintainability by centralizing calculation logic
+
+### Debugging Methodology
+When debugging an issue:
+1. **Identify and rank potential root causes** by likelihood
+2. **Create a clear action plan** for each cause, listing specific changes to make
+3. **Try solutions in order** of highest likelihood
+4. **If a solution doesn't work**, clearly state why and revert all changes before trying the next approach
+5. **Document the successful solution** and explain why it worked
+
+### Code Organization
+- **Keep the codebase very clean and organized**
+- When encountering a non-Markdown file exceeding 600 lines of code:
+  1. Analyze the file structure and identify logical separation points
+  2. Present a refactoring plan that includes:
+     - Proposed file names and their responsibilities
+     - Which functions/classes belong in each new file
+     - Any shared interfaces or dependencies between files
+     - Estimated complexity of the refactoring (low/medium/high)
+  3. Wait for approval before proceeding with the refactoring
+
+### Strategic Logging
+Add strategic logging statements throughout the codebase:
+1. **Log function entry points** with parameters for key functions
+2. **Use different console methods appropriately**:
+   - `console.log()` for general flow information
+   - `console.warn()` for potential issues
+   - `console.error()` for caught exceptions
+3. **Format logs with clear prefixes** (e.g., "[ComponentName]") to make them easily identifiable
+4. **Include relevant state values** in logs to provide context
+5. **For async operations**, log both the start and completion/failure
+
+### Additional Guidelines
+- **Mocking data is only needed for tests**; never mock data for code intended for production
+- **Focus on the areas of code relevant to the task**
+- **Do not touch code that is unrelated to the task**
+- **Always think about what other methods and areas of code** might be affected by code changes
+
+## 12. 📝 Decision Log
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
@@ -380,6 +431,13 @@ Common code smells:
 | 2025-04-27 | Enhanced print-specific styling and layouts | To provide optimized printing capabilities for reports, calculators, and dashboards with proper page breaks, headers, and formatting |
 | 2025-04-27 | Implemented occupancy rate calculator | To enable multi-family property owners to analyze occupancy rates, calculate revenue impact, compare to market averages, and determine breakeven occupancy |
 | 2025-04-28 | Refactored utility functions into centralized modules | To eliminate code duplication, improve maintainability, and ensure consistent behavior by centralizing common functions in dedicated utility modules (common.py, dash_helpers.py, financial_helpers.py) |
+| 2025-04-29 | Updated Property model to use flat structure for monthly income and expenses | To align implementation with documented data structures, improve maintainability, and simplify property financial service interactions |
+| 2025-04-29 | Standardized property_taxes field naming | To ensure consistent use of "property_taxes" (plural) throughout the codebase, aligning with DATA_STRUCTURES.md documentation |
+| 2025-04-29 | Standardized Loan model data types and field naming | To align implementation with documented data structures, using string representations for money and percentage values, consistent term_months field naming, and simplified balloon payment structure |
+| 2025-04-29 | Added Development Practices section to PLANNING.md | To establish clear guidelines for code reuse, debugging methodology, code organization, strategic logging, and general development practices that ensure maintainable, clean, and well-structured code |
+| 2025-04-29 | Established rule against storing calculated values | To improve data integrity, reduce storage needs, and maintain a single source of truth for calculations by computing derived values at runtime rather than storing them |
+| 2025-04-29 | Standardized Transaction model ID field and simplified Reimbursement structure | To align implementation with documented data structures, ensuring ID field is explicitly defined in Transaction class and simplifying the Reimbursement structure while maintaining validation logic |
+| 2025-04-29 | Documented property_access field in User model | To align implementation with documented data structures, adding the property_access field to DATA_STRUCTURES.md with comprehensive documentation of access levels and equity shares, and creating unit tests to validate functionality |
 
 ---
 

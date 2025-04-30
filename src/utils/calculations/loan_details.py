@@ -19,26 +19,26 @@ class LoanDetails:
     with validation and calculation capabilities.
     
     Args:
-        amount: The loan amount
-        interest_rate: The annual interest rate as a percentage
-        term: The loan term in months
+        amount: The loan amount as a string
+        interest_rate: The annual interest rate as a percentage string
+        term_months: The loan term in months
         is_interest_only: Whether the loan is interest-only
         name: Optional name for the loan
         
     Examples:
         >>> loan = LoanDetails(
-        ...     amount=Money(200000),
-        ...     interest_rate=Percentage(4.5),
-        ...     term=360,
+        ...     amount="$200,000.00",
+        ...     interest_rate="4.500%",
+        ...     term_months=360,
         ...     is_interest_only=False,
         ...     name="Primary Mortgage"
         ... )
         >>> payment = loan.calculate_payment()
         >>> print(payment.total)
     """
-    amount: Money
-    interest_rate: Percentage
-    term: int
+    amount: str
+    interest_rate: str
+    term_months: int
     is_interest_only: bool = False
     name: Optional[str] = None
     
@@ -49,21 +49,17 @@ class LoanDetails:
     def _validate(self) -> None:
         """Validate loan parameters."""
         # Validate amount is positive
-        if not isinstance(self.amount, Money):
-            self.amount = Money(self.amount)
-        
-        if self.amount.dollars <= 0:
+        amount_obj = Money(self.amount)
+        if amount_obj.dollars <= 0:
             raise ValueError("Loan amount must be greater than 0")
         
         # Validate interest rate
-        if not isinstance(self.interest_rate, Percentage):
-            self.interest_rate = Percentage(self.interest_rate)
-            
-        if self.interest_rate.value < 0 or self.interest_rate.value > MAX_LOAN_INTEREST_RATE:
+        interest_rate_obj = Percentage(self.interest_rate)
+        if interest_rate_obj.value < 0 or interest_rate_obj.value > MAX_LOAN_INTEREST_RATE:
             raise ValueError(f"Interest rate must be between 0% and {MAX_LOAN_INTEREST_RATE}%")
         
-        # Validate term
-        if self.term <= 0 or self.term > MAX_LOAN_TERM:
+        # Validate term_months
+        if self.term_months <= 0 or self.term_months > MAX_LOAN_TERM:
             raise ValueError(f"Loan term must be between 1 and {MAX_LOAN_TERM} months")
         
         # Validate is_interest_only is boolean
@@ -81,17 +77,21 @@ class LoanDetails:
             ValueError: If loan parameters are invalid
         """
         try:
+            # Convert to Money and Percentage objects for calculations
+            amount_obj = Money(self.amount)
+            interest_rate_obj = Percentage(self.interest_rate)
+            
             # Convert to decimal for precise calculation
-            loan_amount = Decimal(str(self.amount.dollars))
-            annual_rate = Decimal(str(self.interest_rate.as_decimal()))
+            loan_amount = Decimal(str(amount_obj.dollars))
+            annual_rate = Decimal(str(interest_rate_obj.as_decimal()))
             monthly_rate = annual_rate / Decimal('12')
-            term_months = Decimal(str(self.term))
+            term_months = Decimal(str(self.term_months))
             
             # Handle zero interest rate
             if annual_rate == 0:
                 # For 0% loans, always divide principal by term (whether interest-only or not)
                 principal_payment = float(loan_amount / term_months)
-                logger.debug(f"Calculated principal-only payment: ${principal_payment:.2f} for 0% loan amount: ${self.amount.dollars:.2f}")
+                logger.debug(f"Calculated principal-only payment: ${principal_payment:.2f} for 0% loan amount: ${amount_obj.dollars:.2f}")
                 return MonthlyPayment(
                     total=Money(principal_payment),
                     principal=Money(principal_payment),
@@ -102,7 +102,7 @@ class LoanDetails:
             if self.is_interest_only:
                 # For interest-only, calculate the monthly interest
                 interest_payment = float(loan_amount * monthly_rate)
-                logger.debug(f"Calculated interest-only payment: ${interest_payment:.2f} for loan amount: ${self.amount.dollars:.2f}")
+                logger.debug(f"Calculated interest-only payment: ${interest_payment:.2f} for loan amount: ${amount_obj.dollars:.2f}")
                 return MonthlyPayment(
                     total=Money(interest_payment),
                     principal=Money(0),
@@ -119,7 +119,7 @@ class LoanDetails:
             # Calculate principal portion
             principal_payment = total_payment - interest_payment
             
-            logger.debug(f"Calculated amortized payment: ${total_payment:.2f} for loan amount: ${self.amount.dollars:.2f}")
+            logger.debug(f"Calculated amortized payment: ${total_payment:.2f} for loan amount: ${amount_obj.dollars:.2f}")
             
             return MonthlyPayment(
                 total=Money(total_payment),
@@ -147,22 +147,28 @@ class LoanDetails:
         if payments_made < 0:
             raise ValueError("Payments made cannot be negative")
             
-        if payments_made >= self.term:
+        if payments_made >= self.term_months:
             return Money(0)  # Loan is paid off
             
+        # Convert to Money and Percentage objects for calculations
+        amount_obj = Money(self.amount)
+            
         if payments_made == 0:
-            return self.amount  # No payments made yet
+            return amount_obj  # No payments made yet
             
         if self.is_interest_only:
             # For interest-only loans, principal doesn't change until final payment
-            return self.amount
+            return amount_obj
             
         try:
             # Convert to decimal for precise calculation
-            loan_amount = Decimal(str(self.amount.dollars))
-            annual_rate = Decimal(str(self.interest_rate.as_decimal()))
+            amount_obj = Money(self.amount)
+            interest_rate_obj = Percentage(self.interest_rate)
+            
+            loan_amount = Decimal(str(amount_obj.dollars))
+            annual_rate = Decimal(str(interest_rate_obj.as_decimal()))
             monthly_rate = annual_rate / Decimal('12')
-            term_months = Decimal(str(self.term))
+            term_months = Decimal(str(self.term_months))
             
             # Handle zero interest rate
             if annual_rate == 0:
@@ -199,17 +205,21 @@ class LoanDetails:
             list: List of dictionaries containing payment details for each period
         """
         if max_periods is None:
-            max_periods = self.term
+            max_periods = self.term_months
             
         if max_periods <= 0:
             return []
             
+        # Convert to Money and Percentage objects for calculations
+        amount_obj = Money(self.amount)
+        interest_rate_obj = Percentage(self.interest_rate)
+            
         schedule = []
-        remaining_balance = self.amount.dollars
+        remaining_balance = amount_obj.dollars
         
         # Handle interest-only loans
         if self.is_interest_only:
-            interest_payment = self.amount.dollars * (self.interest_rate.value / 100 / 12)
+            interest_payment = amount_obj.dollars * (interest_rate_obj.value / 100 / 12)
             
             # Generate schedule for all periods except the last
             for period in range(1, max_periods):
@@ -222,9 +232,9 @@ class LoanDetails:
                 })
                 
             # Last payment includes principal
-            if max_periods == self.term:
+            if max_periods == self.term_months:
                 schedule.append({
-                    'period': self.term,
+                    'period': self.term_months,
                     'payment': Money(remaining_balance + interest_payment),
                     'principal': Money(remaining_balance),
                     'interest': Money(interest_payment),
@@ -243,10 +253,10 @@ class LoanDetails:
             return schedule
             
         # Handle zero interest rate
-        if self.interest_rate.value == 0:
-            payment = remaining_balance / self.term
+        if interest_rate_obj.value == 0:
+            payment = remaining_balance / self.term_months
             
-            for period in range(1, min(self.term + 1, max_periods + 1)):
+            for period in range(1, min(self.term_months + 1, max_periods + 1)):
                 schedule.append({
                     'period': period,
                     'payment': Money(payment),
@@ -261,15 +271,15 @@ class LoanDetails:
         # Regular amortizing loan
         payment = self.calculate_payment().total.dollars
         
-        for period in range(1, min(self.term + 1, max_periods + 1)):
+        for period in range(1, min(self.term_months + 1, max_periods + 1)):
             # Calculate interest for this period
-            interest = remaining_balance * (self.interest_rate.value / 100 / 12)
+            interest = remaining_balance * (interest_rate_obj.value / 100 / 12)
             
             # Calculate principal for this period
             principal = payment - interest
             
             # Handle final payment rounding issues
-            if period == self.term or period == max_periods:
+            if period == self.term_months or period == max_periods:
                 principal = remaining_balance
                 payment = principal + interest
                 

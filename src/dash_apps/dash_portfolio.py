@@ -343,7 +343,7 @@ def calculate_monthly_cashflow(property_data: Dict, username: str) -> Optional[D
         
         # Calculate total operating expenses
         operating_expenses = sum([
-            safe_float(monthly_expenses.get('property_tax')),
+            safe_float(monthly_expenses.get('property_taxes')),
             safe_float(monthly_expenses.get('insurance')),
             safe_float(monthly_expenses.get('repairs')),
             safe_float(monthly_expenses.get('capex')),
@@ -399,7 +399,7 @@ def calculate_monthly_cashflow(property_data: Dict, username: str) -> Optional[D
 
         # Create expense breakdown
         expense_breakdown = {
-            'Property Tax': safe_float(monthly_expenses.get('property_tax')),
+            'Property Taxes': safe_float(monthly_expenses.get('property_taxes')),
             'Insurance': safe_float(monthly_expenses.get('insurance')),
             'Repairs': safe_float(monthly_expenses.get('repairs')),
             'CapEx': safe_float(monthly_expenses.get('capex')),
