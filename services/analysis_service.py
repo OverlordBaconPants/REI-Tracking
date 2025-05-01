@@ -36,6 +36,116 @@ class AnalysisService:
             'cache_duration': 300    # Cache duration in seconds
         }
 
+    def run_comps_by_address(self, address: str, user_id: str) -> Optional[Dict]:
+        """
+        Run property comps for an address without requiring an existing analysis.
+        
+        Args:
+            address: Property address
+            user_id: ID of the user
+            
+        Returns:
+            Comps data or None if not found
+        """
+        try:
+            # Validate required parameters
+            if not address:
+                logger.error("Missing address")
+                raise ValueError("Property address is required to fetch comps")
+            
+            # Default property details
+            property_type = 'Single Family'
+            bedrooms = 3
+            bathrooms = 2
+            square_footage = 1500
+            
+            # Get property comps data
+            from utils.comps_handler import fetch_property_comps, fetch_rental_comps
+            from flask import current_app
+            
+            try:
+                comps_data = fetch_property_comps(
+                    current_app.config,
+                    address,
+                    property_type,
+                    bedrooms,
+                    bathrooms,
+                    square_footage
+                )
+                
+                # Verify comps_data is valid and has required fields
+                if not comps_data:
+                    raise ValueError("No property comps data returned from API")
+                    
+                # Check for required fields
+                required_fields = ['price', 'priceRangeLow', 'priceRangeHigh', 'comparables', 'last_run']
+                missing_fields = [field for field in required_fields if field not in comps_data]
+                if missing_fields:
+                    logger.warning(f"Comps data missing fields: {missing_fields}")
+                    # Fill in missing fields with defaults
+                    for field in missing_fields:
+                        if field == 'comparables':
+                            comps_data[field] = []
+                        elif field == 'last_run':
+                            comps_data[field] = datetime.utcnow().isoformat()
+                        else:
+                            comps_data[field] = 0
+            except RentcastAPIError as e:
+                logger.error(f"RentCast API error: {str(e)}")
+                raise ValueError(f"Could not find property comps: {str(e)}")
+            
+            # Get rental comps data
+            rental_comps = None
+            try:
+                logger.debug("Fetching rental comps")
+                rental_comps = fetch_rental_comps(
+                    current_app.config,
+                    address,
+                    bedrooms,
+                    bathrooms,
+                    square_footage,
+                    property_type
+                )
+                logger.debug(f"Rental comps fetched successfully: {rental_comps is not None}")
+                
+                # Validate rental comps data
+                if rental_comps and 'estimated_rent' not in rental_comps:
+                    logger.warning("Rental comps missing estimated_rent field")
+                    rental_comps['estimated_rent'] = 0
+                    
+            except Exception as e:
+                logger.error(f"Error fetching rental comps: {str(e)}")
+                logger.exception("Full traceback:")
+                # Continue with property comps even if rental comps fail
+            
+            # Format the comps data for the frontend
+            formatted_comps_data = {
+                'last_run': comps_data.get('last_run', datetime.utcnow().isoformat()),
+                'estimated_value': comps_data.get('estimated_value', 0),
+                'value_range_low': comps_data.get('value_range_low', 0),
+                'value_range_high': comps_data.get('value_range_high', 0),
+                'comparables': comps_data.get('comparables', [])
+            }
+            
+            # Add MAO data if available
+            if 'mao' in comps_data:
+                formatted_comps_data['mao'] = comps_data['mao']
+            
+            # Add rental data if available
+            if rental_comps:
+                formatted_comps_data['rental_comps'] = rental_comps
+            
+            return formatted_comps_data
+                
+        except ValueError as e:
+            # Provide more specific error message for common issues
+            logger.error(f"Value error in run_comps_by_address: {str(e)}")
+            raise RentcastAPIError(f"Could not find property comps: {str(e)}")
+        except Exception as e:
+            logger.error(f"Error in run_comps_by_address: {str(e)}")
+            logger.exception("Full traceback:")
+            raise
+    
     def run_property_comps(self, analysis_id: str, user_id: str) -> Optional[Dict]:
         """
         Run property comps for an analysis and update it with the results.
@@ -147,9 +257,9 @@ class AnalysisService:
                 analysis['comps_data'] = {
                     'last_run': comps_data.get('last_run', datetime.utcnow().isoformat()),
                     'run_count': run_count,
-                    'estimated_value': comps_data.get('price', 0),
-                    'value_range_low': comps_data.get('priceRangeLow', 0),
-                    'value_range_high': comps_data.get('priceRangeHigh', 0),
+                    'estimated_value': comps_data.get('estimated_value', 0),
+                    'value_range_low': comps_data.get('value_range_low', 0),
+                    'value_range_high': comps_data.get('value_range_high', 0),
                     'comparables': comps_data.get('comparables', [])
                 }
                 

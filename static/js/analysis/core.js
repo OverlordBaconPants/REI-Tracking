@@ -393,7 +393,13 @@ const AnalysisCore = {
     const analysisType = document.getElementById('analysis_type');
     if (analysisType) {
       this.state.initialAnalysisType = analysisType.value;
-      this.loadTemplateForType(this.state.initialAnalysisType);
+      this.loadTemplateForType(this.state.initialAnalysisType).then(() => {
+        // Initialize comps handler for new analysis mode
+        if (this.comps) {
+          console.log('Initializing comps handler for new analysis mode');
+          this.comps.init('new');
+        }
+      });
     }
   },
 
@@ -403,7 +409,7 @@ const AnalysisCore = {
       <div class="card mb-4">
         <div class="card-header">
           <div class="d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Comparable Properties</h5>
+            <h5 class="mb-0">Comparable Properties and MAO</h5>
             <span id="compsRunCount" class="badge bg-info" style="display: none;">
               Run <span id="runCountValue">0</span>
             </span>

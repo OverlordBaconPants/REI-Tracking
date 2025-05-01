@@ -456,6 +456,8 @@ Add strategic logging statements throughout the codebase:
 | 2025-04-30 | Fixed circular import between money.py and validators.py | To resolve an import error that was preventing the application from starting, restructured the imports by moving utility functions to validators.py and removing the circular dependency |
 | 2025-04-30 | Implemented alphanumeric sorting for property dropdowns | To improve user experience by displaying properties in a consistent, predictable order in all dropdown menus throughout the application, modified the _format_property_addresses function to sort properties by address in ascending alphanumeric order |
 | 2025-04-30 | Implemented comprehensive test persona for UI testing | To provide consistent test data for UI testing, created a test persona with dedicated user credentials, diverse property portfolio, comprehensive analyses, various loan scenarios, transaction history with reimbursements, and MAO calculation defaults |
+| 2025-04-30 | Relocated MAO button from Purchase Details to Comparable Properties card | To improve UI organization and consolidate related functionality, removed the "Calculate MAO" button from the Purchase Details card header and renamed the "Comparable Properties" card to "Comparable Properties and MAO" to better reflect its combined functionality |
+| 2025-04-30 | Fixed "Run Comps" button for new analyses | To ensure consistent functionality between new and existing analyses, fixed the "Run Comps" button to properly display property values when creating a new analysis by correcting field name references in the API response handling |
 
 ---
 

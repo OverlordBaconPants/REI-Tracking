@@ -37,7 +37,24 @@ const compsHandler = {
     init(analysisId) {
         console.log('Comps Handler: Starting initialization with ID:', analysisId);
         
-        // Enhanced validation
+        // For new analysis mode, we'll use a special flag
+        if (analysisId === 'new') {
+            console.log('Comps Handler: Initializing for new analysis mode');
+            this.analysisId = 'new';
+            
+            // Remove any existing comps sections first
+            this.removeExistingCompsSections();
+            
+            // Create a single clean comps container with Run Comps button
+            this.createCompsContainer();
+            
+            // Watch for DOM changes
+            this.watchForDOMChanges();
+            
+            return true;
+        }
+        
+        // Enhanced validation for existing analysis
         if (!analysisId || typeof analysisId !== 'string') {
             console.error('Comps Handler: Invalid analysis ID type:', typeof analysisId);
             return false;
@@ -159,7 +176,7 @@ const compsHandler = {
             <div class="col-12">
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="mb-0">Comparable Properties</h5>
+                        <h5 class="mb-0">Comparable Properties and MAO</h5>
                     </div>
                     <div class="card-body comps-container">
                         <div id="initialCompsMessage" class="text-center">
@@ -594,6 +611,61 @@ const compsHandler = {
             return;
         }
         
+        // For new analysis mode, we need to get the address from the form
+        if (this.analysisId === 'new') {
+            const addressInput = document.getElementById('address');
+            if (!addressInput || !addressInput.value.trim()) {
+                toastr.error('Please enter a property address first');
+                return;
+            }
+            
+            // Show loading state
+            this.setLoadingState(true);
+            console.log('Comps Handler: Set loading state');
+            
+            try {
+                // Get the address from the form
+                const address = addressInput.value.trim();
+                
+                // Make API request with the address
+                console.log('Comps Handler: Making API request to run comps by address');
+                const response = await fetch('/analyses/run_comps_by_address', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ address })
+                });
+                
+                console.log('Comps Handler: Received response:', response.status);
+                const data = await response.json();
+                console.log('Comps Handler: Parsed response data:', data);
+                
+                if (!response.ok) {
+                    throw new Error(data.message || 'Error fetching comps');
+                }
+                
+                if (data.success) {
+                    // Update display with new comps data
+                    this.updateCompsDisplay(data.comps_data);
+                    toastr.success('Comps updated successfully');
+                    this.hasRunComps = true; // Mark as run
+                    
+                    console.log('Comps Handler: Display updated successfully');
+                } else {
+                    throw new Error(data.message);
+                }
+            } catch (error) {
+                console.error('Comps Handler: Error in handleRunComps:', error);
+                this.showError(error.message || 'Failed to fetch comparable properties');
+            } finally {
+                this.setLoadingState(false);
+                console.log('Comps Handler: Reset loading state');
+            }
+            return;
+        }
+        
+        // For existing analysis, use the normal flow
         // Show loading state
         this.setLoadingState(true);
         console.log('Comps Handler: Set loading state');

@@ -357,6 +357,7 @@ The application includes several specialized dashboards and tools:
   - Detailed calculation breakdown with step-by-step explanation
   - Print-friendly results for sharing and documentation
   - Integration with property comps data
+  - Consolidated with comparable properties functionality for improved UI organization
 
 - **Occupancy Rate Calculator**: Calculate and analyze occupancy rates for multi-family properties
   - Track occupancy over time with visual indicators
@@ -482,6 +483,10 @@ The application features a sophisticated property valuation system:
 - **Market Statistics**: Access location-based market data for comprehensive analysis
 - **Session-based Rate Limiting**: Prevent API abuse with configurable rate limits
 - **Data Persistence**: Store comps data for historical analysis and comparison
+- **Consistent Functionality**: The "Run Comps" button works identically for both new and existing analyses
+  - Standardized field names ensure property values display correctly in all contexts
+  - Address-based comps fetching for new analyses before they're saved
+  - Analysis ID-based comps fetching for existing analyses
 
 ## API Documentation
 

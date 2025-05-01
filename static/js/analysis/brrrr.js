@@ -451,35 +451,8 @@ const BRRRRHandler = {
    * Provides a helper calculation for BRRRR investors
    */
   initMaximumAllowableOfferCalc() {
-    // Find the purchase details card header (using standard DOM methods)
-    const purchaseCards = document.querySelectorAll('.card-header');
-    let purchaseCard = null;
-    
-    for (let i = 0; i < purchaseCards.length; i++) {
-      if (purchaseCards[i].textContent.includes('Purchase Details')) {
-        purchaseCard = purchaseCards[i];
-        break;
-      }
-    }
-    
-    if (purchaseCard) {
-      // Make the header a flex container if it's not already
-      if (!purchaseCard.classList.contains('d-flex')) {
-        purchaseCard.classList.add('d-flex', 'justify-content-between', 'align-items-center');
-      }
-      
-      // Create MAO button
-      const maoButton = document.createElement('button');
-      maoButton.className = 'btn btn-sm btn-outline-primary';
-      maoButton.id = 'calculate-mao-btn';
-      maoButton.innerHTML = '<i class="bi bi-calculator me-1"></i> Calculate MAO';
-      
-      // Add button to header
-      purchaseCard.appendChild(maoButton);
-      
-      // Add event listener
-      maoButton.addEventListener('click', this.showMAOCalculator);
-    }
+    // This function is now empty as the MAO button has been removed
+    // MAO is now shown in the Comparable Properties and MAO card
   },
 
   initClosingCostSyncHandler() {

@@ -430,3 +430,7 @@ For any task to be considered complete, it must meet these criteria:
     - [x] Remove Validator import from money.py
 - [x] Sort properties in dropdown menus in ascending alphanumeric order
     - [x] Update _format_property_addresses function in transaction_service.py to sort properties
+- [x] Fix "Run Comps" button for new analyses
+    - [x] Correct field name references in run_comps_by_address method
+    - [x] Ensure consistent functionality between new and existing analyses
+    - [x] Update documentation in README.md and PLANNING.md

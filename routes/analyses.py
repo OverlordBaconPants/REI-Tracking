@@ -11,6 +11,85 @@ analyses_bp = Blueprint('analyses', __name__)
 logger = logging.getLogger(__name__)
 analysis_service = AnalysisService()
 
+@analyses_bp.route('/run_comps_by_address', methods=['POST'])
+@login_required
+def run_comps_by_address():
+    try:
+        # Get the address from the request
+        data = request.get_json()
+        if not data or 'address' not in data:
+            return jsonify({
+                'success': False,
+                'message': 'Address is required'
+            }), 400
+            
+        address = data['address']
+        
+        # Get user ID from current user
+        user_id = current_user.get_id()
+        
+        # Get max runs from config with default fallback
+        max_runs = current_app.config.get('MAX_COMP_RUNS_PER_SESSION', 3)
+        
+        # Check session run count for this address
+        session_key = f'comps_run_count_address_{address}'
+        run_count = session.get(session_key, 0)
+        
+        # Log current state
+        current_app.logger.debug(f"Current run count for address {address}: {run_count}")
+        current_app.logger.debug(f"Max runs allowed: {max_runs}")
+        
+        if run_count >= max_runs:
+            return jsonify({
+                'success': False,
+                'message': f'Maximum comp runs ({max_runs}) reached for this session'
+            }), 429  # Too Many Requests
+        
+        # Run comps using analysis service
+        analysis_service = AnalysisService()
+        comps_data = analysis_service.run_comps_by_address(address, user_id)
+        
+        if not comps_data:
+            return jsonify({
+                'success': False,
+                'message': 'Failed to get comps for this address'
+            }), 404
+            
+        # Increment run count
+        session[session_key] = run_count + 1
+        current_app.logger.debug(f"Updated run count to: {run_count + 1}")
+            
+        return jsonify({
+            'success': True,
+            'comps_data': comps_data,
+            'message': 'Comps retrieved successfully'
+        })
+        
+    except RentcastAPIError as e:
+        error_msg = str(e)
+        # Make user-friendly error messages
+        if "Failed to fetch property comps" in error_msg:
+            user_msg = "Unable to find comparable properties for this address. Please verify the address is correct."
+        elif "Maximum comp runs" in error_msg:
+            user_msg = error_msg  # This is already user-friendly
+        elif "'NoneType' object has no attribute" in error_msg:
+            user_msg = "Unable to process property comps. The property address may not be recognized."
+        else:
+            user_msg = f"Error running comps: {error_msg}"
+            
+        current_app.logger.error(f'RentcastAPIError: {str(e)}')
+        return jsonify({
+            'success': False,
+            'message': user_msg
+        }), 500
+    except Exception as e:
+        current_app.logger.error(f'Error in run_comps_by_address: {str(e)}')
+        current_app.logger.exception('Full traceback:')
+        return jsonify({
+            'success': False,
+            'message': 'Error running comps: The property address may not be recognized by our data provider.'
+        }), 500
+
 @analyses_bp.route('/run_comps/<analysis_id>', methods=['POST'])
 @login_required
 def run_property_comps(analysis_id):
