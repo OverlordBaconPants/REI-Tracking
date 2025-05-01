@@ -68,3 +68,49 @@ def update_user_password(email, new_password):
         return True
     logger.warning(f"Attempt to update password for non-existent user: {email}")
     return False
+
+def update_user_mao_defaults(email, mao_defaults):
+    """
+    Update MAO default values for a user.
+    
+    Args:
+        email: User email
+        mao_defaults: Dictionary containing MAO default values
+        
+    Returns:
+        True if successful, False if user not found
+    """
+    users = load_users()
+    if email in users:
+        # Initialize mao_defaults if it doesn't exist
+        if 'mao_defaults' not in users[email]:
+            users[email]['mao_defaults'] = {}
+        
+        # Update with new values
+        users[email]['mao_defaults'].update(mao_defaults)
+        save_users(users)
+        logger.info(f"MAO defaults updated for user: {email}")
+        return True
+    logger.warning(f"Attempt to update MAO defaults for non-existent user: {email}")
+    return False
+
+def get_user_mao_defaults(email):
+    """
+    Get MAO default values for a user.
+    
+    Args:
+        email: User email
+        
+    Returns:
+        Dictionary containing MAO default values, or default values if not set
+    """
+    users = load_users()
+    user = users.get(email)
+    if user and 'mao_defaults' in user:
+        return user['mao_defaults']
+    # Return default values if not set
+    return {
+        'ltv_percentage': 75.0,
+        'monthly_holding_costs': 0,
+        'max_cash_left': 10000
+    }

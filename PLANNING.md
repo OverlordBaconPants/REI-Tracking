@@ -172,6 +172,39 @@ project_name/
 
 ## 6. 🧪 Testing & Reliability
 
+### Test Implementation Strategy
+
+1. **Write Tests First**: Following Test-Driven Development (TDD) principles, write tests before implementing features to ensure requirements are met and code is testable.
+   - Define expected behavior before writing implementation
+   - Use tests to guide the design of interfaces and APIs
+   - Ensure all requirements are covered by test cases
+
+2. **Automate Testing**: All tests should be automated and integrated into the development workflow.
+   - Use pytest for backend testing
+   - Use Selenium WebDriver for UI testing
+   - Run tests automatically before commits
+   - Maintain a CI/CD pipeline for continuous testing
+
+3. **Test in Isolation**: Unit tests should test components in isolation with mocked dependencies.
+   - Mock external services and APIs
+   - Test individual functions and methods independently
+   - Use dependency injection to facilitate testing
+   - Avoid testing implementation details
+
+4. **Integration Testing**: Verify that components work together correctly.
+   - Test API endpoints with real database connections
+   - Test interactions between modules
+   - Verify correct data flow between components
+   - Test error handling across component boundaries
+
+5. **UI Testing**: Verify the end-to-end functionality from the user's perspective.
+   - Test critical user flows
+   - Verify UI elements and interactions
+   - Test responsive design and mobile compatibility
+   - Test accessibility features
+
+### Testing Guidelines
+
 - **Create Pytest unit tests** for all new features
 - **Update existing tests** when logic changes
 - **Mirror app structure** in `/tests` folder
@@ -409,6 +442,7 @@ Add strategic logging statements throughout the codebase:
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2025-04-30 | Added Test Implementation Strategy | To establish clear guidelines for comprehensive testing including writing tests first, automating testing, testing in isolation, integration testing, and UI testing |
 | 2025-04-24 | Added MCP integration guidelines | To establish clear workflow for AI-assisted development with filesystem access and version control integration |
 | 2025-04-26 | Reorganized PLANNING.md | To improve clarity, conciseness, and organization of the development workflow documentation |
 | 2025-04-26 | Implemented user authentication system | To provide secure user management with login/registration, session handling, and role-based access control |
@@ -458,6 +492,7 @@ Add strategic logging statements throughout the codebase:
 | 2025-04-30 | Implemented comprehensive test persona for UI testing | To provide consistent test data for UI testing, created a test persona with dedicated user credentials, diverse property portfolio, comprehensive analyses, various loan scenarios, transaction history with reimbursements, and MAO calculation defaults |
 | 2025-04-30 | Relocated MAO button from Purchase Details to Comparable Properties card | To improve UI organization and consolidate related functionality, removed the "Calculate MAO" button from the Purchase Details card header and renamed the "Comparable Properties" card to "Comparable Properties and MAO" to better reflect its combined functionality |
 | 2025-04-30 | Fixed "Run Comps" button for new analyses | To ensure consistent functionality between new and existing analyses, fixed the "Run Comps" button to properly display property values when creating a new analysis by correcting field name references in the API response handling |
+| 2025-04-30 | Added "Change MAO Default Values" feature | To allow users to customize their MAO calculation parameters by setting default values for LTV percentage, monthly holding costs, and max cash left in deal, with values stored in the user's profile and applied to all MAO calculations |
 
 ---
 

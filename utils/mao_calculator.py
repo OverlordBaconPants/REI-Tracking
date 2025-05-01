@@ -3,13 +3,14 @@ from typing import Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
 
-def calculate_mao(arv: float, analysis_data: Dict[str, Any]) -> Dict[str, Any]:
+def calculate_mao(arv: float, analysis_data: Dict[str, Any], user_defaults: Optional[Dict] = None) -> Dict[str, Any]:
     """
-    Calculate Maximum Allowable Offer (MAO) based on ARV and analysis data.
+    Calculate Maximum Allowable Offer (MAO) based on ARV, analysis data, and user defaults.
     
     Args:
         arv: After Repair Value from comps
         analysis_data: Complete analysis data dictionary
+        user_defaults: User's default MAO values (optional)
         
     Returns:
         Dictionary containing MAO value and calculation components
@@ -20,23 +21,28 @@ def calculate_mao(arv: float, analysis_data: Dict[str, Any]) -> Dict[str, Any]:
         renovation_duration = float(analysis_data.get('renovation_duration', 0) or 0)
         closing_costs = float(analysis_data.get('closing_costs', 0) or 0)
         
-        # Get loan parameters - defaults to standard 75% LTV if not found
+        # Get loan parameters - use user defaults if available
         ltv_percentage = 75.0  # default
+        max_cash_left = 10000  # default
+        
+        if user_defaults:
+            ltv_percentage = user_defaults.get('ltv_percentage', ltv_percentage)
+            max_cash_left = user_defaults.get('max_cash_left', max_cash_left)
         
         # Adjust LTV based on analysis type
         analysis_type = analysis_data.get('analysis_type', '')
         if 'BRRRR' in analysis_type:
             # For BRRRR, use a standard 75% LTV if not specified
-            ltv_percentage = 75.0
-            # Check if there's an explicit refinance LTV percentage field
             if 'refinance_ltv_percentage' in analysis_data:
-                ltv_percentage = float(analysis_data.get('refinance_ltv_percentage', 75.0) or 75.0)
+                ltv_percentage = float(analysis_data.get('refinance_ltv_percentage', ltv_percentage) or ltv_percentage)
         elif analysis_data.get('has_balloon_payment'):
             # Use balloon refinance LTV if balloon payment is enabled
-            ltv_percentage = float(analysis_data.get('balloon_refinance_ltv_percentage', 75.0) or 75.0)
+            ltv_percentage = float(analysis_data.get('balloon_refinance_ltv_percentage', ltv_percentage) or ltv_percentage)
         
-        # Calculate monthly holding costs
+        # Calculate monthly holding costs - use user default if available
         monthly_holding_costs = calculate_monthly_holding_costs(analysis_data)
+        if user_defaults and 'monthly_holding_costs' in user_defaults:
+            monthly_holding_costs = user_defaults.get('monthly_holding_costs')
         
         # Calculate total holding costs
         total_holding_costs = monthly_holding_costs * renovation_duration
@@ -50,8 +56,7 @@ def calculate_mao(arv: float, analysis_data: Dict[str, Any]) -> Dict[str, Any]:
         loan_amount = arv * (ltv_percentage / 100)
         logger.debug(f"Calculated loan amount: {loan_amount} based on {ltv_percentage}% of ARV {arv}")
         
-        # Set max cash left in deal - could be configurable in the future
-        max_cash_left = 10000  # $10k default
+        # max_cash_left is already set above from user defaults or default value
         
         # Calculate MAO using the formula
         mao = loan_amount - renovation_costs - closing_costs - total_holding_costs + max_cash_left

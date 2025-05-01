@@ -384,6 +384,78 @@ def generate_pdf(analysis_id):
 def mao_calculator():
     return render_template('analyses/mao_calculator.html')
 
+@analyses_bp.route('/get_mao_defaults', methods=['GET'])
+@login_required
+def get_mao_defaults():
+    """Get MAO default values for the current user."""
+    try:
+        email = current_user.email
+        from services.user_service import get_user_mao_defaults
+        mao_defaults = get_user_mao_defaults(email)
+        
+        return jsonify({
+            "success": True,
+            "mao_defaults": mao_defaults
+        })
+            
+    except Exception as e:
+        logger.error(f"Error getting MAO defaults: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({
+            "success": False,
+            "message": f"An error occurred: {str(e)}"
+        }), 500
+
+@analyses_bp.route('/update_mao_defaults', methods=['POST'])
+@login_required
+def update_mao_defaults():
+    """Update MAO default values for the current user."""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"success": False, "message": "No data provided"}), 400
+            
+        # Validate the data
+        required_fields = ['ltv_percentage', 'monthly_holding_costs', 'max_cash_left']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({"success": False, "message": f"Missing required field: {field}"}), 400
+        
+        # Validate field values
+        ltv_percentage = float(data['ltv_percentage'])
+        if ltv_percentage < 0 or ltv_percentage > 100:
+            return jsonify({"success": False, "message": "LTV percentage must be between 0 and 100"}), 400
+            
+        monthly_holding_costs = float(data['monthly_holding_costs'])
+        if monthly_holding_costs < 0:
+            return jsonify({"success": False, "message": "Monthly holding costs must be a positive number"}), 400
+            
+        max_cash_left = float(data['max_cash_left'])
+        if max_cash_left < 0:
+            return jsonify({"success": False, "message": "Max cash left must be a positive number"}), 400
+                
+        # Update user's MAO defaults
+        email = current_user.email
+        from services.user_service import update_user_mao_defaults
+        success = update_user_mao_defaults(email, data)
+        
+        if success:
+            return jsonify({
+                "success": True,
+                "message": "MAO defaults updated successfully",
+                "mao_defaults": data
+            })
+        else:
+            return jsonify({"success": False, "message": "Failed to update MAO defaults"}), 500
+            
+    except Exception as e:
+        logger.error(f"Error updating MAO defaults: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({
+            "success": False,
+            "message": f"An error occurred: {str(e)}"
+        }), 500
+
 @analyses_bp.route('/delete_analysis/<analysis_id>', methods=['DELETE'])
 @login_required
 def delete_analysis(analysis_id: str):

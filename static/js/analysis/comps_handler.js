@@ -804,6 +804,9 @@ const compsHandler = {
                                             data-bs-target="#maoDetails" aria-expanded="false">
                                         <i class="bi bi-info-circle me-1"></i>View Calculation Details
                                     </button>
+                                    <button class="btn btn-sm btn-link" type="button" id="changeMaoDefaultsBtn">
+                                        <i class="bi bi-gear me-1"></i>Change MAO Default Values
+                                    </button>
                                 </p>
                             </div>
                         </div>
@@ -856,6 +859,18 @@ const compsHandler = {
                 this.applyCompsValues();
             });
         }
+        
+        // Add event handler for the Change MAO Defaults button
+        const changeMaoDefaultsBtn = document.getElementById('changeMaoDefaultsBtn');
+        if (changeMaoDefaultsBtn) {
+            changeMaoDefaultsBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.showMaoDefaultsModal();
+            });
+        }
+        
+        // Create the MAO defaults modal if it doesn't exist
+        this.createMaoDefaultsModal();
     },
     
     // Generate MAO details table
@@ -1245,6 +1260,160 @@ const compsHandler = {
             console.error('Error formatting date:', error);
             return 'N/A';
         }
+    },
+    
+    // Create the MAO defaults modal
+    createMaoDefaultsModal() {
+        // Check if modal already exists
+        if (document.getElementById('maoDefaultsModal')) {
+            return;
+        }
+        
+        // Create the modal dialog for MAO defaults
+        const maoDefaultsModal = document.createElement('div');
+        maoDefaultsModal.className = 'modal fade';
+        maoDefaultsModal.id = 'maoDefaultsModal';
+        maoDefaultsModal.tabIndex = '-1';
+        maoDefaultsModal.setAttribute('aria-labelledby', 'maoDefaultsModalLabel');
+        maoDefaultsModal.setAttribute('aria-hidden', 'true');
+
+        maoDefaultsModal.innerHTML = `
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="maoDefaultsModalLabel">Change MAO Default Values</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="maoDefaultsForm">
+                            <div class="mb-3">
+                                <label for="ltv_percentage" class="form-label">LTV Refinance Percentage (%)</label>
+                                <input type="number" class="form-control" id="ltv_percentage" min="0" max="100" step="0.1" required>
+                                <div class="form-text">Loan-to-Value percentage used for refinancing.</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="monthly_holding_costs" class="form-label">Monthly Holding Costs ($)</label>
+                                <input type="number" class="form-control" id="monthly_holding_costs" min="0" step="1" required>
+                                <div class="form-text">Monthly costs during the holding period.</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="max_cash_left" class="form-label">Max Cash Left in Deal ($)</label>
+                                <input type="number" class="form-control" id="max_cash_left" min="0" step="100" required>
+                                <div class="form-text">Maximum amount of cash you're willing to leave in the deal.</div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="cancelMaoDefaultsBtn">Cancel</button>
+                        <button type="button" class="btn btn-primary" id="saveMaoDefaultsBtn">Save Changes</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(maoDefaultsModal);
+        
+        // Add event handlers for the modal buttons
+        const saveMaoDefaultsBtn = document.getElementById('saveMaoDefaultsBtn');
+        if (saveMaoDefaultsBtn) {
+            saveMaoDefaultsBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.saveMaoDefaults();
+            });
+        }
+
+        const cancelMaoDefaultsBtn = document.getElementById('cancelMaoDefaultsBtn');
+        if (cancelMaoDefaultsBtn) {
+            cancelMaoDefaultsBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                // Show a toaster notification
+                toastr.info('MAO default values changes cancelled');
+            });
+        }
+    },
+    
+    // Show the MAO defaults modal
+    showMaoDefaultsModal() {
+        // Fetch current MAO defaults from the server
+        fetch('/analyses/get_mao_defaults')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Populate the form with current defaults
+                    document.getElementById('ltv_percentage').value = data.mao_defaults.ltv_percentage;
+                    document.getElementById('monthly_holding_costs').value = data.mao_defaults.monthly_holding_costs;
+                    document.getElementById('max_cash_left').value = data.mao_defaults.max_cash_left;
+                    
+                    // Show the modal
+                    const modal = new bootstrap.Modal(document.getElementById('maoDefaultsModal'));
+                    modal.show();
+                } else {
+                    toastr.error('Failed to load MAO defaults');
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching MAO defaults:', error);
+                toastr.error('Failed to load MAO defaults');
+            });
+    },
+    
+    // Save MAO defaults
+    saveMaoDefaults() {
+        // Get values from the form
+        const ltvPercentage = parseFloat(document.getElementById('ltv_percentage').value);
+        const monthlyHoldingCosts = parseFloat(document.getElementById('monthly_holding_costs').value);
+        const maxCashLeft = parseFloat(document.getElementById('max_cash_left').value);
+        
+        // Validate values
+        if (isNaN(ltvPercentage) || ltvPercentage < 0 || ltvPercentage > 100) {
+            toastr.error('LTV percentage must be between 0 and 100');
+            return;
+        }
+        
+        if (isNaN(monthlyHoldingCosts) || monthlyHoldingCosts < 0) {
+            toastr.error('Monthly holding costs must be a positive number');
+            return;
+        }
+        
+        if (isNaN(maxCashLeft) || maxCashLeft < 0) {
+            toastr.error('Max cash left must be a positive number');
+            return;
+        }
+        
+        // Send the data to the server
+        fetch('/analyses/update_mao_defaults', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                ltv_percentage: ltvPercentage,
+                monthly_holding_costs: monthlyHoldingCosts,
+                max_cash_left: maxCashLeft
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Hide the modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('maoDefaultsModal'));
+                modal.hide();
+                
+                // Show a success message
+                toastr.success('MAO default values updated successfully');
+                
+                // If we have an analysis ID, refresh the comps to update the MAO calculation
+                if (this.analysisId) {
+                    this.handleRunComps();
+                }
+            } else {
+                toastr.error(data.message || 'Failed to update MAO defaults');
+            }
+        })
+        .catch(error => {
+            console.error('Error updating MAO defaults:', error);
+            toastr.error('Failed to update MAO defaults');
+        });
     }
 };
 

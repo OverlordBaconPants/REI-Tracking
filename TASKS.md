@@ -434,3 +434,9 @@ For any task to be considered complete, it must meet these criteria:
     - [x] Correct field name references in run_comps_by_address method
     - [x] Ensure consistent functionality between new and existing analyses
     - [x] Update documentation in README.md and PLANNING.md
+- [x] Add "Change MAO Default Values" feature
+    - [x] Create modal dialog for editing MAO defaults
+    - [x] Add API endpoints for getting and updating MAO defaults
+    - [x] Store MAO defaults in the user's profile
+    - [x] Apply MAO defaults to MAO calculations
+    - [x] Add toaster notifications for success/cancel actions

@@ -228,7 +228,13 @@ def fetch_property_comps(
         if analysis_data and 'estimated_value' in standardized_data:
             try:
                 arv = standardized_data['estimated_value']
-                mao_data = calculate_mao(arv, analysis_data)
+                # Get user defaults if available
+                user_defaults = None
+                if 'user_id' in analysis_data:
+                    from services.user_service import get_user_mao_defaults
+                    user_defaults = get_user_mao_defaults(analysis_data['user_id'])
+                
+                mao_data = calculate_mao(arv, analysis_data, user_defaults)
                 standardized_data['mao'] = mao_data
                 logger.debug(f"Calculated MAO: ${mao_data['value']:.2f} for ARV: ${arv:.2f}")
             except Exception as e:
