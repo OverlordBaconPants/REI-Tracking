@@ -870,6 +870,28 @@ To run tests with coverage:
 pytest --cov=src
 ```
 
+#### Test Persona for UI Testing
+The project includes a comprehensive test persona for UI testing:
+
+- **Dedicated Test User**: A test user with consistent credentials for authentication testing
+- **Diverse Property Portfolio**: Test properties covering different investment strategies
+- **Comprehensive Analyses**: Analyses for each property covering all supported strategies
+- **Various Loan Scenarios**: Different loan types including standard, balloon, interest-only, etc.
+- **Transaction History**: Transactions with different types, categories, and reimbursement statuses
+- **MAO Calculation Defaults**: Default values for Maximum Allowable Offer calculations
+
+To set up the test environment with the test persona:
+
+```bash
+cd tests/test_frontend
+python setup_test_environment.py
+```
+
+This will:
+1. Create necessary test files (PDFs, etc.)
+2. Seed the test database with test persona data
+3. Set up directories for test screenshots and reports
+
 #### Frontend Tests
 The project includes a comprehensive frontend testing framework for JavaScript components:
 
@@ -899,7 +921,7 @@ The frontend testing framework uses:
 - **Selenium WebDriver** for browser automation
 - **Chrome** (headless by default) as the browser for testing
 
-All required dependencies for frontend testing are included in the main project's `requirements.txt` file. For more details, see the [Frontend Testing README](tests/test_frontend/README.md).
+All required dependencies for frontend testing are included in the main project's `requirements.txt` file. For more details, see the [Frontend Testing README](tests/test_frontend/README.md) and the [Test Persona Documentation](tests/test_frontend/test_data/README.md).
 
 ### Git Workflow
 

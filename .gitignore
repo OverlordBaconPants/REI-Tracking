@@ -41,5 +41,39 @@ FAILED_TESTS.md
 # Test Results
 test-results/
 
+# Test Persona Data Files
+/data/properties.json
+/data/analyses.json
+/data/loans.json
+/data/partners.json
+/data/reimbursements.json
+
+# Test Files and Artifacts
+/tests/test_frontend/test_data/test_files/receipts/
+/tests/test_frontend/test_data/test_files/leases/
+/tests/test_frontend/test_data/test_files/bank_statements/
+/tests/test_frontend/test_data/test_files/misc/
+/tests/test_frontend/test_data/generated_test_data/
+
+# Keep test file directory structure
+!/tests/test_frontend/test_data/test_files/receipts/.gitkeep
+!/tests/test_frontend/test_data/test_files/leases/.gitkeep
+!/tests/test_frontend/test_data/test_files/bank_statements/.gitkeep
+!/tests/test_frontend/test_data/test_files/misc/.gitkeep
+!/tests/test_frontend/test_data/generated_test_data/.gitkeep
+
+# Test Database Files
+/tests/test_frontend/test_db/
+!/tests/test_frontend/test_db/.gitkeep
+
+# Test Screenshots and Reports
+/tests/test_frontend/screenshots/
+/tests/test_frontend/reports/
+!/tests/test_frontend/screenshots/.gitkeep
+!/tests/test_frontend/reports/.gitkeep
+
+# Test Session Data
+/flask_session/
+
 # Legacy Code
 /legacy_code/

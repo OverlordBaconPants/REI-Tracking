@@ -23,9 +23,28 @@ const viewEditAnalysisModule = {
             toastr.error('No analysis ID provided');
             return;
         }
-        const url = `/analyses/create_analysis?analysis_id=${analysisId}`;
-        console.log('Navigating to:', url);
-        window.location.href = url;
+        
+        // First verify the analysis exists
+        fetch(`/analyses/get_analysis/${analysisId}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Analysis not found');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    const url = `/analyses/create_analysis?analysis_id=${analysisId}`;
+                    console.log('Navigating to:', url);
+                    window.location.href = url;
+                } else {
+                    throw new Error(data.message || 'Analysis not found');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                toastr.error('This analysis no longer exists or you do not have permission to edit it.');
+            });
     },
 
     downloadPdf: function(analysisId) {
@@ -47,42 +66,60 @@ const viewEditAnalysisModule = {
             btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
         }
         
-        // Make AJAX request
-        fetch(`/analyses/generate_pdf/${analysisId}`, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/pdf',
-            },
-        })
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(err => { throw err; });
-            }
-            return response.blob();
-        })
-        .then(blob => {
-            // Create download link
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `analysis_${analysisId}.pdf`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-            
-            toastr.success('PDF generated successfully');
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            toastr.error(error.error || 'Error generating PDF');
-        })
-        .finally(() => {
-            if (btn) {
-                btn.disabled = false;
-                btn.innerHTML = originalHtml;
-            }
-        });
+        // First verify the analysis exists
+        fetch(`/analyses/get_analysis/${analysisId}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Analysis not found');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (!data.success) {
+                    throw new Error(data.message || 'Analysis not found');
+                }
+                
+                // Analysis exists, proceed with PDF generation
+                return fetch(`/analyses/generate_pdf/${analysisId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/pdf',
+                    },
+                });
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => { throw err; });
+                }
+                return response.blob();
+            })
+            .then(blob => {
+                // Create download link
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `analysis_${analysisId}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                toastr.success('PDF generated successfully');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                if (error.message === 'Analysis not found') {
+                    toastr.error('This analysis no longer exists or you do not have permission to access it.');
+                } else {
+                    toastr.error(error.error || 'Error generating PDF');
+                }
+            })
+            .finally(() => {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
+                }
+            });
     },
 
     loadMoreAnalyses: async function(nextPage) {
@@ -157,6 +194,29 @@ const viewEditAnalysisModule = {
     deleteAnalysis: function(analysisId, analysisName) {
         console.log('Deleting analysis:', analysisId, analysisName);
         
+        // First verify the analysis exists
+        fetch(`/analyses/get_analysis/${analysisId}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Analysis not found');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (!data.success) {
+                    throw new Error(data.message || 'Analysis not found');
+                }
+                
+                // Analysis exists, show confirmation dialog
+                this._showDeleteConfirmation(analysisId, analysisName);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                toastr.error('This analysis no longer exists or you do not have permission to delete it.');
+            });
+    },
+    
+    _showDeleteConfirmation: function(analysisId, analysisName) {
         // Show confirmation dialog
         const modal = document.createElement('div');
         modal.className = 'modal fade';

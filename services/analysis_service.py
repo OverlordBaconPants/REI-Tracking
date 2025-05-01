@@ -663,8 +663,23 @@ class AnalysisService:
             Analysis data with calculated metrics or None if not found
         """
         try:
+            # First check if the analysis exists for this user
             filepath = self._get_analysis_filepath(analysis_id, user_id)
             if not os.path.exists(filepath):
+                logger.warning(f"Analysis {analysis_id} not found for user {user_id}")
+                
+                # Check if the analysis exists for any user
+                analyses_dir = current_app.config['ANALYSES_DIR']
+                all_files = os.listdir(analyses_dir)
+                
+                analysis_exists = False
+                for filename in all_files:
+                    if filename.startswith(f"{analysis_id}_"):
+                        analysis_exists = True
+                        logger.warning(f"Analysis {analysis_id} exists but doesn't belong to user {user_id}")
+                        break
+                
+                # If analysis doesn't exist at all or belongs to another user, return None
                 return None
                 
             # Load stored data

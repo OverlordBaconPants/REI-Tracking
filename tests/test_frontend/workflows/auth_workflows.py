@@ -3,6 +3,7 @@ Authentication workflow utilities.
 """
 from tests.test_frontend.page_objects.login_page import LoginPage
 from tests.test_frontend.base.logger import TestLogger
+from tests.test_frontend.test_data.test_persona import TEST_USER
 
 class AuthWorkflows:
     """Authentication workflow utilities."""
@@ -171,3 +172,28 @@ class AuthWorkflows:
                     TestLogger.log_step(logger, "Forgot password request failed")
         
         return forgot_password_page
+    
+    @staticmethod
+    def login_as_test_user(driver, remember_me=False, logger=None):
+        """
+        Login as the test user defined in test_persona.py.
+        
+        Args:
+            driver: WebDriver instance
+            remember_me: Whether to check the "Remember Me" checkbox
+            logger: Optional logger instance
+            
+        Returns:
+            The dashboard page object if login is successful, otherwise the login page
+        """
+        if logger:
+            TestLogger.log_step(logger, "Login as test user workflow started")
+            TestLogger.log_step(logger, f"Using test user: {TEST_USER['email']}")
+        
+        return AuthWorkflows.login(
+            driver, 
+            TEST_USER["email"], 
+            TEST_USER["password"], 
+            remember_me, 
+            logger
+        )

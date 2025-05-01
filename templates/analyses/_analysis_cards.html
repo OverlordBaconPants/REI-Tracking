@@ -10,21 +10,20 @@
         <div class="d-grid gap-2">
             <button type="button" 
                     class="btn btn-secondary"
-                    data-action="download"
-                    data-id="{{ analysis.id }}">
+                    data-analysis-id="{{ analysis.id }}"
+                    onclick="viewEditAnalysisModule.downloadPdf('{{ analysis.id }}')">
                 <i class="bi bi-file-pdf me-2"></i>Download PDF
             </button>
             <button type="button" 
                     class="btn btn-primary"
-                    data-action="edit"
-                    data-id="{{ analysis.id }}">
+                    data-analysis-id="{{ analysis.id }}"
+                    onclick="viewEditAnalysisModule.editAnalysis('{{ analysis.id }}')">
                 <i class="bi bi-pencil me-2"></i>Edit Analysis
             </button>
             <button type="button" 
                     class="btn btn-danger"
-                    data-action="delete"
-                    data-id="{{ analysis.id }}"
-                    data-name="{{ analysis.analysis_name }}">
+                    data-analysis-id="{{ analysis.id }}"
+                    onclick="viewEditAnalysisModule.deleteAnalysis('{{ analysis.id }}', '{{ analysis.analysis_name }}')">
                 <i class="bi bi-trash me-2"></i>Delete Analysis
             </button>
         </div>
