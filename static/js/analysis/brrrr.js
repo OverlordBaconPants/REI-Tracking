@@ -456,20 +456,9 @@ const BRRRRHandler = {
   },
 
   initClosingCostSyncHandler() {
-    const closingCostsInput = document.getElementById('closing_costs');
-    const initialLoanClosingCostsInput = document.getElementById('initial_loan_closing_costs');
-    
-    if (closingCostsInput && initialLoanClosingCostsInput) {
-      // Sync from closing_costs to initial_loan_closing_costs
-      closingCostsInput.addEventListener('input', () => {
-        initialLoanClosingCostsInput.value = closingCostsInput.value;
-      });
-      
-      // Sync from initial_loan_closing_costs to closing_costs
-      initialLoanClosingCostsInput.addEventListener('input', () => {
-        closingCostsInput.value = initialLoanClosingCostsInput.value;
-      });
-    }
+    // This function is now empty as we no longer want to sync the closing costs fields
+    // The Purchase Details Closing Costs and Initial Financing Closing Costs should be separate
+    console.log('Closing costs fields are now independent');
   },
   
   /**
@@ -624,7 +613,7 @@ const BRRRRHandler = {
     
     // Set purchase details
     AnalysisCore.setFieldValue('purchase_price', analysis.purchase_price);
-    AnalysisCore.setFieldValue('closing_costs', analysis.initial_loan_closing_costs);
+    AnalysisCore.setFieldValue('closing_costs', analysis.closing_costs || analysis.initial_loan_closing_costs);
     AnalysisCore.setFieldValue('after_repair_value', analysis.after_repair_value);
     AnalysisCore.setFieldValue('renovation_costs', analysis.renovation_costs);
     AnalysisCore.setFieldValue('renovation_duration', analysis.renovation_duration);
@@ -637,8 +626,8 @@ const BRRRRHandler = {
     AnalysisCore.setFieldValue('initial_loan_closing_costs', analysis.initial_loan_closing_costs);
     AnalysisCore.setFieldValue('initial_interest_only', analysis.initial_interest_only);
     
-    // Set refinance details
-    AnalysisCore.setFieldValue('refinance_ltv_percentage', analysis.refinance_ltv_percentage);
+    // Set refinance details with proper null/undefined checks
+    AnalysisCore.setFieldValue('refinance_ltv_percentage', analysis.refinance_ltv_percentage || 75);
     AnalysisCore.setFieldValue('refinance_loan_amount', analysis.refinance_loan_amount);
     AnalysisCore.setFieldValue('refinance_loan_interest_rate', analysis.refinance_loan_interest_rate);
     AnalysisCore.setFieldValue('refinance_loan_term', analysis.refinance_loan_term);
@@ -657,17 +646,23 @@ AnalysisCore.setFieldValue('repairs_percentage', analysis.repairs_percentage);
 
 // Set PadSplit-specific fields
 if (analysis.analysis_type.includes('PadSplit')) {
-  AnalysisCore.setFieldValue('furnishing_costs', analysis.furnishing_costs);
-  AnalysisCore.setFieldValue('utilities', analysis.utilities);
-  AnalysisCore.setFieldValue('internet', analysis.internet);
-  AnalysisCore.setFieldValue('cleaning', analysis.cleaning);
-  AnalysisCore.setFieldValue('pest_control', analysis.pest_control);
-  AnalysisCore.setFieldValue('landscaping', analysis.landscaping);
-  AnalysisCore.setFieldValue('padsplit_platform_percentage', analysis.padsplit_platform_percentage);
-  
-  // Ensure PadSplit fields are visible
+  // Make sure PadSplit fields are visible first
   document.querySelectorAll('.padsplit-field').forEach(field => {
     field.style.display = 'block';
+  });
+  
+  // Set field values with proper null/undefined checks
+  AnalysisCore.setFieldValue('furnishing_costs', analysis.furnishing_costs || 0);
+  AnalysisCore.setFieldValue('utilities', analysis.utilities || 0);
+  AnalysisCore.setFieldValue('internet', analysis.internet || 0);
+  AnalysisCore.setFieldValue('cleaning', analysis.cleaning || 0);
+  AnalysisCore.setFieldValue('pest_control', analysis.pest_control || 0);
+  AnalysisCore.setFieldValue('landscaping', analysis.landscaping || 0);
+  AnalysisCore.setFieldValue('padsplit_platform_percentage', analysis.padsplit_platform_percentage || 15);
+  
+  // Make sure inputs are required
+  document.querySelectorAll('.padsplit-field input').forEach(input => {
+    input.required = true;
   });
 }
 },
@@ -691,10 +686,8 @@ if (!isPadSplit) {
 }
 
 
-// Sync closing_costs to initial_loan_closing_costs in case they're not already synced
-if ('closing_costs' in analysisData) {
-  analysisData.initial_loan_closing_costs = analysisData.closing_costs;
-}
+// No longer syncing closing_costs to initial_loan_closing_costs
+// Each field will maintain its own value
 
 // Handle numeric fields
 const numericFields = [
@@ -984,16 +977,33 @@ return `
                 </div>
                 <div class="list-group-item d-flex justify-content-between align-items-center py-3">
                   <span>Monthly Payment</span>
-                  <strong>${metrics.refinance_loan_payment || Calculator.calculateLoanPayment({
-                    amount: analysis.refinance_loan_amount,
-                    interestRate: analysis.refinance_loan_interest_rate,
-                    term: analysis.refinance_loan_term,
-                    isInterestOnly: false // Refinance is typically amortized
-                  })}</strong>
+                  <strong>${(function() {
+                    console.log("Refinance loan details:", {
+                      amount: analysis.refinance_loan_amount,
+                      interestRate: analysis.refinance_loan_interest_rate,
+                      term: analysis.refinance_loan_term
+                    });
+                    console.log("Metrics object:", metrics);
+                    console.log("Refinance loan payment from metrics:", metrics.refinance_loan_payment);
+                    
+                    if (metrics.refinance_loan_payment) {
+                      console.log("Using pre-calculated refinance loan payment:", metrics.refinance_loan_payment);
+                      return metrics.refinance_loan_payment;
+                    } else {
+                      const calculatedPayment = Calculator.calculateLoanPayment({
+                        amount: analysis.refinance_loan_amount,
+                        interestRate: analysis.refinance_loan_interest_rate,
+                        term: analysis.refinance_loan_term,
+                        isInterestOnly: false // Refinance is typically amortized
+                      });
+                      console.log("Calculated refinance loan payment:", calculatedPayment);
+                      return UIHelpers.formatDisplayValue(calculatedPayment, 'money');
+                    }
+                  })()}</strong>
                 </div>
                 <div class="list-group-item d-flex justify-content-between align-items-center py-3">
                   <span>LTV Percentage</span>
-                  <strong>${UIHelpers.formatDisplayValue(analysis.refinance_ltv_percentage, 'percentage')}</strong>
+                  <strong>${UIHelpers.formatDisplayValue(analysis.refinance_ltv_percentage || 75, 'percentage')}</strong>
                 </div>
                 <div class="list-group-item d-flex justify-content-between align-items-center py-3">
                   <span>Closing Costs</span>

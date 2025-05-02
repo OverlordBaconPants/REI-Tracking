@@ -15,13 +15,16 @@ This guide provides a structured process for working with Claude to build produc
 9. [File System & Version Control](#9--file-system--version-control-workflow)
 10. [Technical Debt Management](#10--technical-debt-management)
 11. [Development Practices](#11--development-practices)
-12. [Decision Log](#12--decision-log)
+12. [UI/UX Guidelines](#12--uiux-guidelines)
+13. [API Contract Standards](#13--api-contract-standards)
+14. [Project Constraints](#14--project-constraints)
+15. [Decision Log](#15--decision-log)
 
 ## 1. 🔑 Golden Rules for Collaboration
 
 - **Use markdown files** for project management (README.md, PLANNING.md, TASK.md)
 - **Keep development and test files under 500 lines** and split into modules when needed
-- *** Markdown files can be more than 500 lines** since this is just documentation
+- **Markdown files can be more than 500 lines** since this is just documentation
 - **Start fresh conversations** with sufficient context
 - **One task per message** for clearer responses
 - **Test early and often** with unit tests for each new function
@@ -61,6 +64,22 @@ Context: [Brief project description]
 Current task: [What we're working on]
 Relevant files: [List key files/modules]
 Goals: [What you want to accomplish]
+```
+
+### User Story Format for Task Requests
+When providing tasks, use this format for clarity:
+
+```
+As a [property owner/investor/user],
+I want to [specific capability],
+So that [tangible benefit].
+
+Technical Details:
+- [Implementation specifics]
+- [API endpoints affected]
+- [Data models involved]
+
+Any relevant constraints or considerations?
 ```
 
 ### Request Templates
@@ -152,23 +171,39 @@ project_name/
 
 ## 5. 📋 Planning & Task Management
 
-### Task Completion Criteria
-- Core functionality implemented and working
-- Documentation complete:
-  - Code-level documentation (docstrings, comments)
-  - User documentation (if applicable)
-  - `README.md` updates (if applicable)
-  - `PLANNING.md` updates to Decision Log (if applicable)
-  - `TASKS.md` updates for Technical Debt (if applicable)
-- Unit tests written and passing:
-  - Happy path tests
-  - Edge case tests
-  - Error handling tests
-- Code reviewed against quality guidelines
+### Standard Acceptance Criteria
+All development tasks must meet the following criteria:
+
+- Functionality implements all specified requirements
+- Code coverage meets minimum 80% threshold
+- All unit tests pass (new and existing)
+- UI testing passes with testing persona
+- Documentation updated (README.md, PLANNING.md, TASKS.md)
+- Mobile-first implementation verified
+- Cross-browser compatibility (Chrome, Safari, Edge)
 
 ### Task Tracking
 - **Mark completed tasks** in `TASK.md` immediately
 - **Add new tasks** discovered during development to `TASK.md` as Technical Debt
+
+### Task Prioritization Framework
+All tasks should be prioritized using the following framework:
+
+- **Priority Levels**:
+  - **P0**: Critical - Blocking or major functionality issue
+  - **P1**: High - Important feature or improvement
+  - **P2**: Medium - Desired enhancement
+  - **P3**: Low - Nice to have
+
+- **Effort Estimation**:
+  - **Small**: 1-4 hours
+  - **Medium**: 4-8 hours
+  - **Large**: 8+ hours
+
+- **Format in TASKS.md**:
+  ```
+  - [P1][Medium] Implement transaction filtering system
+  ```
 
 ## 6. 🧪 Testing & Reliability
 
@@ -438,10 +473,242 @@ Add strategic logging statements throughout the codebase:
 - **Do not touch code that is unrelated to the task**
 - **Always think about what other methods and areas of code** might be affected by code changes
 
-## 12. 📝 Decision Log
+## 12. 🎨 UI/UX Guidelines
+
+### Visual Elements
+
+#### Color Palette
+- **Primary**: #3498db (Blue)
+- **Secondary**: #2ecc71 (Green)
+- **Accent**: #f39c12 (Orange)
+- **Warning**: #f1c40f (Yellow)
+- **Error**: #e74c3c (Red)
+- **Text**: #2c3e50 (Dark Blue/Gray)
+- **Background**: #ecf0f1 (Light Gray)
+- **Card Background**: #ffffff (White)
+
+#### Typography
+- **Font Family**: 
+  - Primary: "Roboto", sans-serif
+  - Secondary: "Open Sans", sans-serif
+  - Monospace: "Roboto Mono", monospace
+- **Font Sizes**:
+  - Heading 1: 2.5rem
+  - Heading 2: 2rem
+  - Heading 3: 1.75rem
+  - Heading 4: 1.5rem
+  - Body: 1rem
+  - Small: 0.875rem
+- **Font Weights**:
+  - Light: 300
+  - Regular: 400
+  - Medium: 500
+  - Bold: 700
+
+#### Spacing System
+- **Base Unit**: 4px
+- **Spacing Scale**: 
+  - xs: 4px
+  - sm: 8px
+  - md: 16px
+  - lg: 24px
+  - xl: 32px
+  - xxl: 48px
+- **Grid**: 12-column system with 24px gutters
+
+#### Shadows & Elevation
+- **Level 1**: 0 2px 5px rgba(0,0,0,0.1)
+- **Level 2**: 0 4px 10px rgba(0,0,0,0.15)
+- **Level 3**: 0 8px 20px rgba(0,0,0,0.2)
+
+### Components Library
+
+#### Buttons
+- **Primary**: Filled blue button with white text
+- **Secondary**: Outlined button with colored text
+- **Destructive**: Red button for delete/remove actions
+- **Text**: No background, just colored text
+- **Button Sizes**: Small, Medium (default), Large
+- **States**: Normal, Hover, Active, Disabled
+
+#### Form Elements
+- **Text Inputs**: Floating label design with validation feedback
+- **Dropdowns**: Custom styled with search functionality for long lists
+- **Checkboxes**: Custom styled with animation
+- **Radio Buttons**: Custom styled with animation
+- **Toggle Switches**: For boolean settings
+- **Date Pickers**: Calendar popup with range selection
+- **Form Layout**: Consistent spacing and alignment
+
+#### Cards & Containers
+- **Standard Card**: White background with shadow
+- **Feature Card**: With header, icon, and call-to-action
+- **Data Card**: For displaying metrics and statistics
+- **Container Types**: Fixed-width, fluid, and sectioned
+
+#### Tables & Data Displays
+- **Data Tables**: Responsive with sortable columns
+- **Pagination**: With customizable items per page
+- **Filters**: Inline and expandable filter panels
+- **Empty States**: With helpful messages and actions
+- **Mobile Adaptation**: Card view for narrow screens
+
+#### Navigation Elements
+- **Navbar**: Fixed top with dropdown menus
+- **Sidebar**: Collapsible with icons and labels
+- **Tabs**: Underlined style with sliding indicator
+- **Breadcrumbs**: For hierarchy navigation
+- **Pagination**: For multi-page content
+
+#### Modals & Dialogs
+- **Standard Modal**: For forms and confirmation
+- **Alert Dialog**: For important notifications
+- **Drawer**: Side panel for additional content
+- **Toast Notifications**: For transient messages
+
+#### Notifications & Alerts
+- **Success**: Green with check icon
+- **Info**: Blue with info icon
+- **Warning**: Yellow with exclamation icon
+- **Error**: Red with error icon
+- **Toast Duration**: 4 seconds by default
+
+### Interaction Patterns
+
+#### Form Validation Feedback
+- **Real-time Validation**: Validate as user types
+- **Error Messages**: Display below the field
+- **Success Indicators**: Green check for valid fields
+- **Form Submit**: Disable until valid, show loading state
+
+#### Loading States
+- **Button Loading**: Replace text with spinner
+- **Page Loading**: Full-page loading overlay
+- **Content Loading**: Skeleton screens for progressive loading
+- **Infinite Scroll**: Load more content as user scrolls
+
+#### Empty States
+- **Friendly Message**: Explain why content is empty
+- **Helpful Action**: Suggest next steps
+- **Illustrations**: Use consistent visual style
+
+#### Error States
+- **User Errors**: Clear guidance on how to fix
+- **System Errors**: Apologize and offer solutions
+- **Offline State**: Handle gracefully with recovery
+
+#### Mobile-specific Interactions
+- **Touch Targets**: Minimum 44x44px
+- **Swipe Actions**: For common actions like delete
+- **Bottom Navigation**: For primary actions on mobile
+- **Pull to Refresh**: For content updates
+
+### Responsive Breakpoints
+- **Mobile**: < 576px
+- **Tablet**: 576px - 992px
+- **Desktop**: > 992px
+- **Large Desktop**: > 1200px
+
+### Accessibility Guidelines
+- **Color Contrast**: Minimum ratio of 4.5:1 for normal text
+- **Focus States**: Visible focus indicator for keyboard navigation
+- **ARIA Attributes**: For complex interactive components
+- **Keyboard Navigation**: All interactive elements must be accessible
+- **Screen Reader Support**: Meaningful alt text and ARIA labels
+- **Reduced Motion**: Support prefers-reduced-motion media query
+
+## 13. 📋 API Contract Standards
+
+Each API endpoint should be documented using the following template:
+
+```markdown
+# API Contract: [Endpoint Group]
+
+## Endpoint: [HTTP Method] [Path]
+
+**Purpose**: [Brief description of what this endpoint does]
+
+**Authentication**: [Required/Optional/None]
+
+**Request Parameters**:
+- `parameter1` (type): Description [Required/Optional]
+- `parameter2` (type): Description [Required/Optional]
+
+**Request Body**:
+```json
+{
+  "field1": "value1",
+  "field2": "value2"
+}
+```
+
+**Response**:
+```json
+{
+  "field1": "value1",
+  "field2": "value2"
+}
+```
+
+**Status Codes**:
+- 200: Success
+- 400: Bad Request [Error details]
+- 401: Unauthorized [Error details]
+- 404: Not Found [Error details]
+- 500: Server Error [Error details]
+
+**Example**:
+```curl
+curl -X POST https://api.example.com/endpoint \
+  -H "Content-Type: application/json" \
+  -d '{"field1": "value1"}'
+```
+```
+
+### API Documentation Guidelines
+
+1. **Consistency**: Use consistent naming, parameter styles, and response formats across endpoints
+
+2. **Completeness**: Document all possible parameters, responses, and error states
+
+3. **Examples**: Provide working examples of requests and responses
+
+4. **Versioning**: Include API version information in documentation
+
+5. **Status Codes**: Use standard HTTP status codes consistently
+
+6. **Error Handling**: Document error response format and possible error codes
+
+7. **Authentication**: Clearly document authentication requirements
+
+## 14. 🚧 Project Constraints
+
+### Technical Constraints
+- **Browser Compatibility**: Chrome, Safari, and Microsoft Edge
+- **Mobile-First Implementation**: All features must work well on mobile devices
+- **Test Coverage**: Minimum 80% code coverage required
+- **Accessibility**: WCAG 2.1 AA compliance
+
+### Performance Constraints
+- **Page Load Time**: < 3 seconds on desktop, < 5 seconds on mobile
+- **API Response Time**: < 500ms for non-complex operations
+- **Bundle Size**: < 500KB initial load (compressed)
+- **Time-to-Interactive**: < 4 seconds
+
+### Maintenance Constraints
+- **Solo Developer Workflow**: Documentation must be sufficient for future reference
+- **Code Organization**: Follow established patterns in PLANNING.md
+- **Technical Debt**: Address high-impact debt items promptly
+- **Dependency Management**: Keep dependencies updated and minimal
+
+## 15. 📝 Decision Log
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2025-05-02 | Added UI/UX Guidelines section | To establish consistent visual design principles, component standards, and interaction patterns across the application |
+| 2025-05-02 | Added API Contract Standards section | To ensure consistent API documentation and interface patterns |
+| 2025-05-02 | Added Project Constraints section | To clearly define technical, performance, and maintenance boundaries |
+| 2025-05-02 | Enhanced Task Management section | To add prioritization framework with P0-P3 levels and effort estimation |
 | 2025-04-30 | Added Test Implementation Strategy | To establish clear guidelines for comprehensive testing including writing tests first, automating testing, testing in isolation, integration testing, and UI testing |
 | 2025-04-24 | Added MCP integration guidelines | To establish clear workflow for AI-assisted development with filesystem access and version control integration |
 | 2025-04-26 | Reorganized PLANNING.md | To improve clarity, conciseness, and organization of the development workflow documentation |
@@ -481,7 +748,6 @@ Add strategic logging statements throughout the codebase:
 | 2025-04-28 | Refactored utility functions into centralized modules | To eliminate code duplication, improve maintainability, and ensure consistent behavior by centralizing common functions in dedicated utility modules (common.py, dash_helpers.py, financial_helpers.py) |
 | 2025-04-29 | Updated Property model to use flat structure for monthly income and expenses | To align implementation with documented data structures, improve maintainability, and simplify property financial service interactions |
 | 2025-04-29 | Standardized property_taxes field naming | To ensure consistent use of "property_taxes" (plural) throughout the codebase, aligning with DATA_STRUCTURES.md documentation |
-| 2025-04-29 | Standardized Loan model data types and field naming | To align implementation with documented data structures, using string representations for money and percentage values, consistent term_months field naming, and simplified balloon payment structure |
 | 2025-04-29 | Added Development Practices section to PLANNING.md | To establish clear guidelines for code reuse, debugging methodology, code organization, strategic logging, and general development practices that ensure maintainable, clean, and well-structured code |
 | 2025-04-29 | Established rule against storing calculated values | To improve data integrity, reduce storage needs, and maintain a single source of truth for calculations by computing derived values at runtime rather than storing them |
 | 2025-04-29 | Standardized Transaction model ID field and simplified Reimbursement structure | To align implementation with documented data structures, ensuring ID field is explicitly defined in Transaction class and simplifying the Reimbursement structure while maintaining validation logic |

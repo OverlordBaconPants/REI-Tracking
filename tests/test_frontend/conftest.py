@@ -39,12 +39,12 @@ def browser(request):
     
     driver.quit()
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def base_url():
     """Fixture for base URL."""
     return "http://localhost:5000"
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def test_user():
     """Fixture for test user credentials."""
     return {
@@ -54,22 +54,6 @@ def test_user():
         "last_name": "User"
     }
 
-def pytest_html_report_title(report):
-    """Set the title for the HTML report."""
-    report.title = "REI-Tracker UI Test Report"
-
 def pytest_configure(config):
     """Configure pytest metadata."""
-    config._metadata["Project"] = "REI-Tracker"
-    config._metadata["Application"] = "REI Portfolio Management"
-    config._metadata["Environment"] = "Test"
-
-def pytest_html_results_table_header(cells):
-    """Customize the HTML report header."""
-    cells.insert(2, "<th>Description</th>")
-    cells.pop()  # Remove links column
-
-def pytest_html_results_table_row(report, cells):
-    """Customize the HTML report row."""
-    cells.insert(2, f"<td>{getattr(report, 'description', '')}</td>")
-    cells.pop()  # Remove links column
+    pass

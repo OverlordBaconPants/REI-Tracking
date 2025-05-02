@@ -13,30 +13,48 @@ const FinancialCalculator = {
      * @param {boolean} loan.isInterestOnly - Whether the loan is interest-only
      * @returns {number} Monthly payment
      */
-    calculateLoanPayment(loan) {
+calculateLoanPayment(loan) {
+      console.log("calculateLoanPayment called with:", loan);
+      
       if (!loan || loan.amount <= 0 || loan.term <= 0) {
+        console.log("calculateLoanPayment: Invalid loan parameters, returning 0");
         return 0;
       }
-  
+
       const amount = parseFloat(loan.amount);
       const annualRate = parseFloat(loan.interestRate) / 100;
       const monthlyRate = annualRate / 12;
       const term = parseInt(loan.term);
       
+      console.log("calculateLoanPayment: Parsed values:", { 
+        amount, 
+        annualRate, 
+        monthlyRate, 
+        term 
+      });
+
       // Handle zero interest rate
       if (annualRate === 0) {
-        // For 0% loans, always divide principal by term
-        return amount / term;
+        console.log("calculateLoanPayment: Zero interest rate, dividing principal by term");
+        const payment = amount / term;
+        console.log("calculateLoanPayment: Calculated payment:", payment);
+        return payment;
       }
-      
+
       // Interest-only loan
       if (loan.isInterestOnly) {
-        return amount * monthlyRate;
+        console.log("calculateLoanPayment: Interest-only loan");
+        const payment = amount * monthlyRate;
+        console.log("calculateLoanPayment: Calculated payment:", payment);
+        return payment;
       }
-      
+
       // Regular amortizing loan
+      console.log("calculateLoanPayment: Regular amortizing loan");
       const factor = Math.pow(1 + monthlyRate, term);
-      return amount * (monthlyRate * factor) / (factor - 1);
+      const payment = amount * (monthlyRate * factor) / (factor - 1);
+      console.log("calculateLoanPayment: Calculated payment:", payment);
+      return payment;
     },
 
     formatPercentageOrInfinite(value) {

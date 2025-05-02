@@ -153,6 +153,7 @@ ANALYSIS_SCHEMA = {
     'initial_loan_closing_costs': {'type': 'integer'},
 
     'refinance_loan_name': {'type': 'string'},
+    'refinance_ltv_percentage': {'type': 'float'},
     'refinance_loan_amount': {'type': 'integer'},
     'refinance_loan_interest_rate': {'type': 'float'},
     'refinance_loan_term': {'type': 'integer'},

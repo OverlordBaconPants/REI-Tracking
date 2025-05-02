@@ -415,24 +415,34 @@ const UIHelpers = {
      * @returns {string} The formatted value
      */
     formatDisplayValue(value, type = 'money') {
+      console.log(`formatDisplayValue called with:`, { value, type, valueType: typeof value });
+      
       if (value === null || value === undefined || value === '') {
+        console.log(`formatDisplayValue: value is null/undefined/empty, returning default`);
         return type === 'money' ? '$0.00' : '0.00%';
       }
 
       const numValue = parseFloat(value);
+      console.log(`formatDisplayValue: parsed value:`, { numValue, isNaN: isNaN(numValue) });
+      
       if (isNaN(numValue)) {
+        console.log(`formatDisplayValue: parsed value is NaN, returning default`);
         return type === 'money' ? '$0.00' : '0.00%';
       }
 
       if (type === 'money') {
-        return new Intl.NumberFormat('en-US', {
+        const formatted = new Intl.NumberFormat('en-US', {
           style: 'currency',
           currency: 'USD',
           minimumFractionDigits: 2,
           maximumFractionDigits: 2
         }).format(numValue);
+        console.log(`formatDisplayValue: formatted money value:`, formatted);
+        return formatted;
       } else if (type === 'percentage') {
-        return `${numValue.toFixed(2)}%`;
+        const formatted = `${numValue.toFixed(2)}%`;
+        console.log(`formatDisplayValue: formatted percentage value:`, formatted);
+        return formatted;
       }
       
       return value;

@@ -7,6 +7,7 @@ from datetime import datetime
 from math import ceil
 import logging
 import json
+import traceback
 from utils.error_handling import safe_calculation
 from utils.validators import Validator
 

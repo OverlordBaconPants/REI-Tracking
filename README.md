@@ -3,18 +3,18 @@
 ## Project Overview
 This project provides a Flask- and Dash-based Python web application for real estate investors and partners to manage their investment portfolios. The application enables comprehensive real estate investment tracking, analysis, and management with the following key features:
 
-🏠 Property Portfolio Management - Track properties, assign partner equity shares, designate property managers, and monitor performance metrics  
-💰 Financial Calculation Engine - Calculate investment metrics including CoC return, ROI, cap rates, and DSCR with proper decimal handling  
-💵 Transaction Management System - Record, categorize, filter, and report on property-related financial transactions with equity-based splitting, reimbursement tracking, property-specific permissions, and comprehensive filtering capabilities  
-📊 Analysis System - Conduct detailed property analyses across multiple strategies (LTR, BRRRR, Lease Option, Multi-Family, PadSplit)  
-📈 Property Valuation - Integrate with RentCast API for accurate property comps and market valuations with correlation scoring, range indicators, and market statistics  
-🌐 Address Services - Leverage Geoapify for address validation, autocomplete, and geocoding  
-📱 Dynamic Dashboards - View customized KPI reports, equity tracking, and portfolio summaries  
-🔒 User Authentication - Secure multi-user access with role-based permissions, session management, security features, and an informative landing page for unauthenticated users  
-📄 Report Generation - Create professional PDF reports for analyses, transactions, and portfolio performance  
-🎨 User Interface - Responsive design with Bootstrap Spacelab theme, modular JavaScript architecture, and accessibility optimizations  
+🏠 **Property Portfolio Management** - Track properties, assign partner equity shares, designate property managers, and monitor performance metrics  
+💰 **Financial Calculation Engine** - Calculate investment metrics including CoC return, ROI, cap rates, and DSCR with proper decimal handling  
+💵 **Transaction Management System** - Record, categorize, filter, and report on property-related financial transactions with equity-based splitting, reimbursement tracking, property-specific permissions, and comprehensive filtering capabilities  
+📊 **Analysis System** - Conduct detailed property analyses across multiple strategies (LTR, BRRRR, Lease Option, Multi-Family, PadSplit)  
+📈 **Property Valuation** - Integrate with RentCast API for accurate property comps and market valuations with correlation scoring, range indicators, and market statistics  
+🌐 **Address Services** - Leverage Geoapify for address validation, autocomplete, and geocoding  
+📱 **Dynamic Dashboards** - View customized KPI reports, equity tracking, and portfolio summaries  
+🔒 **User Authentication** - Secure multi-user access with role-based permissions, session management, security features, and an informative landing page for unauthenticated users  
+📄 **Report Generation** - Create professional PDF reports for analyses, transactions, and portfolio performance  
+🎨 **User Interface** - Responsive design with Bootstrap Spacelab theme, modular JavaScript architecture, and accessibility optimizations  
 
-## Setup and Installation
+## Quickstart Setup
 
 ### Prerequisites
 
@@ -22,47 +22,37 @@ This project provides a Flask- and Dash-based Python web application for real es
 - pip (Python package manager)
 - Git
 
-### Setup
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/REI-Tracker.git
-   cd REI-Tracker
-   ```
-
-2. Create a virtual environment:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. Create a `.env` file based on `.env.example`:
-   ```bash
-   cp .env.example .env
-   ```
-
-5. Edit the `.env` file with your configuration settings.
-
-### Running the Application
-
-To run the application in development mode:
+### One-Command Setup
 
 ```bash
-python -m src.main
+# Clone and setup the application
+git clone https://github.com/yourusername/REI-Tracker.git && cd REI-Tracker && python -m venv venv && source venv/bin/activate && pip install -r requirements.txt && cp .env.example .env
 ```
 
-Or use the startup script:
+### Verification Steps
 
-```bash
-./startup.sh
-```
+1. Edit the `.env` file with your configuration settings
+2. Run the application:
+   ```bash
+   python -m src.main
+   ```
+3. Access the application at http://localhost:5000
+4. Verify login works and dashboard loads
 
-The application will be available at http://localhost:5000.
+### Common Troubleshooting
+
+- **Database connection issues**: Check your database credentials in `.env`
+- **API errors**: Verify API keys are correctly set in `.env`
+- **Module not found errors**: Ensure virtual environment is activated
+
+## Technical Constraints
+
+- **Browser Compatibility**: Chrome, Safari, and Microsoft Edge
+- **Mobile-First Design**: All features work on mobile devices
+- **Test Coverage**: Minimum 80% code coverage required
+- **Performance Targets**: 
+  - Page Load: < 3 seconds (desktop), < 5 seconds (mobile)
+  - API Response: < 500ms for standard operations
 
 ## Core Calculation Components
 
@@ -628,345 +618,43 @@ Updates a user.
 }
 ```
 
+## Automated Testing
+
+For detailed information on the automated testing framework, refer to the AUTOMATED_TESTING_IMPLEMENTATION.md file. The application includes:
+
+- **Comprehensive Test Suite**: Unit, integration, and UI tests
+- **Testing Persona**: Dedicated test user with diverse property portfolio for UI testing
+- **Cross-Browser Testing**: Support for Chrome, Firefox, and Safari
+- **Mobile-Responsive Testing**: Test on different device sizes
+
 ## Project Structure
 
-The project follows a modular structure with clear separation of concerns:
-
-```
-REI-Tracker/
-├── README.md                 # Project overview and setup instructions
-├── PLANNING.md               # Project planning and workflow guidelines
-├── TASKS.md                  # Task list and progress tracking
-├── DATA_STRUCTURES.md        # Comprehensive documentation of all data structures
-├── AUTOMATED_TESTING_IMPLEMENTATION.md # Automated testing implementation plan
-├── requirements.txt          # Python dependencies
-├── .env.example              # Example environment variables
-├── pytest.ini                # Pytest configuration
-├── wsgi.py                   # WSGI entry point for production servers
-├── app.py                    # Main application module
-├── __init__.py               # Package initialization
-├── startup.sh                # Startup script for development
-├── models/                   # Data models
-│   ├── __init__.py
-│   └── models.py             # Database models
-├── routes/                   # API routes
-│   ├── analyses.py           # Analysis routes
-│   ├── api.py                # API routes
-│   ├── app.py                # App routes
-│   ├── auth.py               # Authentication routes
-│   ├── dashboards.py         # Dashboard routes
-│   ├── main.py               # Main routes
-│   ├── monitor.py            # Monitoring routes
-│   ├── properties.py         # Property routes
-│   └── transactions.py       # Transaction routes
-├── services/                 # Business logic services
-│   ├── analysis_calculations.py # Analysis calculations
-│   ├── analysis_schema.py    # Analysis schema validation
-│   ├── analysis_service.py   # Analysis service
-│   ├── property_kpi_service.py # Property KPI service
-│   ├── report_generator.py   # Report generation service
-│   ├── transaction_import_service.py # Transaction import service
-│   ├── transaction_report_generator.py # Transaction report generator
-│   ├── transaction_service.py # Transaction service
-│   └── user_service.py       # User service
-├── static/                   # Static assets
-│   ├── css/                  # CSS files
-│   │   └── styles.css        # Main stylesheet
-│   ├── images/               # Image files
-│   │   ├── logo.png          # Logo image
-│   │   └── logo-blue.png     # Blue logo variant
-│   └── js/                   # JavaScript files
-│       ├── base.js           # Base JavaScript functionality
-│       ├── config.js         # Configuration
-│       ├── main.js           # Main JavaScript functionality
-│       ├── notifications.js  # Notification system
-│       ├── analysis/         # Analysis-specific JavaScript
-│       │   ├── brrrr.js      # BRRRR analysis
-│       │   ├── calculator.js # Analysis calculator
-│       │   ├── comps_handler.js # Comps handler
-│       │   ├── core.js       # Core analysis functionality
-│       │   ├── form_handler.js # Form handling
-│       │   ├── lease_option.js # Lease option analysis
-│       │   ├── ltr.js        # Long-term rental analysis
-│       │   ├── multi_family.js # Multi-family analysis
-│       │   ├── multi-family.js # Alternative multi-family analysis
-│       │   ├── property_details.js # Property details
-│       │   ├── registry.js   # Analysis registry
-│       │   ├── renderer.js   # Analysis renderer
-│       │   ├── ui_helpers.js # UI helpers
-│       │   └── validators.js # Validators
-│       └── modules/          # JavaScript modules
-│           ├── add_properties.js # Add properties
-│           ├── add_transactions.js # Add transactions
-│           ├── analysis.js   # Analysis module
-│           ├── auth.js       # Authentication module
-│           ├── bulk_import.js # Bulk import
-│           ├── comps_handler.js # Comps handler
-│           ├── dashboards.js # Dashboards
-│           ├── edit_properties.js # Edit properties
-│           ├── edit_transactions.js # Edit transactions
-│           ├── kpi_comparison.js # KPI comparison
-│           ├── kpi_dashboard.js # KPI dashboard
-│           ├── landing.js    # Landing page
-│           ├── loan_term_toggle.js # Loan term toggle
-│           ├── main.js       # Main module
-│           ├── mao_calculator.js # MAO calculator
-│           ├── password_validation.js # Password validation
-│           ├── remove_properties.js # Remove properties
-│           ├── view_edit_analysis.js # View/edit analysis
-│           ├── view_transactions.js # View transactions
-│           └── welcome.js    # Welcome page
-├── templates/                # HTML templates
-│   ├── 403.html             # 403 error page
-│   ├── 404.html             # 404 error page
-│   ├── 500.html             # 500 error page
-│   ├── base.html            # Base template
-│   ├── bulk_import.html     # Bulk import page
-│   ├── forgot_password.html # Forgot password page
-│   ├── index.html           # Index page
-│   ├── landing.html         # Landing page
-│   ├── login.html           # Login page
-│   ├── new_user_welcome.html # New user welcome page
-│   ├── signup.html          # Signup page
-│   ├── analyses/            # Analysis templates
-│   │   ├── _analysis_cards.html # Analysis cards partial
-│   │   ├── _loan_section.html # Loan section partial
-│   │   ├── create_analysis.html # Create analysis page
-│   │   ├── kpi_comparison.html # KPI comparison page
-│   │   ├── mao_calculator.html # MAO calculator page
-│   │   └── view_edit_analysis.html # View/edit analysis page
-│   ├── dashboards/          # Dashboard templates
-│   │   ├── dash_amortization.html # Amortization dashboard
-│   │   └── dash_transactions.html # Transactions dashboard
-│   ├── main/                # Main templates
-│   │   ├── amortization.html # Amortization page
-│   │   ├── dashboards.html  # Dashboards page
-│   │   ├── main.html        # Main page
-│   │   ├── portfolio.html   # Portfolio page
-│   │   ├── properties.html  # Properties page
-│   │   └── transactions.html # Transactions page
-│   ├── properties/          # Property templates
-│   │   ├── add_properties.html # Add properties page
-│   │   ├── edit_properties.html # Edit properties page
-│   │   ├── remove_properties.html # Remove properties page
-│   │   └── logs/            # Property logs
-│   │       └── app.log.1    # Application log
-│   └── transactions/        # Transaction templates
-│       ├── add_transactions.html # Add transactions page
-│       ├── bulk_import.html # Bulk import page
-│       ├── edit_transactions.html # Edit transactions page
-│       ├── remove_transactions.html # Remove transactions page
-│       └── view_transactions.html # View transactions page
-├── utils/                    # Utility functions
-│   ├── api_mappers.py       # API mappers
-│   ├── calculators.py       # Calculators
-│   ├── comps_handler.py     # Comps handler
-│   ├── converters.py        # Converters
-│   ├── error_handling.py    # Error handling
-│   ├── financial_calculator.py # Financial calculator
-│   ├── flash.py             # Flash messages
-│   ├── json_handler.py      # JSON handler
-│   ├── mao_calculator.py    # MAO calculator
-│   ├── money.py             # Money utilities
-│   ├── response_handler.py  # Response handler
-│   ├── standardized_metrics.py # Standardized metrics
-│   ├── utils.py             # General utilities
-│   └── validators.py        # Validators
-├── dash_apps/                # Dash applications
-│   ├── __init__.py
-│   ├── dash_amortization.py # Amortization dashboard
-│   ├── dash_portfolio.py    # Portfolio dashboard
-│   └── dash_transactions.py # Transactions dashboard
-├── data/                     # Data files
-│   └── categories.json      # Category data
-├── flask_session/           # Flask session files
-│   ├── 2029240f6d1128be89ddc32729463129
-│   ├── 8c3f3bf6892ab30c7fca76c70af9cd80
-│   └── e3fc915900934af5eb1f2680a17026b1
-├── logs/                     # Log files
-│   └── .gitkeep             # Git keep file
-└── tests/                    # Tests
-    ├── test_frontend/       # Frontend tests
-    │   ├── conftest.py      # Pytest fixtures
-    │   ├── run_tests.py     # Test runner script
-    │   ├── base/            # Test framework foundation
-    │   │   ├── __init__.py
-    │   │   ├── base_test.py # Base test class
-    │   │   ├── browser.py   # Browser setup
-    │   │   ├── config.py    # Test configuration
-    │   │   └── logger.py    # Test logging
-    │   ├── page_objects/    # Page Object Models
-    │   │   ├── __init__.py
-    │   │   ├── base_page.py # Base page object
-    │   │   ├── login_page.py # Login page object
-    │   │   ├── property/    # Property page objects
-    │   │   ├── transaction/ # Transaction page objects
-    │   │   ├── analysis/    # Analysis page objects
-    │   │   ├── dashboard/   # Dashboard page objects
-    │   │   └── components/  # Component page objects
-    │   ├── test_data/       # Test data
-    │   │   ├── __init__.py
-    │   │   ├── users.py     # User test data
-    │   │   ├── properties.py # Property test data
-    │   │   ├── transactions.py # Transaction test data
-    │   │   ├── analyses.py  # Analysis test data
-    │   │   └── test_files/  # Test files
-    │   ├── utilities/       # Test utilities
-    │   │   ├── __init__.py
-    │   │   ├── data_generator.py # Data generator
-    │   │   ├── screenshot.py # Screenshot utilities
-    │   │   ├── wait_helper.py # Wait helpers
-    │   │   └── assertion_helper.py # Assertion helpers
-    │   ├── workflows/       # Test workflows
-    │   │   ├── __init__.py
-    │   │   ├── auth_workflows.py # Authentication workflows
-    │   │   ├── property_workflows.py # Property workflows
-    │   │   ├── transaction_workflows.py # Transaction workflows
-    │   │   └── analysis_workflows.py # Analysis workflows
-    │   └── tests/           # Test cases
-    │       ├── test_auth/   # Authentication tests
-    │       ├── test_property/ # Property tests
-    │       ├── test_transaction/ # Transaction tests
-    │       ├── test_analysis/ # Analysis tests
-    │       ├── test_dashboard/ # Dashboard tests
-    │       └── test_integrated/ # Integrated tests
-    ├── test_models/         # Model tests
-    ├── test_services/       # Service tests
-    ├── test_routes/         # Route tests
-    └── test_utils/          # Utility tests
-```
+The project follows a modular structure with clear separation of concerns. See the full structure in the project repository.
 
 ## Development Guide
 
-### Coding Standards
+For detailed development guidelines including coding standards, naming conventions, documentation requirements, testing procedures, and deployment instructions, please refer to the PLANNING.md document.
 
-#### Python Style Guide
+## Acceptance Criteria for All Tasks
 
-- Follow [PEP 8](https://www.python.org/dev/peps/pep-0008/) for Python code style.
-- Use 4 spaces for indentation.
-- Maximum line length is 100 characters.
-- Use docstrings for all modules, classes, and functions.
+All development tasks must meet the following criteria:
 
-#### Naming Conventions
+- Functionality implements all specified requirements
+- Code coverage meets minimum 80% threshold
+- All unit tests pass (new and existing)
+- UI testing passes with testing persona
+- Documentation updated (README.md, PLANNING.md, TASKS.md)
+- Mobile-first implementation verified
+- Cross-browser compatibility (Chrome, Safari, Edge)
 
-- Use `snake_case` for variables, functions, and methods.
-- Use `PascalCase` for classes.
-- Use `UPPER_CASE` for constants.
-- Use descriptive names that reflect the purpose of the variable, function, or class.
+## Contribution Guidelines
 
-#### Documentation
+As a solo developer project, contribution is limited. However, all code should follow the established patterns and guidelines in PLANNING.md.
 
-- Document all modules, classes, and functions with docstrings.
-- Use [Google-style docstrings](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings).
-- Keep documentation up-to-date with code changes.
+## License
 
-### Testing
+[MIT License]
 
-#### Backend Tests
-Run backend tests with pytest:
+## Contact
 
-```bash
-pytest
-```
-
-To run tests with coverage:
-
-```bash
-pytest --cov=src
-```
-
-#### Test Persona for UI Testing
-The project includes a comprehensive test persona for UI testing:
-
-- **Dedicated Test User**: A test user with consistent credentials for authentication testing
-- **Diverse Property Portfolio**: Test properties covering different investment strategies
-- **Comprehensive Analyses**: Analyses for each property covering all supported strategies
-- **Various Loan Scenarios**: Different loan types including standard, balloon, interest-only, etc.
-- **Transaction History**: Transactions with different types, categories, and reimbursement statuses
-- **MAO Calculation Defaults**: Default values for Maximum Allowable Offer calculations
-
-To set up the test environment with the test persona:
-
-```bash
-cd tests/test_frontend
-python setup_test_environment.py
-```
-
-This will:
-1. Create necessary test files (PDFs, etc.)
-2. Seed the test database with test persona data
-3. Set up directories for test screenshots and reports
-
-#### Frontend Tests
-The project includes a comprehensive frontend testing framework for JavaScript components:
-
-```bash
-# Run all frontend tests
-cd tests/test_frontend
-./run_tests.py
-
-# Run a specific test file
-./run_tests.py --test-file test_minimal.py
-
-# Run tests with verbose output
-./run_tests.py --verbose
-
-# Run tests with browser visible (not headless)
-./run_tests.py --no-headless
-
-# Generate HTML report
-./run_tests.py --html-report
-
-# Generate coverage report
-./run_tests.py --coverage
-```
-
-The frontend testing framework uses:
-- **pytest** as the test runner
-- **Selenium WebDriver** for browser automation
-- **Chrome** (headless by default) as the browser for testing
-
-All required dependencies for frontend testing are included in the main project's `requirements.txt` file. For more details, see the [Frontend Testing README](tests/test_frontend/README.md) and the [Test Persona Documentation](tests/test_frontend/test_data/README.md).
-
-### Git Workflow
-
-#### Branching Strategy
-
-- `main`: Production-ready code
-- `develop`: Development branch
-- Feature branches: `feature/feature-name`
-- Bug fix branches: `bugfix/bug-name`
-- Release branches: `release/version`
-
-#### Commit Messages
-
-- Use clear and descriptive commit messages.
-- Start with a verb in the imperative mood (e.g., "Add", "Fix", "Update").
-- Keep the first line under 50 characters.
-- Provide more details in the commit body if necessary.
-
-### Deployment
-
-#### Production Setup
-
-1. Set up a production server with Python 3.9 or higher.
-2. Clone the repository and install dependencies.
-3. Create a `.env` file with production settings.
-4. Set up a WSGI server (e.g., Gunicorn) to run the application.
-5. Set up a reverse proxy (e.g., Nginx) to handle requests.
-
-#### Environment Variables
-
-- `FLASK_ENV`: Set to `production` for production environment.
-- `SECRET_KEY`: A secure random string for session encryption.
-- `GEOAPIFY_API_KEY`: API key for Geoapify services.
-- `RENTCAST_API_KEY`: API key for Rentcast services.
-
-## Tech Stack
-- Python 3.9+
-- Flask web framework
-- Plotly Dash for interactive dashboards
-- Pydantic for data validation
-- PyTest for testing
-- Bootstrap Spacelab theme for UI
-- JavaScript with modular architecture
+For any questions or support, please contact [Your Contact Information].

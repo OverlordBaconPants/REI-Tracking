@@ -803,6 +803,29 @@ class AnalysisService:
             analysis = create_analysis(stored_data)
             metrics = analysis.get_report_data()['metrics']
             
+            # Ensure refinance loan payment is calculated for BRRRR analyses
+            if stored_data.get('analysis_type', '').endswith('BRRRR'):
+                # Double-check refinance loan payment calculation
+                refinance_loan_amount = float(stored_data.get('refinance_loan_amount', 0))
+                refinance_loan_interest_rate = float(stored_data.get('refinance_loan_interest_rate', 0))
+                refinance_loan_term = int(stored_data.get('refinance_loan_term', 0))
+                
+                if refinance_loan_amount > 0 and refinance_loan_interest_rate > 0 and refinance_loan_term > 0:
+                    from utils.financial_calculator import FinancialCalculator
+                    from utils.money import Money, Percentage, MonthlyPayment
+                    
+                    # Calculate refinance loan payment
+                    refinance_payment = FinancialCalculator.calculate_loan_payment(
+                        loan_amount=Money(refinance_loan_amount),
+                        annual_rate=Percentage(refinance_loan_interest_rate),
+                        term=refinance_loan_term,
+                        is_interest_only=False  # Refinance loans are always amortizing
+                    )
+                    
+                    # Ensure the payment is included in metrics
+                    metrics['refinance_loan_payment'] = str(refinance_payment.total)
+                    logger.debug(f"Calculated refinance loan payment: {refinance_payment.total}")
+            
             # Utilize standardized metrics functions instead of MetricsHandler
             from utils.standardized_metrics import register_metrics
             register_metrics(analysis_id, metrics)

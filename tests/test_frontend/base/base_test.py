@@ -11,10 +11,11 @@ class BaseTest:
     """Base class for all UI tests."""
     
     @pytest.fixture(autouse=True)
-    def setup(self, browser, base_url):
+    def setup(self, browser, base_url, test_user):
         """Set up the test environment."""
         self.driver = browser
         self.base_url = base_url
+        self.test_user = test_user
         self.wait = WebDriverWait(self.driver, 10)
         
         # Create screenshots directory if it doesn't exist
