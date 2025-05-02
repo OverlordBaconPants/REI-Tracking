@@ -50,33 +50,36 @@ class FinancialCalculator:
         
         # Handle zero interest rate
         if monthly_rate == 0:
-            monthly_payment = loan_amount.dollars / Decimal(term)
+            # Convert term to float before dividing
+            monthly_payment = loan_amount.dollars / float(term)
             return MonthlyPayment(
                 total=Money(monthly_payment),
-                principal=Money(monthly_payment),
                 interest=Money(0)
             )
         
         # Handle interest-only loans
         if is_interest_only:
-            monthly_interest = loan_amount.dollars * monthly_rate
+            # Convert monthly_rate to float before multiplying with dollars
+            monthly_interest = loan_amount.dollars * float(monthly_rate)
             return MonthlyPayment(
                 total=Money(monthly_interest),
                 principal=Money(0),
                 interest=Money(monthly_interest)
             )
-            
+
         # Standard mortgage payment formula for amortizing loans
         payment_factor = (
             monthly_rate * (1 + monthly_rate) ** term
         ) / (
             (1 + monthly_rate) ** term - 1
         )
-        
-        monthly_payment = loan_amount.dollars * payment_factor
+
+        # Convert payment_factor to float before multiplying with dollars
+        monthly_payment = loan_amount.dollars * float(payment_factor)
 
         # Calculate first month's principal and interest
-        monthly_interest = loan_amount.dollars * monthly_rate
+        # Convert monthly_rate to float before multiplying with dollars
+        monthly_interest = loan_amount.dollars * float(monthly_rate)
         monthly_principal = monthly_payment - monthly_interest
         
         return MonthlyPayment(
