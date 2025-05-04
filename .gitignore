@@ -18,6 +18,10 @@ config.py
 .clinerules
 .env
 
+# Files to Help Debug
+analysis.pdf
+browser.txt
+
 # Logs
 /logs/*
 !/logs/.gitkeep

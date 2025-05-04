@@ -1,4 +1,5 @@
-/**
+
+.0/**
  * core.js
  * Core functionality for the analysis module system
  */
@@ -68,11 +69,11 @@ const AnalysisCore = {
       // Load other modules
       await this.loadModules();
       
-      // Initialize UI elements
-      this.initUI();
-      
       // Extract current analysis ID if present
       this.state.analysisId = this.getAnalysisIdFromUrl();
+      
+      // Initialize UI elements
+      this.initUI();
       
       // Handle edit requests from the renderer
       this.events.on('edit:requested', (analysisData) => {
@@ -757,8 +758,17 @@ const AnalysisCore = {
       }
       
       // Verify returned analysis has same ID
-      if (data.analysis.id !== analysisId) {
+      if (!data.analysis.id) {
+        console.log(`Server returned undefined analysis ID, using original: ${analysisId}`);
+        data.analysis.id = analysisId;
+      } else if (data.analysis.id !== analysisId) {
         console.error(`Server returned different analysis ID: ${data.analysis.id} vs original ${analysisId}`);
+      }
+      
+      // Verify returned analysis has same type
+      if (!data.analysis.analysis_type) {
+        console.log(`Server returned undefined analysis type, using original: ${this.state.analysisType}`);
+        data.analysis.analysis_type = this.state.analysisType;
       }
       
       // Populate reports tab and switch to it
