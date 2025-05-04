@@ -21,6 +21,11 @@ config.py
 # Files to Help Debug
 analysis.pdf
 browser.txt
+/tests/.coverage
+.coverage
+coverage.xml
+TEST_COVERAGE_IMPLEMENTATION_PLAN.md
+
 
 # Logs
 /logs/*
