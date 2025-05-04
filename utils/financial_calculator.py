@@ -54,6 +54,7 @@ class FinancialCalculator:
             monthly_payment = loan_amount.dollars / float(term)
             return MonthlyPayment(
                 total=Money(monthly_payment),
+                principal=Money(monthly_payment),
                 interest=Money(0)
             )
         
