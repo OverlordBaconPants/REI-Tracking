@@ -447,12 +447,15 @@ class AnalysisService:
                 
         return value
 
-    def validate_analysis_data(self, data: Dict) -> None:
+    def validate_analysis_data(self, data: Dict) -> bool:
         """
         Validate analysis data against schema.
         
         Args:
             data: Analysis data to validate
+            
+        Returns:
+            True if validation passes
             
         Raises:
             ValueError: If validation fails
@@ -484,8 +487,11 @@ class AnalysisService:
             # Validate analysis-type specific data
             if data.get('analysis_type') == 'Lease Option':
                 self._validate_lease_option(data)
+            elif data.get('analysis_type') == 'BRRRR':
+                self._validate_brrrr_analysis(data)
 
             logger.debug("Analysis data validation complete")
+            return True
             
         except ValueError as e:
             logger.error(f"Validation error: {str(e)}")
@@ -558,6 +564,29 @@ class AnalysisService:
         # Validate loans for Lease Options
         self._validate_loans(data)
 
+    def _validate_brrrr_analysis(self, data: Dict) -> None:
+        """Validate BRRRR analysis specific fields."""
+        # Check for required BRRRR fields
+        required_fields = {
+            'rehab_costs': "Rehab costs",
+            'holding_costs': "Holding costs",
+            'after_repair_value': "After repair value"
+        }
+        
+        for field, display_name in required_fields.items():
+            value = self._get_value(data, field)
+            if value is None or float(value) <= 0:
+                raise ValueError(f"{display_name} must be greater than 0")
+        
+        # Validate ARV is greater than purchase price
+        purchase_price = float(self._get_value(data, 'purchase_price') or 0)
+        arv = float(self._get_value(data, 'after_repair_value') or 0)
+        if arv <= purchase_price:
+            raise ValueError("After repair value must be greater than purchase price")
+        
+        # Validate loans for BRRRR
+        self._validate_loans(data)
+    
     def _validate_loans(self, data: Dict) -> None:
         """Validate loan data."""
         loan_prefixes = ['loan1', 'loan2', 'loan3']

@@ -68,7 +68,13 @@ class LoanDetails:
     def __post_init__(self) -> None:
         """Validate loan details after initialization."""
         Validator.validate_positive_number(self.amount, "Loan amount")
-        Validator.validate_percentage(self.interest_rate, "Interest rate", 0, MAX_LOAN_INTEREST_RATE)
+        
+        # Validate interest rate is between 0 and MAX_LOAN_INTEREST_RATE
+        if self.interest_rate.value < 0:
+            raise ValueError(f"Interest rate must be greater than or equal to 0%")
+        if self.interest_rate.value > MAX_LOAN_INTEREST_RATE:
+            raise ValueError(f"Interest rate must be less than or equal to {MAX_LOAN_INTEREST_RATE}%")
+            
         if self.term <= 0 or self.term > MAX_LOAN_TERM:
             raise ValueError(f"Loan term must be between 1 and {MAX_LOAN_TERM} months")
 
@@ -81,7 +87,10 @@ class LoanCalculator:
     @safe_calculation(default_value=Money(0))
     def calculate_payment(loan: LoanDetails) -> Money:
         """Calculate monthly payment for a loan."""
-        if loan.amount.dollars <= 0 or loan.term <= 0:
+        if loan.amount.dollars == 0:
+            return Money(0)
+            
+        if loan.amount.dollars < 0 or loan.term <= 0:
             return Money(0)
         
         # Use the centralized financial calculator
@@ -519,11 +528,10 @@ class LeaseOptionAnalysis(Analysis):
                     value = self._get_money(field)
                     Validator.validate_positive_number(value, display_name)
 
-            # Validate rent credit percentage
-            Validator.validate_percentage(
-                self.data.get('monthly_rent_credit_percentage', 0),
-                "Monthly rent credit percentage"
-            )
+            # Validate rent credit percentage is between 0 and 100
+            rent_credit_pct = self.data.get('monthly_rent_credit_percentage', 0)
+            if rent_credit_pct < 0 or rent_credit_pct > 100:
+                raise ValueError("Monthly rent credit percentage must be between 0 and 100%")
 
             # Validate strike price is greater than purchase price
             if float(self.data.get('strike_price', 0)) <= float(self.data.get('purchase_price', 0)):
@@ -1536,6 +1544,16 @@ class MultiFamilyAnalysis(Analysis):
         
         return total_expenses
 
+    def _calculate_operating_expense_ratio(self) -> float:
+        """Calculate operating expense ratio as a decimal (not percentage)."""
+        operating_expenses = self._calculate_operating_expenses()
+        gross_rent = self.gross_potential_rent
+        
+        if gross_rent.dollars <= 0:
+            return 0.0
+            
+        return float(operating_expenses.dollars) / float(gross_rent.dollars)
+    
     def _calculate_type_specific_metrics(self) -> Dict:
         """
         Calculate metrics specific to multi-family analysis.
