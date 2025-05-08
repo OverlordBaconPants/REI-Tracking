@@ -440,3 +440,7 @@ For any task to be considered complete, it must meet these criteria:
     - [x] Store MAO defaults in the user's profile
     - [x] Apply MAO defaults to MAO calculations
     - [x] Add toaster notifications for success/cancel actions
+- [x] Auto-select first property in amortization dashboard
+    - [x] Modify property dropdown callback to return both options and value
+    - [x] Select the first property by default when the page loads
+    - [x] Prevent "Failed to fetch property data" errors on initial load

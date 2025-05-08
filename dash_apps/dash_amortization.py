@@ -213,28 +213,32 @@ def create_amortization_dash(flask_app):
         ], fluid=True, className='p-3')
 
         @dash_app.callback(
-            Output('property-selector', 'options'),
+            [Output('property-selector', 'options'),
+             Output('property-selector', 'value')],
             Input('property-selector', 'id')
         )
         def populate_property_dropdown(dropdown_id):
-            """Populate the property dropdown with available properties."""
+            """Populate the property dropdown with available properties and select the first one."""
             try:
                 with flask_app.app_context():
                     properties = get_properties_for_user(current_user.id, current_user.name)
                 
                 if not properties:
-                    return []
+                    return [], None
                 
                 options = [{
                     'label': prop['address'].split(',')[0].strip(),
                     'value': prop['address']
                 } for prop in properties]
                 
-                return options
+                # Return the first property value to auto-select it
+                first_property_value = options[0]['value'] if options else None
+                
+                return options, first_property_value
                 
             except Exception as e:
                 logger.error(f"Error populating property dropdown: {str(e)}")
-                return []
+                return [], None
 
         @dash_app.callback(
             [Output('loan-info', 'children'),

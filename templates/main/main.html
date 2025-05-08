@@ -21,6 +21,38 @@
                     <h4 class="mb-0">Welcome, {{ name }}!</h4>
                 </div>
                 <div class="card-body p-3">
+                    <!-- Quick Links -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-navy">
+                            <h5 class="mb-0">Quick Links</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-12 col-md-4">
+                                    <div class="d-grid">
+                                        <a href="{{ url_for('properties.add_properties') }}" class="btn btn-outline-primary">
+                                            <i class="bi bi-building me-2"></i>Manage Properties
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <div class="d-grid">
+                                        <a href="{{ url_for('transactions.view_transactions') }}" class="btn btn-outline-primary">
+                                            <i class="bi bi-cash me-2"></i>View Transactions
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <div class="d-grid">
+                                        <a href="{{ url_for('dashboards.amortization_view') }}" class="btn btn-outline-primary">
+                                            <i class="bi bi-graph-up me-2"></i>View Dashboards
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Equity and Transactions Cards -->
                     <div class="row g-3">
                         <!-- Equity Card -->
@@ -351,37 +383,6 @@
                         </div>
                     </div>
 
-                    <!-- Quick Links -->
-                    <div class="card mt-4">
-                        <div class="card-header bg-navy">
-                            <h5 class="mb-0">Quick Links</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="row g-3">
-                                <div class="col-12 col-md-4">
-                                    <div class="d-grid">
-                                        <a href="{{ url_for('properties.add_properties') }}" class="btn btn-outline-primary">
-                                            <i class="bi bi-building me-2"></i>Manage Properties
-                                        </a>
-                                    </div>
-                                </div>
-                                <div class="col-12 col-md-4">
-                                    <div class="d-grid">
-                                        <a href="{{ url_for('transactions.view_transactions') }}" class="btn btn-outline-primary">
-                                            <i class="bi bi-cash me-2"></i>View Transactions
-                                        </a>
-                                    </div>
-                                </div>
-                                <div class="col-12 col-md-4">
-                                    <div class="d-grid">
-                                        <a href="{{ url_for('dashboards.amortization_view') }}" class="btn btn-outline-primary">
-                                            <i class="bi bi-graph-up me-2"></i>View Dashboards
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
